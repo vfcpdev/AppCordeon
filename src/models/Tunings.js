@@ -108,6 +108,15 @@ class TuningRegistry {
      * @param {string} id
      * @returns {TuningDefinition|undefined}
      */
+    get(id) {
+        return this.getById(id);
+    }
+
+    /**
+     * Obtiene una afinación por su ID.
+     * @param {string} id
+     * @returns {TuningDefinition|undefined}
+     */
     getById(id) {
         return this._tunings.get(id);
     }

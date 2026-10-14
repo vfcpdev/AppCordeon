@@ -5,6 +5,7 @@
  */
 
 import { eventBus } from '../core/EventBus.js';
+import { metronomeEngine } from './MetronomeEngine.js';
 
 export class AudioPlayerController {
     constructor() {
@@ -18,6 +19,7 @@ export class AudioPlayerController {
         this._isPlaying = false;
         this._animationId = null;
 
+        this._playbackRate = 1.0;
         this._chordsTimeline = [];
         this._currentChordIndex = -1;
         this._syncWithDiapason = true;
@@ -79,6 +81,7 @@ export class AudioPlayerController {
 
         this._sourceNode = ctx.createBufferSource();
         this._sourceNode.buffer = this._audioBuffer;
+        this._sourceNode.playbackRate.value = this._playbackRate;
 
         // El audio SIEMPRE se reproduce en su tono original (sin detune).
         // El ajuste de tono es exclusivamente visual (transposición de acordes).
@@ -89,13 +92,17 @@ export class AudioPlayerController {
 
         const bufDur = this._audioBuffer.duration || dur;
         const offset = (this._pausedAt || 0) % bufDur;
-        this._startTime = ctx.currentTime - offset;
+        this._startTime = ctx.currentTime - (offset / this._playbackRate);
 
         this._sourceNode.start(0, offset);
         this._isPlaying = true;
 
+        // Iniciar sincronización de metrónomo con el audio
+        metronomeEngine.setAudioContext(ctx);
+        metronomeEngine.startAudioSync(() => this.currentTime);
+
         this._sourceNode.onended = () => {
-            if (this._isPlaying && (ctx.currentTime - this._startTime >= bufDur)) {
+            if (this._isPlaying && ((ctx.currentTime - this._startTime) * this._playbackRate >= bufDur)) {
                 this.stop();
                 eventBus.emit('player:ended');
             }
@@ -112,8 +119,9 @@ export class AudioPlayerController {
         if (!this._isPlaying) return;
 
         const ctx = this._getAudioContext();
-        this._pausedAt = ctx.currentTime - this._startTime;
+        this._pausedAt = (ctx.currentTime - this._startTime) * this._playbackRate;
 
+        metronomeEngine.stopAudioSync();
         this._stopSource();
         this._stopSyncLoop();
         this._isPlaying = false;
@@ -125,6 +133,7 @@ export class AudioPlayerController {
      * Detiene la reproducción y reinicia la posición al inicio.
      */
     stop() {
+        metronomeEngine.stopAudioSync();
         this._stopSource();
         this._stopSyncLoop();
         this._isPlaying = false;
@@ -154,6 +163,7 @@ export class AudioPlayerController {
 
         this._pausedAt = targetTime;
         this._currentChordIndex = -1;
+        metronomeEngine.notifySeek(targetTime);
         this._checkCurrentChord(targetTime);
 
         eventBus.emit('player:timeupdate', {
@@ -165,6 +175,42 @@ export class AudioPlayerController {
         if (wasPlaying) {
             this.play();
         }
+    }
+
+    /**
+     * Salta relativo (adelante o atrás) en segundos.
+     * @param {number} deltaSeconds
+     */
+    skipSeconds(deltaSeconds) {
+        this.seek(this.currentTime + deltaSeconds);
+    }
+
+    /**
+     * Cambia la velocidad de reproducción (0.25x - 2.0x).
+     * @param {number} rate
+     */
+    setPlaybackRate(rate) {
+        const parsed = parseFloat(rate);
+        if (isNaN(parsed) || parsed <= 0) return;
+        this._playbackRate = Math.max(0.25, Math.min(2.0, parsed));
+
+        if (this._sourceNode && this._audioContext) {
+            try {
+                this._sourceNode.playbackRate.setValueAtTime(this._playbackRate, this._audioContext.currentTime);
+            } catch (e) {}
+        }
+
+        if (this._isPlaying && this._audioContext) {
+            const now = this._audioContext.currentTime;
+            const curAudioTime = this.currentTime;
+            this._startTime = now - (curAudioTime / this._playbackRate);
+        }
+
+        eventBus.emit('player:rate_change', { playbackRate: this._playbackRate });
+    }
+
+    get playbackRate() {
+        return this._playbackRate;
     }
 
     /**
@@ -191,7 +237,8 @@ export class AudioPlayerController {
             if (!this._isPlaying || !this._audioBuffer) return;
 
             const ctx = this._getAudioContext();
-            const currentTime = Math.min(ctx.currentTime - this._startTime, this._audioBuffer.duration);
+            const elapsed = (ctx.currentTime - this._startTime) * this._playbackRate;
+            const currentTime = Math.min(Math.max(0, elapsed), this._audioBuffer.duration);
             const duration = this._audioBuffer.duration;
             const progress = duration > 0 ? (currentTime / duration) : 0;
 
@@ -258,7 +305,8 @@ export class AudioPlayerController {
         if (!this._isPlaying) return this._pausedAt || 0;
         const ctx = this._getAudioContext();
         const dur = this.duration;
-        return Math.min(ctx.currentTime - this._startTime, dur);
+        const elapsed = (ctx.currentTime - this._startTime) * this._playbackRate;
+        return Math.min(Math.max(0, elapsed), dur);
     }
 
     /**

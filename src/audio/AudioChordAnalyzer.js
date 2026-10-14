@@ -209,21 +209,28 @@ export class AudioChordAnalyzer {
 
     /**
      * Transpone matemáticamente un reporte de análisis musical por un desplazamiento de semitonos.
-     * Permite cambiar la tonalidad y los acordes instantáneamente sin reprocesar el audio.
+     * Permite cambiar la tonalidad y los acordes instantáneamente sin reprocesar el audio (solo visual).
      * @param {AudioAnalysisReport} report
      * @param {number} semitoneShift (-12 a +12)
+     * @param {string} [targetMode=null] 'major' o 'minor'
      * @returns {AudioAnalysisReport}
      */
-    transposeReport(report, semitoneShift) {
-        if (!report || semitoneShift === 0) return report;
+    transposeReport(report, semitoneShift, targetMode = null) {
+        if (!report) return null;
+        const currentMode = report.mainKey ? report.mainKey.mode : 'major';
+        const finalMode = targetMode || currentMode;
+
+        if (semitoneShift === 0 && finalMode === currentMode) {
+            return report;
+        }
 
         const shift = ((semitoneShift % 12) + 12) % 12;
         const arrLat = getNoteNamesList(NOTATION_MODES.LATINA, 0);
         const arrAle = getNoteNamesList(NOTATION_MODES.ALEMANA, 0);
 
         // 1. Transponer tonalidad principal
-        const newRoot = (report.mainKey.rootMod + shift) % 12;
-        const mode = report.mainKey.mode;
+        const newRoot = ((report.mainKey ? report.mainKey.rootMod : 0) + shift) % 12;
+        const mode = finalMode;
         const modeLabelLat = mode === 'major' ? 'Mayor' : 'Menor';
         const modeLabelAle = mode === 'major' ? 'Major' : 'Minor';
 
@@ -237,8 +244,8 @@ export class AudioChordAnalyzer {
             recommendedTuning: recommendation.tuningName,
             recommendedOffset: recommendation.offset,
             recommendedRow: recommendation.rowKey,
-            correlation: report.mainKey.correlation,
-            originalKeyLat: report.mainKey.originalKeyLat || report.mainKey.keyNameLat,
+            correlation: report.mainKey ? report.mainKey.correlation : 0,
+            originalKeyLat: (report.mainKey && report.mainKey.originalKeyLat) || (report.mainKey && report.mainKey.keyNameLat) || `${arrLat[newRoot]} ${modeLabelLat}`,
             pitchShift: semitoneShift
         };
 

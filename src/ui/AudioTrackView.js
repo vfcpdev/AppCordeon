@@ -7,6 +7,7 @@
 
 import { audioChordAnalyzer } from '../audio/AudioChordAnalyzer.js';
 import { audioPlayerController } from '../audio/AudioPlayerController.js';
+import { metronomeEngine } from '../audio/MetronomeEngine.js';
 import { getNoteNamesList } from '../theory/MusicTheory.js';
 import { NOTATION_MODES, ROW_BASE_TONICS } from '../core/Constants.js';
 import { tuningRegistry } from '../models/Tunings.js';
@@ -38,6 +39,28 @@ export class AudioTrackView {
         this._activeChordBadge = elements.activeChordBadge;
         this._chkSyncDiapason = elements.chkSyncDiapason;
         this._chordsStrip = elements.chordsStrip;
+
+        // Nuevos controles de transporte, metrónomo, velocidad y cuadrícula
+        this._measureGridContainer = document.getElementById('audioMeasureGridContainer');
+        this._btnPrevMeasure = document.getElementById('btnPrevMeasure');
+        this._btnNextMeasure = document.getElementById('btnNextMeasure');
+        this._btnToggleMetronome = document.getElementById('btnToggleMetronome');
+        this._metronomeToggleLabel = document.getElementById('metronomeToggleLabel');
+        this._audioSpeedSelect = document.getElementById('audioSpeedSelect');
+        this._btnBpmMinus = document.getElementById('btnBpmMinus');
+        this._btnBpmPlus = document.getElementById('btnBpmPlus');
+        this._playerBpmDisplay = document.getElementById('playerBpmDisplay');
+        this._playerBpmInput = document.getElementById('playerBpmInput');
+        this._audioTimeCurrent = document.getElementById('audioTimeCurrent');
+        this._audioTimeRemaining = document.getElementById('audioTimeRemaining');
+        this._activeChordTitle = document.getElementById('activeChordTitle');
+        this._btnEditActiveChord = document.getElementById('btnEditActiveChord');
+        this._activeMeasureBeatInfo = document.getElementById('activeMeasureBeatInfo');
+
+        this._currentBpm = 120;
+        this._activeBeatSlot = null;
+        this._activeMeasureRow = null;
+        this._lastScrollMeasure = -1;
 
         // Controles de Ajuste de Tono (Pitch Shift)
         this._btnPitchDown = elements.btnPitchDown;
@@ -97,8 +120,7 @@ export class AudioTrackView {
         this._selectedAccordionRowKey = 'row2';
         this._handlers = null;
 
-        // Progresión predeterminada (Cinco Letras / Vallenato tradicional) para que la línea de tiempo
-        // sea visible, interactiva y editable inmediatamente desde la carga inicial de la página
+        // Progresión predeterminada (Cinco Letras / Vallenato tradicional)
         const defaultChords = [
             { root: 10, chordType: 'major', chordName: 'Si♭ (Bb)', chordSymbol: 'Bb', noteMods: [10, 2, 5], startTime: 0, endTime: 4, confidence: 1.0, bassNote: 10, bellowsAction: 'both' },
             { root: 3, chordType: 'major', chordName: 'Mi♭ (Eb)', chordSymbol: 'Eb', noteMods: [3, 7, 10], startTime: 4, endTime: 8, confidence: 1.0, bassNote: 3, bellowsAction: 'both' },
@@ -108,6 +130,7 @@ export class AudioTrackView {
 
         this._currentAnalysisData = {
             duration: 16,
+            bpm: 120,
             mainKey: {
                 rootMod: 10,
                 mode: 'major',
@@ -124,10 +147,25 @@ export class AudioTrackView {
 
         this._initChordEditor();
         this._initChordQuickToolbar();
+        this._initTransportAndMetronome();
 
-        // Renderizar la tira de acordes y la barra de desplazamiento visual inmediatamente en la carga
+        if (this._btnEditActiveChord) {
+            this._btnEditActiveChord.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const curTime = audioPlayerController.currentTime || 0;
+                const timeline = (this._currentAnalysisData && this._currentAnalysisData.chords) || [];
+                const chordIdx = timeline.findIndex(c => curTime >= c.startTime && curTime < c.endTime);
+                this._openChordEditor(chordIdx, curTime);
+            });
+        }
+
+        // Poblar selector de tono con la tonalidad inicial (solo visual)
+        this._populateKeySelect(this._currentAnalysisData.mainKey);
+
+        // Renderizar cuadrícula de compases inmediatamente
+        this.renderMeasureGrid(this._currentAnalysisData.chords, this._currentAnalysisData.duration, this._currentBpm);
         this.renderChordsStrip(this._currentAnalysisData.chords, this._onChordMarkerClick);
-        this.renderChordProgressBar(this._currentAnalysisData.chords, this._currentAnalysisData.duration);
+        this.renderChordProgressBar(this._currentAnalysisData.chords, this._currentAnalysisData.duration, this._currentBpm);
         audioPlayerController.setChordsTimeline(this._currentAnalysisData.chords);
     }
 
@@ -231,18 +269,18 @@ export class AudioTrackView {
             });
         }
 
-        // Selector manual de tonalidad para cambiar el tono detectado
+        // Selector manual de tono de referencia (solo visual: recalcula todos los acordes con referencia al tono ajustado)
         if (this._audioKeySelect) {
             this._audioKeySelect.addEventListener('change', (e) => {
-                if (!this._originalAnalysisData) return;
+                if (!this._originalAnalysisData || !this._originalAnalysisData.mainKey) return;
                 const [targetRootStr, targetMode] = e.target.value.split('_');
-                const targetRoot = parseInt(targetRootStr);
+                const targetRoot = parseInt(targetRootStr, 10);
                 const originalRoot = this._originalAnalysisData.mainKey.rootMod;
 
                 let diff = (targetRoot - originalRoot + 12) % 12;
                 if (diff > 6) diff -= 12; // Transposición más cercana (-6 a +6)
 
-                this.setPitchShift(diff, handlers);
+                this.setPitchShift(diff, handlers || this._handlers, targetMode);
             });
         }
 
@@ -340,14 +378,13 @@ export class AudioTrackView {
 
         // Actualizar badges
         this._updateKeyDisplay(analysisData.mainKey);
-        if (analysisData.bpm) {
-            const bpmVal = document.getElementById('audioBpmValue');
-            if (bpmVal) bpmVal.innerText = `${analysisData.bpm} BPM`;
-        }
+        const songBpm = analysisData.bpm || 120;
+        this.setBPM(songBpm);
 
-        // Tira de acordes secuenciales con alto contraste
+        // Cuadrícula de compases interactiva y tira de acordes
+        this.renderMeasureGrid(analysisData.chords, analysisData.duration, songBpm);
         this.renderChordsStrip(analysisData.chords, onChordMarkerClick);
-        this.renderChordProgressBar(analysisData.chords, analysisData.duration, analysisData.bpm);
+        this.renderChordProgressBar(analysisData.chords, analysisData.duration, songBpm);
 
         // Restablecer indicador de pitch
         if (this._lblPitchShift) {
@@ -492,7 +529,7 @@ export class AudioTrackView {
     }
 
     /**
-     * Llena el combobox con las 24 tonalidades mayores y menores.
+     * Llena el combobox con las 24 tonalidades mayores y menores agrupadas.
      * @private
      */
     _populateKeySelect(currentKey) {
@@ -501,32 +538,43 @@ export class AudioTrackView {
         this._audioKeySelect.style.display = 'inline-block';
 
         const arrLat = getNoteNamesList(NOTATION_MODES.LATINA, 0);
+        const arrAle = getNoteNamesList(NOTATION_MODES.ALEMANA, 0);
 
+        const curRoot = currentKey ? currentKey.rootMod : 0;
+        const curMode = currentKey ? currentKey.mode : 'major';
+
+        const optGroupMaj = document.createElement('optgroup');
+        optGroupMaj.label = 'Tonalidades Mayores';
         for (let r = 0; r < 12; r++) {
             const optMaj = document.createElement('option');
             optMaj.value = `${r}_major`;
-            optMaj.innerText = `${arrLat[r]} Mayor`;
-            if (r === currentKey.rootMod && currentKey.mode === 'major') optMaj.selected = true;
-            this._audioKeySelect.appendChild(optMaj);
+            optMaj.innerText = `${arrLat[r]} Mayor (${arrAle[r]})`;
+            if (r === curRoot && curMode === 'major') optMaj.selected = true;
+            optGroupMaj.appendChild(optMaj);
         }
+        this._audioKeySelect.appendChild(optGroupMaj);
 
+        const optGroupMin = document.createElement('optgroup');
+        optGroupMin.label = 'Tonalidades Menores';
         for (let r = 0; r < 12; r++) {
             const optMin = document.createElement('option');
             optMin.value = `${r}_minor`;
-            optMin.innerText = `${arrLat[r]} Menor`;
-            if (r === currentKey.rootMod && currentKey.mode === 'minor') optMin.selected = true;
-            this._audioKeySelect.appendChild(optMin);
+            optMin.innerText = `${arrLat[r]} Menor (${arrAle[r]}m)`;
+            if (r === curRoot && curMode === 'minor') optMin.selected = true;
+            optGroupMin.appendChild(optMin);
         }
+        this._audioKeySelect.appendChild(optGroupMin);
     }
 
     /**
      * Aplica un desplazamiento de tono VISUAL en semitonos (-12 a +12).
-     * El audio de la canción NO se modifica: solo se transponen los acordes,
-     * la tonalidad mostrada y las digitaciones en los diapasones.
+     * El audio de la canción NO se modifica: solo se recalculan y transponen todos los acordes
+     * con referencia a la tonalidad ajustada, actualizando la cuadrícula y el diapasón.
      * @param {number} semitones
      * @param {Object} [handlers]
+     * @param {string} [targetMode=null]
      */
-    setPitchShift(semitones, handlers) {
+    setPitchShift(semitones, handlers, targetMode = null) {
         if (!this._originalAnalysisData) return;
 
         // Conservar ediciones manuales y preferencias Abre/Cierra hechas sobre la vista transpuesta
@@ -539,28 +587,47 @@ export class AudioTrackView {
             this._lblPitchShift.innerText = `${clamped > 0 ? '+' : ''}${clamped} st`;
         }
 
-        // 1. Transponer reporte con audioChordAnalyzer (solo datos visuales)
-        const transposedReport = audioChordAnalyzer.transposeReport(this._originalAnalysisData, clamped);
+        // 1. Transponer y recalcular reporte con audioChordAnalyzer (solo datos visuales)
+        const transposedReport = audioChordAnalyzer.transposeReport(
+            this._originalAnalysisData,
+            clamped,
+            targetMode
+        );
         this._currentAnalysisData = transposedReport;
 
-        // 2. El audio conserva su tono original; solo se actualiza la línea de acordes sincronizada
+        // 2. El audio conserva su tono original (sin detune); solo se actualiza la línea de acordes sincronizada
         audioPlayerController.setPitchShift(clamped);
         audioPlayerController.setChordsTimeline(transposedReport.chords);
 
-        // 3. Actualizar información visual de tonalidad
+        // 3. Sincronizar selector de tonalidad
         this._updateKeyDisplay(transposedReport.mainKey);
 
-        // 4. Sincronizar selector de tonalidad
-        if (this._audioKeySelect) {
-            this._audioKeySelect.value = `${transposedReport.mainKey.rootMod}_${transposedReport.mainKey.mode}`;
+        // 4. Re-renderizar cuadrícula de compases con todos los acordes recalculados
+        this.renderMeasureGrid(transposedReport.chords, this._currentAnalysisData.duration, this.getBPM());
+        this.renderChordsStrip(transposedReport.chords, this._onChordMarkerClick);
+        this.renderChordProgressBar(transposedReport.chords, this._currentAnalysisData.duration, this.getBPM());
+
+        // 5. Notificar actualización de acordes a los controladores (diapasón y sidebar)
+        const curHandlers = handlers || this._handlers;
+        if (curHandlers && curHandlers.onChordTimelineUpdated) {
+            curHandlers.onChordTimelineUpdated(transposedReport.chords);
         }
 
-        // 5. Re-renderizar tira de acordes con alto contraste
-        this.renderChordsStrip(transposedReport.chords, this._onChordMarkerClick);
-        this.renderChordProgressBar(transposedReport.chords, this._currentAnalysisData.duration, this._currentAnalysisData.bpm);
+        // 6. Refrescar acorde activo inmediatamente si existe en el tiempo actual
+        const curTime = audioPlayerController.currentTime || 0;
+        const activeChord = (transposedReport.chords || []).find(c => curTime >= c.startTime && curTime < c.endTime);
+        if (activeChord) {
+            const chordIdx = transposedReport.chords.indexOf(activeChord);
+            this.setActiveChord(activeChord, chordIdx);
+            eventBus.emit('player:chord_active', {
+                chord: activeChord,
+                index: chordIdx,
+                syncWithDiapason: this.isSyncEnabled()
+            });
+        }
 
-        // 6. Actualizar estado visual de los botones de las hileras del acordeón
-        this._renderAccordionRowButtons(handlers || this._handlers);
+        // 7. Actualizar estado visual de los botones de las hileras del acordeón
+        this._renderAccordionRowButtons(curHandlers);
     }
 
     /**
@@ -583,24 +650,12 @@ export class AudioTrackView {
     }
 
     /**
-     * Actualiza las insignias de tonalidad y recomendación de acordeón.
+     * Actualiza la selección del tono ajustado en el combobox (solo visual).
      * @private
      */
     _updateKeyDisplay(mainKey) {
-        if (this._mainKeyBadge && mainKey) {
-            const shiftTag = this._currentPitchShift !== 0
-                ? `<span style="font-size: 0.65rem; color: #7c3aed; font-weight: 800; margin-left: 4px;" title="Transposición visual: el audio conserva su tono original">(${this._currentPitchShift > 0 ? '+' : ''}${this._currentPitchShift} st · visual)</span>`
-                : '';
-
-            this._mainKeyBadge.innerHTML = `
-                <i class="fas fa-key"></i> Tonalidad: <strong>${mainKey.keyNameLat}</strong> (${mainKey.keyNameAle})${shiftTag}
-            `;
-        }
-
-        if (this._tuningRecommendation && mainKey) {
-            this._tuningRecommendation.innerHTML = `
-                <i class="fas fa-thumbs-up"></i> Afinación sugerida: <strong>${mainKey.recommendedTuning}</strong>
-            `;
+        if (this._audioKeySelect && mainKey) {
+            this._audioKeySelect.value = `${mainKey.rootMod}_${mainKey.mode}`;
         }
     }
 
@@ -1242,10 +1297,24 @@ export class AudioTrackView {
         // Actualizar timeline sincronizado en el reproductor
         audioPlayerController.setChordsTimeline(timeline);
         this.renderChordsStrip(timeline, this._onChordMarkerClick);
-        this.renderChordProgressBar(timeline, this._currentAnalysisData.duration);
+        this.renderChordProgressBar(timeline, this._currentAnalysisData.duration, this.getBPM());
+        this.renderMeasureGrid(timeline, this._currentAnalysisData.duration, this.getBPM());
 
         if (this._handlers && this._handlers.onChordTimelineUpdated) {
             this._handlers.onChordTimelineUpdated(timeline);
+        }
+
+        // Refrescar acorde activo inmediatamente
+        const curTime = audioPlayerController.currentTime || 0;
+        const curActive = timeline.find(c => curTime >= c.startTime && curTime < c.endTime);
+        if (curActive) {
+            const actIdx = timeline.indexOf(curActive);
+            this.setActiveChord(curActive, actIdx);
+            eventBus.emit('player:chord_active', {
+                chord: curActive,
+                index: actIdx,
+                syncWithDiapason: this.isSyncEnabled()
+            });
         }
 
         this._closeChordEditor();
@@ -1263,7 +1332,8 @@ export class AudioTrackView {
             timeline.splice(this._editingChordIndex, 1);
             audioPlayerController.setChordsTimeline(timeline);
             this.renderChordsStrip(timeline, this._onChordMarkerClick);
-            this.renderChordProgressBar(timeline, this._currentAnalysisData.duration);
+            this.renderChordProgressBar(timeline, this._currentAnalysisData.duration, this.getBPM());
+            this.renderMeasureGrid(timeline, this._currentAnalysisData.duration, this.getBPM());
 
             if (this._handlers && this._handlers.onChordTimelineUpdated) {
                 this._handlers.onChordTimelineUpdated(timeline);
@@ -1341,17 +1411,14 @@ export class AudioTrackView {
      * @param {number} chordIndex
      */
     setActiveChord(chord, chordIndex) {
-        if (this._activeChordBadge) {
-            this._activeChordBadge.innerHTML = `
-                <div style="display: flex; flex-direction: column; gap: 2px;">
-                    <span style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Acorde Detectado</span>
-                    <strong style="font-size: 1.10rem; font-weight: 900; color: #4338ca; line-height: 1.1;">${chord.chordName}</strong>
-                </div>
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="font-size: 0.72rem; font-weight: 800; background: #ede9fe; color: #6d28d9; padding: 2px 8px; border-radius: 4px; border: 1px solid #c4b5fd;">${chord.chordSymbol}</span>
-                    <span style="font-size: 0.65rem; color: #64748b; font-weight: 700;">${Math.round(chord.confidence * 100)}% conf.</span>
-                </div>
-            `;
+        if (this._activeChordTitle) {
+            this._activeChordTitle.innerHTML = chord
+                ? `Acorde: <strong>${chord.chordSymbol}</strong> (${chord.chordName})`
+                : 'Presiona reproducir para sincronizar';
+        }
+
+        if (this._btnEditActiveChord) {
+            this._btnEditActiveChord.style.display = chord ? 'inline-flex' : 'none';
         }
 
         if (this._chordsStrip) {
@@ -1359,44 +1426,299 @@ export class AudioTrackView {
             chips.forEach((c, i) => {
                 const isActive = i === chordIndex;
                 c.classList.toggle('active-timeline-chord', isActive);
-                if (isActive) {
-                    c.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                }
-            });
-        }
-
-        if (this._chordProgressBarTrack) {
-            const blocks = this._chordProgressBarTrack.querySelectorAll('.chord-segment-block');
-            blocks.forEach((blk, i) => {
-                blk.classList.toggle('active', i === chordIndex);
             });
         }
     }
 
     /**
-     * Actualiza el indicador temporal y la barra de progreso.
+     * Actualiza el indicador temporal, barra de progreso y pulso activo en la cuadrícula.
      * @param {number} currentTime
      * @param {number} duration
      * @param {number} progress
      */
     updateTime(currentTime, duration, progress) {
+        const timeFormatted = this._formatTime(currentTime);
+        const remainingFormatted = '-' + this._formatTime(Math.max(0, duration - currentTime));
+
+        if (this._audioTimeCurrent) {
+            this._audioTimeCurrent.innerText = timeFormatted;
+        }
+        if (this._audioTimeRemaining) {
+            this._audioTimeRemaining.innerText = remainingFormatted;
+        }
         if (this._timeDisplay) {
-            this._timeDisplay.innerText = `${this._formatTime(currentTime)} / ${this._formatTime(duration)}`;
+            this._timeDisplay.innerText = `${timeFormatted} / ${this._formatTime(duration)}`;
         }
         if (this._timelineSeeker) {
             this._timelineSeeker.value = progress;
         }
-        if (this._chordTrackPlayhead) {
-            this._chordTrackPlayhead.style.left = `${(progress * 100).toFixed(2)}%`;
+
+        // Resaltar pulso y compás en la cuadrícula de compases
+        const bpm = this.getBPM();
+        const beatSec = 60 / bpm;
+        const barSec = 4 * beatSec;
+
+        const curBar = Math.floor(currentTime / barSec);
+        const curBeat = Math.min(3, Math.floor((currentTime % barSec) / beatSec));
+
+        if (this._activeMeasureBeatInfo) {
+            this._activeMeasureBeatInfo.innerText = `Compás ${curBar + 1} · Pulso ${curBeat + 1}`;
         }
 
-        // Resaltar el cuadro (compás) activo en tiempo real
-        if (this._barSec && this._chordProgressBarTrack) {
-            const activeBarIdx = Math.floor(currentTime / this._barSec);
-            const boxes = this._chordProgressBarTrack.querySelectorAll('.track-bpm-box');
-            boxes.forEach((bx, idx) => {
-                bx.classList.toggle('active-bar', idx === activeBarIdx);
+        if (this._activeBeatSlot) {
+            this._activeBeatSlot.classList.remove('active-beat');
+        }
+        const newBeatSlot = document.getElementById(`beat-slot-${curBar}-${curBeat}`);
+        if (newBeatSlot) {
+            newBeatSlot.classList.add('active-beat');
+            this._activeBeatSlot = newBeatSlot;
+        }
+
+        if (this._activeMeasureRow) {
+            this._activeMeasureRow.classList.remove('active-measure');
+        }
+        const newRow = document.getElementById(`measure-row-${curBar}`);
+        if (newRow) {
+            newRow.classList.add('active-measure');
+            this._activeMeasureRow = newRow;
+
+            // Auto-scroll suave para mantener el compás actual a la vista
+            if (this._lastScrollMeasure !== curBar && this._measureGridContainer) {
+                this._lastScrollMeasure = curBar;
+                const rowTop = newRow.offsetTop - this._measureGridContainer.offsetTop;
+                const targetScroll = Math.max(0, rowTop - 40);
+                this._measureGridContainer.scrollTo({ top: targetScroll, behavior: 'smooth' });
+            }
+        }
+    }
+
+    /**
+     * Dibuja la cuadrícula de compases interactiva (4 pulsos por compás) estilo Moises / Chordify.
+     * @param {Array} chords
+     * @param {number} duration
+     * @param {number} bpm
+     */
+    renderMeasureGrid(chords, duration, bpm) {
+        if (!this._measureGridContainer) return;
+        this._measureGridContainer.innerHTML = '';
+
+        if (!chords || chords.length === 0) return;
+
+        const dur = duration || (this._currentAnalysisData && this._currentAnalysisData.duration) || audioPlayerController.duration || 16;
+        const songBpm = bpm || this.getBPM();
+        const beatSec = 60 / songBpm;
+        const barSec = 4 * beatSec;
+        const totalBars = Math.max(1, Math.ceil(dur / barSec));
+
+        this._barSec = barSec;
+        this._beatSec = beatSec;
+        this._totalBars = totalBars;
+
+        const fragment = document.createDocumentFragment();
+        let lastChordSymbol = null;
+
+        for (let m = 0; m < totalBars; m++) {
+            const row = document.createElement('div');
+            row.className = 'measure-grid-row';
+            row.id = `measure-row-${m}`;
+            row.dataset.barIndex = m;
+
+            // Número del compás a la izquierda
+            const num = document.createElement('div');
+            num.className = 'measure-grid-num';
+            num.textContent = (m + 1);
+            row.appendChild(num);
+
+            // 4 celdas correspondientes a los 4 pulsos (Beats 1 a 4)
+            const beats = document.createElement('div');
+            beats.className = 'measure-grid-beats';
+
+            for (let b = 0; b < 4; b++) {
+                const beatStart = (m * barSec) + (b * beatSec);
+                const beatMid = beatStart + (beatSec * 0.25);
+                const chord = chords.find(c => c.startTime <= beatMid && c.endTime > beatMid);
+
+                const slot = document.createElement('button');
+                slot.type = 'button';
+                slot.className = 'measure-beat-slot';
+                slot.id = `beat-slot-${m}-${b}`;
+                slot.dataset.barIndex = m;
+                slot.dataset.beatIndex = b;
+                slot.dataset.startTime = beatStart;
+
+                const currentSymbol = chord ? chord.chordSymbol : '';
+                // Mostrar el acorde solo si hubo cambio respecto al pulso anterior o en el primer compás
+                if (currentSymbol && (currentSymbol !== lastChordSymbol || (m === 0 && b === 0))) {
+                    slot.classList.add('has-chord');
+                    slot.innerHTML = `<span class="slot-chord-text" title="Clic para editar acorde ${currentSymbol}">${currentSymbol} <i class="fas fa-pen" style="font-size: 0.52rem; opacity: 0.5; margin-left: 2px;"></i></span>`;
+                    lastChordSymbol = currentSymbol;
+                } else {
+                    slot.innerHTML = `<span class="slot-empty-dot"></span>`;
+                }
+
+                slot.title = `Compás ${m + 1}, Pulso ${b + 1} (${this._formatTime(beatStart)})${currentSymbol ? ' - Acorde: ' + currentSymbol + ' (Doble clic o clic en acorde para editar)' : ' (Doble clic para agregar acorde aquí)'}`;
+
+                slot.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (e.target.closest('.slot-chord-text')) {
+                        const chordIndex = chord ? chords.indexOf(chord) : -1;
+                        this._openChordEditor(chordIndex, beatStart);
+                        return;
+                    }
+                    audioPlayerController.seek(beatStart);
+                });
+
+                slot.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    const chordIndex = chord ? chords.indexOf(chord) : -1;
+                    this._openChordEditor(chordIndex, beatStart);
+                });
+
+                beats.appendChild(slot);
+            }
+
+            row.appendChild(beats);
+            fragment.appendChild(row);
+        }
+
+        this._measureGridContainer.appendChild(fragment);
+    }
+
+    /**
+     * Inicializa los eventos de transporte, metrónomo, velocidad y ajuste de tempo.
+     * @private
+     */
+    _initTransportAndMetronome() {
+        if (this._btnPrevMeasure) {
+            this._btnPrevMeasure.addEventListener('click', () => {
+                const bpm = this.getBPM();
+                const barSec = (60 / bpm) * 4;
+                const curTime = audioPlayerController.currentTime || 0;
+                const curBar = Math.floor(curTime / barSec);
+                const timeInBar = curTime - (curBar * barSec);
+                const targetBar = timeInBar > 0.8 ? curBar : Math.max(0, curBar - 1);
+                audioPlayerController.seek(targetBar * barSec);
             });
+        }
+
+        if (this._btnNextMeasure) {
+            this._btnNextMeasure.addEventListener('click', () => {
+                const bpm = this.getBPM();
+                const barSec = (60 / bpm) * 4;
+                const curTime = audioPlayerController.currentTime || 0;
+                const curBar = Math.floor(curTime / barSec);
+                audioPlayerController.seek((curBar + 1) * barSec);
+            });
+        }
+
+        if (this._btnToggleMetronome) {
+            this._btnToggleMetronome.addEventListener('click', () => {
+                const isEnabled = metronomeEngine.toggle();
+                this._updateMetronomeToggleUI(isEnabled);
+            });
+        }
+
+        if (this._audioSpeedSelect) {
+            this._audioSpeedSelect.addEventListener('change', (e) => {
+                const rate = parseFloat(e.target.value);
+                audioPlayerController.setPlaybackRate(rate);
+            });
+        }
+
+        if (this._btnBpmMinus) {
+            this._btnBpmMinus.addEventListener('click', () => {
+                this.setBPM(this.getBPM() - 1);
+            });
+        }
+
+        if (this._btnBpmPlus) {
+            this._btnBpmPlus.addEventListener('click', () => {
+                this.setBPM(this.getBPM() + 1);
+            });
+        }
+
+        if (this._playerBpmInput) {
+            const handleBpmInput = (e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val) && val >= 30 && val <= 280) {
+                    this.setBPM(val);
+                } else {
+                    e.target.value = this.getBPM();
+                }
+            };
+            this._playerBpmInput.addEventListener('change', handleBpmInput);
+            this._playerBpmInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    handleBpmInput(e);
+                    e.target.blur();
+                }
+            });
+        }
+
+        const audioBpmBadge = document.getElementById('audioBpmBadge');
+        if (audioBpmBadge) {
+            audioBpmBadge.addEventListener('click', () => {
+                if (this._playerBpmInput) {
+                    this._playerBpmInput.focus();
+                    this._playerBpmInput.select();
+                }
+            });
+        }
+
+        metronomeEngine.onBeat((beat, measure) => {
+            if (this._activeMeasureBeatInfo) {
+                this._activeMeasureBeatInfo.innerText = `Compás ${measure + 1} · Pulso ${beat}`;
+            }
+        });
+    }
+
+    /**
+     * Ajusta el tempo (BPM) del reproductor, metrónomo y cuadrícula.
+     * @param {number} bpm
+     */
+    setBPM(bpm) {
+        const val = Math.max(30, Math.min(260, Math.round(bpm)));
+        this._currentBpm = val;
+        metronomeEngine.setBPM(val);
+
+        if (this._playerBpmInput) {
+            this._playerBpmInput.value = val;
+        }
+        if (this._playerBpmDisplay) {
+            this._playerBpmDisplay.innerText = `${val} BPM`;
+        }
+        const audioBpmVal = document.getElementById('audioBpmValue');
+        if (audioBpmVal) {
+            audioBpmVal.innerText = `${val} BPM`;
+        }
+
+        if (this._currentAnalysisData && this._currentAnalysisData.chords) {
+            this._currentAnalysisData.bpm = val;
+            this.renderMeasureGrid(this._currentAnalysisData.chords, this._currentAnalysisData.duration, val);
+            this.renderChordProgressBar(this._currentAnalysisData.chords, this._currentAnalysisData.duration, val);
+        }
+    }
+
+    /**
+     * Retorna el BPM actual configurado.
+     * @returns {number}
+     */
+    getBPM() {
+        return this._currentBpm || (this._currentAnalysisData && this._currentAnalysisData.bpm) || 120;
+    }
+
+    /**
+     * Actualiza la interfaz del botón del metrónomo.
+     * @private
+     * @param {boolean} isEnabled
+     */
+    _updateMetronomeToggleUI(isEnabled) {
+        if (!this._btnToggleMetronome) return;
+        this._btnToggleMetronome.classList.toggle('active', isEnabled);
+        if (this._metronomeToggleLabel) {
+            this._metronomeToggleLabel.innerHTML = isEnabled
+                ? 'Metrónomo: <strong>ON</strong>'
+                : 'Metrónomo: <strong>OFF</strong>';
         }
     }
 
