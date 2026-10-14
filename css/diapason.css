@@ -625,6 +625,7 @@
 .diapason-audio-chords-sidebar {
     display: flex;
     flex-direction: column;
+    align-self: flex-start;
     width: 250px;
     min-width: 240px;
     background: #111422;
