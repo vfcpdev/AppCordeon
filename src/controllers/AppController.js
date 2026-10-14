@@ -15,7 +15,7 @@ import { getTransposedAccordion } from '../models/AccordionData.js';
 import { generateScale, generateMajorScale, getHarmonicFamilyAndRelatedChords, getCadenceChords, getAccordionButtonsForChord } from '../theory/Scales.js';
 import { HarmonicAnalysisStrategy } from '../strategies/HarmonicAnalysisStrategy.js';
 import { FeasibilityAnalysisStrategy } from '../strategies/FeasibilityAnalysisStrategy.js';
-import { getPitchClass, midiToName } from '../theory/MusicTheory.js';
+import { getPitchClass, midiToName, getNoteNamesList } from '../theory/MusicTheory.js';
 import {
     ROW_NAMES,
     ROW_BASE_TONICS,
