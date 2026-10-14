@@ -21,7 +21,9 @@ export class ButtonFactory {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "btn-accordion";
-        btn.id = buttonData.id;
+        const prefix = handlers.idPrefix || '';
+        btn.id = prefix + buttonData.id;
+        btn.dataset.rawId = buttonData.id;
         btn.dataset.pushMidi = buttonData.push;
         btn.dataset.pullMidi = buttonData.pull;
         btn.dataset.rowKey = buttonData.rowKey;

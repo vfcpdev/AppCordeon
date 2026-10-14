@@ -26,8 +26,8 @@
     --push-glow: rgba(220, 38, 38, 0.55);
     --pull-color: #2563eb;       /* Azul: Abrir */
     --pull-glow: rgba(37, 99, 235, 0.55);
-    --both-color: #9333ea;       /* Púrpura: Ambas */
-    --both-glow: rgba(147, 51, 234, 0.55);
+    --both-color: #059669;       /* Verde: Ambas */
+    --both-glow: rgba(5, 150, 105, 0.55);
 
     /* Acentos y Señalizaciones */
     --highlight: #eab308;        /* Amarillo dorado */

@@ -1,9 +1,15 @@
 /**
  * @fileoverview Vista del Analizador de Pistas de Audio MP3 y Sincronizador de Acordes (SRP).
  * Gestiona el panel de carga de archivos, visualización de tonalidad principal,
- * barra de progreso y acordes en tiempo real.
+ * barra de progreso, ajuste de tono (pitch shifting / transposición) y acordes en tiempo real.
  * @module ui/AudioTrackView
  */
+
+import { audioChordAnalyzer } from '../audio/AudioChordAnalyzer.js';
+import { audioPlayerController } from '../audio/AudioPlayerController.js';
+import { getNoteNamesList } from '../theory/MusicTheory.js';
+import { NOTATION_MODES, ROW_BASE_TONICS } from '../core/Constants.js';
+import { tuningRegistry } from '../models/Tunings.js';
 
 export class AudioTrackView {
     /**
@@ -20,6 +26,7 @@ export class AudioTrackView {
         this._trackInfoCard = elements.trackInfoCard;
         this._fileNameLabel = elements.fileNameLabel;
         this._mainKeyBadge = elements.mainKeyBadge;
+        this._audioKeySelect = elements.audioKeySelect;
         this._tuningRecommendation = elements.tuningRecommendation;
         this._btnApplyTuning = elements.btnApplyTuning;
 
@@ -32,7 +39,41 @@ export class AudioTrackView {
         this._chkSyncDiapason = elements.chkSyncDiapason;
         this._chordsStrip = elements.chordsStrip;
 
-        this._analysisData = null;
+        // Controles de Ajuste de Tono (Pitch Shift)
+        this._btnPitchDown = elements.btnPitchDown;
+        this._btnPitchUp = elements.btnPitchUp;
+        this._btnPitchReset = elements.btnPitchReset;
+        this._lblPitchShift = elements.lblPitchShift;
+
+        // Controles de Afinación de Acordeón Objetivo
+        this._audioAccordionSelect = elements.audioAccordionSelect;
+        this._audioAccordionRowsContainer = elements.audioAccordionRowsContainer;
+        this._btnSyncTuningToDiapason = elements.btnSyncTuningToDiapason;
+
+        // Modal de Edición de Acordes del Timeline
+        this._btnAddChord = elements.btnAddChord || document.getElementById('btnAddChordAtCurrentTime');
+        this._modal = document.getElementById('chordEditorModal');
+        this._modalBackdrop = document.getElementById('chordEditorBackdrop');
+        this._btnCloseModal = document.getElementById('btnCloseChordEditor');
+        this._btnCancelModal = document.getElementById('btnCancelEditorChord');
+        this._btnSaveModal = document.getElementById('btnSaveEditorChord');
+        this._btnDeleteModal = document.getElementById('btnDeleteEditorChord');
+        this._editorRootSelect = document.getElementById('editorChordRoot');
+        this._editorTypeSelect = document.getElementById('editorChordType');
+        this._editorStartInput = document.getElementById('editorChordStart');
+        this._editorEndInput = document.getElementById('editorChordEnd');
+
+        this._editingChordIndex = -1;
+
+        this._originalAnalysisData = null;
+        this._currentAnalysisData = null;
+        this._currentPitchShift = 0;
+        this._onChordMarkerClick = null;
+        this._selectedAccordionTuningId = null;
+        this._selectedAccordionRowKey = 'row2';
+        this._handlers = null;
+
+        this._initChordEditor();
     }
 
     /**
@@ -40,6 +81,8 @@ export class AudioTrackView {
      * @param {Object} handlers
      */
     bindEvents(handlers) {
+        this._handlers = handlers;
+
         if (this._fileInput) {
             this._fileInput.addEventListener('change', (e) => {
                 if (e.target.files && e.target.files[0]) {
@@ -82,10 +125,11 @@ export class AudioTrackView {
 
         if (this._btnApplyTuning) {
             this._btnApplyTuning.addEventListener('click', () => {
-                if (this._analysisData && this._analysisData.mainKey && handlers.onApplyTuning) {
+                const data = this._currentAnalysisData || this._originalAnalysisData;
+                if (data && data.mainKey && handlers.onApplyTuning) {
                     handlers.onApplyTuning(
-                        this._analysisData.mainKey.recommendedOffset,
-                        this._analysisData.mainKey.recommendedRow
+                        data.mainKey.recommendedOffset,
+                        data.mainKey.recommendedRow
                     );
                 }
             });
@@ -95,6 +139,75 @@ export class AudioTrackView {
             this._chkSyncDiapason.addEventListener('change', (e) => {
                 if (handlers.onSyncToggle) {
                     handlers.onSyncToggle(e.target.checked);
+                }
+            });
+        }
+
+        // Eventos de ajuste de tono
+        if (this._btnPitchDown) {
+            this._btnPitchDown.addEventListener('click', () => {
+                this.setPitchShift(this._currentPitchShift - 1, handlers);
+            });
+        }
+
+        if (this._btnPitchUp) {
+            this._btnPitchUp.addEventListener('click', () => {
+                this.setPitchShift(this._currentPitchShift + 1, handlers);
+            });
+        }
+
+        if (this._btnPitchReset) {
+            this._btnPitchReset.addEventListener('click', () => {
+                this.setPitchShift(0, handlers);
+            });
+        }
+
+        // Selector manual de tonalidad para cambiar el tono detectado
+        if (this._audioKeySelect) {
+            this._audioKeySelect.addEventListener('change', (e) => {
+                if (!this._originalAnalysisData) return;
+                const [targetRootStr, targetMode] = e.target.value.split('_');
+                const targetRoot = parseInt(targetRootStr);
+                const originalRoot = this._originalAnalysisData.mainKey.rootMod;
+
+                let diff = (targetRoot - originalRoot + 12) % 12;
+                if (diff > 6) diff -= 12; // Transposición más cercana (-6 a +6)
+
+                this.setPitchShift(diff, handlers);
+            });
+        }
+
+        // Selector de Tipos de Tonalidades / Afinaciones en Acordeones
+        if (this._audioAccordionSelect) {
+            this._audioAccordionSelect.addEventListener('change', (e) => {
+                const val = e.target.value;
+                if (val === 'original') {
+                    this._selectedAccordionTuningId = null;
+                    this.setPitchShift(0, handlers);
+                    this._renderAccordionRowButtons(handlers);
+                    return;
+                }
+                this._selectedAccordionTuningId = val;
+                this._applySelectedAccordionTuning(handlers);
+            });
+        }
+
+        // Botón para sincronizar la afinación seleccionada directamente con el acordeón virtual
+        if (this._btnSyncTuningToDiapason) {
+            this._btnSyncTuningToDiapason.addEventListener('click', () => {
+                if (!handlers || !handlers.onApplyTuning) return;
+
+                if (!this._selectedAccordionTuningId && this._currentAnalysisData && this._currentAnalysisData.mainKey) {
+                    handlers.onApplyTuning(
+                        this._currentAnalysisData.mainKey.recommendedOffset,
+                        this._currentAnalysisData.mainKey.recommendedRow || 'row2'
+                    );
+                    return;
+                }
+
+                const tuning = tuningRegistry.get(this._selectedAccordionTuningId);
+                if (tuning) {
+                    handlers.onApplyTuning(tuning.offset, this._selectedAccordionRowKey || 'row2');
                 }
             });
         }
@@ -133,7 +246,10 @@ export class AudioTrackView {
      * @param {(seekTime: number) => void} onChordMarkerClick
      */
     renderAnalysis(file, analysisData, onChordMarkerClick) {
-        this._analysisData = analysisData;
+        this._originalAnalysisData = analysisData;
+        this._currentAnalysisData = analysisData;
+        this._currentPitchShift = 0;
+        this._onChordMarkerClick = onChordMarkerClick;
 
         if (this._trackInfoCard) {
             this._trackInfoCard.style.display = 'flex';
@@ -146,50 +262,489 @@ export class AudioTrackView {
             this._fileNameLabel.innerText = file.name;
         }
 
-        // Tonalidad Principal
-        if (this._mainKeyBadge && analysisData.mainKey) {
-            this._mainKeyBadge.innerHTML = `
-                <i class="fas fa-key"></i> Tonalidad Principal: <strong>${analysisData.mainKey.keyNameLat}</strong> (${analysisData.mainKey.keyNameAle})
-            `;
-        }
+        // Poblar combobox para cambiar la tonalidad manualmente
+        this._populateKeySelect(analysisData.mainKey);
 
-        // Recomendación de acordeón
-        if (this._tuningRecommendation && analysisData.mainKey) {
-            this._tuningRecommendation.innerHTML = `
-                <i class="fas fa-thumbs-up"></i> Afinación sugerida: <strong>${analysisData.mainKey.recommendedTuning}</strong>
-            `;
-        }
+        // Poblar selector con los tipos de tonalidades de acordeón registradas
+        this._populateAccordionTuningsSelect(analysisData.mainKey);
+        this._renderAccordionRowButtons(this._handlers);
 
-        // Tira de acordes secuenciales
+        // Actualizar badges
+        this._updateKeyDisplay(analysisData.mainKey);
+
+        // Tira de acordes secuenciales con alto contraste
         this.renderChordsStrip(analysisData.chords, onChordMarkerClick);
+
+        // Restablecer indicador de pitch
+        if (this._lblPitchShift) {
+            this._lblPitchShift.innerText = '0 st';
+        }
 
         // Actualizar tiempos iniciales
         this.updateTime(0, analysisData.duration, 0);
     }
 
     /**
-     * Renderiza la tira con los bloques de acordes detectados.
+     * Llena el combobox con los tipos de afinaciones y tonalidades de acordeón registradas.
+     * @private
+     */
+    _populateAccordionTuningsSelect(mainKey) {
+        if (!this._audioAccordionSelect) return;
+        this._audioAccordionSelect.innerHTML = "";
+
+        // Opción de tono original
+        const optOriginal = document.createElement('option');
+        optOriginal.value = 'original';
+        optOriginal.innerText = `Original: ${mainKey.keyNameLat} (0 st)`;
+        this._audioAccordionSelect.appendChild(optOriginal);
+
+        const allTunings = tuningRegistry.getAll();
+        let matchedTuningId = null;
+
+        allTunings.forEach(tuning => {
+            const opt = document.createElement('option');
+            opt.value = tuning.id;
+            opt.innerText = `${tuning.name} (${tuning.rowsDescription})`;
+
+            // Si coincide con la recomendación del analizador, seleccionarla por defecto
+            if (mainKey.recommendedTuning && mainKey.recommendedTuning.toLowerCase().includes(tuning.name.toLowerCase().split(' ')[0])) {
+                opt.selected = true;
+                matchedTuningId = tuning.id;
+            }
+            this._audioAccordionSelect.appendChild(opt);
+        });
+
+        // Si no hubo coincidencia por nombre, preseleccionar la afinación sugerida por offset
+        if (!matchedTuningId && allTunings.length > 0) {
+            const foundByOffset = allTunings.find(t => t.offset === mainKey.recommendedOffset);
+            matchedTuningId = foundByOffset ? foundByOffset.id : allTunings[0].id;
+            this._audioAccordionSelect.value = matchedTuningId;
+        }
+
+        this._selectedAccordionTuningId = matchedTuningId;
+    }
+
+    /**
+     * Aplica la afinación de acordeón seleccionada adaptando la canción a la hilera más idónea.
+     * @private
+     */
+    _applySelectedAccordionTuning(handlers) {
+        if (!this._selectedAccordionTuningId || !this._originalAnalysisData) return;
+        const tuning = tuningRegistry.get(this._selectedAccordionTuningId);
+        if (!tuning) return;
+
+        const isMinor = this._originalAnalysisData.mainKey.mode === 'minor';
+        const originalRoot = this._originalAnalysisData.mainKey.rootMod;
+
+        const rows = [
+            { key: 'row1', base: (ROW_BASE_TONICS.row1 + tuning.offset) % 12 },
+            { key: 'row2', base: (ROW_BASE_TONICS.row2 + tuning.offset) % 12 },
+            { key: 'row3', base: (ROW_BASE_TONICS.row3 + tuning.offset) % 12 }
+        ];
+
+        let bestRow = rows[1]; // Por defecto hilera del medio (row2)
+        let bestDiff = 999;
+
+        rows.forEach(r => {
+            const targetTonic = isMinor ? (r.base + 9) % 12 : r.base;
+            let diff = (targetTonic - originalRoot + 12) % 12;
+            if (diff > 6) diff -= 12;
+            if (Math.abs(diff) < Math.abs(bestDiff)) {
+                bestDiff = diff;
+                bestRow = r;
+            }
+        });
+
+        this._selectedAccordionRowKey = bestRow.key;
+        this.setPitchShift(bestDiff, handlers);
+        this._renderAccordionRowButtons(handlers);
+    }
+
+    /**
+     * Renderiza los 3 botones de las hileras del acordeón seleccionado con su tonalidad y semitonos.
+     * @private
+     */
+    _renderAccordionRowButtons(handlers) {
+        if (!this._audioAccordionRowsContainer) return;
+        this._audioAccordionRowsContainer.innerHTML = "";
+
+        if (!this._selectedAccordionTuningId || this._selectedAccordionTuningId === 'original' || !this._originalAnalysisData) {
+            const lbl = document.createElement('div');
+            lbl.style.fontSize = '0.66rem';
+            lbl.style.color = '#64748b';
+            lbl.style.fontStyle = 'italic';
+            lbl.innerText = 'Tono original seleccionado. Elige una afinación de acordeón arriba para ver sus hileras.';
+            this._audioAccordionRowsContainer.appendChild(lbl);
+            return;
+        }
+
+        const tuning = tuningRegistry.get(this._selectedAccordionTuningId);
+        if (!tuning) return;
+
+        const isMinor = this._originalAnalysisData.mainKey.mode === 'minor';
+        const originalRoot = this._originalAnalysisData.mainKey.rootMod;
+        const arrLat = getNoteNamesList(NOTATION_MODES.LATINA, tuning.offset);
+
+        const rowsData = [
+            { key: 'row1', label: 'Hilera 1 (Afuera)', base: (ROW_BASE_TONICS.row1 + tuning.offset) % 12 },
+            { key: 'row2', label: 'Hilera 2 (Medio)', base: (ROW_BASE_TONICS.row2 + tuning.offset) % 12 },
+            { key: 'row3', label: 'Hilera 3 (Adentro)', base: (ROW_BASE_TONICS.row3 + tuning.offset) % 12 }
+        ];
+
+        rowsData.forEach(r => {
+            const targetTonic = isMinor ? (r.base + 9) % 12 : r.base;
+            let diff = (targetTonic - originalRoot + 12) % 12;
+            if (diff > 6) diff -= 12;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            const isActive = (this._currentPitchShift === diff);
+            btn.className = `accordion-row-btn ${isActive ? 'active' : ''}`;
+            btn.title = `Adaptar a ${r.label} (${arrLat[targetTonic]} ${isMinor ? 'Menor' : 'Mayor'}) aplicando ${diff > 0 ? '+' : ''}${diff} semitonos`;
+
+            btn.innerHTML = `
+                <span class="row-title">${r.label}</span>
+                <span class="row-tonality">${arrLat[targetTonic]} ${isMinor ? 'Menor' : 'Mayor'}</span>
+                <span class="row-shift">${diff > 0 ? '+' : ''}${diff} st</span>
+            `;
+
+            btn.addEventListener('click', () => {
+                this._selectedAccordionRowKey = r.key;
+                this.setPitchShift(diff, handlers || this._handlers);
+            });
+
+            this._audioAccordionRowsContainer.appendChild(btn);
+        });
+    }
+
+    /**
+     * Llena el combobox con las 24 tonalidades mayores y menores.
+     * @private
+     */
+    _populateKeySelect(currentKey) {
+        if (!this._audioKeySelect) return;
+        this._audioKeySelect.innerHTML = "";
+        this._audioKeySelect.style.display = 'inline-block';
+
+        const arrLat = getNoteNamesList(NOTATION_MODES.LATINA, 0);
+
+        for (let r = 0; r < 12; r++) {
+            const optMaj = document.createElement('option');
+            optMaj.value = `${r}_major`;
+            optMaj.innerText = `${arrLat[r]} Mayor`;
+            if (r === currentKey.rootMod && currentKey.mode === 'major') optMaj.selected = true;
+            this._audioKeySelect.appendChild(optMaj);
+        }
+
+        for (let r = 0; r < 12; r++) {
+            const optMin = document.createElement('option');
+            optMin.value = `${r}_minor`;
+            optMin.innerText = `${arrLat[r]} Menor`;
+            if (r === currentKey.rootMod && currentKey.mode === 'minor') optMin.selected = true;
+            this._audioKeySelect.appendChild(optMin);
+        }
+    }
+
+    /**
+     * Aplica un desplazamiento de tono en semitonos (-12 a +12).
+     * @param {number} semitones
+     * @param {Object} [handlers]
+     */
+    setPitchShift(semitones, handlers) {
+        if (!this._originalAnalysisData) return;
+
+        const clamped = Math.max(-12, Math.min(12, semitones));
+        this._currentPitchShift = clamped;
+
+        if (this._lblPitchShift) {
+            this._lblPitchShift.innerText = `${clamped > 0 ? '+' : ''}${clamped} st`;
+        }
+
+        // 1. Transponer reporte con audioChordAnalyzer
+        const transposedReport = audioChordAnalyzer.transposeReport(this._originalAnalysisData, clamped);
+        this._currentAnalysisData = transposedReport;
+
+        // 2. Transponer reproducción de audio en tiempo real con Web Audio detune
+        audioPlayerController.setPitchShift(clamped);
+        audioPlayerController.setChordsTimeline(transposedReport.chords);
+
+        // 3. Actualizar información visual de tonalidad
+        this._updateKeyDisplay(transposedReport.mainKey);
+
+        // 4. Sincronizar selector de tonalidad
+        if (this._audioKeySelect) {
+            this._audioKeySelect.value = `${transposedReport.mainKey.rootMod}_${transposedReport.mainKey.mode}`;
+        }
+
+        // 5. Re-renderizar tira de acordes con alto contraste
+        this.renderChordsStrip(transposedReport.chords, this._onChordMarkerClick);
+
+        // 6. Actualizar estado visual de los botones de las hileras del acordeón
+        this._renderAccordionRowButtons(handlers || this._handlers);
+    }
+
+    /**
+     * Actualiza las insignias de tonalidad y recomendación de acordeón.
+     * @private
+     */
+    _updateKeyDisplay(mainKey) {
+        if (this._mainKeyBadge && mainKey) {
+            const shiftTag = this._currentPitchShift !== 0
+                ? `<span style="font-size: 0.65rem; color: #7c3aed; font-weight: 800; margin-left: 4px;">(${this._currentPitchShift > 0 ? '+' : ''}${this._currentPitchShift} st)</span>`
+                : '';
+
+            this._mainKeyBadge.innerHTML = `
+                <i class="fas fa-key"></i> Tonalidad: <strong>${mainKey.keyNameLat}</strong> (${mainKey.keyNameAle})${shiftTag}
+            `;
+        }
+
+        if (this._tuningRecommendation && mainKey) {
+            this._tuningRecommendation.innerHTML = `
+                <i class="fas fa-thumbs-up"></i> Afinación sugerida: <strong>${mainKey.recommendedTuning}</strong>
+            `;
+        }
+    }
+
+    /**
+     * Inicializa el modal y eventos de edición de acordes.
+     * @private
+     */
+    _initChordEditor() {
+        if (!this._modal) return;
+
+        // Poblar selector de tónica si está vacío o solo tiene 1 opción
+        if (this._editorRootSelect && this._editorRootSelect.options.length <= 1) {
+            this._editorRootSelect.innerHTML = '';
+            const latinNotes = getNoteNamesList(NOTATION_MODES.LATIN);
+            const englishNotes = getNoteNamesList(NOTATION_MODES.ENGLISH);
+            latinNotes.forEach((lat, i) => {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = `${lat} / ${englishNotes[i]}`;
+                this._editorRootSelect.appendChild(opt);
+            });
+        }
+
+        if (this._btnCloseModal) {
+            this._btnCloseModal.addEventListener('click', () => this._closeChordEditor());
+        }
+        if (this._btnCancelModal) {
+            this._btnCancelModal.addEventListener('click', () => this._closeChordEditor());
+        }
+        if (this._modalBackdrop) {
+            this._modalBackdrop.addEventListener('click', () => this._closeChordEditor());
+        }
+        if (this._btnSaveModal) {
+            this._btnSaveModal.addEventListener('click', () => this._saveEditedChord());
+        }
+        if (this._btnDeleteModal) {
+            this._btnDeleteModal.addEventListener('click', () => this._deleteEditedChord());
+        }
+        if (this._btnAddChord) {
+            this._btnAddChord.addEventListener('click', () => {
+                const curTime = audioPlayerController.currentTime || 0;
+                this._openChordEditor(-1, curTime);
+            });
+        }
+    }
+
+    /**
+     * Abre el modal para editar un acorde existente o agregar uno nuevo.
+     * @param {number} idx Índice del acorde (-1 para nuevo)
+     * @param {number} [defaultTime=0] Tiempo por defecto para nuevo acorde
+     */
+    _openChordEditor(idx, defaultTime = 0) {
+        if (!this._modal) return;
+        this._editingChordIndex = idx;
+
+        const timeline = (this._currentAnalysisData && (this._currentAnalysisData.chords || this._currentAnalysisData.chordsTimeline)) || [];
+
+        if (idx >= 0 && timeline[idx]) {
+            const ch = timeline[idx];
+            if (this._editorRootSelect) this._editorRootSelect.value = ch.root ?? 0;
+            if (this._editorTypeSelect) this._editorTypeSelect.value = ch.chordType || 'major';
+            if (this._editorStartInput) this._editorStartInput.value = (typeof ch.startTime === 'number' ? ch.startTime : 0).toFixed(2);
+            if (this._editorEndInput) this._editorEndInput.value = (typeof ch.endTime === 'number' ? ch.endTime : 1).toFixed(2);
+            if (this._btnDeleteModal) this._btnDeleteModal.style.display = 'inline-flex';
+        } else {
+            // Nuevo acorde
+            if (this._editorRootSelect) this._editorRootSelect.value = 0;
+            if (this._editorTypeSelect) this._editorTypeSelect.value = 'major';
+            if (this._editorStartInput) this._editorStartInput.value = defaultTime.toFixed(2);
+            const dur = audioPlayerController.duration || (defaultTime + 2.0);
+            const end = Math.min(defaultTime + 2.0, dur > 0 ? dur : defaultTime + 2.0);
+            if (this._editorEndInput) this._editorEndInput.value = end.toFixed(2);
+            if (this._btnDeleteModal) this._btnDeleteModal.style.display = 'none';
+        }
+
+        this._modal.classList.remove('hidden');
+    }
+
+    /**
+     * Cierra el modal de edición de acordes.
+     * @private
+     */
+    _closeChordEditor() {
+        if (this._modal) {
+            this._modal.classList.add('hidden');
+        }
+        this._editingChordIndex = -1;
+    }
+
+    /**
+     * Guarda los cambios del acorde editado o añade uno nuevo.
+     * @private
+     */
+    _saveEditedChord() {
+        if (!this._currentAnalysisData) return;
+        if (!this._currentAnalysisData.chords) {
+            this._currentAnalysisData.chords = [];
+        }
+        const timeline = this._currentAnalysisData.chords;
+
+        const root = parseInt(this._editorRootSelect.value, 10);
+        const chordType = this._editorTypeSelect.value;
+        const startTime = Math.max(0, parseFloat(this._editorStartInput.value) || 0);
+        const endTime = Math.max(startTime + 0.1, parseFloat(this._editorEndInput.value) || (startTime + 1));
+
+        const latinNotes = getNoteNamesList(NOTATION_MODES.LATIN);
+        const englishNotes = getNoteNamesList(NOTATION_MODES.ENGLISH);
+        const rootNameLat = latinNotes[root] || 'Do';
+        const rootNameEng = englishNotes[root] || 'C';
+
+        let typeLabel = '';
+        let symbolSuffix = '';
+        let noteIntervals = [0, 4, 7]; // Triada Mayor por defecto
+
+        if (chordType === 'minor') {
+            typeLabel = 'm';
+            symbolSuffix = 'm';
+            noteIntervals = [0, 3, 7];
+        } else if (chordType === '7') {
+            typeLabel = '7';
+            symbolSuffix = '7';
+            noteIntervals = [0, 4, 7, 10];
+        } else if (chordType === 'm7') {
+            typeLabel = 'm7';
+            symbolSuffix = 'm7';
+            noteIntervals = [0, 3, 7, 10];
+        } else if (chordType === 'dim') {
+            typeLabel = 'dim';
+            symbolSuffix = 'dim';
+            noteIntervals = [0, 3, 6];
+        } else if (chordType === 'aug') {
+            typeLabel = 'aum';
+            symbolSuffix = 'aug';
+            noteIntervals = [0, 4, 8];
+        } else if (chordType === 'sus4') {
+            typeLabel = 'sus4';
+            symbolSuffix = 'sus4';
+            noteIntervals = [0, 5, 7];
+        } else if (chordType === 'sus2') {
+            typeLabel = 'sus2';
+            symbolSuffix = 'sus2';
+            noteIntervals = [0, 2, 7];
+        }
+
+        const chordName = `${rootNameLat} ${typeLabel}`.trim();
+        const chordSymbol = `${rootNameEng}${symbolSuffix}`.trim();
+        const noteMods = noteIntervals.map(interval => (root + interval) % 12);
+
+        const updatedChord = {
+            root,
+            chordType,
+            chordName,
+            chordSymbol,
+            noteMods,
+            startTime,
+            endTime,
+            confidence: 1.0,
+            bassNote: root
+        };
+
+        if (this._editingChordIndex >= 0 && this._editingChordIndex < timeline.length) {
+            timeline[this._editingChordIndex] = updatedChord;
+        } else {
+            timeline.push(updatedChord);
+        }
+
+        // Ordenar acordes por tiempo de inicio cronológico
+        timeline.sort((a, b) => a.startTime - b.startTime);
+
+        // Actualizar timeline sincronizado en el reproductor
+        audioPlayerController.setChordsTimeline(timeline);
+        this.renderChordsStrip(timeline, this._onChordMarkerClick);
+
+        if (this._handlers && this._handlers.onChordTimelineUpdated) {
+            this._handlers.onChordTimelineUpdated(timeline);
+        }
+
+        this._closeChordEditor();
+    }
+
+    /**
+     * Elimina el acorde actualmente en edición.
+     * @private
+     */
+    _deleteEditedChord() {
+        if (!this._currentAnalysisData || !this._currentAnalysisData.chords) return;
+        const timeline = this._currentAnalysisData.chords;
+
+        if (this._editingChordIndex >= 0 && this._editingChordIndex < timeline.length) {
+            timeline.splice(this._editingChordIndex, 1);
+            audioPlayerController.setChordsTimeline(timeline);
+            this.renderChordsStrip(timeline, this._onChordMarkerClick);
+
+            if (this._handlers && this._handlers.onChordTimelineUpdated) {
+                this._handlers.onChordTimelineUpdated(timeline);
+            }
+        }
+        this._closeChordEditor();
+    }
+
+    /**
+     * Renderiza la tira con los bloques de acordes detectados garantizando alto contraste y editabilidad.
      * @param {Array} chords
      * @param {(time: number) => void} onClick
      */
     renderChordsStrip(chords, onClick) {
         if (!this._chordsStrip) return;
         this._chordsStrip.innerHTML = "";
+        this._onChordMarkerClick = onClick;
+
+        if (!chords || chords.length === 0) {
+            this._chordsStrip.innerHTML = '<span style="color: #64748b; font-size: 0.8rem; padding: 4px 8px;">No hay acordes disponibles</span>';
+            return;
+        }
 
         chords.forEach((chord, idx) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
+            const btn = document.createElement('div');
             btn.className = 'chord-timeline-chip';
             btn.id = `chord-marker-${idx}`;
-            btn.title = `${chord.chordName} (${this._formatTime(chord.startTime)} - ${this._formatTime(chord.endTime)})`;
+            btn.title = `${chord.chordName} (${this._formatTime(chord.startTime)} - ${this._formatTime(chord.endTime)}) - Clic para reproducir, lápiz o doble clic para editar`;
 
             btn.innerHTML = `
-                <strong style="color: #ffffff;">${chord.chordName}</strong>
-                <span style="font-size: 0.60rem; color: #a78bfa;">${this._formatTime(chord.startTime)}</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-start; pointer-events: none;">
+                    <strong class="timeline-chord-name">${chord.chordName}</strong>
+                    <span class="timeline-chord-time">${this._formatTime(chord.startTime)}</span>
+                </div>
+                <button type="button" class="chip-edit-icon" title="Editar este acorde" data-idx="${idx}">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
             `;
 
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                if (e.target.closest('.chip-edit-icon')) {
+                    e.stopPropagation();
+                    this._openChordEditor(idx);
+                    return;
+                }
                 if (onClick) onClick(chord.startTime);
+            });
+
+            btn.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                this._openChordEditor(idx);
             });
 
             this._chordsStrip.appendChild(btn);
@@ -197,16 +752,21 @@ export class AudioTrackView {
     }
 
     /**
-     * Resalta el acorde activo en la línea de tiempo y en el badge.
+     * Resalta el acorde activo en la línea de tiempo y en el badge con alto contraste.
      * @param {Object} chord
      * @param {number} chordIndex
      */
     setActiveChord(chord, chordIndex) {
         if (this._activeChordBadge) {
             this._activeChordBadge.innerHTML = `
-                <div style="font-size: 0.70rem; color: #a78bfa; text-transform: uppercase; font-weight: 800;">Acorde Actual en Audio:</div>
-                <div style="font-size: 1.25rem; font-weight: 900; color: #facc15; text-shadow: 0 0 10px rgba(250, 204, 21, 0.6);">${chord.chordName}</div>
-                <div style="font-size: 0.68rem; color: #cbd5e1;">Cifrado: <strong>${chord.chordSymbol}</strong> · Confianza: ${Math.round(chord.confidence * 100)}%</div>
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Acorde Detectado</span>
+                    <strong style="font-size: 1.10rem; font-weight: 900; color: #4338ca; line-height: 1.1;">${chord.chordName}</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 0.72rem; font-weight: 800; background: #ede9fe; color: #6d28d9; padding: 2px 8px; border-radius: 4px; border: 1px solid #c4b5fd;">${chord.chordSymbol}</span>
+                    <span style="font-size: 0.65rem; color: #64748b; font-weight: 700;">${Math.round(chord.confidence * 100)}% conf.</span>
+                </div>
             `;
         }
 
@@ -266,3 +826,5 @@ export class AudioTrackView {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
 }
+
+export default AudioTrackView;

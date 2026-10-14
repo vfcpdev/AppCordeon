@@ -29,8 +29,41 @@ export class ChordView {
         this._bellowsButtons = elements.bellowsButtons;
         this._currentBellowsMode = 'both';
 
+        // Modo Armónico / Melódico en Acorde Libre
+        this._modeButtons = elements.modeButtons;
+        this._currentExecutionMode = 'harmonic'; // 'harmonic' | 'melodic'
+
+        // Escala Generada del Acorde
+        this._scaleNameLabel = elements.scaleNameLabel;
+        this._scaleGrid = elements.scaleGrid;
+        this._btnSyncScale = elements.btnSyncScale;
+        this._currentChordScaleSteps = [];
+        this._activeScaleDegree = -1;
+
         this._currentStepIndex = -1;
         this._isArpeggioPlaying = false;
+        this._onScaleDegreeClick = null;
+    }
+
+    /**
+     * Indica si el modo armónico está activo en el acorde libre.
+     * @returns {boolean}
+     */
+    isHarmonicMode() {
+        return this._currentExecutionMode === 'harmonic';
+    }
+
+    /**
+     * Establece el modo de ejecución ('harmonic' o 'melodic').
+     * @param {'harmonic'|'melodic'} mode
+     */
+    setExecutionMode(mode) {
+        this._currentExecutionMode = mode;
+        if (this._modeButtons) {
+            this._modeButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+        }
     }
 
     /**
@@ -188,7 +221,7 @@ export class ChordView {
         }
 
         if (this._notesDisplay) {
-            this._notesDisplay.innerHTML = `<i class="fas fa-layer-group" style="font-size:0.68rem;margin-right:4px;"></i> Notas: <strong style="color:#ffffff;">${noteNamesText}</strong>`;
+            this._notesDisplay.innerHTML = `<i class="fas fa-layer-group" style="font-size:0.68rem;margin-right:4px;"></i> Notas: <strong style="color:#0f172a;">${noteNamesText}</strong>`;
         }
 
         const feasibility = FeasibilityAnalysisStrategy.check(chordData, accordionData, bellowsMode);
@@ -199,6 +232,93 @@ export class ChordView {
         }
 
         this.renderStrip(chordData, feasibility, notation, tuningOffset);
+        this._renderChordScale(chordData, notation, tuningOffset);
+    }
+
+    /**
+     * Renderiza la escala generada a partir del acorde seleccionado (grados I a VII).
+     * @private
+     */
+    _renderChordScale(chordData, notation, tuningOffset) {
+        if (!this._scaleGrid) return;
+        this._scaleGrid.innerHTML = "";
+
+        const noteNames = getNoteNamesList(notation, tuningOffset);
+        const isMinor = chordData.type === 'min';
+        const isDim = chordData.type === 'dim';
+
+        // Escala diatónica correspondiente al tipo de acorde
+        let scaleIntervals, numerals, triadQualities;
+        let scaleTitle = '';
+
+        if (isMinor) {
+            scaleIntervals = [0, 2, 3, 5, 7, 8, 10]; // Menor Natural
+            numerals = ['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII'];
+            triadQualities = ['min', 'dim', 'maj', 'min', 'min', 'maj', 'maj'];
+            scaleTitle = 'Menor Natural';
+        } else if (isDim) {
+            scaleIntervals = [0, 2, 3, 5, 6, 8, 9]; // Disminuida
+            numerals = ['i°', 'ii', 'bIII', 'iv', 'bV', 'bVI', 'vi'];
+            triadQualities = ['dim', 'min', 'maj', 'min', 'dim', 'maj', 'min'];
+            scaleTitle = 'Disminuida';
+        } else {
+            scaleIntervals = [0, 2, 4, 5, 7, 9, 11]; // Mayor
+            numerals = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
+            triadQualities = ['maj', 'min', 'min', 'maj', 'maj', 'min', 'dim'];
+            scaleTitle = 'Mayor';
+        }
+
+        const rootName = noteNames[chordData.root];
+        if (this._scaleNameLabel) {
+            this._scaleNameLabel.innerText = `Escala del Acorde: ${rootName} ${scaleTitle}`;
+        }
+
+        this._currentChordScaleSteps = scaleIntervals.map((interval, i) => {
+            const pitchClass = (chordData.root + interval) % 12;
+            const quality = triadQualities[i];
+            const triadIntervals = quality === 'min' ? [0, 3, 7] : quality === 'dim' ? [0, 3, 6] : [0, 4, 7];
+            const chordPitchClasses = triadIntervals.map(ti => (pitchClass + ti) % 12);
+            const baseMidi = 60 + pitchClass;
+            const chordPlaybackMidis = triadIntervals.map(ti => baseMidi + ti);
+
+            return {
+                degreeIndex: i,
+                numeral: numerals[i],
+                pitchClass,
+                noteName: noteNames[pitchClass],
+                quality,
+                chordPitchClasses,
+                chordPlaybackMidis,
+                chordName: `${noteNames[pitchClass]} ${quality === 'maj' ? 'Mayor' : quality === 'min' ? 'Menor' : 'Dism.'}`
+            };
+        });
+
+        this._currentChordScaleSteps.forEach((step, idx) => {
+            const chip = document.createElement('div');
+            chip.className = 'scale-step-chip chord-scale-chip';
+            if (idx === this._activeScaleDegree) {
+                chip.classList.add('active-step');
+            }
+
+            chip.innerHTML = `
+                <span class="chip-degree" style="font-size:0.60rem;font-weight:800;color:#64748b;">${step.numeral}</span>
+                <strong style="font-size:0.75rem;font-weight:900;color:#0f172a;line-height:1.1;">${step.noteName}</strong>
+                <span style="font-size:0.58rem;font-weight:700;color:#059669;margin-top:2px;">${step.quality === 'maj' ? 'Mayor' : step.quality === 'min' ? 'Menor' : 'Dism.'}</span>
+            `;
+
+            chip.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._activeScaleDegree = idx;
+                const chips = this._scaleGrid.querySelectorAll('.chord-scale-chip');
+                chips.forEach((c, i) => c.classList.toggle('active-step', i === idx));
+
+                if (this._onScaleDegreeClick) {
+                    this._onScaleDegreeClick(step, this.isHarmonicMode());
+                }
+            });
+
+            this._scaleGrid.appendChild(chip);
+        });
     }
 
     /**
@@ -329,6 +449,28 @@ export class ChordView {
             });
         }
 
+        if (this._modeButtons) {
+            this._modeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    this.setExecutionMode(btn.dataset.mode);
+                    if (handlers.onExecutionModeChange) handlers.onExecutionModeChange(btn.dataset.mode);
+                });
+            });
+        }
+
+        if (this._btnSyncScale) {
+            this._btnSyncScale.addEventListener('click', () => {
+                const chord = this.getSelectedChordData();
+                const isMinor = chord.type === 'min';
+                if (handlers.onSyncToScale) {
+                    handlers.onSyncToScale({
+                        root: chord.root,
+                        scaleType: isMinor ? 'minor' : 'major'
+                    });
+                }
+            });
+        }
+
         if (this._btnPlay) this._btnPlay.addEventListener('click', handlers.onPlayChord);
         if (this._btnArpeggio) this._btnArpeggio.addEventListener('click', handlers.onArpeggio);
         if (this._btnPrevNote) this._btnPrevNote.addEventListener('click', handlers.onPrevNote);
@@ -340,6 +482,14 @@ export class ChordView {
                 if (handlers.onPinChange) handlers.onPinChange(e.target.checked);
             });
         }
+    }
+
+    /**
+     * Registra callback para cuando el usuario hace clic en un grado de la escala del acorde.
+     * @param {(stepData: Object, isHarmonic: boolean) => void} fn
+     */
+    onScaleDegreeClick(fn) {
+        this._onScaleDegreeClick = fn;
     }
 
     /**

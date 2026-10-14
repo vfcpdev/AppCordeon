@@ -75,17 +75,25 @@ export const SCALE_DEFINITIONS = Object.freeze({
  * Genera la estructura completa de notas y acordes para los 8 grados de una escala.
  * @param {number} rootMidi Tónica base en formato MIDI (ej: 60 = Do, 67 = Sol)
  * @param {string} [scaleType='major'] 'major', 'minor', o 'harmonic_minor'
+ * @param {string} [octaveMode='progressive'] 'progressive' (sube octava en grado VIII) o 'same_octave' (misma octava)
  * @returns {ScaleStepInfo[]}
  */
-export function generateScale(rootMidi, scaleType = 'major') {
+export function generateScale(rootMidi, scaleType = 'major', octaveMode = 'progressive') {
     const scaleDef = SCALE_DEFINITIONS[scaleType] || SCALE_DEFINITIONS.major;
+    const isSameOctave = octaveMode === 'same_octave';
 
-    return scaleDef.intervals.map((interval, stepIndex) => {
+    return scaleDef.intervals.map((rawInterval, stepIndex) => {
+        const interval = isSameOctave ? (rawInterval % 12) : rawInterval;
         const midi = rootMidi + interval;
         const pitchClass = getPitchClass(midi);
         const degreeData = scaleDef.degrees[stepIndex];
 
-        const chordAbsoluteMidis = degreeData.intervals.map(i => midi + i);
+        const chordAbsoluteMidis = degreeData.intervals.map(i => {
+            if (isSameOctave) {
+                return rootMidi + ((interval + i) % 12);
+            }
+            return midi + i;
+        });
         const chordPitchClasses = chordAbsoluteMidis.map(m => getPitchClass(m));
 
         return Object.freeze({
@@ -105,8 +113,8 @@ export function generateScale(rootMidi, scaleType = 'major') {
 
 /** Compatibilidad con código anterior */
 export const MAJOR_SCALE_INTERVALS = SCALE_DEFINITIONS.major.intervals;
-export function generateMajorScale(rootMidi) {
-    return generateScale(rootMidi, 'major');
+export function generateMajorScale(rootMidi, octaveMode = 'progressive') {
+    return generateScale(rootMidi, 'major', octaveMode);
 }
 
 /**
@@ -280,5 +288,150 @@ export function getHarmonicFamilyAndRelatedChords(rootPitchClass, notation = NOT
             'sus4',
             '#14b8a6' // Verde azulado
         )
+    ];
+}
+
+/**
+ * Obtiene los botones físicos de un acordeón que ejecutan las notas de un acorde,
+ * diferenciando entre los que suenan al abrir (pull) y los que suenan al cerrar (push).
+ * @param {Object} accordionData Objeto { row1, row2, row3 }
+ * @param {number[]} noteMods Clases de tono del acorde (0-11)
+ * @param {string} [notation=NOTATION_MODES.LATINA]
+ * @param {number} [tuningOffset=0]
+ * @returns {{ pullButtons: Array, pushButtons: Array }}
+ */
+export function getAccordionButtonsForChord(accordionData, noteMods, notation = NOTATION_MODES.LATINA, tuningOffset = 0) {
+    if (!accordionData || !noteMods || noteMods.length === 0) {
+        return { pullButtons: [], pushButtons: [] };
+    }
+
+    const pullButtons = [];
+    const pushButtons = [];
+
+    const rowLabels = {
+        row1: 'H1',
+        row2: 'H2',
+        row3: 'H3'
+    };
+
+    ['row1', 'row2', 'row3'].forEach(rowKey => {
+        if (!accordionData[rowKey]) return;
+        accordionData[rowKey].forEach(btn => {
+            const pullMod = getPitchClass(btn.pull);
+            const pushMod = getPitchClass(btn.push);
+
+            if (noteMods.includes(pullMod)) {
+                pullButtons.push({
+                    id: btn.id,
+                    rowKey: btn.rowKey,
+                    btnIndex: btn.btnIndex,
+                    rowLabel: rowLabels[btn.rowKey] || btn.rowKey,
+                    label: `${rowLabels[btn.rowKey] || btn.rowKey}·B${btn.btnIndex}`,
+                    noteName: midiToName(btn.pull, notation, true, tuningOffset),
+                    midi: btn.pull,
+                    noteMod: pullMod,
+                    direction: 'pull'
+                });
+            }
+
+            if (noteMods.includes(pushMod)) {
+                pushButtons.push({
+                    id: btn.id,
+                    rowKey: btn.rowKey,
+                    btnIndex: btn.btnIndex,
+                    rowLabel: rowLabels[btn.rowKey] || btn.rowKey,
+                    label: `${rowLabels[btn.rowKey] || btn.rowKey}·B${btn.btnIndex}`,
+                    noteName: midiToName(btn.push, notation, true, tuningOffset),
+                    midi: btn.push,
+                    noteMod: pushMod,
+                    direction: 'push'
+                });
+            }
+        });
+    });
+
+    return { pullButtons, pushButtons };
+}
+
+/**
+ * Genera la cadencia diatónica principal de Cuarta y Quinta (I - IV - V) para una tónica dada.
+ * @param {number} rootPitchClass Clase de tono base (0 a 11)
+ * @param {string} [scaleType='major'] 'major', 'minor', o 'harmonic_minor'
+ * @param {string} [notation=NOTATION_MODES.LATINA]
+ * @param {number} [tuningOffset=0]
+ * @returns {Array}
+ */
+export function getCadenceChords(rootPitchClass, scaleType = 'major', notation = NOTATION_MODES.LATINA, tuningOffset = 0) {
+    const arrLat = getNoteNamesList(NOTATION_MODES.LATINA, tuningOffset);
+    const arrAle = getNoteNamesList(NOTATION_MODES.ALEMANA, tuningOffset);
+    const isMinor = scaleType === 'minor' || scaleType === 'harmonic_minor';
+
+    const r = getPitchClass(rootPitchClass);
+
+    // 1. Tónica (I)
+    const tonicIntervals = isMinor ? [0, 3, 7] : [0, 4, 7];
+    const tonicSuffixLat = isMinor ? 'Menor' : 'Mayor';
+    const tonicSuffixAle = isMinor ? 'm' : '';
+    const tonicNoteMods = tonicIntervals.map(i => (r + i) % 12);
+    const tonicMidis = tonicIntervals.map(i => 60 + r + i);
+
+    // 2. Cuarta (IV / Subdominante)
+    const ivRoot = (r + 5) % 12;
+    const ivIntervals = isMinor ? [0, 3, 7] : [0, 4, 7];
+    const ivSuffixLat = isMinor ? 'Menor' : 'Mayor';
+    const ivSuffixAle = isMinor ? 'm' : '';
+    const ivNoteMods = ivIntervals.map(i => (ivRoot + i) % 12);
+    const ivMidis = ivIntervals.map(i => 60 + ivRoot + i);
+
+    // 3. Quinta (V / Dominante)
+    const vRoot = (r + 7) % 12;
+    const vIntervals = [0, 4, 7, 10]; // Dominante 7ma
+    const vSuffixLat = '7ma Dominante';
+    const vSuffixAle = '7';
+    const vNoteMods = vIntervals.map(i => (vRoot + i) % 12);
+    const vMidis = vIntervals.map(i => 60 + vRoot + i);
+
+    const formatNoteNames = (mods) => mods.map(m => (notation === NOTATION_MODES.LATINA ? arrLat[m] : arrAle[m]));
+
+    return [
+        {
+            id: 'cadence_tonic',
+            numeral: isMinor ? 'i' : 'I',
+            roleName: 'Tónica (Primera)',
+            rootPitchClass: r,
+            chordName: `${arrLat[r]} ${tonicSuffixLat}`.trim(),
+            chordSymbol: `${arrAle[r]}${tonicSuffixAle}`.trim(),
+            intervals: tonicIntervals,
+            noteMods: tonicNoteMods,
+            noteNames: formatNoteNames(tonicNoteMods),
+            playbackMidis: tonicMidis,
+            colorBadge: '#10b981' // Verde esmeralda
+        },
+        {
+            id: 'cadence_fourth',
+            numeral: isMinor ? 'iv' : 'IV',
+            roleName: 'Cuarta (Subdominante)',
+            rootPitchClass: ivRoot,
+            chordName: `${arrLat[ivRoot]} ${ivSuffixLat}`.trim(),
+            chordSymbol: `${arrAle[ivRoot]}${ivSuffixAle}`.trim(),
+            intervals: ivIntervals,
+            noteMods: ivNoteMods,
+            noteNames: formatNoteNames(ivNoteMods),
+            playbackMidis: ivMidis,
+            colorBadge: '#3b82f6' // Azul
+        },
+        {
+            id: 'cadence_fifth',
+            numeral: 'V',
+            roleName: 'Quinta (Dominante)',
+            rootPitchClass: vRoot,
+            chordName: `${arrLat[vRoot]} ${vSuffixLat}`.trim(),
+            chordSymbol: `${arrAle[vRoot]}${vSuffixAle}`.trim(),
+            intervals: vIntervals,
+            noteMods: vNoteMods,
+            noteNames: formatNoteNames(vNoteMods),
+            playbackMidis: vMidis,
+            colorBadge: '#ef4444' // Rojo
+        }
     ];
 }

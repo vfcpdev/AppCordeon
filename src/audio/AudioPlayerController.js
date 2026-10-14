@@ -21,6 +21,7 @@ export class AudioPlayerController {
         this._chordsTimeline = [];
         this._currentChordIndex = -1;
         this._syncWithDiapason = true;
+        this._pitchShift = 0; // Desplazamiento de tono en semitonos (-12 a +12)
     }
 
     /**
@@ -48,6 +49,7 @@ export class AudioPlayerController {
         this._chordsTimeline = chordsTimeline || [];
         this._pausedAt = 0;
         this._currentChordIndex = -1;
+        this._pitchShift = 0;
 
         eventBus.emit('player:loaded', {
             duration: buffer.duration,
@@ -64,6 +66,11 @@ export class AudioPlayerController {
         const ctx = this._getAudioContext();
         this._sourceNode = ctx.createBufferSource();
         this._sourceNode.buffer = this._audioBuffer;
+
+        // Aplicar ajuste de tono en tiempo real mediante detune (cents: semitonos * 100)
+        if (this._sourceNode.detune) {
+            this._sourceNode.detune.value = this._pitchShift * 100;
+        }
 
         this._gainNode = ctx.createGain();
         this._sourceNode.connect(this._gainNode);
@@ -240,6 +247,37 @@ export class AudioPlayerController {
         if (!this._isPlaying) return this._pausedAt;
         const ctx = this._getAudioContext();
         return Math.min(ctx.currentTime - this._startTime, this._audioBuffer.duration);
+    }
+
+    /**
+     * Establece el ajuste de tono (pitch shift) en semitonos (-12 a +12).
+     * @param {number} semitones
+     */
+    setPitchShift(semitones) {
+        this._pitchShift = Math.max(-12, Math.min(12, semitones));
+        if (this._sourceNode && this._sourceNode.detune && this._isPlaying) {
+            const ctx = this._getAudioContext();
+            this._sourceNode.detune.setValueAtTime(this._pitchShift * 100, ctx.currentTime);
+        }
+        eventBus.emit('player:pitch_shift_changed', { pitchShift: this._pitchShift });
+    }
+
+    get pitchShift() {
+        return this._pitchShift;
+    }
+
+    /**
+     * Actualiza la línea de tiempo de acordes tras ajuste de tono.
+     * @param {Array} chordsTimeline
+     */
+    setChordsTimeline(chordsTimeline) {
+        this._chordsTimeline = chordsTimeline || [];
+        this._currentChordIndex = -1;
+        if (this._isPlaying && this._audioBuffer) {
+            const ctx = this._getAudioContext();
+            const currentTime = Math.min(ctx.currentTime - this._startTime, this._audioBuffer.duration);
+            this._checkCurrentChord(currentTime);
+        }
     }
 
     get duration() {

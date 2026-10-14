@@ -428,15 +428,41 @@
 /* =========================================================================
    PALETA DE TONOS RELACIONADOS Y FAMILIA ARMÓNICA
    ========================================================================= */
+.btn-toggle-collapse {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 0.60rem;
+    font-weight: 700;
+    color: #4338ca;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.btn-toggle-collapse:hover {
+    background: #eef2ff;
+    border-color: #818cf8;
+}
+
 .related-chords-strip {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px;
     align-items: center;
     background: #ffffff;
-    padding: 8px 10px;
-    border-radius: 8px;
+    padding: 5px 7px;
+    border-radius: 6px;
     border: 1px solid #cbd5e1;
+    transition: all 0.25s ease;
+}
+
+.related-chords-strip.collapsed {
+    display: none !important;
 }
 
 .related-chord-chip {
@@ -446,42 +472,44 @@
     justify-content: center;
     background: #ffffff;
     border: 1px solid #cbd5e1;
-    border-left-width: 4px;
-    border-radius: 7px;
-    padding: 4px 8px;
-    min-width: 78px;
+    border-left-width: 3px;
+    border-radius: 5px;
+    padding: 2px 6px;
+    min-width: 58px;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
     text-align: left;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .related-chord-chip:hover {
     background: #f8fafc;
     border-color: #4f46e5;
-    transform: translateY(-2px);
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 }
 
 .related-chord-chip.active-related-chord {
     background: #fef08a !important;
     border-color: #eab308 !important;
-    box-shadow: 0 0 10px rgba(234, 179, 8, 0.5) !important;
-    transform: scale(1.04) translateY(-2px);
+    box-shadow: 0 0 8px rgba(234, 179, 8, 0.45) !important;
+    transform: scale(1.02) translateY(-1px);
 }
 
 .related-chord-chip strong {
-    font-size: 0.82rem;
+    font-size: 0.72rem;
     color: #0f172a;
-    font-weight: 900;
+    font-weight: 800;
+    line-height: 1.1;
 }
 
 .related-chord-role {
-    font-size: 0.58rem;
+    font-size: 0.52rem;
     font-weight: 700;
     color: #64748b;
-    letter-spacing: 0.2px;
+    letter-spacing: 0.1px;
+    line-height: 1.1;
 }
 
 .related-chord-chip.active-related-chord strong {
@@ -606,6 +634,60 @@
     padding: 8px 12px;
 }
 
+.accordion-row-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 4px 6px;
+    background: #f8fafc;
+    color: #1e293b;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    user-select: none;
+}
+
+.accordion-row-btn:hover {
+    background: #eef2ff;
+    border-color: #818cf8;
+    transform: translateY(-1px);
+}
+
+.accordion-row-btn.active {
+    background: #4f46e5 !important;
+    color: #ffffff !important;
+    border-color: #3730a3 !important;
+    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.4) !important;
+}
+
+.accordion-row-btn .row-title {
+    font-size: 0.62rem;
+    font-weight: 700;
+    opacity: 0.85;
+    line-height: 1;
+}
+
+.accordion-row-btn .row-tonality {
+    font-size: 0.72rem;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.accordion-row-btn .row-shift {
+    font-size: 0.60rem;
+    font-weight: 800;
+    color: #4f46e5;
+}
+
+.accordion-row-btn.active .row-shift {
+    color: #fef08a !important;
+}
+
 .track-seeker-row {
     display: flex;
     align-items: center;
@@ -643,32 +725,53 @@
     align-items: center;
     justify-content: center;
     background: #ffffff;
-    border: 1px solid #cbd5e1;
+    border: 1.5px solid #cbd5e1;
     border-radius: 6px;
-    padding: 3px 7px;
-    min-width: 52px;
+    padding: 4px 8px;
+    min-width: 60px;
     cursor: pointer;
     transition: all 0.15s ease;
     user-select: none;
     flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.chord-timeline-chip .timeline-chord-name,
+.chord-timeline-chip strong {
+    color: #0f172a !important; /* Texto negro/azul oscuro de máximo contraste siempre visible */
+    font-size: 0.74rem !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.2px;
+    line-height: 1.1;
+}
+
+.chord-timeline-chip .timeline-chord-time,
+.chord-timeline-chip span {
+    font-size: 0.62rem !important;
+    color: #4f46e5 !important;
+    font-weight: 700 !important;
+    margin-top: 2px;
 }
 
 .chord-timeline-chip:hover {
-    background: #f8fafc;
-    border-color: #7c3aed;
+    background: #f1f5f9;
+    border-color: #6d28d9;
+    transform: translateY(-1px);
 }
 
 .chord-timeline-chip.active-timeline-chord {
-    background: #7c3aed !important;
-    border-color: #6d28d9 !important;
-    color: #ffffff !important;
-    box-shadow: 0 0 10px rgba(124, 58, 237, 0.5) !important;
-    transform: scale(1.05);
+    background: #6d28d9 !important;
+    border-color: #4c1d95 !important;
+    box-shadow: 0 0 12px rgba(109, 40, 217, 0.65) !important;
+    transform: scale(1.08);
 }
 
+.chord-timeline-chip.active-timeline-chord .timeline-chord-name,
 .chord-timeline-chip.active-timeline-chord strong,
+.chord-timeline-chip.active-timeline-chord .timeline-chord-time,
 .chord-timeline-chip.active-timeline-chord span {
     color: #ffffff !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 /* =========================================================================
@@ -889,3 +992,343 @@
     border-color: #4f46e5;
     outline: none;
 }
+
+/* =========================================================================
+   EDITOR INTERACTIVO DE ACORDES EN LA LÍNEA DE TIEMPO
+   ========================================================================= */
+.chord-timeline-chip {
+    position: relative;
+}
+
+.chord-timeline-chip .chip-edit-icon {
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    font-size: 0.50rem;
+    color: #94a3b8;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.chord-timeline-chip:hover .chip-edit-icon {
+    opacity: 1;
+    color: #4f46e5;
+}
+
+.chord-editor-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chord-editor-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+}
+
+.chord-editor-card {
+    position: relative;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 1;
+    animation: modalSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalSlideUp {
+    from { transform: translateY(20px) scale(0.96); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.chord-editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 8px;
+}
+
+.chord-editor-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 900;
+    color: #4338ca;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.chord-editor-close {
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.chord-editor-close:hover {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
+.chord-editor-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chord-editor-body .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chord-editor-body label {
+    font-size: 0.70rem;
+    font-weight: 800;
+    color: #475569;
+}
+
+.chord-editor-body .form-select,
+.chord-editor-body .form-input {
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #0f172a;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+.chord-editor-body .form-select:focus,
+.chord-editor-body .form-input:focus {
+    border-color: #4f46e5;
+    outline: none;
+    background: #ffffff;
+}
+
+.chord-editor-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 10px;
+    gap: 8px;
+}
+
+/* =========================================================================
+   ARMONÍA DIATÓNICA: CUARTA Y QUINTA (POSICIONES Y ACORDES)
+   ========================================================================= */
+.cadence-panel {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+    padding: 8px 12px 12px 12px;
+    box-sizing: border-box;
+}
+
+.cadence-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.cadence-card {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.cadence-card:hover {
+    border-color: #6366f1;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12);
+}
+
+.cadence-card.active-cadence-card {
+    border-color: #4f46e5 !important;
+    background: #eef2ff !important;
+    box-shadow: 0 0 12px rgba(79, 70, 229, 0.35) !important;
+    transform: scale(1.02);
+}
+
+.cadence-card-top {
+    padding-left: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cadence-role-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.cadence-numeral {
+    font-size: 0.82rem;
+    font-weight: 900;
+    font-family: monospace;
+}
+
+.cadence-chord-title {
+    font-size: 0.95rem;
+    color: #0f172a;
+    font-weight: 900;
+}
+
+.cadence-chord-sym {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #4f46e5;
+    background: #e0e7ff;
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.cadence-notes-row {
+    font-size: 0.68rem;
+    color: #64748b;
+}
+
+.cadence-notes-row strong {
+    color: #1e293b;
+}
+
+.cadence-accordion-section {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 4px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cadence-accordion-section--sec {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.cadence-accordion-lbl {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cadence-bellows-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cadence-bellows-col {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.cadence-bellows-tag {
+    font-size: 0.60rem;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+.cadence-bellows-tag.pull-tag {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.cadence-bellows-tag.push-tag {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.cadence-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    align-items: center;
+}
+
+.cadence-mini-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.60rem;
+    padding: 1px 4px;
+    border-radius: 3px;
+    user-select: none;
+}
+
+.cadence-mini-chip.pull-chip {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+}
+
+.cadence-mini-chip.push-chip {
+    background: #fff1f2;
+    color: #9f1239;
+    border: 1px solid #fca5a5;
+}
+
+.cadence-mini-chip strong {
+    font-weight: 800;
+}
+
+.cadence-mini-chip small {
+    font-size: 0.55rem;
+    opacity: 0.85;
+}
+
+.cadence-btn-empty {
+    font-size: 0.58rem;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+

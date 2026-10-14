@@ -30,10 +30,32 @@ export class ScaleBarView {
         this._loopEndInput = elements.loopEndInput;
         this._speedSlider = elements.speedSlider;
         this._speedLabel = elements.speedLabel;
+        this._octaveButtons = elements.octaveButtons;
 
         this._isPlaying = false;
         this._isLooping = false;
         this._activeRelatedChordId = null;
+
+        // Alternancia de Colapso / Expansión de Acordes Relacionados
+        this._btnToggleRelatedCollapse = document.getElementById('btnToggleRelatedCollapse');
+        this._lblRelatedCollapse = document.getElementById('lblRelatedCollapse');
+        this._iconRelatedCollapse = document.getElementById('iconRelatedCollapse');
+        this._isRelatedCollapsed = false;
+
+        if (this._btnToggleRelatedCollapse) {
+            this._btnToggleRelatedCollapse.addEventListener('click', () => {
+                this._isRelatedCollapsed = !this._isRelatedCollapsed;
+                if (this._relatedChordsStrip) {
+                    this._relatedChordsStrip.classList.toggle('collapsed', this._isRelatedCollapsed);
+                }
+                if (this._lblRelatedCollapse) {
+                    this._lblRelatedCollapse.textContent = this._isRelatedCollapsed ? 'Expandir' : 'Colapsar';
+                }
+                if (this._iconRelatedCollapse) {
+                    this._iconRelatedCollapse.className = this._isRelatedCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-down';
+                }
+            });
+        }
     }
 
     /**
@@ -134,10 +156,10 @@ export class ScaleBarView {
 
             chip.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%; gap:4px;">
-                    <strong style="color:#ffffff; font-size:0.80rem;">${chord.chordName}</strong>
-                    <span style="font-size:0.62rem; color:${chord.colorBadge}; font-weight:800;">${chord.chordSymbol}</span>
+                    <strong>${chord.chordName}</strong>
+                    <span style="font-size:0.60rem; color:${chord.colorBadge}; font-weight:800;">${chord.chordSymbol}</span>
                 </div>
-                <span class="related-chord-role" style="color:#94a3b8;">${chord.roleName}</span>
+                <span class="related-chord-role">${chord.roleName}</span>
             `;
 
             chip.addEventListener('click', () => {
@@ -197,6 +219,15 @@ export class ScaleBarView {
         if (this._scaleTypeSelect) {
             this._scaleTypeSelect.addEventListener('change', (e) => {
                 if (handlers.onTypeChange) handlers.onTypeChange(e.target.value);
+            });
+        }
+        if (this._octaveButtons) {
+            this._octaveButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    this._octaveButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    if (handlers.onOctaveChange) handlers.onOctaveChange(btn.dataset.octave);
+                });
             });
         }
     }

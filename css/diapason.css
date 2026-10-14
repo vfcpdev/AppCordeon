@@ -254,6 +254,26 @@
     z-index: 9;
 }
 
+/* Micro-resaltado de notas que integran el acorde en botones duales */
+.btn-accordion.chord-glow .btn-note-push.note-matched,
+.btn-accordion.chord-glow .btn-note-pull.note-matched,
+.btn-accordion.chord-glow .btn-note-single.note-matched,
+.btn-accordion.single-focus .btn-note-push.note-matched,
+.btn-accordion.single-focus .btn-note-pull.note-matched {
+    color: #fef08a !important; /* Dorado brillante de alto impacto */
+    font-size: 0.76rem !important;
+    font-weight: 900 !important;
+    text-shadow: 0 0 8px rgba(250, 204, 21, 0.95), 0 1px 2px #000000 !important;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.btn-accordion.chord-glow .btn-note-push.note-dimmed,
+.btn-accordion.chord-glow .btn-note-pull.note-dimmed {
+    opacity: 0.30 !important;
+    filter: grayscale(1) !important;
+}
+
 /* Efecto Glow Violeta Vibrante para Detector de Acordes */
 .btn-accordion.detector-selected {
     transform: scale(1.12) translateY(1px) !important;
@@ -273,3 +293,526 @@
     filter: brightness(1.25);
     z-index: 10;
 }
+
+/* Etiqueta flotante de acción de fuelle (Abre / Cierra) sobre el botón al activarse el sonido */
+.bellows-action-pill {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 1px 7px;
+    font-size: 0.58rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-radius: 9999px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 50;
+    line-height: 1.2;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+    animation: actionPillPop 0.16s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.bellows-action-pill.abre {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    border: 1px solid #93c5fd;
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.7);
+}
+
+.bellows-action-pill.cierra {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border: 1px solid #fca5a5;
+    box-shadow: 0 0 10px rgba(220, 38, 38, 0.7);
+}
+
+@keyframes actionPillPop {
+    0% { opacity: 0; transform: translateX(-50%) translateY(4px) scale(0.65); }
+    100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* =========================================================================
+   DIAPASONES EN PARALELO (DIAPASÓN PRINCIPAL + SEGUNDO DIAPASÓN EQUIVALENTE)
+   ========================================================================= */
+.diapasons-stage-container {
+    display: flex;
+    flex-direction: row;
+    gap: 14px;
+    align-items: flex-start;
+    justify-content: center;
+    width: fit-content;
+}
+
+.diapason-column-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    transition: all 0.25s ease;
+}
+
+.diapason-column-item.hidden {
+    display: none !important;
+}
+
+.diapason-card-header {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background: #111422;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 6px 10px;
+    gap: 5px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    box-sizing: border-box;
+}
+
+.diapason-badge-tag {
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.diapason-badge-tag--primary {
+    background: rgba(37, 99, 235, 0.22);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.diapason-badge-tag--secondary {
+    background: rgba(16, 185, 129, 0.22);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.primary-tuning-select,
+.secondary-tuning-select,
+.diapason-tuning-select {
+    font-size: 0.70rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    height: 24px;
+    border-radius: 5px;
+    background: #1e2238;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    max-width: 175px;
+    flex: 1;
+}
+
+.primary-tuning-select:focus,
+.diapason-tuning-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.secondary-tuning-select:focus {
+    outline: none;
+    border-color: #10b981;
+}
+
+.diapason-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 6px;
+}
+
+.diapason-header-lbl {
+    font-size: 0.65rem;
+    color: #cbd5e1;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.diapason-bellows-group {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: #1e2238;
+    height: 24px;
+}
+
+.diapason-bellows-group .bellows-btn {
+    width: 28px;
+    height: 100%;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    border: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.68rem;
+    transition: all 0.15s ease;
+}
+
+.diapason-bellows-group .bellows-btn:last-child {
+    border-right: none;
+}
+
+.diapason-bellows-group .bellows-btn[data-mode="both"] {
+    color: #10b981;
+}
+.diapason-bellows-group .bellows-btn[data-mode="both"].active {
+    background: #059669 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.diapason-bellows-group .bellows-btn[data-mode="pull"] {
+    color: #60a5fa;
+}
+.diapason-bellows-group .bellows-btn[data-mode="pull"].active {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
+}
+
+.diapason-bellows-group .bellows-btn[data-mode="push"] {
+    color: #f87171;
+}
+.diapason-bellows-group .bellows-btn[data-mode="push"].active {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 8px rgba(220, 38, 38, 0.5);
+}
+
+.diapason.diapason--secondary {
+    border: 1.5px solid rgba(16, 185, 129, 0.4);
+    box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.95), 0 16px 45px rgba(0, 0, 0, 0.7), 0 0 16px rgba(16, 185, 129, 0.25);
+}
+
+.diapason--secondary .row-header.active-header {
+    background: linear-gradient(135deg, #059669, #10b981) !important;
+    border-color: #6ee7b7 !important;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.65) !important;
+}
+
+.btn-dual-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.70rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    background: rgba(30, 34, 56, 0.85);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.btn-dual-toggle:hover {
+    background: rgba(45, 51, 84, 0.95);
+    color: #ffffff;
+    border-color: #10b981;
+}
+
+.btn-dual-toggle.active {
+    background: rgba(16, 185, 129, 0.25);
+    color: #6ee7b7;
+    border-color: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.35);
+}
+
+/* =========================================================================
+   FILA CON DIAPASÓN Y BARRA LATERAL DERECHA DE ACORDES IDENTIFICADOS
+   ========================================================================= */
+.diapason-content-row {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+}
+
+.diapason-audio-chords-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 155px;
+    min-width: 155px;
+    background: #111422;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    padding: 8px;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 8px 24px rgba(0, 0, 0, 0.4);
+    box-sizing: border-box;
+    font-size: 0.70rem;
+    color: #e2e8f0;
+    gap: 6px;
+}
+
+.diapason-audio-chords-sidebar--secondary {
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 4px;
+}
+
+.sidebar-title {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #a5b4fc;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.diapason-audio-chords-sidebar--secondary .sidebar-title {
+    color: #6ee7b7;
+}
+
+.sidebar-active-chord-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sidebar-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 18px 6px;
+    color: #64748b;
+    gap: 6px;
+    font-size: 0.65rem;
+}
+
+.sidebar-placeholder i {
+    font-size: 1.2rem;
+    color: #475569;
+}
+
+.sidebar-chord-card-header {
+    background: rgba(30, 34, 56, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 4px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sidebar-acc-tag {
+    font-size: 0.58rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+.sidebar-chord-symbol {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #818cf8;
+    background: rgba(99, 102, 241, 0.2);
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+.sidebar-chord-name {
+    font-size: 0.88rem;
+    color: #ffffff;
+    font-weight: 900;
+}
+
+.sidebar-bellows-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 4px 6px;
+}
+
+.sidebar-bellows-block.pull-block {
+    border-left: 3px solid #3b82f6;
+}
+
+.sidebar-bellows-block.push-block {
+    border-left: 3px solid #ef4444;
+}
+
+.sidebar-bellows-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.62rem;
+    cursor: pointer;
+    user-select: none;
+    padding: 1px 2px;
+    border-radius: 3px;
+    transition: background 0.15s ease;
+}
+
+.sidebar-bellows-header:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-bellows-title {
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pull-block .sidebar-bellows-title {
+    color: #60a5fa;
+}
+
+.push-block .sidebar-bellows-title {
+    color: #f87171;
+}
+
+.sidebar-bellows-count {
+    font-size: 0.55rem;
+    color: #94a3b8;
+}
+
+.sidebar-buttons-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    max-height: 110px;
+    overflow-y: auto;
+}
+
+.sidebar-btn-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 0.60rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.sidebar-btn-badge.pull-badge {
+    background: rgba(37, 99, 235, 0.2);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+.sidebar-btn-badge.pull-badge:hover {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(37, 99, 235, 0.6);
+}
+
+.sidebar-btn-badge.push-badge {
+    background: rgba(220, 38, 38, 0.2);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.sidebar-btn-badge.push-badge:hover {
+    background: #dc2626;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(220, 38, 38, 0.6);
+}
+
+.sidebar-btn-badge strong {
+    font-weight: 800;
+}
+
+.sidebar-btn-badge small {
+    font-size: 0.52rem;
+    opacity: 0.85;
+}
+
+.sidebar-empty-msg {
+    font-size: 0.58rem;
+    color: #64748b;
+    font-style: italic;
+    padding: 2px;
+}
+
+/* Lista de Acordes de la Canción en el Sidebar */
+.sidebar-song-chords-container {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 5px;
+}
+
+.sidebar-song-chords-title {
+    font-size: 0.58rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+.sidebar-song-chords-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 120px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.sidebar-mini-chord-chip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    padding: 2px 5px;
+    font-size: 0.60rem;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+}
+
+.sidebar-mini-chord-chip:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+.sidebar-mini-chord-chip.active-mini-chord {
+    background: #fde047 !important;
+    color: #0f172a !important;
+    border-color: #eab308 !important;
+    font-weight: 900;
+    box-shadow: 0 0 6px rgba(234, 179, 8, 0.5);
+}
+
+.sidebar-mini-chord-chip small {
+    font-size: 0.52rem;
+    opacity: 0.8;
+}
+
+

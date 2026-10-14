@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Hojas de Estilos Modulares (BEM + Custom Properties) -->
-    <link rel="stylesheet" href="./css/main.css">
+    <link rel="stylesheet" href="./css/main.css?v=9">
 </head>
 
 <body>
@@ -30,32 +30,35 @@
         <header class="app-header">
             <div class="app-header__branding">
                 <i class="fas fa-compact-disc app-header__icon"></i>
-                <div>
-                    <h1 class="app-header__title">Acordeón Diatónico Pro</h1>
-                    <p class="app-header__subtitle">Sistema Diatónico 31 Botones / 3 Hileras (5 Letras) · Síntesis Web Audio & Teoría Diatónica</p>
-                </div>
+                <h1 class="app-header__title">Acordeón Diatónico Pro</h1>
             </div>
 
-            <div class="app-header__quick-actions">
-                <span class="legend-compact">
-                    <div><span style="display:inline-block;width:10px;height:10px;background:var(--push-color);border-radius:50%;"></span> Cerrar (Push)</div>
-                    <div><span style="display:inline-block;width:10px;height:10px;background:var(--pull-color);border-radius:50%;"></span> Abrir (Pull)</div>
-                    <div><span style="display:inline-block;width:10px;height:10px;background:var(--both-color);border-radius:50%;"></span> Ambas</div>
-                </span>
+            <div class="app-header__controls">
+                <div class="header-control-item" title="Personalizar Color de Fondo">
+                    <label for="bgColor" class="header-control-label"><i class="fas fa-palette"></i> Fondo:</label>
+                    <input type="color" id="bgColor" value="#ffffff" title="Personalizar Color de Fondo" class="header-color-picker">
+                </div>
             </div>
         </header>
 
         <!-- ================= LAYOUT PRINCIPAL MULTI-COLUMNA ================= -->
         <main class="app-layout">
 
-            <!-- ================= COLUMNA 1: DIAPASÓN & POSICIONES DE EJECUCIÓN ================= -->
+            <!-- ================= COLUMNA 1: DIAPASONES & POSICIONES DE EJECUCIÓN ================= -->
             <div class="app-layout__col app-layout__col--stage" aria-label="Diapasón del Acordeón">
-                <!-- Barra superior directamente sobre el diapasón -->
+                <!-- Barra superior directamente sobre los diapasones -->
                 <div class="diapason-top-bar">
-                    <!-- Botón de Modo Espejo (Intercambiar Hileras) -->
-                    <button type="button" class="btn-mirror-toggle" id="btnToggleMirror" title="Invertir / Modo Espejo (Intercambiar ubicación de Hilera 1 y Hilera 3)">
-                        <i class="fas fa-arrows-left-right"></i>
-                        <span id="lblMirrorStatus">Hileras: Normal (3-2-1)</span>
+                    <!-- Selector de Orientación / Inversión de Hileras -->
+                    <div class="toggle-segmented mirror-toggle-segmented" id="mirrorToggleGroup" title="Orientación de las Hileras del Diapasón">
+                        <button type="button" class="segment-btn active" id="btnToggleMirror" data-mirror="false" title="Invertir ubicación de Hileras: Afuera (1) vs Adentro (3)">
+                            <i class="fas fa-arrows-rotate"></i>
+                            <span id="lblMirrorStatus">Hileras: 3-2-1</span>
+                        </button>
+                    </div>
+
+                    <!-- Botón para Activar / Desactivar Segundo Diapasón -->
+                    <button type="button" class="btn-dual-toggle active" id="btnToggleSecondaryDiapason" title="Activar o desactivar visualización del 2do Diapasón">
+                        <i class="fas fa-toggle-on"></i> <span id="lblSecondaryDiapasonStatus">2do Acordeón: ON</span>
                     </button>
 
                     <!-- Toggle Notación (Latina / Alemana) -->
@@ -65,11 +68,131 @@
                     </div>
                 </div>
 
-                <div class="diapason-wrapper" id="accordion-wrapper">
-                    <div class="diapason" id="diapason">
-                        <!-- Hileras de botones 10-11-10 generadas dinámicamente -->
+                <!-- Contenedor de Diapasones en Paralelo -->
+                <div class="diapasons-stage-container" id="diapasonsStageContainer">
+
+                    <!-- DIAPASÓN 1: PRINCIPAL -->
+                    <div class="diapason-column-item" id="primaryDiapasonCol">
+                        <div class="diapason-card-header">
+                            <div class="diapason-header-row">
+                                <div class="diapason-badge-tag diapason-badge-tag--primary">
+                                    <i class="fas fa-star"></i> 1er Acordeón:
+                                </div>
+                                <select id="tuningSelect" class="form-select primary-tuning-select" title="Selecciona la afinación del 1er acordeón">
+                                    <!-- Llenado dinámicamente -->
+                                </select>
+                            </div>
+                            <div class="diapason-header-row" style="margin-top: 4px;">
+                                <span class="diapason-header-lbl"><i class="fas fa-wind"></i> Fuelle:</span>
+                                <div class="header-bellows-group diapason-bellows-group" id="primaryBellowsButtonGroup">
+                                    <button type="button" class="bellows-btn active" data-mode="both" title="Ambos (Abrir y Cerrar)">
+                                        <i class="fas fa-arrows-left-right"></i>
+                                    </button>
+                                    <button type="button" class="bellows-btn" data-mode="pull" title="Abrir (Pull - Azul)">
+                                        <i class="fas fa-arrow-left"></i>
+                                    </button>
+                                    <button type="button" class="bellows-btn" data-mode="push" title="Cerrar (Push - Rojo)">
+                                        <i class="fas fa-arrow-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="diapason-content-row">
+                            <div class="diapason-wrapper" id="accordion-wrapper">
+                                <div class="diapason" id="diapason">
+                                    <!-- Hileras de botones 10-11-10 generadas dinámicamente -->
+                                </div>
+                            </div>
+                            <aside class="diapason-audio-chords-sidebar" id="primaryDiapasonChordSidebar" aria-label="Acordes de la canción en Acordeón 1">
+                                <div class="sidebar-header">
+                                    <span class="sidebar-title"><i class="fas fa-compact-disc"></i> Acordes Canción</span>
+                                </div>
+                                <div class="sidebar-active-chord-box" id="primSidebarChordBox">
+                                    <div class="sidebar-placeholder">
+                                        <i class="fas fa-headphones"></i>
+                                        <span>Carga una canción para ver los acordes y digitaciones</span>
+                                    </div>
+                                </div>
+                                <div class="sidebar-song-chords-container" id="primSidebarChordsList">
+                                    <!-- Lista de acordes de la canción -->
+                                </div>
+                            </aside>
+                        </div>
                     </div>
+
+                    <!-- DIAPASÓN 2: COMPARATIVO / EQUIVALENTE -->
+                    <div class="diapason-column-item" id="secondaryDiapasonCol">
+                        <div class="diapason-card-header">
+                            <div class="diapason-header-row">
+                                <div class="diapason-badge-tag diapason-badge-tag--secondary">
+                                    <i class="fas fa-clone"></i> 2do Acordeón:
+                                </div>
+                                <select id="secondaryTuningSelect" class="form-select secondary-tuning-select" title="Selecciona la afinación del 2do acordeón">
+                                    <!-- Llenado dinámicamente -->
+                                </select>
+                            </div>
+                            <div class="diapason-header-row" style="margin-top: 4px; gap: 4px;">
+                                <div class="header-bellows-group diapason-bellows-group" id="secondaryBellowsButtonGroup" title="Fuelle para el 2do Acordeón">
+                                    <button type="button" class="bellows-btn active" data-mode="both" title="Ambos (Abrir y Cerrar)">
+                                        <i class="fas fa-arrows-left-right"></i>
+                                    </button>
+                                    <button type="button" class="bellows-btn" data-mode="pull" title="Abrir (Pull - Azul)">
+                                        <i class="fas fa-arrow-left"></i>
+                                    </button>
+                                    <button type="button" class="bellows-btn" data-mode="push" title="Cerrar (Push - Rojo)">
+                                        <i class="fas fa-arrow-right"></i>
+                                    </button>
+                                </div>
+                                <div class="toggle-segmented" id="secondaryEquivalenceToggle" style="padding: 2px;">
+                                    <button type="button" class="segment-btn active" data-mode="pitch" style="padding: 2px 5px; font-size: 0.62rem;" title="Mismo Tono Real (Tonalidad y notas exactas)">Mismo Tono</button>
+                                    <button type="button" class="segment-btn" data-mode="relative" style="padding: 2px 5px; font-size: 0.62rem;" title="Misma Posición / Hilera (Transportado)">Misma Hilera</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="diapason-content-row">
+                            <div class="diapason-wrapper" id="secondary-accordion-wrapper">
+                                <div class="diapason diapason--secondary" id="secondaryDiapason">
+                                    <!-- Hileras de botones del segundo acordeón generadas dinámicamente -->
+                                </div>
+                            </div>
+                            <aside class="diapason-audio-chords-sidebar diapason-audio-chords-sidebar--secondary" id="secondaryDiapasonChordSidebar" aria-label="Acordes de la canción en Acordeón 2">
+                                <div class="sidebar-header">
+                                    <span class="sidebar-title"><i class="fas fa-clone"></i> 2do Acordeón (Equiv.)</span>
+                                </div>
+                                <div class="sidebar-active-chord-box" id="secSidebarChordBox">
+                                    <div class="sidebar-placeholder">
+                                        <i class="fas fa-headphones"></i>
+                                        <span>Equivalencias al reproducir audio</span>
+                                    </div>
+                                </div>
+                                <div class="sidebar-song-chords-container" id="secSidebarChordsList">
+                                    <!-- Lista de acordes de la canción en 2do acordeón -->
+                                </div>
+                            </aside>
+                        </div>
+                    </div>
+
                 </div>
+
+                <!-- ARMONÍA DIATÓNICA: CUARTA Y QUINTA (POSICIONES Y ACORDES) -->
+                <section class="control-panel cadence-panel" id="cadenceSection" style="width: 100%; margin-top: 10px;">
+                    <header class="control-panel__header" style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <h2 class="control-panel__title" style="color: #6366f1; font-size: 0.85rem; margin: 0;">
+                                <i class="fas fa-cubes-stacked"></i> Armonía Diatónica: Cuarta y Quinta
+                            </h2>
+                            <span id="lblCadenceActiveTone" style="font-size: 0.72rem; font-weight: 800; color: #4338ca; background: #e0e7ff; padding: 2px 8px; border-radius: 4px;">
+                                Tónica: Do
+                            </span>
+                        </div>
+                        <span style="font-size: 0.65rem; color: #64748b; font-weight: 600;">
+                            Clic para escuchar y sincronizar en ambos acordeones
+                        </span>
+                    </header>
+                    <div class="cadence-cards-container" id="cadenceCardsContainer">
+                        <!-- Generado dinámicamente: Tónica (I), Cuarta (IV), Quinta (V) -->
+                    </div>
+                </section>
 
                 <!-- POSICIONES DE EJECUCIÓN (DIGITACIONES) JUSTO DEBAJO DEL DIAPASÓN -->
                 <section class="control-panel execution-panel" style="width: 100%; margin-top: 10px;">
@@ -89,47 +212,8 @@
                 </section>
             </div>
 
-            <!-- ================= COLUMNA 2: AFINACIÓN, ESCALA DIATÓNICA Y FAMILIA ARMÓNICA ================= -->
-            <div class="app-layout__col app-layout__col--theory" aria-label="Afinación y Escala">
-
-                <!-- SECCIÓN 1: AFINACIÓN Y FUELLE -->
-                <section class="control-panel">
-                    <header class="control-panel__header">
-                        <h2 class="control-panel__title" style="color: #4f46e5;"><i class="fas fa-sliders-h"></i> Afinación y Fuelle</h2>
-                    </header>
-
-                    <div class="control-panel__row">
-                        <!-- Afinaciones Disponibles -->
-                        <select id="tuningSelect" class="form-select" title="Afinación del Acordeón" style="flex: 1 1 45%;">
-                            <!-- Llenado dinámicamente por TuningRegistry (OCP) -->
-                        </select>
-
-                        <!-- Botones de Fuelle con SVGs -->
-                        <div class="bellows-group" id="bellowsButtonGroup" style="flex: 0 0 auto;">
-                            <button type="button" class="bellows-btn active" data-mode="both" title="Ambos (Abrir y Cerrar)">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M7 16l-4-4 4-4m14 8l4-4-4-4M3 12h18" />
-                                </svg>
-                                <span>Ambos</span>
-                            </button>
-                            <button type="button" class="bellows-btn" data-mode="pull" title="Abrir Fuelle (Pull)">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M19 12H5m7 7l-7-7 7-7" />
-                                </svg>
-                                <span>Abrir</span>
-                            </button>
-                            <button type="button" class="bellows-btn" data-mode="push" title="Cerrar Fuelle (Push)">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M5 12h14m-7 7l7-7-7-7" />
-                                </svg>
-                                <span>Cerrar</span>
-                            </button>
-                        </div>
-
-                        <!-- Color de Fondo Predeterminado Blanco -->
-                        <input type="color" id="bgColor" value="#ffffff" title="Personalizar Color de Fondo">
-                    </div>
-                </section>
+            <!-- ================= COLUMNA 2: ESCALA DIATÓNICA & DETECTOR DE ACORDES ================= -->
+            <div class="app-layout__col app-layout__col--theory" aria-label="Escalas y Detector de Acordes">
 
                 <!-- SECCIÓN 2: ESCALA DIATÓNICA & TONOS RELACIONADOS -->
                 <section class="control-panel scale-panel" id="scaleSection">
@@ -152,16 +236,24 @@
                         </div>
                     </header>
 
-                    <!-- Selectores de Tónica y Tipo de Escala Independiente -->
+                    <!-- Selectores de Tónica, Tipo de Escala y Modo de Octava (Progresiva vs Misma Octava) -->
                     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                        <select id="scaleRootSelect" class="form-select" style="flex: 1 1 50%; font-size: 0.78rem;" title="Selecciona la tónica que deseas estudiar sobre esta afinación de acordeón">
+                        <select id="scaleRootSelect" class="form-select" style="flex: 1 1 35%; font-size: 0.78rem;" title="Selecciona la tónica que deseas estudiar sobre esta afinación de acordeón">
                             <!-- Llenado dinámicamente con las 12 notas cromáticas -->
                         </select>
-                        <select id="scaleTypeSelect" class="form-select" style="flex: 1 1 40%; font-size: 0.78rem;" title="Modalidad de la escala">
+                        <select id="scaleTypeSelect" class="form-select" style="flex: 1 1 30%; font-size: 0.78rem;" title="Modalidad de la escala">
                             <option value="major" selected>Mayor</option>
                             <option value="minor">Menor Natural</option>
                             <option value="harmonic_minor">Menor Armónica</option>
                         </select>
+                        <div class="toggle-segmented" id="scaleOctaveToggle" style="margin-left: auto;" title="Ejecución de la Escala: Progresiva (Sube a la octava superior) o Misma Octava (Se mantiene en la misma octava base)">
+                            <button type="button" class="segment-btn active" data-octave="progressive" title="Asciende a la 8va superior en Grado VIII">
+                                <i class="fas fa-arrow-trend-up"></i> Progresiva
+                            </button>
+                            <button type="button" class="segment-btn" data-octave="same_octave" title="Todas las notas y acordes se ejecutan dentro de la misma octava base">
+                                <i class="fas fa-equals"></i> Misma Octava
+                            </button>
+                        </div>
                     </div>
 
                     <div class="scale-panel__chips-strip" id="scaleGrid">
@@ -209,10 +301,15 @@
                     </div>
 
                     <!-- SUBSECCIÓN: FAMILIA ARMÓNICA Y TONOS RELACIONADOS -->
-                    <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
+                    <div class="scale-related-wrapper" id="scaleRelatedWrapper" style="margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; color: #4f46e5; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
-                            <span><i class="fas fa-sitemap"></i> Tonos y Acordes Relacionados:</span>
-                            <span style="font-size: 0.62rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Clic para ver y tocar</span>
+                            <span style="display: flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-sitemap"></i> Acordes Relacionados
+                            </span>
+                            <button type="button" class="btn-toggle-collapse" id="btnToggleRelatedCollapse" title="Expandir o Colapsar Acordes Relacionados">
+                                <i class="fas fa-chevron-down" id="iconRelatedCollapse"></i>
+                                <span id="lblRelatedCollapse">Colapsar</span>
+                            </button>
                         </div>
                         <div class="related-chords-strip" id="relatedChordsStrip">
                             <!-- Chips de tonos relacionados generados por JS -->
@@ -220,185 +317,7 @@
                     </div>
                 </section>
 
-            </div>
-
-            <!-- ================= COLUMNA 3: ANALIZADOR COMPACTO, ACORDE LIBRE & DETECTOR ================= -->
-            <div class="app-layout__col app-layout__col--chords" aria-label="Acordes y Detección">
-
-                <!-- SECCIÓN 3: REPRODUCTOR DE AUDIO MP3 & DETECTOR DE ACORDES (COMPACTO) -->
-                <section class="control-panel" id="audioAnalysisSection">
-                    <header class="control-panel__header">
-                        <h2 class="control-panel__title" style="color: #0284c7;">
-                            <i class="fas fa-file-audio"></i> Analizador de Canciones (MP3)
-                        </h2>
-                    </header>
-
-                    <!-- Zona Drag & Drop Compacta -->
-                    <div class="audio-dropzone audio-dropzone--compact" id="audioDropZone" title="Haz clic o arrastra un archivo de audio MP3, WAV o OGG">
-                        <i class="fas fa-cloud-arrow-up audio-dropzone__icon"></i>
-                        <div>
-                            <div class="audio-dropzone__title">Cargar canción (MP3, WAV, OGG)</div>
-                            <div class="audio-dropzone__subtitle">Haz clic o arrastra aquí para extraer acordes</div>
-                        </div>
-                        <input type="file" id="audioFileInput" accept="audio/*" style="display: none;">
-                    </div>
-
-                    <!-- Barra de Progreso del Análisis Espectral -->
-                    <div class="audio-progress-container" id="audioProgressContainer" style="display: none;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #7c3aed; font-weight: 700;">
-                            <span id="audioProgressText">Analizando audio y calculando cromagrama...</span>
-                        </div>
-                        <div class="audio-progress-bar-bg">
-                            <div class="audio-progress-bar-fill" id="audioProgressBar"></div>
-                        </div>
-                    </div>
-
-                    <!-- Tarjeta con la Tonalidad Principal y Recomendación -->
-                    <div class="track-info-card" id="trackInfoCard" style="display: none;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
-                            <div style="font-size: 0.78rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
-                                <i class="fas fa-music" style="color: var(--accent);"></i>
-                                <span id="audioFileName">-</span>
-                            </div>
-                            <span class="track-key-badge" id="audioMainKeyBadge">
-                                <i class="fas fa-key"></i> Tonalidad: -
-                            </span>
-                        </div>
-
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 3px;">
-                            <span class="track-recommendation-chip" id="audioTuningRecommendation">
-                                <i class="fas fa-thumbs-up"></i> Afinación sugerida: -
-                            </span>
-                            <button type="button" class="btn-action btn-action--success" id="btnApplySuggestedTuning" style="padding: 2px 7px; font-size: 0.68rem; height: 24px;" title="Configurar el acordeón automáticamente con la afinación idónea">
-                                <i class="fas fa-check"></i> Aplicar
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Controles de Reproducción y Sincronización en Tiempo Real -->
-                    <div class="track-playback-controls" id="trackPlaybackControls" style="display: none;">
-                        <!-- Insignia del Acorde Actual Detectado -->
-                        <div id="audioActiveChordBadge" style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; margin-bottom: 2px;">
-                            <span style="font-size: 0.72rem; color: #475569;">Presiona reproducir para sincronizar</span>
-                        </div>
-
-                        <!-- Barra de Tiempo y Scrubbing -->
-                        <div class="track-seeker-row">
-                            <input type="range" id="audioSeeker" class="track-seeker" min="0" max="1" step="0.001" value="0">
-                            <span class="track-time-lbl" id="audioTimeDisplay">00:00 / 00:00</span>
-                        </div>
-
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 2px;">
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <button type="button" class="btn-action btn-action--primary" id="btnPlayPauseAudio" style="padding: 3px 8px; font-size: 0.72rem; height: 26px;">
-                                    <i class="fas fa-play"></i> Play
-                                </button>
-                                <button type="button" class="btn-action" id="btnStopAudio" style="padding: 3px 6px; font-size: 0.72rem; height: 26px;">
-                                    <i class="fas fa-stop"></i>
-                                </button>
-                            </div>
-
-                            <label class="fix-chord-toggle" title="Al reproducir, muestra automáticamente en el diapasón los botones del acorde">
-                                <input type="checkbox" id="chkSyncDiapason" checked>
-                                <span>Sincronizar Diapasón</span>
-                            </label>
-                        </div>
-
-                        <!-- Tira con la secuencia cronológica de acordes detectados -->
-                        <div style="margin-top: 4px;">
-                            <div class="chords-timeline-strip" id="audioChordsStrip">
-                                <!-- Chips cronológicos generados por JS -->
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- SECCIÓN 4: ACORDE LIBRE, ARPEGIOS Y FACTIBILIDAD -->
-                <section class="control-panel" id="freeChordSection">
-                    <header class="control-panel__header">
-                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                            <h2 class="control-panel__title" style="margin: 0; color: #059669;"><i class="fas fa-music"></i> Acorde Libre</h2>
-                            <span id="chordNotesDisplay" style="font-size: 0.68rem; font-weight: 800; color: #0f172a; background: #ffffff; padding: 2px 6px; border-radius: 6px; border: 1px solid #cbd5e1;">
-                                Notas: Do · Mi · Sol
-                            </span>
-                            <span id="chordBellowsFeasibilityBadge" class="bellows-feasibility-badge both" title="Factibilidad según fuelle">
-                                <i class="fas fa-arrows-alt-h"></i> <span>Cerrando o Abriendo</span>
-                            </span>
-                        </div>
-
-                        <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
-                            <label class="fix-chord-toggle" title="Dejar el acorde fijo visual y sonoramente" style="font-size: 0.68rem;">
-                                <input type="checkbox" id="chkFixFreeChord">
-                                <span>Fijo</span>
-                            </label>
-                            <button class="transport-btn" id="btnPrevChordNote" title="Nota anterior del acorde" style="width: 26px; height: 26px; font-size: 0.70rem;">
-                                <i class="fas fa-backward-step"></i>
-                            </button>
-                            <button class="btn-action btn-action--primary" id="btnPlayFreeChord" title="Tocar acorde completo" style="padding: 2px 7px; font-size: 0.70rem; height: 26px;">
-                                <i class="fas fa-play"></i> Acorde
-                            </button>
-                            <button class="btn-action btn-action--success" id="btnArpeggioFreeChord" title="Arpegio nota a nota" style="padding: 2px 7px; font-size: 0.70rem; height: 26px;">
-                                <i class="fas fa-music"></i> Arpegio
-                            </button>
-                            <button class="transport-btn" id="btnNextChordNote" title="Nota siguiente del acorde" style="width: 26px; height: 26px; font-size: 0.70rem;">
-                                <i class="fas fa-forward-step"></i>
-                            </button>
-                            <button class="btn-action btn-action--danger" id="btnClearChord" title="Restaurar Escala" style="display:none; padding: 2px 5px; font-size: 0.68rem; height: 26px;">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </header>
-
-                    <!-- Selector de Acción de Fuelle en Acorde Libre -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.70rem; color: #475569; background: #ffffff; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; gap: 6px; flex-wrap: wrap;">
-                        <span><i class="fas fa-wind" style="color: #059669;"></i> <strong>Acción de Fuelle:</strong></span>
-                        <div class="toggle-segmented" id="chordBellowsToggle">
-                            <button type="button" class="segment-btn active" data-mode="both" title="Mostrar en ambas direcciones de fuelle">
-                                <i class="fas fa-arrows-alt-h"></i> Ambos
-                            </button>
-                            <button type="button" class="segment-btn" data-mode="push" title="Filtrar notas que se tocan Cerrando (Push)">
-                                <i class="fas fa-arrow-right-to-line"></i> Cerrar (Push)
-                            </button>
-                            <button type="button" class="segment-btn" data-mode="pull" title="Filtrar notas que se tocan Abriendo (Pull)">
-                                <i class="fas fa-arrow-left-to-line"></i> Abrir (Pull)
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="control-panel__row">
-                        <select id="chordRoot" class="form-select" title="Tónica del acorde" style="flex: 1 1 20%;">
-                            <!-- Llenado dinámicamente -->
-                        </select>
-                        <select id="chordType" class="form-select" title="Tipo de acorde base" style="flex: 1 1 24%;">
-                            <option value="maj">Mayor (3 notas)</option>
-                            <option value="min">Menor (3 notas)</option>
-                            <option value="dim">Disminuido (3 notas)</option>
-                            <option value="aug">Aumentado (3 notas)</option>
-                            <option value="sus4">Suspendido 4 (3 notas)</option>
-                        </select>
-                        <select id="chord4thNote" class="form-select" title="Seleccionar 4ta nota opcional" style="flex: 1 1 26%;">
-                            <option value="none">Sin 4ta nota (Tríada)</option>
-                            <option value="octave">+ Octava (+8va)</option>
-                            <option value="dom7">+ 7ma Dominante / Menor</option>
-                            <option value="maj7">+ 7ma Mayor (Maj7)</option>
-                            <option value="maj6">+ 6ta Mayor</option>
-                            <option value="add9">+ 9na / 2da (Add9)</option>
-                        </select>
-                        <select id="chordOctave" class="form-select" title="Filtrar por Octava" style="flex: 1 1 22%;">
-                            <option value="all">Todas las Octavas</option>
-                            <option value="3">Octava 3 (Grave)</option>
-                            <option value="4">Octava 4 (Media)</option>
-                            <option value="5">Octava 5 (Aguda)</option>
-                        </select>
-                    </div>
-
-                    <!-- Tira de Notas del Arpegio Libre -->
-                    <div class="chord-sequence-strip" id="freeChordNotesStrip">
-                        <!-- Chips generados por JS -->
-                    </div>
-                </section>
-
-                <!-- SECCIÓN 5: DETECTOR Y ANALIZADOR INTELIGENTE DE ACORDES -->
+                <!-- SECCIÓN 3: DETECTOR Y ANALIZADOR INTELIGENTE DE ACORDES -->
                 <section class="control-panel" id="detectorSection">
                     <header class="control-panel__header">
                         <h2 class="control-panel__title" style="color: #7c3aed;"><i class="fas fa-microchip"></i> Detector de Acordes</h2>
@@ -475,8 +394,330 @@
 
             </div>
 
+            <!-- ================= COLUMNA 3: DERECHA - SUBIR ARCHIVOS (MP3) & ACORDE LIBRE ================= -->
+            <div class="app-layout__col app-layout__col--chords" aria-label="Subir Archivos y Acorde Libre">
+
+                <!-- SECCIÓN 4: SUBIR ARCHIVOS - REPRODUCTOR MP3 & DETECTOR DE ACORDES (COMPACTO) -->
+                <section class="control-panel" id="audioAnalysisSection">
+                    <header class="control-panel__header">
+                        <h2 class="control-panel__title" style="color: #0284c7;">
+                            <i class="fas fa-file-audio"></i> Subir Archivos & Analizador MP3
+                        </h2>
+                    </header>
+
+                    <!-- Zona Drag & Drop Compacta -->
+                    <div class="audio-dropzone audio-dropzone--compact" id="audioDropZone" title="Haz clic o arrastra un archivo de audio MP3, WAV o OGG">
+                        <i class="fas fa-cloud-arrow-up audio-dropzone__icon"></i>
+                        <div>
+                            <div class="audio-dropzone__title">Cargar canción (MP3, WAV, OGG)</div>
+                            <div class="audio-dropzone__subtitle">Haz clic o arrastra aquí para extraer acordes</div>
+                        </div>
+                        <input type="file" id="audioFileInput" accept="audio/*" style="display: none;">
+                    </div>
+
+                    <!-- Barra de Progreso del Análisis Espectral -->
+                    <div class="audio-progress-container" id="audioProgressContainer" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #7c3aed; font-weight: 700;">
+                            <span id="audioProgressText">Analizando audio y calculando cromagrama...</span>
+                        </div>
+                        <div class="audio-progress-bar-bg">
+                            <div class="audio-progress-bar-fill" id="audioProgressBar"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tarjeta con la Tonalidad Principal y Recomendación -->
+                    <div class="track-info-card" id="trackInfoCard" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                            <div style="font-size: 0.78rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-music" style="color: var(--accent);"></i>
+                                <span id="audioFileName">-</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span class="track-key-badge" id="audioMainKeyBadge">
+                                    <i class="fas fa-key"></i> Tonalidad: -
+                                </span>
+                                <select id="audioKeySelect" class="form-select" style="font-size: 0.72rem; padding: 2px 6px; height: 24px; border-radius: 4px; display: none;" title="Cambiar la tonalidad de la canción manualmente">
+                                    <!-- Opciones de tonalidades generadas dinámicamente -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 3px;">
+                            <span class="track-recommendation-chip" id="audioTuningRecommendation">
+                                <i class="fas fa-thumbs-up"></i> Afinación sugerida: -
+                            </span>
+                            <button type="button" class="btn-action btn-action--success" id="btnApplySuggestedTuning" style="padding: 2px 7px; font-size: 0.68rem; height: 24px;" title="Configurar el acordeón automáticamente con la afinación idónea">
+                                <i class="fas fa-check"></i> Aplicar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Controles de Reproducción y Sincronización en Tiempo Real -->
+                    <div class="track-playback-controls" id="trackPlaybackControls" style="display: flex;">
+                        <!-- Insignia del Acorde Actual Detectado -->
+                        <div id="audioActiveChordBadge" style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; margin-bottom: 2px;">
+                            <span style="font-size: 0.72rem; color: #475569;">Presiona reproducir para sincronizar</span>
+                        </div>
+
+                        <!-- Barra de Tiempo y Scrubbing -->
+                        <div class="track-seeker-row">
+                            <input type="range" id="audioSeeker" class="track-seeker" min="0" max="1" step="0.001" value="0">
+                            <span class="track-time-lbl" id="audioTimeDisplay">00:00 / 00:00</span>
+                        </div>
+
+                        <!-- Tira con la secuencia cronológica de acordes detectados (Directamente debajo de la línea de reproducción) -->
+                        <div style="margin-top: 4px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 6px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; flex-wrap: wrap; gap: 4px;">
+                                <span style="font-size: 0.65rem; color: #4338ca; font-weight: 800; display: flex; align-items: center; gap: 4px;">
+                                    <i class="fas fa-stream"></i> Acordes en Línea de Tiempo (Clic para editar):
+                                </span>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <button type="button" class="btn-action btn-action--primary" id="btnMarkChordChange" style="padding: 1px 7px; font-size: 0.62rem; height: 20px;" title="Fijar el fin del acorde actual e iniciar el nuevo acorde en el segundo actual de reproducción">
+                                        <i class="fas fa-cut"></i> Marcar Cambio
+                                    </button>
+                                    <button type="button" class="btn-action" id="btnAddChordAtCurrentTime" style="padding: 1px 6px; font-size: 0.62rem; height: 20px;" title="Insertar acorde en el segundo actual">
+                                        <i class="fas fa-plus"></i> + Acorde
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="chords-timeline-strip" id="audioChordsStrip">
+                                <!-- Chips cronológicos editables generados por JS -->
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <button type="button" class="btn-action btn-action--primary" id="btnPlayPauseAudio" style="padding: 3px 8px; font-size: 0.72rem; height: 26px;">
+                                    <i class="fas fa-play"></i> Play
+                                </button>
+                                <button type="button" class="btn-action" id="btnStopAudio" style="padding: 3px 6px; font-size: 0.72rem; height: 26px;">
+                                    <i class="fas fa-stop"></i>
+                                </button>
+                            </div>
+
+                            <label class="fix-chord-toggle" title="Al reproducir, muestra automáticamente en el diapasón los botones del acorde">
+                                <input type="checkbox" id="chkSyncDiapason" checked>
+                                <span>Sincronizar Diapasón</span>
+                            </label>
+                        </div>
+
+                        <!-- Control de Ajuste de Tono (Pitch Shift) con Lista de Tonalidades de Acordeón -->
+                        <div class="audio-pitch-box" id="audioPitchBox" style="display: flex; flex-direction: column; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; margin-top: 5px; gap: 6px;">
+                            <!-- Fila 1: Título y Lista de Tipos de Tonalidades en Acordeones -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                                <label for="audioAccordionSelect" style="font-size: 0.70rem; font-weight: 800; color: #4338ca; display: flex; align-items: center; gap: 5px; margin: 0;">
+                                    <i class="fas fa-sliders-h"></i> <span>Ajustar Tono a Acordeón:</span>
+                                </label>
+                                <select id="audioAccordionSelect" class="form-select" style="font-size: 0.72rem; padding: 2px 6px; height: 25px; border-radius: 5px; border: 1.5px solid #a5b4fc; background: #f8fafc; color: #0f172a; font-weight: 700; max-width: 220px;" title="Selecciona el tipo de afinación de acordeón en el que deseas aplicar y tocar los acordes">
+                                    <!-- Tipos de afinaciones: Cinco Letras, Rey Vallenato, Sabanera, etc. -->
+                                </select>
+                            </div>
+
+                            <!-- Fila 2: Hileras de la Afinación de Acordeón Seleccionada (con su tonalidad y semitonos) -->
+                            <div id="audioAccordionRowsContainer" style="display: flex; gap: 4px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                                <!-- Botones de las 3 hileras con su tonalidad y semitonos calculados -->
+                            </div>
+
+                            <!-- Fila 3: Ajuste fino semitono a semitono y Botón para Aplicar al Acordeón Diapasón -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 5px; margin-top: 1px; flex-wrap: wrap; gap: 6px;">
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <span style="font-size: 0.65rem; color: #64748b; font-weight: 700;">Ajuste fino:</span>
+                                    <button type="button" class="btn-action" id="btnPitchDown" title="Bajar 1 semitono (-1)" style="padding: 2px 7px; font-size: 0.68rem; height: 22px;">-1 st</button>
+                                    <span id="lblPitchShiftValue" style="font-size: 0.72rem; font-weight: 800; min-width: 42px; text-align: center; color: #0f172a; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1;">0 st</span>
+                                    <button type="button" class="btn-action" id="btnPitchUp" title="Subir 1 semitono (+1)" style="padding: 2px 7px; font-size: 0.68rem; height: 22px;">+1 st</button>
+                                    <button type="button" class="btn-action" id="btnPitchReset" title="Restablecer al tono original (0 st)" style="padding: 2px 5px; font-size: 0.65rem; height: 22px; color: #64748b;">Reset</button>
+                                </div>
+                                <button type="button" class="btn-action btn-action--success" id="btnSyncTuningToDiapason" style="padding: 2px 8px; font-size: 0.68rem; height: 22px;" title="Configurar el acordeón virtual con esta afinación">
+                                    <i class="fas fa-check"></i> Aplicar al Acordeón
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECCIÓN 5: ACORDE LIBRE, ARPEGIOS Y FACTIBILIDAD -->
+                <section class="control-panel" id="freeChordSection">
+                    <header class="control-panel__header">
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <h2 class="control-panel__title" style="margin: 0; color: #059669;"><i class="fas fa-music"></i> Acorde Libre</h2>
+                            <span id="chordNotesDisplay" style="font-size: 0.68rem; font-weight: 800; color: #0f172a; background: #ffffff; padding: 2px 6px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                                Notas: Do · Mi · Sol
+                            </span>
+                            <span id="chordBellowsFeasibilityBadge" class="bellows-feasibility-badge both" title="Factibilidad según fuelle">
+                                <i class="fas fa-arrows-alt-h"></i> <span>Cerrando o Abriendo</span>
+                            </span>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                            <div class="toggle-segmented" id="freeChordModeToggle" title="Modo Armónico (tocar acorde completo) o Melódico (nota a nota)">
+                                <button type="button" class="segment-btn active" data-mode="harmonic" title="Modo Armónico (Acorde del grado)">
+                                    <i class="fas fa-layer-group"></i> Armónico
+                                </button>
+                                <button type="button" class="segment-btn" data-mode="melodic" title="Modo Melódico (Nota a nota)">
+                                    <i class="fas fa-music"></i> Melódico
+                                </button>
+                            </div>
+                            <label class="fix-chord-toggle" title="Dejar el acorde fijo visual y sonoramente" style="font-size: 0.68rem;">
+                                <input type="checkbox" id="chkFixFreeChord">
+                                <span>Fijo</span>
+                            </label>
+                            <button class="transport-btn" id="btnPrevChordNote" title="Nota anterior del acorde" style="width: 26px; height: 26px; font-size: 0.70rem;">
+                                <i class="fas fa-backward-step"></i>
+                            </button>
+                            <button class="btn-action btn-action--primary" id="btnPlayFreeChord" title="Tocar acorde completo" style="padding: 2px 7px; font-size: 0.70rem; height: 26px;">
+                                <i class="fas fa-play"></i> Acorde
+                            </button>
+                            <button class="btn-action btn-action--success" id="btnArpeggioFreeChord" title="Arpegio nota a nota" style="padding: 2px 7px; font-size: 0.70rem; height: 26px;">
+                                <i class="fas fa-music"></i> Arpegio
+                            </button>
+                            <button class="transport-btn" id="btnNextChordNote" title="Nota siguiente del acorde" style="width: 26px; height: 26px; font-size: 0.70rem;">
+                                <i class="fas fa-forward-step"></i>
+                            </button>
+                            <button class="btn-action btn-action--danger" id="btnClearChord" title="Restaurar Escala" style="display:none; padding: 2px 5px; font-size: 0.68rem; height: 26px;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </header>
+
+                    <!-- Selector de Acción de Fuelle en Acorde Libre -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.70rem; color: #475569; background: #ffffff; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; gap: 6px; flex-wrap: wrap;">
+                        <span><i class="fas fa-wind" style="color: #059669;"></i> <strong>Acción de Fuelle:</strong></span>
+                        <div class="toggle-segmented" id="chordBellowsToggle">
+                            <button type="button" class="segment-btn active" data-mode="both" title="Mostrar en ambas direcciones de fuelle">
+                                <i class="fas fa-arrows-alt-h"></i> Ambos
+                            </button>
+                            <button type="button" class="segment-btn" data-mode="push" title="Filtrar notas que se tocan Cerrando (Push)">
+                                <i class="fas fa-arrow-right-to-line"></i> Cerrar (Push)
+                            </button>
+                            <button type="button" class="segment-btn" data-mode="pull" title="Filtrar notas que se tocan Abriendo (Pull)">
+                                <i class="fas fa-arrow-left-to-line"></i> Abrir (Pull)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="control-panel__row">
+                        <select id="chordRoot" class="form-select" title="Tónica del acorde" style="flex: 1 1 20%;">
+                            <!-- Llenado dinámicamente -->
+                        </select>
+                        <select id="chordType" class="form-select" title="Tipo de acorde base" style="flex: 1 1 24%;">
+                            <option value="maj">Mayor (3 notas)</option>
+                            <option value="min">Menor (3 notas)</option>
+                            <option value="dim">Disminuido (3 notas)</option>
+                            <option value="aug">Aumentado (3 notas)</option>
+                            <option value="sus4">Suspendido 4 (3 notas)</option>
+                        </select>
+                        <select id="chord4thNote" class="form-select" title="Seleccionar 4ta nota opcional" style="flex: 1 1 26%;">
+                            <option value="none">Sin 4ta nota (Tríada)</option>
+                            <option value="octave">+ Octava (+8va)</option>
+                            <option value="dom7">+ 7ma Dominante / Menor</option>
+                            <option value="maj7">+ 7ma Mayor (Maj7)</option>
+                            <option value="maj6">+ 6ta Mayor</option>
+                            <option value="add9">+ 9na / 2da (Add9)</option>
+                        </select>
+                        <select id="chordOctave" class="form-select" title="Filtrar por Octava" style="flex: 1 1 22%;">
+                            <option value="all">Todas las Octavas</option>
+                            <option value="3">Octava 3 (Grave)</option>
+                            <option value="4">Octava 4 (Media)</option>
+                            <option value="5">Octava 5 (Aguda)</option>
+                        </select>
+                    </div>
+
+                    <!-- Tira de Notas del Arpegio Libre -->
+                    <div class="chord-sequence-strip" id="freeChordNotesStrip">
+                        <!-- Chips generados por JS -->
+                    </div>
+
+                    <!-- ESCALA GENERADA DEL ACORDE LIBRE -->
+                    <div class="free-chord-scale-box" style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #cbd5e1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
+                            <span style="font-size: 0.68rem; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.4px;">
+                                <i class="fas fa-route"></i> <span id="lblFreeChordScaleName">Escala del Acorde: Do Mayor</span>
+                            </span>
+                            <button type="button" class="btn-action" id="btnSyncFreeChordToScale" style="font-size: 0.65rem; padding: 2px 6px; height: 22px; color: #059669; border-color: #a7f3d0;" title="Cargar y estudiar esta escala en la Sección de Escalas">
+                                <i class="fas fa-arrow-up-right-from-square"></i> Cargar en Escalas
+                            </button>
+                        </div>
+                        <div class="scale-panel__chips-strip free-chord-scale-strip" id="freeChordScaleGrid" style="gap: 4px; min-height: 38px;">
+                            <!-- Chips interactivos de la escala del acorde generados por JS -->
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
         </main>
 
+    </div>
+
+    <!-- MODAL PARA EDITAR ACORDES DEL TIMELINE -->
+    <div class="chord-editor-modal hidden" id="chordEditorModal" role="dialog" aria-modal="true" aria-labelledby="editorModalTitle" style="display: none;">
+        <div class="chord-editor-backdrop" id="chordEditorBackdrop"></div>
+        <div class="chord-editor-card">
+            <div class="chord-editor-header">
+                <h4 id="editorModalTitle"><i class="fas fa-pen-to-square"></i> Editar Acorde en Línea de Tiempo</h4>
+                <button type="button" class="chord-editor-close" id="btnCloseChordEditor" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="chord-editor-body">
+                <div class="form-group">
+                    <label for="editorChordRoot">Nota Tónica Fundamental:</label>
+                    <select id="editorChordRoot" class="form-select"></select>
+                </div>
+                <div class="form-group">
+                    <label for="editorChordType">Estructura / Cualidad del Acorde:</label>
+                    <select id="editorChordType" class="form-select">
+                        <option value="major">Mayor (Tríada Mayor: 1 - 3 - 5)</option>
+                        <option value="minor">Menor (Tríada Menor: 1 - b3 - 5)</option>
+                        <option value="7">Séptima Dominante (1 - 3 - 5 - b7)</option>
+                        <option value="m7">Menor Séptima (1 - b3 - 5 - b7)</option>
+                        <option value="dim">Disminuido (1 - b3 - b5)</option>
+                        <option value="aug">Aumentado (1 - 3 - #5)</option>
+                        <option value="sus4">Suspendido 4 (1 - 4 - 5)</option>
+                        <option value="sus2">Suspendido 2 (1 - 2 - 5)</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="editorChordStart">Punto de Inicio (seg):</label>
+                        <div style="display: flex; gap: 4px;">
+                            <input type="number" id="editorChordStart" class="form-input" step="0.1" min="0">
+                            <button type="button" class="btn-action" id="btnSetStartCurrentTime" title="Fijar en el segundo actual del reproductor" style="padding: 0 6px; font-size: 0.65rem; white-space: nowrap; height: 30px;">
+                                <i class="fas fa-stopwatch"></i> Actual
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="editorChordEnd">Punto de Fin / Cambio (seg):</label>
+                        <div style="display: flex; gap: 4px;">
+                            <input type="number" id="editorChordEnd" class="form-input" step="0.1" min="0">
+                            <button type="button" class="btn-action" id="btnSetEndCurrentTime" title="Fijar en el segundo actual del reproductor" style="padding: 0 6px; font-size: 0.65rem; white-space: nowrap; height: 30px;">
+                                <i class="fas fa-stopwatch"></i> Actual
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chord-editor-hint" style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 6px; padding: 6px 8px; font-size: 0.68rem; color: #3730a3; display: flex; align-items: flex-start; gap: 6px;">
+                    <i class="fas fa-info-circle" style="margin-top: 2px;"></i>
+                    <span><strong>Punto de cambio:</strong> Al alcanzar el <em>Punto de Fin</em>, el reproductor realiza la transición armónica al siguiente acorde y actualiza el diapasón.</span>
+                </div>
+
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.70rem; color: #475569; font-weight: 600; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="chkAutoAdjustAdjacent" checked style="accent-color: #4f46e5;">
+                    <span>Ajustar automáticamente acordes adyacentes para una transición perfecta</span>
+                </label>
+            </div>
+            <div class="chord-editor-footer">
+                <button type="button" class="btn-action btn-action--danger" id="btnDeleteEditorChord">
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+                <div style="display: flex; gap: 6px;">
+                    <button type="button" class="btn-action" id="btnCancelEditorChord">Cancelar</button>
+                    <button type="button" class="btn-action btn-action--primary" id="btnSaveEditorChord">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Script de Inicialización Modular ESM -->

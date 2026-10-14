@@ -43,7 +43,7 @@ export class ExecutionView {
             const opt = document.createElement('option');
             opt.value = idx;
             const tag = idx === 0 ? " (Principal)" : " (Alternativa)";
-            opt.innerText = `${f.rowName} · Botón ${f.btnNum} · ${f.direction}${tag}`;
+            opt.innerText = f.customLabel || `${f.rowName} · Botón ${f.btnNum} · ${f.direction}${tag}`;
             this._executionSelect.appendChild(opt);
         });
 

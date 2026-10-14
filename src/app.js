@@ -10,12 +10,26 @@ import { ChordView } from './ui/ChordView.js';
 import { DetectorView } from './ui/DetectorView.js';
 import { ExecutionView } from './ui/ExecutionView.js';
 import { AudioTrackView } from './ui/AudioTrackView.js';
+import { CadenceView } from './ui/CadenceView.js';
+import { DiapasonChordSidebarView } from './ui/DiapasonChordSidebarView.js';
 import { AppController } from './controllers/AppController.js';
 import { audioEngine } from './audio/AudioEngine.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Instanciación de Vistas con referencias a elementos del DOM
-    const diapasonView = new DiapasonView(document.getElementById('diapason'));
+    const diapasonView = new DiapasonView(document.getElementById('diapason'), '');
+    const secondaryDiapasonView = new DiapasonView(document.getElementById('secondaryDiapason'), 'sec_');
+
+    const cadenceView = new CadenceView({
+        container: document.getElementById('cadenceSection'),
+        cardsContainer: document.getElementById('cadenceCardsContainer'),
+        activeToneLabel: document.getElementById('lblCadenceActiveTone')
+    });
+
+    const diapasonChordSidebarView = new DiapasonChordSidebarView({
+        primarySidebar: document.getElementById('primaryDiapasonChordSidebar'),
+        secondarySidebar: document.getElementById('secondaryDiapasonChordSidebar')
+    });
 
     const scaleBarView = new ScaleBarView({
         titleEl: document.getElementById('lblScaleTitle'),
@@ -32,7 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loopStartInput: document.getElementById('loopStart'),
         loopEndInput: document.getElementById('loopEnd'),
         speedSlider: document.getElementById('speedSlider'),
-        speedLabel: document.getElementById('speedValueLabel')
+        speedLabel: document.getElementById('speedValueLabel'),
+        octaveButtons: document.querySelectorAll('#scaleOctaveToggle .segment-btn')
     });
 
     const chordView = new ChordView({
@@ -49,7 +64,11 @@ document.addEventListener('DOMContentLoaded', () => {
         btnPrevNote: document.getElementById('btnPrevChordNote'),
         btnNextNote: document.getElementById('btnNextChordNote'),
         btnClear: document.getElementById('btnClearChord'),
-        chkFixChord: document.getElementById('chkFixFreeChord')
+        chkFixChord: document.getElementById('chkFixFreeChord'),
+        modeButtons: document.querySelectorAll('#freeChordModeToggle .segment-btn'),
+        scaleNameLabel: document.getElementById('lblFreeChordScaleName'),
+        scaleGrid: document.getElementById('freeChordScaleGrid'),
+        btnSyncScale: document.getElementById('btnSyncFreeChordToScale')
     });
 
     const detectorView = new DetectorView({
@@ -92,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         trackInfoCard: document.getElementById('trackInfoCard'),
         fileNameLabel: document.getElementById('audioFileName'),
         mainKeyBadge: document.getElementById('audioMainKeyBadge'),
+        audioKeySelect: document.getElementById('audioKeySelect'),
         tuningRecommendation: document.getElementById('audioTuningRecommendation'),
         btnApplyTuning: document.getElementById('btnApplySuggestedTuning'),
         playbackControls: document.getElementById('trackPlaybackControls'),
@@ -101,17 +121,27 @@ document.addEventListener('DOMContentLoaded', () => {
         timelineSeeker: document.getElementById('audioSeeker'),
         activeChordBadge: document.getElementById('audioActiveChordBadge'),
         chkSyncDiapason: document.getElementById('chkSyncDiapason'),
-        chordsStrip: document.getElementById('audioChordsStrip')
+        chordsStrip: document.getElementById('audioChordsStrip'),
+        btnPitchDown: document.getElementById('btnPitchDown'),
+        btnPitchUp: document.getElementById('btnPitchUp'),
+        btnPitchReset: document.getElementById('btnPitchReset'),
+        lblPitchShift: document.getElementById('lblPitchShiftValue'),
+        audioAccordionSelect: document.getElementById('audioAccordionSelect'),
+        audioAccordionRowsContainer: document.getElementById('audioAccordionRowsContainer'),
+        btnSyncTuningToDiapason: document.getElementById('btnSyncTuningToDiapason')
     });
 
     // 2. Creación del Controlador Principal
     const appController = new AppController({
         diapasonView,
+        secondaryDiapasonView,
         scaleBarView,
         chordView,
         detectorView,
         executionView,
-        audioTrackView
+        audioTrackView,
+        cadenceView,
+        diapasonChordSidebarView
     });
 
     // 3. Inicialización
@@ -130,6 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./sw.js').then((registration) => {
+                registration.update();
                 console.log('[PWA] Service Worker registrado con éxito:', registration.scope);
             }).catch((err) => {
                 console.log('[PWA] Registro de Service Worker falló:', err);

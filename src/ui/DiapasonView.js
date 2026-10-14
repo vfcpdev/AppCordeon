@@ -11,12 +11,14 @@ import { midiToName, getPitchClass } from '../theory/MusicTheory.js';
 export class DiapasonView {
     /**
      * @param {HTMLElement} containerElement Elemento contenedor del diapasón (#diapason)
+     * @param {string} [idPrefix=''] Prefijo opcional para los IDs de los botones del diapasón
      */
-    constructor(containerElement) {
+    constructor(containerElement, idPrefix = '') {
         if (!containerElement) {
             throw new Error('[DiapasonView] Se requiere un elemento contenedor válido.');
         }
         this._container = containerElement;
+        this._idPrefix = idPrefix;
         this._isMirrored = false;
     }
 
@@ -96,7 +98,8 @@ export class DiapasonView {
                         tuningOffset,
                         {
                             onClick: handlers.onButtonClick,
-                            onRightClick: handlers.onButtonRightClick
+                            onRightClick: handlers.onButtonRightClick,
+                            idPrefix: this._idPrefix
                         }
                     );
                     col.appendChild(btn);
@@ -115,6 +118,41 @@ export class DiapasonView {
         buttons.forEach(btn => {
             btn.classList.remove('push', 'pull', 'both', 'single-focus', 'chord-glow', 'detector-selected');
         });
+
+        // Limpiar micro-resaltados en las notas textuales internas
+        this._container.querySelectorAll('.btn-note-push, .btn-note-pull, .btn-note-single').forEach(el => {
+            el.classList.remove('note-matched', 'note-dimmed');
+        });
+
+        // Limpiar etiquetas flotantes de fuelle (Abre/Cierra)
+        this._container.querySelectorAll('.bellows-action-pill').forEach(el => el.remove());
+    }
+
+    /**
+     * Muestra una etiqueta flotante sobre el botón con las palabras "Abre" o "Cierra" al sonar.
+     * @param {HTMLElement} btnEl
+     * @param {'push'|'pull'|'both'} direction
+     * @param {number} [duration=650]
+     */
+    showActionBadge(btnEl, direction, duration = 650) {
+        if (!btnEl) return;
+
+        // Remover badge previo si existiese
+        const prev = btnEl.querySelector('.bellows-action-pill');
+        if (prev) prev.remove();
+
+        const badge = document.createElement('span');
+        const isPull = direction === 'pull';
+        badge.className = `bellows-action-pill ${isPull ? 'abre' : 'cierra'}`;
+        badge.innerText = isPull ? 'Abre' : 'Cierra';
+
+        btnEl.appendChild(badge);
+
+        if (btnEl._badgeTimer) clearTimeout(btnEl._badgeTimer);
+        btnEl._badgeTimer = setTimeout(() => {
+            badge.remove();
+            btnEl._badgeTimer = null;
+        }, duration);
     }
 
     /**
@@ -124,14 +162,17 @@ export class DiapasonView {
      */
     highlightSingleButton(btnId, directionClass) {
         this.clearHighlights();
-        const btn = document.getElementById(btnId);
+        const btn = this._container.querySelector(`#${this._idPrefix}${btnId}`) || this._container.querySelector(`#${btnId}`);
         if (btn) {
             btn.classList.add(directionClass, 'single-focus');
+            const targetNoteEl = directionClass === 'push' ? btn.querySelector('.btn-note-push') : btn.querySelector('.btn-note-pull');
+            if (targetNoteEl) targetNoteEl.classList.add('note-matched');
+            this.showActionBadge(btn, directionClass, 1200);
         }
     }
 
     /**
-     * Resalta todos los botones que forman un acorde con Glow Verde.
+     * Resalta todos los botones que forman un acorde con Glow Verde y micro-resalta la nota exacta.
      * @param {Object} accordionData
      * @param {number[]} targetNotes Lista de notas (pitch classes 0-11 o MIDIs absolutos)
      * @param {boolean} [isExactMidi=false]
@@ -143,7 +184,7 @@ export class DiapasonView {
         ['row3', 'row2', 'row1'].forEach(r => {
             if (!accordionData[r]) return;
             accordionData[r].forEach(b => {
-                const btnEl = document.getElementById(b.id);
+                const btnEl = this._container.querySelector(`#${this._idPrefix}${b.id}`) || this._container.querySelector(`#${b.id}`);
                 if (!btnEl) return;
 
                 let isPush = false;
@@ -159,18 +200,42 @@ export class DiapasonView {
                     isPull = targetNotes.includes(plMod);
                 }
 
-                if (!isPush && !isPull) return;
+                // Filtrar estrictamente según el modo de fuelle para evitar falsos brillos
+                if (bellowsMode === BELLOWS_MODES.PUSH && !isPush) return;
+                if (bellowsMode === BELLOWS_MODES.PULL && !isPull) return;
+                if (bellowsMode === BELLOWS_MODES.BOTH && !isPush && !isPull) return;
 
+                // El botón califica para el acorde: agregar resplandor
                 btnEl.classList.add('chord-glow');
 
+                const pushNoteEl = btnEl.querySelector('.btn-note-push');
+                const pullNoteEl = btnEl.querySelector('.btn-note-pull');
+                const singleNoteEl = btnEl.querySelector('.btn-note-single');
+
                 if (bellowsMode === BELLOWS_MODES.BOTH) {
-                    if (isPush && isPull) btnEl.classList.add('both');
-                    else if (isPush) btnEl.classList.add('push');
-                    else if (isPull) btnEl.classList.add('pull');
+                    if (isPush && isPull) {
+                        btnEl.classList.add('both');
+                        if (pushNoteEl) pushNoteEl.classList.add('note-matched');
+                        if (pullNoteEl) pullNoteEl.classList.add('note-matched');
+                    } else if (isPush) {
+                        btnEl.classList.add('push');
+                        if (pushNoteEl) pushNoteEl.classList.add('note-matched');
+                        if (pullNoteEl) pullNoteEl.classList.add('note-dimmed');
+                    } else if (isPull) {
+                        btnEl.classList.add('pull');
+                        if (pullNoteEl) pullNoteEl.classList.add('note-matched');
+                        if (pushNoteEl) pushNoteEl.classList.add('note-dimmed');
+                    }
                 } else if (bellowsMode === BELLOWS_MODES.PUSH && isPush) {
                     btnEl.classList.add('push');
+                    if (pushNoteEl) pushNoteEl.classList.add('note-matched');
+                    if (pullNoteEl) pullNoteEl.classList.add('note-dimmed');
+                    if (singleNoteEl) singleNoteEl.classList.add('note-matched');
                 } else if (bellowsMode === BELLOWS_MODES.PULL && isPull) {
                     btnEl.classList.add('pull');
+                    if (pullNoteEl) pullNoteEl.classList.add('note-matched');
+                    if (pushNoteEl) pushNoteEl.classList.add('note-dimmed');
+                    if (singleNoteEl) singleNoteEl.classList.add('note-matched');
                 }
             });
         });
@@ -183,7 +248,7 @@ export class DiapasonView {
     highlightDetectorButtons(selectedButtons) {
         this.clearHighlights();
         selectedButtons.forEach(sel => {
-            const btnEl = document.getElementById(sel.btnId);
+            const btnEl = this._container.querySelector(`#${this._idPrefix}${sel.btnId}`) || this._container.querySelector(`#${sel.btnId}`);
             if (btnEl) {
                 btnEl.classList.add('detector-selected', sel.direction);
             }
@@ -209,12 +274,16 @@ export class DiapasonView {
     }
 
     /**
-     * Dispara glow sobre un elemento de botón específico.
+     * Dispara glow sobre un elemento de botón específico y muestra la acción Abre / Cierra.
      * @param {HTMLElement} btnEl
+     * @param {'push'|'pull'|null} [direction=null]
      */
-    triggerGlowOnElement(btnEl) {
+    triggerGlowOnElement(btnEl, direction = null) {
         if (!btnEl) return;
         btnEl.classList.add("glow-active");
+        if (direction) {
+            this.showActionBadge(btnEl, direction, 700);
+        }
         setTimeout(() => btnEl.classList.remove("glow-active"), 250);
     }
 }

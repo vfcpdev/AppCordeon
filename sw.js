@@ -1,7 +1,8 @@
 /**
  * Service Worker para Acordeón Diatónico Pro (PWA)
+ * Estrategia Network-First con fallback a caché para soporte offline confiable
  */
-const CACHE_NAME = 'acordeon-pro-v1';
+const CACHE_NAME = 'acordeon-pro-v13';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -19,6 +20,8 @@ const ASSETS_TO_CACHE = [
     './src/audio/IAudioEngine.js',
     './src/audio/WebAudioSynth.js',
     './src/audio/AudioEngine.js',
+    './src/audio/AudioChordAnalyzer.js',
+    './src/audio/AudioPlayerController.js',
     './src/models/AccordionData.js',
     './src/models/Tunings.js',
     './src/theory/MusicTheory.js',
@@ -31,9 +34,10 @@ const ASSETS_TO_CACHE = [
     './src/ui/ScaleBarView.js',
     './src/ui/ChordView.js',
     './src/ui/DetectorView.js',
-    './src/audio/AudioChordAnalyzer.js',
-    './src/audio/AudioPlayerController.js',
+    './src/ui/ExecutionView.js',
     './src/ui/AudioTrackView.js',
+    './src/ui/CadenceView.js',
+    './src/ui/DiapasonChordSidebarView.js',
     './src/controllers/AppController.js'
 ];
 
@@ -61,15 +65,29 @@ self.addEventListener('activate', (e) => {
     self.clients.claim();
 });
 
+// Estrategia Network-First: Siempre obtiene los cambios más recientes de la red,
+// y recurre al caché solo cuando no hay conexión (offline).
 self.addEventListener('fetch', (e) => {
+    if (e.request.method !== 'GET') return;
+
     e.respondWith(
-        caches.match(e.request).then((cachedResponse) => {
-            return cachedResponse || fetch(e.request).catch(() => {
-                // Modo offline fallback
-                if (e.request.destination === 'document') {
-                    return caches.match('./index.html');
+        fetch(e.request)
+            .then((networkResponse) => {
+                if (networkResponse && networkResponse.status === 200) {
+                    const clone = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(e.request, clone);
+                    });
                 }
-            });
-        })
+                return networkResponse;
+            })
+            .catch(() => {
+                return caches.match(e.request).then((cachedResponse) => {
+                    if (cachedResponse) return cachedResponse;
+                    if (e.request.destination === 'document') {
+                        return caches.match('./index.html');
+                    }
+                });
+            })
     );
 });
