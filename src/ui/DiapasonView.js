@@ -178,7 +178,7 @@ export class DiapasonView {
      * @param {boolean} [isExactMidi=false]
      * @param {string} [bellowsMode=BELLOWS_MODES.BOTH]
      */
-    highlightChord(accordionData, targetNotes, isExactMidi = false, bellowsMode = BELLOWS_MODES.BOTH) {
+    highlightChord(accordionData, targetNotes, isExactMidi = false, bellowsMode = BELLOWS_MODES.BOTH, excludedButtons = null) {
         this.clearHighlights();
 
         ['row3', 'row2', 'row1'].forEach(r => {
@@ -198,6 +198,13 @@ export class DiapasonView {
                     const plMod = getPitchClass(b.pull);
                     isPush = targetNotes.includes(pMod);
                     isPull = targetNotes.includes(plMod);
+                }
+
+                // Excluir botones que hayan sido desactivados en la barra lateral
+                if (excludedButtons) {
+                    if (excludedButtons.has(b.id)) return;
+                    if (excludedButtons.has(`pull_${b.id}`)) isPull = false;
+                    if (excludedButtons.has(`push_${b.id}`)) isPush = false;
                 }
 
                 // Filtrar estrictamente según el modo de fuelle para evitar falsos brillos

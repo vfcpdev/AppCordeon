@@ -532,6 +532,27 @@ export class AppController {
                     }
                 }
             });
+
+            if (this._diapasonChordSidebarView) {
+                this._diapasonChordSidebarView.setTimelineUpdateCallback((timeline, newIdx) => {
+                    audioPlayerController.setChordsTimeline(timeline);
+                    if (this._audioTrackView) {
+                        if (this._audioTrackView._currentAnalysisData) {
+                            this._audioTrackView._currentAnalysisData.chords = timeline;
+                        }
+                        this._audioTrackView.renderChordsStrip(timeline, (seekTime) => {
+                            audioPlayerController.seek(seekTime);
+                        });
+                    }
+                    if (newIdx >= 0 && newIdx < timeline.length) {
+                        const ch = timeline[newIdx];
+                        this._updateSidebarChordsView(ch);
+                        if (this._audioTrackView) {
+                            this._audioTrackView.setActiveChord(ch, newIdx);
+                        }
+                    }
+                });
+            }
         }
     }
 
@@ -852,11 +873,10 @@ export class AppController {
             this._currentOffset,
             this._secondaryOffset,
             (action) => {
-                if (action.type === 'bellows_preference_change') {
+                if (action.type === 'button_toggle_active') {
                     const targetChord = action.chord;
                     if (targetChord) {
-                        targetChord.bellowsAction = action.bellowsAction;
-                        const filterMode = action.bellowsAction === 'both' ? 'both' : action.bellowsAction;
+                        const filterMode = targetChord.bellowsAction === 'both' ? 'both' : targetChord.bellowsAction;
                         const targetView = action.target === 'primary' ? this._diapasonView : this._secondaryDiapasonView;
                         const accData = action.target === 'primary' ? this._accordionData : this._secondaryAccordionData;
                         if (targetView && accData) {
@@ -864,13 +884,41 @@ export class AppController {
                                 accData,
                                 targetChord.noteMods,
                                 false,
-                                filterMode
+                                filterMode,
+                                action.deactivatedButtons
                             );
                         }
                         this._syncSecondaryDiapason({
                             notes: targetChord.noteMods,
                             isExactMidi: false,
-                            bellowsMode: filterMode
+                            bellowsMode: filterMode,
+                            excludedButtons: action.deactivatedButtons
+                        });
+                    }
+                    return;
+                }
+                if (action.type === 'bellows_preference_change') {
+                    const targetChord = action.chord;
+                    if (targetChord) {
+                        targetChord.bellowsAction = action.bellowsAction;
+                        const filterMode = action.bellowsAction === 'both' ? 'both' : action.bellowsAction;
+                        const targetView = action.target === 'primary' ? this._diapasonView : this._secondaryDiapasonView;
+                        const accData = action.target === 'primary' ? this._accordionData : this._secondaryAccordionData;
+                        const deactivated = this._diapasonChordSidebarView ? this._diapasonChordSidebarView.getDeactivatedButtons() : null;
+                        if (targetView && accData) {
+                            targetView.highlightChord(
+                                accData,
+                                targetChord.noteMods,
+                                false,
+                                filterMode,
+                                deactivated
+                            );
+                        }
+                        this._syncSecondaryDiapason({
+                            notes: targetChord.noteMods,
+                            isExactMidi: false,
+                            bellowsMode: filterMode,
+                            excludedButtons: deactivated
                         });
                     }
                     return;
@@ -888,12 +936,14 @@ export class AppController {
                 } else if (action.direction && action.chord) {
                     const targetView = action.target === 'primary' ? this._diapasonView : this._secondaryDiapasonView;
                     const accData = action.target === 'primary' ? this._accordionData : this._secondaryAccordionData;
+                    const deactivated = this._diapasonChordSidebarView ? this._diapasonChordSidebarView.getDeactivatedButtons() : null;
                     if (targetView && accData) {
                         targetView.highlightChord(
                             accData,
                             action.chord.noteMods,
                             false,
-                            action.direction
+                            action.direction,
+                            deactivated
                         );
                     }
                     if (action.buttons && action.buttons.length > 0) {
@@ -1044,7 +1094,8 @@ export class AppController {
                 this._secondaryAccordionData,
                 targetNotes,
                 isExactMidi,
-                bellowsMode
+                bellowsMode,
+                state.excludedButtons || null
             );
         } else {
             // Modo "Mismo Tono": mantiene la tonalidad real (exactos mismos pitch classes)
@@ -1055,7 +1106,8 @@ export class AppController {
                 this._secondaryAccordionData,
                 targetNotes,
                 false,
-                bellowsMode
+                bellowsMode,
+                state.excludedButtons || null
             );
         }
     }

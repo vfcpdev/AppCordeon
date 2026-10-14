@@ -548,8 +548,8 @@
 .diapason-audio-chords-sidebar {
     display: flex;
     flex-direction: column;
-    width: 175px;
-    min-width: 165px;
+    width: 250px;
+    min-width: 240px;
     background: #111422;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 18px;
@@ -784,6 +784,142 @@
     opacity: 0.85;
 }
 
+/* Estados Activo / Desactivado de Botones en la Barra Lateral */
+.sidebar-btn-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 5px;
+    padding: 2.5px 6px;
+    font-size: 0.62rem;
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.sidebar-btn-badge.pull-badge.is-active {
+    background: rgba(37, 99, 235, 0.25);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.65);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.sidebar-btn-badge.pull-badge.is-active:hover {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.85);
+    transform: translateY(-1px);
+}
+
+.sidebar-btn-badge.push-badge.is-active {
+    background: rgba(220, 38, 38, 0.25);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.65);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.sidebar-btn-badge.push-badge.is-active:hover {
+    background: #dc2626;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(220, 38, 38, 0.85);
+    transform: translateY(-1px);
+}
+
+/* Estado Desactivado: El botón permanece visible pero atenuado con borde discontinuo */
+.sidebar-btn-badge.is-deactivated {
+    opacity: 0.38;
+    filter: grayscale(85%);
+    border: 1.5px dashed #64748b !important;
+    background: rgba(15, 23, 42, 0.55) !important;
+    color: #94a3b8 !important;
+    box-shadow: none !important;
+}
+
+.sidebar-btn-badge.is-deactivated:hover {
+    opacity: 0.80;
+    filter: grayscale(30%);
+    border-color: #cbd5e1 !important;
+    background: rgba(30, 41, 59, 0.75) !important;
+    color: #f8fafc !important;
+    transform: translateY(-1px);
+}
+
+.sidebar-btn-badge.is-deactivated strong {
+    text-decoration: line-through;
+    opacity: 0.75;
+}
+
+.badge-status-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    line-height: 1;
+}
+
+.badge-status-dot.dot-active {
+    color: #4ade80;
+}
+
+.badge-status-dot.dot-inactive {
+    color: #ef4444;
+}
+
+/* Botón Mostrar / Activar Todas (Restaurar) */
+.sidebar-btn-restore-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(234, 179, 8, 0.2);
+    border: 1px solid rgba(234, 179, 8, 0.45);
+    color: #fde047;
+    font-size: 0.58rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.sidebar-btn-restore-all:hover {
+    background: #eab308;
+    color: #0f172a;
+    box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
+}
+
+.sidebar-btn-restore-all.has-hidden,
+.sidebar-btn-restore-all.has-deactivated {
+    background: #eab308 !important;
+    color: #0f172a !important;
+    box-shadow: 0 0 10px rgba(234, 179, 8, 0.7) !important;
+    animation: pulse 1.5s infinite;
+}
+
+/* Botón colapsar / expandir lista de botones de fuelle */
+.sidebar-btn-toggle-bellows-vis {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.62rem;
+    cursor: pointer;
+    padding: 0 2px;
+    transition: color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar-btn-toggle-bellows-vis:hover {
+    color: #ffffff;
+}
+
+.sidebar-buttons-grid.is-collapsed {
+    display: none !important;
+}
+
 .sidebar-empty-msg {
     font-size: 0.58rem;
     color: #64748b;
@@ -791,30 +927,41 @@
     padding: 2px;
 }
 
-/* Lista de Acordes de la Canción en el Sidebar */
+/* Lista de Acordes de la Canción en el Sidebar (Directamente debajo de Abre y Cierra) */
 .sidebar-song-chords-container {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    margin-top: auto;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 5px;
+    gap: 4px;
+    margin-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    padding-top: 6px;
 }
 
 .sidebar-song-chords-title {
-    font-size: 0.58rem;
-    font-weight: 700;
+    font-size: 0.62rem;
+    font-weight: 800;
     color: #94a3b8;
     text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    letter-spacing: 0.4px;
 }
 
 .sidebar-song-chords-scroll {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    max-height: 120px;
+    gap: 3px;
+    max-height: 220px;
     overflow-y: auto;
     padding-right: 2px;
+}
+
+.sidebar-mini-chord-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
 }
 
 .sidebar-mini-chord-chip {
@@ -823,31 +970,284 @@
     align-items: center;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 4px;
-    padding: 2px 5px;
-    font-size: 0.60rem;
+    border-radius: 5px;
+    padding: 3px 6px;
+    font-size: 0.62rem;
     color: #cbd5e1;
     cursor: pointer;
     transition: all 0.15s ease;
     text-align: left;
+    flex: 1;
+    min-width: 0;
 }
 
 .sidebar-mini-chord-chip:hover {
     background: rgba(255, 255, 255, 0.12);
     color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
-.sidebar-mini-chord-chip.active-mini-chord {
+.sidebar-mini-chord-row.active-mini-chord .sidebar-mini-chord-chip {
     background: #fde047 !important;
     color: #0f172a !important;
     border-color: #eab308 !important;
     font-weight: 900;
-    box-shadow: 0 0 6px rgba(234, 179, 8, 0.5);
+    box-shadow: 0 0 8px rgba(234, 179, 8, 0.45);
 }
 
-.sidebar-mini-chord-chip small {
-    font-size: 0.52rem;
-    opacity: 0.8;
+.sidebar-mini-chord-row.active-mini-chord .sidebar-change-badge {
+    background: #ca8a04;
+    color: #ffffff;
+    border-color: #a16207;
 }
+
+.sidebar-mini-chord-chip strong {
+    font-size: 0.68rem;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 105px;
+}
+
+.sidebar-chord-meta-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.sidebar-chord-time {
+    font-size: 0.52rem;
+    color: #94a3b8;
+    font-family: monospace;
+}
+
+.sidebar-mini-chord-row.active-mini-chord .sidebar-chord-time {
+    color: #475569;
+}
+
+/* Marca visual donde hay cambio de acorde */
+.sidebar-change-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.50rem;
+    font-weight: 800;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: rgba(234, 179, 8, 0.15);
+    color: #facc15;
+    border: 1px solid rgba(234, 179, 8, 0.35);
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.sidebar-change-badge i {
+    font-size: 0.52rem;
+    color: #eab308;
+}
+
+/* Botón de edición a la derecha del acorde */
+.sidebar-btn-edit-chord {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    color: #a5b4fc;
+    font-size: 0.60rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.sidebar-btn-edit-chord:hover {
+    background: #4f46e5;
+    border-color: #6366f1;
+    color: #ffffff;
+    box-shadow: 0 0 6px rgba(99, 102, 241, 0.5);
+    transform: scale(1.05);
+}
+
+.sidebar-card-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    color: #c7d2fe;
+    font-size: 0.58rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.sidebar-card-edit-btn:hover {
+    background: #4f46e5;
+    color: #ffffff;
+    border-color: #6366f1;
+}
+
+/* Editor Inline en el Sidebar (Sin Ventana Modal) */
+.sidebar-inline-editor {
+    background: #161b2e;
+    border: 1.5px solid #6366f1;
+    border-radius: 8px;
+    padding: 7px;
+    margin: 4px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+    animation: fadeIn 0.18s ease-out;
+}
+
+.sidebar-inline-editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #c7d2fe;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 3px;
+}
+
+.sidebar-inline-editor-header button.btn-close-inline {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.sidebar-inline-editor-header button.btn-close-inline:hover {
+    color: #ffffff;
+}
+
+.sidebar-inline-editor-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sidebar-editor-field-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sidebar-editor-field-row label {
+    width: 52px;
+    font-size: 0.58rem;
+    font-weight: 700;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.sidebar-editor-select,
+.sidebar-editor-input {
+    background: #0b0f19;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #f8fafc;
+    font-size: 0.62rem;
+    padding: 2px 4px;
+    flex: 1;
+    min-width: 0;
+    height: 22px;
+    box-sizing: border-box;
+}
+
+.sidebar-editor-btn-time {
+    background: #334155;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #e2e8f0;
+    font-size: 0.55rem;
+    padding: 0 5px;
+    height: 22px;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar-editor-btn-time:hover {
+    background: #475569;
+    color: #ffffff;
+}
+
+.sidebar-editor-change-notice {
+    font-size: 0.54rem;
+    color: #fde047;
+    background: rgba(234, 179, 8, 0.12);
+    border: 1px solid rgba(234, 179, 8, 0.25);
+    border-radius: 4px;
+    padding: 3px 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sidebar-editor-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 3px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    gap: 4px;
+}
+
+.sidebar-editor-btn {
+    font-size: 0.60rem;
+    font-weight: 700;
+    padding: 3px 7px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s ease;
+}
+
+.sidebar-editor-btn--primary {
+    background: #4f46e5;
+    color: #ffffff;
+}
+
+.sidebar-editor-btn--primary:hover {
+    background: #4338ca;
+}
+
+.sidebar-editor-btn--secondary {
+    background: #334155;
+    color: #cbd5e1;
+}
+
+.sidebar-editor-btn--secondary:hover {
+    background: #475569;
+    color: #ffffff;
+}
+
+.sidebar-editor-btn--danger {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #f87171;
+}
+
+.sidebar-editor-btn--danger:hover {
+    background: #ef4444;
+    color: #ffffff;
+}
+
 
 

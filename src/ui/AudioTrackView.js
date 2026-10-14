@@ -69,6 +69,26 @@ export class AudioTrackView {
 
         this._editingChordIndex = -1;
 
+        // Barra de desplazamiento con marcadores visuales de acordes
+        this._trackSeekerContainer = document.getElementById('trackSeekerContainer');
+        this._chordProgressBarTrack = document.getElementById('chordProgressBarTrack');
+        this._chordTrackPlayhead = document.getElementById('chordTrackPlayhead');
+
+        // Barra flotante rápida de edición y extensión
+        this._chordQuickToolbar = document.getElementById('chordQuickToolbar');
+        this._quickChordName = document.getElementById('quickChordName');
+        this._quickChordTimes = document.getElementById('quickChordTimes');
+        this._btnCloseQuickToolbar = document.getElementById('btnCloseQuickToolbar');
+        this._btnExtendMinus = document.getElementById('btnExtendMinus');
+        this._btnExtendPlus = document.getElementById('btnExtendPlus');
+        this._btnExtendToCurrent = document.getElementById('btnExtendToCurrent');
+        this._quickRootSelect = document.getElementById('quickRootSelect');
+        this._quickTypeSelect = document.getElementById('quickTypeSelect');
+        this._btnApplyReplaceChord = document.getElementById('btnApplyReplaceChord');
+        this._btnQuickDeleteChord = document.getElementById('btnQuickDeleteChord');
+        this._btnQuickOpenEditor = document.getElementById('btnQuickOpenEditor');
+        this._selectedQuickChordIndex = -1;
+
         this._originalAnalysisData = null;
         this._currentPitchShift = 0;
         this._onChordMarkerClick = (seekTime) => {
@@ -104,9 +124,11 @@ export class AudioTrackView {
         this._originalAnalysisData = this._currentAnalysisData;
 
         this._initChordEditor();
+        this._initChordQuickToolbar();
 
-        // Renderizar la tira de acordes inmediatamente en la carga
+        // Renderizar la tira de acordes y la barra de desplazamiento visual inmediatamente en la carga
         this.renderChordsStrip(this._currentAnalysisData.chords, this._onChordMarkerClick);
+        this.renderChordProgressBar(this._currentAnalysisData.chords, this._currentAnalysisData.duration);
         audioPlayerController.setChordsTimeline(this._currentAnalysisData.chords);
     }
 
@@ -154,6 +176,20 @@ export class AudioTrackView {
             this._timelineSeeker.addEventListener('input', (e) => {
                 const percent = parseFloat(e.target.value);
                 handlers.onSeek(percent);
+            });
+        }
+
+        if (this._trackSeekerContainer) {
+            this._trackSeekerContainer.addEventListener('click', (e) => {
+                if (e.target.closest('.chord-segment-block') || e.target.closest('.chord-segment-handle-right')) return;
+                const rect = this._trackSeekerContainer.getBoundingClientRect();
+                const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                if (handlers && handlers.onSeek) {
+                    handlers.onSeek(percent);
+                } else {
+                    const dur = audioPlayerController.duration || (this._currentAnalysisData && this._currentAnalysisData.duration) || 16;
+                    audioPlayerController.seek(percent * dur);
+                }
             });
         }
 
@@ -308,6 +344,7 @@ export class AudioTrackView {
 
         // Tira de acordes secuenciales con alto contraste
         this.renderChordsStrip(analysisData.chords, onChordMarkerClick);
+        this.renderChordProgressBar(analysisData.chords, analysisData.duration);
 
         // Restablecer indicador de pitch
         if (this._lblPitchShift) {
@@ -517,6 +554,7 @@ export class AudioTrackView {
 
         // 5. Re-renderizar tira de acordes con alto contraste
         this.renderChordsStrip(transposedReport.chords, this._onChordMarkerClick);
+        this.renderChordProgressBar(transposedReport.chords, this._currentAnalysisData.duration);
 
         // 6. Actualizar estado visual de los botones de las hileras del acordeón
         this._renderAccordionRowButtons(handlers || this._handlers);
@@ -624,6 +662,404 @@ export class AudioTrackView {
     }
 
     /**
+     * Inicializa los controles de la barra rápida de extensión y reemplazo de acordes.
+     * @private
+     */
+    _initChordQuickToolbar() {
+        const latinNotes = getNoteNamesList(NOTATION_MODES.LATIN);
+        if (this._quickRootSelect) {
+            this._quickRootSelect.innerHTML = '';
+            latinNotes.forEach((name, i) => {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = name;
+                this._quickRootSelect.appendChild(opt);
+            });
+        }
+
+        if (this._btnCloseQuickToolbar) {
+            this._btnCloseQuickToolbar.addEventListener('click', () => {
+                this._closeQuickToolbar();
+            });
+        }
+
+        if (this._btnExtendMinus) {
+            this._btnExtendMinus.addEventListener('click', () => {
+                this._adjustQuickChordDuration(-0.5);
+            });
+        }
+
+        if (this._btnExtendPlus) {
+            this._btnExtendPlus.addEventListener('click', () => {
+                this._adjustQuickChordDuration(+0.5);
+            });
+        }
+
+        if (this._btnExtendToCurrent) {
+            this._btnExtendToCurrent.addEventListener('click', () => {
+                const curTime = audioPlayerController.currentTime || 0;
+                this._setQuickChordEndTime(curTime);
+            });
+        }
+
+        if (this._btnApplyReplaceChord) {
+            this._btnApplyReplaceChord.addEventListener('click', () => {
+                this._replaceQuickChord();
+            });
+        }
+
+        if (this._btnQuickDeleteChord) {
+            this._btnQuickDeleteChord.addEventListener('click', () => {
+                if (this._selectedQuickChordIndex >= 0) {
+                    this._editingChordIndex = this._selectedQuickChordIndex;
+                    this._deleteEditedChord();
+                    this._closeQuickToolbar();
+                }
+            });
+        }
+
+        if (this._btnQuickOpenEditor) {
+            this._btnQuickOpenEditor.addEventListener('click', () => {
+                const idx = this._selectedQuickChordIndex;
+                this._closeQuickToolbar();
+                if (idx >= 0) {
+                    this._openChordEditor(idx);
+                }
+            });
+        }
+    }
+
+    /**
+     * Abre el menú rápido para un acorde seleccionado en la barra de desplazamiento.
+     * @param {number} idx
+     * @private
+     */
+    _openQuickToolbar(idx) {
+        if (!this._chordQuickToolbar) return;
+        const timeline = (this._currentAnalysisData && this._currentAnalysisData.chords) || [];
+        const chord = timeline[idx];
+        if (!chord) return;
+
+        this._selectedQuickChordIndex = idx;
+        this._updateQuickToolbarDisplay(idx);
+
+        this._chordQuickToolbar.style.display = 'block';
+        this._chordQuickToolbar.classList.remove('hidden');
+
+        // Resaltar el bloque seleccionado
+        if (this._chordProgressBarTrack) {
+            const blocks = this._chordProgressBarTrack.querySelectorAll('.chord-segment-block');
+            blocks.forEach((b, i) => {
+                b.classList.toggle('selected-chord-segment', i === idx);
+            });
+        }
+    }
+
+    /**
+     * Actualiza la información en la barra rápida.
+     * @param {number} idx
+     * @private
+     */
+    _updateQuickToolbarDisplay(idx) {
+        const timeline = (this._currentAnalysisData && this._currentAnalysisData.chords) || [];
+        const chord = timeline[idx];
+        if (!chord) return;
+
+        if (this._quickChordName) this._quickChordName.textContent = chord.chordName;
+        if (this._quickChordTimes) {
+            this._quickChordTimes.textContent = `${this._formatTime(chord.startTime)} - ${this._formatTime(chord.endTime)} (${(chord.endTime - chord.startTime).toFixed(1)}s)`;
+        }
+        if (this._quickRootSelect) this._quickRootSelect.value = chord.root ?? 0;
+        if (this._quickTypeSelect) this._quickTypeSelect.value = chord.chordType || 'major';
+    }
+
+    /**
+     * Cierra el menú rápido.
+     * @private
+     */
+    _closeQuickToolbar() {
+        if (this._chordQuickToolbar) {
+            this._chordQuickToolbar.style.display = 'none';
+            this._chordQuickToolbar.classList.add('hidden');
+        }
+        this._selectedQuickChordIndex = -1;
+        if (this._chordProgressBarTrack) {
+            const blocks = this._chordProgressBarTrack.querySelectorAll('.chord-segment-block');
+            blocks.forEach(b => b.classList.remove('selected-chord-segment'));
+        }
+    }
+
+    /**
+     * Ajusta la duración de fin del acorde en deltaSeconds.
+     * @param {number} deltaSeconds
+     * @private
+     */
+    _adjustQuickChordDuration(deltaSeconds) {
+        if (this._selectedQuickChordIndex < 0 || !this._currentAnalysisData || !this._currentAnalysisData.chords) return;
+        const timeline = this._currentAnalysisData.chords;
+        const chord = timeline[this._selectedQuickChordIndex];
+        if (!chord) return;
+
+        const newEnd = Math.max(chord.startTime + 0.2, chord.endTime + deltaSeconds);
+        chord.endTime = parseFloat(newEnd.toFixed(2));
+
+        // Ajustar siguiente acorde adyacente si coincide
+        if (this._selectedQuickChordIndex < timeline.length - 1) {
+            const next = timeline[this._selectedQuickChordIndex + 1];
+            if (next && next.startTime < chord.endTime) {
+                next.startTime = chord.endTime;
+            }
+        }
+
+        audioPlayerController.setChordsTimeline(timeline);
+        this.renderChordsStrip(timeline, this._onChordMarkerClick);
+        this.renderChordProgressBar(timeline, this._currentAnalysisData.duration);
+        this._updateQuickToolbarDisplay(this._selectedQuickChordIndex);
+
+        if (this._handlers && this._handlers.onChordTimelineUpdated) {
+            this._handlers.onChordTimelineUpdated(timeline);
+        }
+    }
+
+    /**
+     * Fija el fin del acorde actual hasta el tiempo indicado (ej. tiempo actual de reproducción).
+     * @param {number} targetTime
+     * @private
+     */
+    _setQuickChordEndTime(targetTime) {
+        if (this._selectedQuickChordIndex < 0 || !this._currentAnalysisData || !this._currentAnalysisData.chords) return;
+        const timeline = this._currentAnalysisData.chords;
+        const chord = timeline[this._selectedQuickChordIndex];
+        if (!chord) return;
+
+        const newEnd = Math.max(chord.startTime + 0.2, targetTime);
+        chord.endTime = parseFloat(newEnd.toFixed(2));
+
+        if (this._selectedQuickChordIndex < timeline.length - 1) {
+            const next = timeline[this._selectedQuickChordIndex + 1];
+            if (next && next.startTime < chord.endTime) {
+                next.startTime = chord.endTime;
+            }
+        }
+
+        audioPlayerController.setChordsTimeline(timeline);
+        this.renderChordsStrip(timeline, this._onChordMarkerClick);
+        this.renderChordProgressBar(timeline, this._currentAnalysisData.duration);
+        this._updateQuickToolbarDisplay(this._selectedQuickChordIndex);
+
+        if (this._handlers && this._handlers.onChordTimelineUpdated) {
+            this._handlers.onChordTimelineUpdated(timeline);
+        }
+    }
+
+    /**
+     * Reemplaza el acorde actual con la nueva tónica y cualidad seleccionada.
+     * @private
+     */
+    _replaceQuickChord() {
+        if (this._selectedQuickChordIndex < 0 || !this._currentAnalysisData || !this._currentAnalysisData.chords) return;
+        const timeline = this._currentAnalysisData.chords;
+        const chord = timeline[this._selectedQuickChordIndex];
+        if (!chord) return;
+
+        const root = parseInt(this._quickRootSelect.value, 10);
+        const chordType = this._quickTypeSelect.value;
+        const updatedChord = this._buildChordObject(root, chordType, chord.startTime, chord.endTime, chord.bellowsAction);
+
+        timeline[this._selectedQuickChordIndex] = updatedChord;
+
+        audioPlayerController.setChordsTimeline(timeline);
+        this.renderChordsStrip(timeline, this._onChordMarkerClick);
+        this.renderChordProgressBar(timeline, this._currentAnalysisData.duration);
+        this._updateQuickToolbarDisplay(this._selectedQuickChordIndex);
+
+        if (this._handlers && this._handlers.onChordTimelineUpdated) {
+            this._handlers.onChordTimelineUpdated(timeline);
+        }
+    }
+
+    /**
+     * Genera un objeto de acorde con nombres, notas e intervalos.
+     * @private
+     */
+    _buildChordObject(root, chordType, startTime, endTime, bellowsAction = 'both') {
+        const latinNotes = getNoteNamesList(NOTATION_MODES.LATIN);
+        const englishNotes = getNoteNamesList(NOTATION_MODES.ENGLISH);
+        const rootNameLat = latinNotes[root] || 'Do';
+        const rootNameEng = englishNotes[root] || 'C';
+
+        let typeLabel = '';
+        let symbolSuffix = '';
+        let noteIntervals = [0, 4, 7]; // Triada Mayor por defecto
+
+        if (chordType === 'minor') {
+            typeLabel = 'm';
+            symbolSuffix = 'm';
+            noteIntervals = [0, 3, 7];
+        } else if (chordType === '7') {
+            typeLabel = '7';
+            symbolSuffix = '7';
+            noteIntervals = [0, 4, 7, 10];
+        } else if (chordType === 'm7') {
+            typeLabel = 'm7';
+            symbolSuffix = 'm7';
+            noteIntervals = [0, 3, 7, 10];
+        } else if (chordType === 'dim') {
+            typeLabel = 'dim';
+            symbolSuffix = 'dim';
+            noteIntervals = [0, 3, 6];
+        } else if (chordType === 'aug') {
+            typeLabel = 'aum';
+            symbolSuffix = 'aug';
+            noteIntervals = [0, 4, 8];
+        } else if (chordType === 'sus4') {
+            typeLabel = 'sus4';
+            symbolSuffix = 'sus4';
+            noteIntervals = [0, 5, 7];
+        } else if (chordType === 'sus2') {
+            typeLabel = 'sus2';
+            symbolSuffix = 'sus2';
+            noteIntervals = [0, 2, 7];
+        }
+
+        const chordName = `${rootNameLat} ${typeLabel}`.trim();
+        const chordSymbol = `${rootNameEng}${symbolSuffix}`.trim();
+        const noteMods = noteIntervals.map(interval => (root + interval) % 12);
+
+        return {
+            root,
+            chordType,
+            chordName,
+            chordSymbol,
+            noteMods,
+            startTime,
+            endTime,
+            confidence: 1.0,
+            bassNote: root,
+            bellowsAction: bellowsAction || 'both'
+        };
+    }
+
+    /**
+     * Renderiza los segmentos de cada acorde sobre la barra de desplazamiento,
+     * mostrando barras visuales de inicio (verde) y fin (amarillo/ámbar) con handle para extender.
+     * @param {Array} chords
+     * @param {number} [duration]
+     */
+    renderChordProgressBar(chords, duration) {
+        if (!this._chordProgressBarTrack) return;
+        this._chordProgressBarTrack.innerHTML = '';
+
+        if (!chords || chords.length === 0) return;
+
+        const dur = duration || (this._currentAnalysisData && this._currentAnalysisData.duration) || audioPlayerController.duration || (chords.length ? chords[chords.length - 1].endTime : 16);
+        if (!dur || dur <= 0) return;
+
+        chords.forEach((chord, idx) => {
+            const startPct = Math.max(0, Math.min(100, (chord.startTime / dur) * 100));
+            const endPct = Math.max(0, Math.min(100, (chord.endTime / dur) * 100));
+            const widthPct = Math.max(0.6, endPct - startPct);
+
+            const block = document.createElement('div');
+            block.className = 'chord-segment-block';
+            block.id = `chord-segment-${idx}`;
+            block.style.left = `${startPct}%`;
+            block.style.width = `${widthPct}%`;
+            block.title = `${chord.chordName} [Inicio: ${this._formatTime(chord.startTime)} | Fin/Cambio: ${this._formatTime(chord.endTime)}] - Clic para opciones/reproducir o arrastra la barra derecha para extender`;
+
+            block.innerHTML = `
+                <span class="chord-segment-name">${chord.chordName}</span>
+                <div class="chord-segment-handle-right" data-idx="${idx}" title="Arrastra para extender o recortar el fin del acorde"></div>
+            `;
+
+            // Clic en el cuerpo del acorde abre el toolbar de opciones y reproduce
+            block.addEventListener('click', (e) => {
+                if (e.target.classList.contains('chord-segment-handle-right')) return;
+                e.stopPropagation();
+                audioPlayerController.seek(chord.startTime);
+                this._openQuickToolbar(idx);
+            });
+
+            // Arrastre del extremo derecho para extender/recortar
+            const handle = block.querySelector('.chord-segment-handle-right');
+            if (handle) {
+                handle.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    this._startDragExtend(e, idx, dur);
+                });
+            }
+
+            this._chordProgressBarTrack.appendChild(block);
+        });
+    }
+
+    /**
+     * Inicia el arrastre interactivo en el borde derecho del acorde para extender su duración en tiempo real.
+     * @param {MouseEvent} startEvent
+     * @param {number} idx
+     * @param {number} totalDuration
+     * @private
+     */
+    _startDragExtend(startEvent, idx, totalDuration) {
+        if (!this._currentAnalysisData || !this._currentAnalysisData.chords) return;
+        const timeline = this._currentAnalysisData.chords;
+        const chord = timeline[idx];
+        if (!chord || !this._trackSeekerContainer) return;
+
+        const containerRect = this._trackSeekerContainer.getBoundingClientRect();
+        const block = document.getElementById(`chord-segment-${idx}`);
+
+        const onMouseMove = (moveEvent) => {
+            const relX = moveEvent.clientX - containerRect.left;
+            const pct = Math.max(0, Math.min(1, relX / containerRect.width));
+            const newEndTime = Math.max(chord.startTime + 0.15, pct * totalDuration);
+            chord.endTime = parseFloat(newEndTime.toFixed(2));
+
+            // Actualizar estilo en tiempo real
+            if (block) {
+                const widthPct = Math.max(0.6, ((chord.endTime - chord.startTime) / totalDuration) * 100);
+                block.style.width = `${widthPct}%`;
+            }
+
+            // Si hay un siguiente acorde, ajustar su inicio
+            if (idx < timeline.length - 1) {
+                const nextChord = timeline[idx + 1];
+                if (nextChord && nextChord.startTime < chord.endTime) {
+                    nextChord.startTime = chord.endTime;
+                    const nextBlock = document.getElementById(`chord-segment-${idx + 1}`);
+                    if (nextBlock) {
+                        const nextStartPct = (nextChord.startTime / totalDuration) * 100;
+                        const nextWidthPct = Math.max(0.6, ((nextChord.endTime - nextChord.startTime) / totalDuration) * 100);
+                        nextBlock.style.left = `${nextStartPct}%`;
+                        nextBlock.style.width = `${nextWidthPct}%`;
+                    }
+                }
+            }
+        };
+
+        const onMouseUp = () => {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+
+            audioPlayerController.setChordsTimeline(timeline);
+            this.renderChordsStrip(timeline, this._onChordMarkerClick);
+            this.renderChordProgressBar(timeline, totalDuration);
+
+            if (this._selectedQuickChordIndex === idx) {
+                this._updateQuickToolbarDisplay(idx);
+            }
+
+            if (this._handlers && this._handlers.onChordTimelineUpdated) {
+                this._handlers.onChordTimelineUpdated(timeline);
+            }
+        };
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+    }
+
+    /**
      * Marca un cambio de acorde en el segundo actual de reproducción:
      * Cierra el acorde actual fijando su punto final, e inicia el nuevo acorde en ese segundo.
      * @private
@@ -672,6 +1108,7 @@ export class AudioTrackView {
 
             audioPlayerController.setChordsTimeline(timeline);
             this.renderChordsStrip(timeline, this._onChordMarkerClick);
+            this.renderChordProgressBar(timeline, this._currentAnalysisData.duration);
 
             if (this._handlers && this._handlers.onChordTimelineUpdated) {
                 this._handlers.onChordTimelineUpdated(timeline);
@@ -747,65 +1184,11 @@ export class AudioTrackView {
         const startTime = Math.max(0, parseFloat(this._editorStartInput.value) || 0);
         const endTime = Math.max(startTime + 0.1, parseFloat(this._editorEndInput.value) || (startTime + 1));
 
-        const latinNotes = getNoteNamesList(NOTATION_MODES.LATIN);
-        const englishNotes = getNoteNamesList(NOTATION_MODES.ENGLISH);
-        const rootNameLat = latinNotes[root] || 'Do';
-        const rootNameEng = englishNotes[root] || 'C';
-
-        let typeLabel = '';
-        let symbolSuffix = '';
-        let noteIntervals = [0, 4, 7]; // Triada Mayor por defecto
-
-        if (chordType === 'minor') {
-            typeLabel = 'm';
-            symbolSuffix = 'm';
-            noteIntervals = [0, 3, 7];
-        } else if (chordType === '7') {
-            typeLabel = '7';
-            symbolSuffix = '7';
-            noteIntervals = [0, 4, 7, 10];
-        } else if (chordType === 'm7') {
-            typeLabel = 'm7';
-            symbolSuffix = 'm7';
-            noteIntervals = [0, 3, 7, 10];
-        } else if (chordType === 'dim') {
-            typeLabel = 'dim';
-            symbolSuffix = 'dim';
-            noteIntervals = [0, 3, 6];
-        } else if (chordType === 'aug') {
-            typeLabel = 'aum';
-            symbolSuffix = 'aug';
-            noteIntervals = [0, 4, 8];
-        } else if (chordType === 'sus4') {
-            typeLabel = 'sus4';
-            symbolSuffix = 'sus4';
-            noteIntervals = [0, 5, 7];
-        } else if (chordType === 'sus2') {
-            typeLabel = 'sus2';
-            symbolSuffix = 'sus2';
-            noteIntervals = [0, 2, 7];
-        }
-
-        const chordName = `${rootNameLat} ${typeLabel}`.trim();
-        const chordSymbol = `${rootNameEng}${symbolSuffix}`.trim();
-        const noteMods = noteIntervals.map(interval => (root + interval) % 12);
-
         // Conservar preferencia de fuelle si ya existía
         const existingChord = (this._editingChordIndex >= 0 && this._editingChordIndex < timeline.length) ? timeline[this._editingChordIndex] : null;
         const bellowsAction = existingChord ? (existingChord.bellowsAction || 'both') : 'both';
 
-        const updatedChord = {
-            root,
-            chordType,
-            chordName,
-            chordSymbol,
-            noteMods,
-            startTime,
-            endTime,
-            confidence: 1.0,
-            bassNote: root,
-            bellowsAction
-        };
+        const updatedChord = this._buildChordObject(root, chordType, startTime, endTime, bellowsAction);
 
         // Ajuste automático de acordes adyacentes para una transición perfecta sin huecos
         const autoAdjust = this._chkAutoAdjustAdjacent ? this._chkAutoAdjustAdjacent.checked : true;
@@ -836,6 +1219,7 @@ export class AudioTrackView {
         // Actualizar timeline sincronizado en el reproductor
         audioPlayerController.setChordsTimeline(timeline);
         this.renderChordsStrip(timeline, this._onChordMarkerClick);
+        this.renderChordProgressBar(timeline, this._currentAnalysisData.duration);
 
         if (this._handlers && this._handlers.onChordTimelineUpdated) {
             this._handlers.onChordTimelineUpdated(timeline);
@@ -856,6 +1240,7 @@ export class AudioTrackView {
             timeline.splice(this._editingChordIndex, 1);
             audioPlayerController.setChordsTimeline(timeline);
             this.renderChordsStrip(timeline, this._onChordMarkerClick);
+            this.renderChordProgressBar(timeline, this._currentAnalysisData.duration);
 
             if (this._handlers && this._handlers.onChordTimelineUpdated) {
                 this._handlers.onChordTimelineUpdated(timeline);
@@ -897,9 +1282,14 @@ export class AudioTrackView {
                         <strong class="timeline-chord-name">${chord.chordName}</strong>
                         ${dirTag}
                     </div>
-                    <span class="timeline-chord-time">${this._formatTime(chord.startTime)} ➔ ${this._formatTime(chord.endTime)}</span>
+                    <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                        <span class="timeline-chord-time">${this._formatTime(chord.startTime)}</span>
+                        <span class="sidebar-change-badge" style="font-size:0.52rem; padding: 1px 4px;" title="Punto de cambio de acorde a los ${this._formatTime(chord.endTime)}">
+                            <i class="fas fa-bolt"></i> ${this._formatTime(chord.endTime)}
+                        </span>
+                    </div>
                 </div>
-                <button type="button" class="chip-edit-icon" title="Editar este acorde" data-idx="${idx}">
+                <button type="button" class="chip-edit-icon" title="Editar este acorde a la derecha" data-idx="${idx}">
                     <i class="fas fa-pencil-alt"></i>
                 </button>
             `;
@@ -951,6 +1341,13 @@ export class AudioTrackView {
                 }
             });
         }
+
+        if (this._chordProgressBarTrack) {
+            const blocks = this._chordProgressBarTrack.querySelectorAll('.chord-segment-block');
+            blocks.forEach((blk, i) => {
+                blk.classList.toggle('active', i === chordIndex);
+            });
+        }
     }
 
     /**
@@ -965,6 +1362,9 @@ export class AudioTrackView {
         }
         if (this._timelineSeeker) {
             this._timelineSeeker.value = progress;
+        }
+        if (this._chordTrackPlayhead) {
+            this._chordTrackPlayhead.style.left = `${(progress * 100).toFixed(2)}%`;
         }
     }
 

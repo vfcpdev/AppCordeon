@@ -688,6 +688,13 @@
     color: #fef08a !important;
 }
 
+.track-seeker-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 4px;
+}
+
 .track-seeker-row {
     display: flex;
     align-items: center;
@@ -695,11 +702,164 @@
     width: 100%;
 }
 
-.track-seeker {
+.track-seeker-container {
+    position: relative;
     flex: 1;
-    height: 5px;
-    accent-color: #7c3aed;
+    height: 38px;
+    background: #090d16;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1.5px solid #334155;
+    display: flex;
+    align-items: stretch;
+    user-select: none;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+
+.chord-progress-bar-track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    pointer-events: auto;
+}
+
+.chord-segment-block {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
     cursor: pointer;
+    transition: filter 0.15s, border-color 0.15s;
+    overflow: hidden;
+    border-left: 3px solid #22c55e; /* Barra visual verde de Inicio */
+    border-right: 3px solid #eab308; /* Barra visual amarilla de Fin / Cambio */
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.4), rgba(99, 102, 241, 0.25));
+}
+
+.chord-segment-block:hover {
+    filter: brightness(1.3);
+}
+
+.chord-segment-block.active-segment {
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.35), rgba(79, 70, 229, 0.5)) !important;
+    border-top: 2px solid #facc15;
+    border-bottom: 2px solid #facc15;
+    box-shadow: inset 0 0 12px rgba(250, 204, 21, 0.3);
+}
+
+.chord-segment-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    padding: 0 4px;
+    z-index: 2;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.chord-segment-info strong {
+    font-size: 0.68rem;
+    color: #ffffff;
+    font-weight: 900;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.1;
+}
+
+.chord-segment-info small {
+    font-size: 0.52rem;
+    color: #cbd5e1;
+    font-family: var(--font-mono);
+    white-space: nowrap;
+}
+
+/* Tirador / Handle para extender el acorde a la derecha */
+.chord-segment-handle-right {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+    z-index: 6;
+    background: rgba(234, 179, 8, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.5;
+    transition: all 0.15s ease;
+}
+
+.chord-segment-handle-right:hover {
+    opacity: 1;
+    width: 12px;
+    background: #eab308;
+    box-shadow: 0 0 8px #eab308;
+}
+
+/* Tirador / Handle para inicio a la izquierda */
+.chord-segment-handle-left {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 7px;
+    height: 100%;
+    cursor: ew-resize;
+    z-index: 6;
+    background: rgba(34, 197, 94, 0.5);
+    opacity: 0.5;
+    transition: all 0.15s ease;
+}
+
+.chord-segment-handle-left:hover {
+    opacity: 1;
+    width: 10px;
+    background: #22c55e;
+    box-shadow: 0 0 8px #22c55e;
+}
+
+/* Cabeza de reproducción (Playhead) */
+.chord-track-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #ef4444;
+    box-shadow: 0 0 8px #ef4444, 0 0 2px #ffffff;
+    z-index: 8;
+    pointer-events: none;
+    transition: left 0.05s linear;
+}
+
+.chord-track-playhead::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -4px;
+    width: 10px;
+    height: 7px;
+    background: #ef4444;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.track-seeker--overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 4;
+    margin: 0;
 }
 
 .track-time-lbl {
@@ -709,6 +869,154 @@
     font-weight: 700;
     min-width: 75px;
     text-align: right;
+}
+
+/* Menú Rápido Flotante de Edición / Reemplazo / Extensión */
+.chord-quick-toolbar {
+    background: #111827;
+    border: 1.5px solid #6366f1;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 4px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+    animation: fadeIn 0.15s ease-out;
+}
+
+.quick-toolbar-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.quick-toolbar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 4px;
+    font-size: 0.70rem;
+    color: #c7d2fe;
+    font-weight: 800;
+}
+
+.quick-toolbar-times {
+    font-size: 0.62rem;
+    color: #94a3b8;
+    font-family: var(--font-mono);
+}
+
+.btn-quick-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 1rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 3px;
+}
+
+.btn-quick-close:hover {
+    color: #ffffff;
+}
+
+.quick-toolbar-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.quick-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.quick-label {
+    font-size: 0.64rem;
+    font-weight: 700;
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.quick-btn-group {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.btn-quick-action {
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 4px;
+    color: #f3f4f6;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.btn-quick-action:hover {
+    background: #374151;
+    border-color: #6366f1;
+    color: #ffffff;
+}
+
+.btn-quick-action--primary {
+    background: #4f46e5;
+    border-color: #6366f1;
+    color: #ffffff;
+}
+
+.btn-quick-action--primary:hover {
+    background: #4338ca;
+}
+
+.btn-quick-action--accent {
+    background: rgba(234, 179, 8, 0.2);
+    border-color: rgba(234, 179, 8, 0.4);
+    color: #fde047;
+}
+
+.btn-quick-action--accent:hover {
+    background: #eab308;
+    color: #0f172a;
+}
+
+.btn-quick-action--danger {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+}
+
+.btn-quick-action--danger:hover {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.quick-select {
+    background: #111827 !important;
+    border: 1px solid #4b5563 !important;
+    color: #f9fafb !important;
+    font-size: 0.65rem !important;
+    padding: 2px 6px !important;
+    height: 24px !important;
+    border-radius: 4px !important;
+}
+
+.quick-toolbar-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 5px;
+    margin-top: 2px;
 }
 
 .chords-timeline-strip {
@@ -1052,15 +1360,14 @@
 }
 
 .chord-editor-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 9999;
+    position: relative;
+    width: 100%;
+    height: auto;
+    z-index: 10;
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
+    margin-top: 6px;
 }
 
 .chord-editor-modal.hidden {
@@ -1068,34 +1375,23 @@
 }
 
 .chord-editor-backdrop {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(4px);
+    display: none !important;
 }
 
 .chord-editor-card {
     position: relative;
     background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 14px;
-    width: 90%;
-    max-width: 420px;
-    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
-    padding: 16px 18px;
+    border: 1.5px solid #6366f1;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 100%;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    padding: 10px 14px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     z-index: 1;
-    animation: modalSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes modalSlideUp {
-    from { transform: translateY(20px) scale(0.96); opacity: 0; }
-    to { transform: translateY(0) scale(1); opacity: 1; }
+    animation: fadeIn 0.15s ease-out;
 }
 
 .chord-editor-header {
@@ -1370,5 +1666,307 @@
     color: #94a3b8;
     font-style: italic;
 }
+
+/* =========================================================================
+   BARRA DE REPRODUCCIÓN CON MARCADOR VISUAL DE INICIO/FIN DE ACORDES
+   ========================================================================= */
+.track-seeker-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    position: relative;
+}
+
+.track-seeker-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.track-seeker-container {
+    position: relative;
+    flex: 1;
+    height: 38px;
+    background: #0f172a;
+    border-radius: 8px;
+    border: 1.5px solid #334155;
+    overflow: hidden;
+    user-select: none;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+}
+
+.chord-progress-bar-track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    pointer-events: auto;
+    z-index: 2;
+}
+
+.chord-segment-block {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+    /* MARCADORES VISUALES: Verde al inicio, Ámbar al final/cambio */
+    border-left: 3.5px solid #22c55e !important;
+    border-right: 3.5px solid #eab308 !important;
+    color: #f8fafc;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    box-sizing: border-box;
+    padding: 0 4px;
+}
+
+.chord-segment-block:hover {
+    background: linear-gradient(180deg, #334155, #1e293b);
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+}
+
+.chord-segment-block.active {
+    background: linear-gradient(180deg, #312e81, #1e1b4b) !important;
+    border-top: 1.5px solid #818cf8 !important;
+    border-bottom: 1.5px solid #818cf8 !important;
+    box-shadow: inset 0 0 10px rgba(99, 102, 241, 0.5), 0 0 8px rgba(79, 70, 229, 0.6) !important;
+}
+
+.chord-segment-name {
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    pointer-events: none;
+    color: #f1f5f9;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+.chord-segment-handle-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 10px;
+    height: 100%;
+    cursor: ew-resize;
+    z-index: 5;
+    background: rgba(234, 179, 8, 0.25);
+    transition: background 0.2s;
+}
+
+.chord-segment-handle-right:hover {
+    background: rgba(234, 179, 8, 0.85);
+}
+
+.chord-track-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2.5px;
+    background: #ef4444;
+    box-shadow: 0 0 6px #ef4444, 0 0 10px #f87171;
+    z-index: 10;
+    pointer-events: none;
+    transition: left 0.05s linear;
+}
+
+.chord-track-playhead::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -4px;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid #ef4444;
+}
+
+.track-seeker--overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 1;
+    margin: 0;
+}
+
+/* =========================================================================
+   BARRA FLOTANTE RÁPIDA DE EDICIÓN / EXTENSIÓN / REEMPLAZO DE ACORDE
+   ========================================================================= */
+.chord-quick-toolbar {
+    background: #ffffff;
+    border: 1.5px solid #6366f1;
+    border-radius: 8px;
+    padding: 8px 12px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+    margin-top: 4px;
+    z-index: 20;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.quick-toolbar-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.quick-toolbar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 4px;
+}
+
+.quick-toolbar-header span {
+    font-size: 0.80rem;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.quick-toolbar-times {
+    font-size: 0.70rem;
+    font-weight: 700;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.btn-quick-close {
+    background: transparent;
+    border: none;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.btn-quick-close:hover {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
+.quick-toolbar-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.quick-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.quick-label {
+    font-size: 0.70rem;
+    font-weight: 800;
+    color: #475569;
+    min-width: 110px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.quick-btn-group {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.btn-quick-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    font-size: 0.70rem;
+    font-weight: 800;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    height: 26px;
+    box-sizing: border-box;
+}
+
+.btn-quick-action:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+}
+
+.btn-quick-action--accent {
+    background: #ede9fe;
+    color: #6d28d9;
+    border-color: #c4b5fd;
+}
+
+.btn-quick-action--accent:hover {
+    background: #ddd6fe;
+    border-color: #a78bfa;
+}
+
+.btn-quick-action--primary {
+    background: #4f46e5;
+    color: #ffffff;
+    border-color: #4338ca;
+}
+
+.btn-quick-action--primary:hover {
+    background: #4338ca;
+}
+
+.btn-quick-action--danger {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fca5a5;
+}
+
+.btn-quick-action--danger:hover {
+    background: #fecaca;
+    color: #991b1b;
+}
+
+.quick-select {
+    padding: 2px 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    height: 26px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #ffffff;
+}
+
+.quick-toolbar-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 6px;
+    margin-top: 2px;
+}
+
 
 
