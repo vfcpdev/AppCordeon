@@ -5,7 +5,8 @@
 .diapason-wrapper {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    width: fit-content;
 }
 
 .diapason-top-bar {
@@ -13,9 +14,13 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
+    background: #111422;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
     margin-bottom: 8px;
-    padding: 0 4px;
+    padding: 6px 10px;
     gap: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Botón de Inversión / Modo Espejo de Hileras */

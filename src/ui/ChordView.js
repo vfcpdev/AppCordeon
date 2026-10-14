@@ -260,10 +260,27 @@ export class ChordView {
      * @param {Object} handlers
      */
     bindEvents(handlers) {
-        if (this._rootSelect) this._rootSelect.addEventListener('change', handlers.onChange);
-        if (this._typeSelect) this._typeSelect.addEventListener('change', handlers.onChange);
-        if (this._fourthSelect) this._fourthSelect.addEventListener('change', handlers.onChange);
-        if (this._octaveSelect) this._octaveSelect.addEventListener('change', handlers.onChange);
+        const notifyChange = () => {
+            this._currentStepIndex = -1;
+            if (handlers.onChange) handlers.onChange();
+        };
+
+        if (this._rootSelect) {
+            this._rootSelect.addEventListener('change', notifyChange);
+            this._rootSelect.addEventListener('input', notifyChange);
+        }
+        if (this._typeSelect) {
+            this._typeSelect.addEventListener('change', notifyChange);
+            this._typeSelect.addEventListener('input', notifyChange);
+        }
+        if (this._fourthSelect) {
+            this._fourthSelect.addEventListener('change', notifyChange);
+            this._fourthSelect.addEventListener('input', notifyChange);
+        }
+        if (this._octaveSelect) {
+            this._octaveSelect.addEventListener('change', notifyChange);
+            this._octaveSelect.addEventListener('input', notifyChange);
+        }
 
         if (this._btnPlay) this._btnPlay.addEventListener('click', handlers.onPlayChord);
         if (this._btnArpeggio) this._btnArpeggio.addEventListener('click', handlers.onArpeggio);

@@ -233,9 +233,19 @@ export class AppController {
         // Vista de Acordes
         this._chordView.bindEvents({
             onChange: () => {
+                this._updateFeasibilityAndChordDisplay();
                 const chord = this._chordView.getSelectedChordData();
+                this._pinnedChordData = chord;
                 this._showFreeChordOnAccordion(chord, false);
                 if (this._isChordPinned) this._holdChordAudio(chord);
+
+                const rootName = midiToName(chord.playbackMidis[0], this._currentNotation, false, this._currentOffset);
+                this._executionView.setNoteLabel(`Acorde Libre: ${chord.typeName} (${rootName})`);
+                const forms = this.calculateExecutionForms(chord.root, false);
+                this._executionView.renderForms(forms, (selectedForm) => {
+                    this._diapasonView.highlightSingleButton(selectedForm.btnId, selectedForm.directionClass);
+                    audioEngine.play(selectedForm.midi);
+                });
             },
             onPlayChord: () => {
                 const chord = this._chordView.getSelectedChordData();

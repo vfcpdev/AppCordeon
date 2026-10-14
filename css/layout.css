@@ -1,14 +1,15 @@
 /**
- * LAYOUT Y ESTRUCTURA GENERAL
+ * LAYOUT Y ESTRUCTURA GENERAL MULTI-COLUMNA
  * Simulador de Acordeón Diatónico Pro
  */
 .app-container {
     width: 100%;
-    max-width: 1360px;
+    max-width: 1720px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 16px;
+    padding-bottom: 24px;
 }
 
 /* Header de la Aplicación */
@@ -16,12 +17,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: var(--panel-bg);
+    background: #f8fafc;
     border: 1px solid var(--panel-border);
-    backdrop-filter: blur(14px);
     padding: 12px 20px;
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-panel);
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
     flex-wrap: wrap;
     gap: 12px;
 }
@@ -35,16 +35,14 @@
 .app-header__icon {
     font-size: 1.6rem;
     color: var(--accent);
-    filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.6));
+    filter: drop-shadow(0 0 8px rgba(219, 39, 119, 0.4));
 }
 
 .app-header__title {
-    font-size: 1.18rem;
+    font-size: 1.25rem;
     font-weight: 900;
     letter-spacing: -0.3px;
-    background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #0f172a;
 }
 
 .app-header__subtitle {
@@ -60,34 +58,59 @@
     flex-wrap: wrap;
 }
 
-/* Layout Principal de 2 Columnas */
+/* =========================================================================
+   LAYOUT PRINCIPAL MULTI-COLUMNA (SECCIONES ORGANIZADAS EN COLUMNAS)
+   ========================================================================= */
 .app-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+    display: grid;
+    grid-template-columns: auto minmax(360px, 1fr) minmax(360px, 1fr);
+    gap: 18px;
     width: 100%;
-    align-items: flex-start;
+    align-items: start;
 }
 
-@media (min-width: 980px) {
-    .app-layout {
-        flex-direction: row;
-        align-items: flex-start;
-    }
-}
-
-.app-layout__stage {
+/* Columna 1: Escenario del Diapasón */
+.app-layout__col--stage {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    flex: 0 0 auto;
+    align-items: center;
+    width: fit-content;
 }
 
-.app-layout__sidebar {
+/* Columna 2: Afinación, Fuelle y Escalas */
+.app-layout__col--theory {
     display: flex;
     flex-direction: column;
     gap: 14px;
-    flex: 1 1 440px;
-    width: 100%;
-    max-width: 580px;
+    min-width: 0;
+}
+
+/* Columna 3: Analizador Compacto, Acordes Libres y Detector */
+.app-layout__col--chords {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1280px) {
+    .app-layout {
+        grid-template-columns: auto 1fr;
+    }
+    .app-layout__col--chords {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 960px) {
+    .app-layout {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .app-layout__col--stage {
+        align-items: center;
+        width: 100%;
+    }
 }
