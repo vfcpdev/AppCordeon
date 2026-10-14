@@ -39,7 +39,14 @@ Simulador interactivo de alto rendimiento de **Acordeón Diatónico Profesional 
    - Soporte para **Cinco Letras** (B♭ - E♭ - A♭), **Rey Vallenato** (G - C - F), **Guacamayo** (A - D - G), **Simila** (B - E - A), **Cuatro Letras** (F - B♭ - E♭), **Sabanera** (C - F - B♭) y **Anisada** (E - A - D).
    - Conmutación instantánea entre Cifrado Latino (*Do, Re, Mi...*) y Cifrado Alemán / Anglosajón (*C, D, E...*).
 
-7. **Soporte PWA Híbrido**:
+7. **Analizador de Canciones (MP3 / Audio) y Sincronización en Vivo**:
+   - Carga de archivos de audio (MP3, WAV, OGG) mediante selector o *Drag & Drop*.
+   - **Extracción de Acordes Espectral**: Algoritmo de cromagrama (Harmonic Pitch Class Profile) y correlación de plantillas armónicas cuadro a cuadro.
+   - **Detección de Tonalidad Principal**: Algoritmo Krumhansl-Schmuckler sobre la melodía completa, sugiriendo la afinación idónea del acordeón y la hilera tonal correspondiente con un botón de configuración automática.
+   - **Sincronización en el Diapasón en Tiempo Real**: Conforme se reproduce la canción, los botones correspondientes a cada acorde detectado se iluminan dinámicamente en el acordeón en sus posiciones de cerrar (*Push*) o abrir (*Pull*).
+   - Barra de tiempo (*Scrubbing*) interactiva y marcadores de acordes clickeables para saltar a cualquier punto de la pieza.
+
+8. **Soporte PWA Híbrido**:
    - `manifest.json` y `sw.js` (Service Worker) para instalación como aplicación web de escritorio o móvil con funcionamiento offline.
 
 ---
