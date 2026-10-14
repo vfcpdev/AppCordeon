@@ -51,6 +51,12 @@
             <!-- ================= ESQUINA SUPERIOR IZQUIERDA: DIAPASÓN ================= -->
             <section class="app-layout__stage" aria-label="Diapasón del Acordeón">
                 <div class="diapason-top-bar">
+                    <!-- Botón de Modo Espejo (Intercambiar Hileras) -->
+                    <button type="button" class="btn-mirror-toggle" id="btnToggleMirror" title="Invertir / Modo Espejo (Intercambiar ubicación de Hilera 1 y Hilera 3)">
+                        <i class="fas fa-arrows-left-right"></i>
+                        <span id="lblMirrorStatus">Hileras: Normal (3-2-1)</span>
+                    </button>
+
                     <!-- Toggle Notación (Latina / Alemana) -->
                     <div class="toggle-segmented notation-toggle-compact" id="notationToggle">
                         <button type="button" class="segment-btn active" data-val="latina" title="Cifrado Latino (Do, Re, Mi...)">Latina</button>

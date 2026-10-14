@@ -17,11 +17,41 @@ export class DiapasonView {
             throw new Error('[DiapasonView] Se requiere un elemento contenedor válido.');
         }
         this._container = containerElement;
+        this._isMirrored = false;
+    }
+
+    /**
+     * Obtiene el estado actual del modo espejo.
+     * @returns {boolean}
+     */
+    get isMirrored() {
+        return this._isMirrored;
+    }
+
+    /**
+     * Establece el modo espejo (intercambiar hileras 1 y 3).
+     * @param {boolean} value
+     */
+    setMirrored(value) {
+        this._isMirrored = Boolean(value);
+        if (this._container) {
+            this._container.classList.toggle('diapason--mirrored', this._isMirrored);
+        }
+    }
+
+    /**
+     * Alterna el modo espejo.
+     * @returns {boolean} Nuevo estado
+     */
+    toggleMirrored() {
+        this.setMirrored(!this._isMirrored);
+        return this._isMirrored;
     }
 
     /**
      * Renderiza las 3 hileras de botones en el diapasón.
-     * Hilera 3 (Adentro) a la izquierda, Hilera 2 (Medio) al centro, Hilera 1 (Afuera) a la derecha.
+     * Normal: Hilera 3 (Adentro) a la izquierda, Hilera 2 (Medio) al centro, Hilera 1 (Afuera) a la derecha.
+     * Espejo: Hilera 1 (Afuera) a la izquierda, Hilera 2 (Medio) al centro, Hilera 3 (Adentro) a la derecha.
      *
      * @param {Object} accordionData Objeto con las 3 hileras { row1, row2, row3 }
      * @param {string} activeRowKey Clave de la hilera activa ('row1', 'row2', 'row3')
@@ -32,8 +62,9 @@ export class DiapasonView {
      */
     render(accordionData, activeRowKey, bellowsMode, notation, tuningOffset, handlers = {}) {
         this._container.innerHTML = "";
+        this._container.classList.toggle('diapason--mirrored', this._isMirrored);
 
-        const displayOrder = ['row3', 'row2', 'row1'];
+        const displayOrder = this._isMirrored ? ['row1', 'row2', 'row3'] : ['row3', 'row2', 'row1'];
 
         displayOrder.forEach(rowKey => {
             const col = document.createElement("div");

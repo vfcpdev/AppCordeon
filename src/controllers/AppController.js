@@ -61,6 +61,12 @@ export class AppController {
         this._pinnedChordData = null;
         this._detectorSelectedButtons = [];
         this._isScalePlaying = false;
+
+        // Modo Espejo (Intercambiar Hileras 1 y 3)
+        this._isDiapasonMirrored = typeof localStorage !== 'undefined' && localStorage.getItem('acordeon_is_mirrored') === 'true';
+        if (this._diapasonView) {
+            this._diapasonView.setMirrored(this._isDiapasonMirrored);
+        }
     }
 
     /**
@@ -74,6 +80,7 @@ export class AppController {
 
         // Inicializar vistas con datos
         this._chordView.populateRoots(this._currentNotation, this._currentOffset);
+        this._updateMirrorButtonUI();
         this._renderAll();
     }
 
@@ -178,6 +185,23 @@ export class AppController {
         if (bgColorInput) {
             bgColorInput.addEventListener('input', (e) => {
                 document.body.style.backgroundColor = e.target.value;
+            });
+        }
+
+        // Modo Espejo del Diapasón (Intercambiar Hileras 1 y 3)
+        const btnToggleMirror = document.getElementById('btnToggleMirror');
+        if (btnToggleMirror) {
+            btnToggleMirror.addEventListener('click', () => {
+                this._isDiapasonMirrored = !this._isDiapasonMirrored;
+                try {
+                    localStorage.setItem('acordeon_is_mirrored', this._isDiapasonMirrored.toString());
+                } catch (e) {
+                    console.warn('[AppController] No se pudo persistir modo espejo:', e);
+                }
+                this._diapasonView.setMirrored(this._isDiapasonMirrored);
+                this._updateMirrorButtonUI();
+                this._renderDiapason();
+                this._restoreActiveHighlights();
             });
         }
 
@@ -404,7 +428,14 @@ export class AppController {
         });
 
         this._updateFeasibilityAndChordDisplay();
+        this._restoreActiveHighlights();
+    }
 
+    /**
+     * Restaura los resaltados visuales activos en el diapasón según el estado actual.
+     * @private
+     */
+    _restoreActiveHighlights() {
         if (this._detectorView.isModeActive) {
             this._diapasonView.highlightDetectorButtons(this._detectorSelectedButtons);
         } else if (this._isChordPinned && this._pinnedChordData) {
@@ -414,8 +445,28 @@ export class AppController {
                 this._pinnedChordData.isExactMidi,
                 this._bellowsMachine.mode
             );
-        } else {
+        } else if (this._scaleSteps.length > 0) {
             this.setStep(this._currentStepIndex, false);
+        }
+    }
+
+    /**
+     * Actualiza el estado visual y texto del botón de Modo Espejo.
+     * @private
+     */
+    _updateMirrorButtonUI() {
+        const btnToggleMirror = document.getElementById('btnToggleMirror');
+        const lblMirrorStatus = document.getElementById('lblMirrorStatus');
+        if (!btnToggleMirror) return;
+
+        if (this._isDiapasonMirrored) {
+            btnToggleMirror.classList.add('active');
+            if (lblMirrorStatus) lblMirrorStatus.innerText = 'Hileras: Espejo (1-2-3)';
+            btnToggleMirror.title = 'Modo Espejo activado (Hilera 1 a la izquierda, Hilera 3 a la derecha). Haz clic para volver al modo normal.';
+        } else {
+            btnToggleMirror.classList.remove('active');
+            if (lblMirrorStatus) lblMirrorStatus.innerText = 'Hileras: Normal (3-2-1)';
+            btnToggleMirror.title = 'Modo Normal (Hilera 3 a la izquierda, Hilera 1 a la derecha). Haz clic para invertir al modo espejo.';
         }
     }
 
