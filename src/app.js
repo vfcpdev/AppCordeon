@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         typeSelect: document.getElementById('chordType'),
         fourthSelect: document.getElementById('chord4thNote'),
         octaveSelect: document.getElementById('chordOctave'),
+        bellowsButtons: document.querySelectorAll('#chordBellowsToggle .segment-btn'),
         notesDisplay: document.getElementById('chordNotesDisplay'),
         feasibilityBadge: document.getElementById('chordBellowsFeasibilityBadge'),
         strip: document.getElementById('freeChordNotesStrip'),

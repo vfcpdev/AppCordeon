@@ -592,11 +592,13 @@ export class AppController {
      * Calcula todas las formas de ejecutar una nota en el acordeón.
      * @param {number} noteTarget Pitch class (0-11) o nota MIDI exacta
      * @param {boolean} [isExactMidi=false]
+     * @param {string|null} [bellowsFilter=null] Filtro opcional ('both', 'push', 'pull')
      * @returns {Array}
      */
-    calculateExecutionForms(noteTarget, isExactMidi = false) {
+    calculateExecutionForms(noteTarget, isExactMidi = false, bellowsFilter = null) {
         const forms = [];
         const rowsOrder = [this._activeRowKey, ...['row3', 'row2', 'row1'].filter(r => r !== this._activeRowKey)];
+        const effectiveBellows = bellowsFilter || this._bellowsMachine.mode;
 
         rowsOrder.forEach(r => {
             if (!this._accordionData[r]) return;
@@ -607,7 +609,7 @@ export class AppController {
                 const isPushMatch = pTarget === noteTarget;
                 const isPullMatch = plTarget === noteTarget;
 
-                if (isPushMatch && (this._bellowsMachine.mode === BELLOWS_MODES.BOTH || this._bellowsMachine.mode === BELLOWS_MODES.PUSH)) {
+                if (isPushMatch && (effectiveBellows === BELLOWS_MODES.BOTH || effectiveBellows === BELLOWS_MODES.PUSH)) {
                     forms.push({
                         btnId: b.id,
                         rowName: ROW_NAMES[r],
@@ -619,7 +621,7 @@ export class AppController {
                         isNatural: r === this._activeRowKey
                     });
                 }
-                if (isPullMatch && (this._bellowsMachine.mode === BELLOWS_MODES.BOTH || this._bellowsMachine.mode === BELLOWS_MODES.PULL)) {
+                if (isPullMatch && (effectiveBellows === BELLOWS_MODES.BOTH || effectiveBellows === BELLOWS_MODES.PULL)) {
                     forms.push({
                         btnId: b.id,
                         rowName: ROW_NAMES[r],
@@ -671,10 +673,11 @@ export class AppController {
      */
     _updateFeasibilityAndChordDisplay() {
         const chord = this._chordView.getSelectedChordData();
+        const bellowsMode = this._chordView ? this._chordView.bellowsMode : this._bellowsMachine.mode;
         this._chordView.updateDisplay(
             chord,
             this._accordionData,
-            this._bellowsMachine.mode,
+            bellowsMode,
             this._currentNotation,
             this._currentOffset
         );
@@ -685,16 +688,31 @@ export class AppController {
      * @private
      */
     _showFreeChordOnAccordion(chordData, shouldPlay = false) {
+        const bellowsMode = this._chordView ? this._chordView.bellowsMode : this._bellowsMachine.mode;
         this._diapasonView.highlightChord(
             this._accordionData,
             chordData.targetNotes,
             chordData.isExactMidi,
-            this._bellowsMachine.mode
+            bellowsMode
         );
         this._chordView.showClearButton();
 
         if (shouldPlay) {
-            audioEngine.play(chordData.playbackMidis);
+            let midisToPlay = chordData.playbackMidis;
+            if (bellowsMode === BELLOWS_MODES.PUSH || bellowsMode === BELLOWS_MODES.PULL) {
+                const feasibility = FeasibilityAnalysisStrategy.check(chordData, this._accordionData, bellowsMode);
+                if (feasibility) {
+                    const availableMidis = [];
+                    feasibility.noteDetails.forEach((detail, idx) => {
+                        const canPlay = bellowsMode === BELLOWS_MODES.PUSH ? detail.canPush : detail.canPull;
+                        if (canPlay) {
+                            availableMidis.push(chordData.playbackMidis[idx]);
+                        }
+                    });
+                    if (availableMidis.length > 0) midisToPlay = availableMidis;
+                }
+            }
+            audioEngine.play(midisToPlay);
         }
     }
 
@@ -715,9 +733,10 @@ export class AppController {
             : midiToName(chord.playbackMidis[idx], this._currentNotation, true, this._currentOffset);
         const roleName = chord.roles[idx] || '';
 
+        const bellowsMode = this._chordView ? this._chordView.bellowsMode : this._bellowsMachine.mode;
         this._executionView.setNoteLabel(`${noteName} (${roleName})`);
 
-        const forms = this.calculateExecutionForms(target, chord.isExactMidi);
+        const forms = this.calculateExecutionForms(target, chord.isExactMidi, bellowsMode);
         this._executionView.renderForms(forms, (selectedForm) => {
             this._diapasonView.highlightSingleButton(selectedForm.btnId, selectedForm.directionClass);
             audioEngine.play(selectedForm.midi);

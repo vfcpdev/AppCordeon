@@ -349,6 +349,22 @@
                         </div>
                     </header>
 
+                    <!-- Selector de Acción de Fuelle en Acorde Libre -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.70rem; color: #475569; background: #ffffff; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; gap: 6px; flex-wrap: wrap;">
+                        <span><i class="fas fa-wind" style="color: #059669;"></i> <strong>Acción de Fuelle:</strong></span>
+                        <div class="toggle-segmented" id="chordBellowsToggle">
+                            <button type="button" class="segment-btn active" data-mode="both" title="Mostrar en ambas direcciones de fuelle">
+                                <i class="fas fa-arrows-alt-h"></i> Ambos
+                            </button>
+                            <button type="button" class="segment-btn" data-mode="push" title="Filtrar notas que se tocan Cerrando (Push)">
+                                <i class="fas fa-arrow-right-to-line"></i> Cerrar (Push)
+                            </button>
+                            <button type="button" class="segment-btn" data-mode="pull" title="Filtrar notas que se tocan Abriendo (Pull)">
+                                <i class="fas fa-arrow-left-to-line"></i> Abrir (Pull)
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="control-panel__row">
                         <select id="chordRoot" class="form-select" title="Tónica del acorde" style="flex: 1 1 20%;">
                             <!-- Llenado dinámicamente -->

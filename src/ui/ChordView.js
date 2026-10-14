@@ -26,9 +26,32 @@ export class ChordView {
         this._btnNextNote = elements.btnNextNote;
         this._btnClear = elements.btnClear;
         this._chkFixChord = elements.chkFixChord;
+        this._bellowsButtons = elements.bellowsButtons;
+        this._currentBellowsMode = 'both';
 
         this._currentStepIndex = -1;
         this._isArpeggioPlaying = false;
+    }
+
+    /**
+     * Modo de fuelle actual en el selector de acorde libre ('both', 'push', 'pull').
+     * @returns {string}
+     */
+    get bellowsMode() {
+        return this._currentBellowsMode;
+    }
+
+    /**
+     * Establece el modo de fuelle para el acorde libre.
+     * @param {'both'|'push'|'pull'} mode
+     */
+    setBellowsMode(mode) {
+        this._currentBellowsMode = mode;
+        if (this._bellowsButtons) {
+            this._bellowsButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+        }
     }
 
     /**
@@ -208,14 +231,28 @@ export class ChordView {
             const noteFeat = feasibility ? feasibility.noteDetails[idx] : null;
             let bellowsBadge = '';
             if (noteFeat) {
-                if (noteFeat.canPush && noteFeat.canPull) {
-                    bellowsBadge = '<span class="note-bellows-dir both">Abrir/Cerrar</span>';
-                } else if (noteFeat.canPush) {
-                    bellowsBadge = '<span class="note-bellows-dir push">Cerrar</span>';
-                } else if (noteFeat.canPull) {
-                    bellowsBadge = '<span class="note-bellows-dir pull">Abrir</span>';
+                if (this._currentBellowsMode === 'push') {
+                    if (noteFeat.canPush) {
+                        bellowsBadge = '<span class="note-bellows-dir push">Cerrar</span>';
+                    } else {
+                        bellowsBadge = '<span class="note-bellows-dir unavailable" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;">Falta al Cerrar</span>';
+                    }
+                } else if (this._currentBellowsMode === 'pull') {
+                    if (noteFeat.canPull) {
+                        bellowsBadge = '<span class="note-bellows-dir pull">Abrir</span>';
+                    } else {
+                        bellowsBadge = '<span class="note-bellows-dir unavailable" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;">Falta al Abrir</span>';
+                    }
                 } else {
-                    bellowsBadge = '<span class="note-bellows-dir none">Falta</span>';
+                    if (noteFeat.canPush && noteFeat.canPull) {
+                        bellowsBadge = '<span class="note-bellows-dir both">Abrir/Cerrar</span>';
+                    } else if (noteFeat.canPush) {
+                        bellowsBadge = '<span class="note-bellows-dir push">Cerrar</span>';
+                    } else if (noteFeat.canPull) {
+                        bellowsBadge = '<span class="note-bellows-dir pull">Abrir</span>';
+                    } else {
+                        bellowsBadge = '<span class="note-bellows-dir none">Falta</span>';
+                    }
                 }
             }
 
@@ -280,6 +317,16 @@ export class ChordView {
         if (this._octaveSelect) {
             this._octaveSelect.addEventListener('change', notifyChange);
             this._octaveSelect.addEventListener('input', notifyChange);
+        }
+
+        if (this._bellowsButtons) {
+            this._bellowsButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    this.setBellowsMode(btn.dataset.mode);
+                    notifyChange();
+                    if (handlers.onBellowsChange) handlers.onBellowsChange(btn.dataset.mode);
+                });
+            });
         }
 
         if (this._btnPlay) this._btnPlay.addEventListener('click', handlers.onPlayChord);
