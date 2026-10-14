@@ -8,8 +8,9 @@
 import { audioChordAnalyzer } from '../audio/AudioChordAnalyzer.js';
 import { audioPlayerController } from '../audio/AudioPlayerController.js';
 import { metronomeEngine } from '../audio/MetronomeEngine.js';
-import { getNoteNamesList } from '../theory/MusicTheory.js';
+import { getNoteNamesList, parseChordNotation } from '../theory/MusicTheory.js';
 import { NOTATION_MODES, ROW_BASE_TONICS } from '../core/Constants.js';
+import { eventBus } from '../core/EventBus.js';
 import { tuningRegistry } from '../models/Tunings.js';
 
 export class AudioTrackView {
@@ -679,6 +680,83 @@ export class AudioTrackView {
             });
         }
 
+        this._editorNotationInput = document.getElementById('editorChordNotationInput');
+        this._btnApplyNotation = document.getElementById('btnApplyChordNotation');
+        this._notationFeedback = document.getElementById('chordNotationFeedback');
+
+        const applyParsedNotation = (shouldNotify = true) => {
+            if (!this._editorNotationInput) return false;
+            const parsed = parseChordNotation(this._editorNotationInput.value);
+            if (parsed) {
+                if (this._editorRootSelect) this._editorRootSelect.value = parsed.root;
+                if (this._editorTypeSelect) {
+                    this._editorTypeSelect.value = parsed.chordType;
+                    if (this._editorTypeSelect.value !== parsed.chordType) {
+                        const opt = document.createElement('option');
+                        opt.value = parsed.chordType;
+                        opt.textContent = parsed.chordName;
+                        this._editorTypeSelect.appendChild(opt);
+                        this._editorTypeSelect.value = parsed.chordType;
+                    }
+                }
+                if (this._notationFeedback) {
+                    const latinNotes = getNoteNamesList(NOTATION_MODES.LATINA, 0);
+                    this._notationFeedback.style.color = '#15803d';
+                    this._notationFeedback.innerHTML = `<i class="fas fa-check-circle"></i> <strong>${parsed.chordSymbol}</strong> (${parsed.chordName}) · Notas: ${parsed.noteMods.map(n => latinNotes[n]).join(', ')}`;
+                }
+                return true;
+            } else if (this._editorNotationInput.value.trim() !== '') {
+                if (this._notationFeedback) {
+                    this._notationFeedback.style.color = '#b91c1c';
+                    this._notationFeedback.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Notación no reconocida (ej: CM7, Esus4, Am, Bb7)`;
+                }
+                return false;
+            } else {
+                if (this._notationFeedback) this._notationFeedback.innerHTML = '';
+                return false;
+            }
+        };
+
+        if (this._editorNotationInput) {
+            this._editorNotationInput.addEventListener('input', () => {
+                applyParsedNotation(false);
+            });
+            this._editorNotationInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (applyParsedNotation(true)) {
+                        this._saveEditedChord();
+                    }
+                }
+            });
+        }
+
+        if (this._btnApplyNotation) {
+            this._btnApplyNotation.addEventListener('click', () => {
+                applyParsedNotation(true);
+            });
+        }
+
+        // Sincronizar el input de texto cuando cambian los selectores desplegables
+        const updateNotationInputFromSelects = () => {
+            if (!this._editorRootSelect || !this._editorTypeSelect || !this._editorNotationInput) return;
+            const root = parseInt(this._editorRootSelect.value, 10);
+            const qual = this._editorTypeSelect.value;
+            const tempChord = this._buildChordObject(root, qual, 0, 1);
+            this._editorNotationInput.value = tempChord.chordSymbol;
+            if (this._notationFeedback) {
+                this._notationFeedback.style.color = '#4338ca';
+                this._notationFeedback.innerHTML = `<i class="fas fa-music"></i> ${tempChord.chordSymbol} (${tempChord.chordName})`;
+            }
+        };
+
+        if (this._editorRootSelect) {
+            this._editorRootSelect.addEventListener('change', updateNotationInputFromSelects);
+        }
+        if (this._editorTypeSelect) {
+            this._editorTypeSelect.addEventListener('change', updateNotationInputFromSelects);
+        }
+
         if (this._btnCloseModal) {
             this._btnCloseModal.addEventListener('click', () => this._closeChordEditor());
         }
@@ -936,8 +1014,8 @@ export class AudioTrackView {
      * @private
      */
     _buildChordObject(root, chordType, startTime, endTime, bellowsAction = 'both') {
-        const latinNotes = getNoteNamesList(NOTATION_MODES.LATIN);
-        const englishNotes = getNoteNamesList(NOTATION_MODES.ENGLISH);
+        const latinNotes = getNoteNamesList(NOTATION_MODES.LATINA);
+        const englishNotes = getNoteNamesList(NOTATION_MODES.ALEMANA);
         const rootNameLat = latinNotes[root] || 'Do';
         const rootNameEng = englishNotes[root] || 'C';
 
@@ -949,18 +1027,34 @@ export class AudioTrackView {
             typeLabel = 'm';
             symbolSuffix = 'm';
             noteIntervals = [0, 3, 7];
-        } else if (chordType === '7') {
-            typeLabel = '7';
-            symbolSuffix = '7';
-            noteIntervals = [0, 4, 7, 10];
+        } else if (chordType === 'maj7') {
+            typeLabel = 'Maj7';
+            symbolSuffix = 'Maj7';
+            noteIntervals = [0, 4, 7, 11];
         } else if (chordType === 'm7') {
             typeLabel = 'm7';
             symbolSuffix = 'm7';
             noteIntervals = [0, 3, 7, 10];
+        } else if (chordType === '7') {
+            typeLabel = '7';
+            symbolSuffix = '7';
+            noteIntervals = [0, 4, 7, 10];
+        } else if (chordType === 'm7b5') {
+            typeLabel = 'm7(♭5)';
+            symbolSuffix = 'm7(♭5)';
+            noteIntervals = [0, 3, 6, 10];
+        } else if (chordType === 'dim7') {
+            typeLabel = 'dim7';
+            symbolSuffix = 'dim7';
+            noteIntervals = [0, 3, 6, 9];
         } else if (chordType === 'dim') {
             typeLabel = 'dim';
             symbolSuffix = 'dim';
             noteIntervals = [0, 3, 6];
+        } else if (chordType === 'aug7') {
+            typeLabel = '7(♯5)';
+            symbolSuffix = '7(♯5)';
+            noteIntervals = [0, 4, 8, 10];
         } else if (chordType === 'aug') {
             typeLabel = 'aum';
             symbolSuffix = 'aug';
@@ -973,11 +1067,44 @@ export class AudioTrackView {
             typeLabel = 'sus2';
             symbolSuffix = 'sus2';
             noteIntervals = [0, 2, 7];
+        } else if (chordType === '7sus4') {
+            typeLabel = '7sus4';
+            symbolSuffix = '7sus4';
+            noteIntervals = [0, 5, 7, 10];
+        } else if (chordType === 'add9') {
+            typeLabel = 'add9';
+            symbolSuffix = 'add9';
+            noteIntervals = [0, 2, 4, 7];
+        } else if (chordType === 'maj9') {
+            typeLabel = 'Maj9';
+            symbolSuffix = 'Maj9';
+            noteIntervals = [0, 2, 4, 7, 11];
+        } else if (chordType === 'min9') {
+            typeLabel = 'm9';
+            symbolSuffix = 'm9';
+            noteIntervals = [0, 2, 3, 7, 10];
+        } else if (chordType === '9') {
+            typeLabel = '9';
+            symbolSuffix = '9';
+            noteIntervals = [0, 2, 4, 7, 10];
+        } else if (chordType === 'maj6' || chordType === '6') {
+            typeLabel = '6';
+            symbolSuffix = '6';
+            noteIntervals = [0, 4, 7, 9];
+        } else if (chordType === 'min6' || chordType === 'm6') {
+            typeLabel = 'm6';
+            symbolSuffix = 'm6';
+            noteIntervals = [0, 3, 7, 9];
+        } else if (chordType === '5') {
+            typeLabel = '5';
+            symbolSuffix = '5';
+            noteIntervals = [0, 7];
         }
 
         const chordName = `${rootNameLat} ${typeLabel}`.trim();
         const chordSymbol = `${rootNameEng}${symbolSuffix}`.trim();
         const noteMods = noteIntervals.map(interval => (root + interval) % 12);
+        const playbackMidis = noteIntervals.map(interval => 60 + root + interval);
 
         return {
             root,
@@ -985,6 +1112,7 @@ export class AudioTrackView {
             chordName,
             chordSymbol,
             noteMods,
+            playbackMidis,
             startTime,
             endTime,
             confidence: 1.0,
@@ -1212,10 +1340,17 @@ export class AudioTrackView {
 
         const timeline = (this._currentAnalysisData && (this._currentAnalysisData.chords || this._currentAnalysisData.chordsTimeline)) || [];
 
+        let currentSymbol = 'C';
+        let currentRoot = 0;
+        let currentType = 'major';
+
         if (idx >= 0 && timeline[idx]) {
             const ch = timeline[idx];
-            if (this._editorRootSelect) this._editorRootSelect.value = ch.root ?? 0;
-            if (this._editorTypeSelect) this._editorTypeSelect.value = ch.chordType || 'major';
+            currentRoot = ch.root ?? 0;
+            currentType = ch.chordType || 'major';
+            currentSymbol = ch.chordSymbol || '';
+            if (this._editorRootSelect) this._editorRootSelect.value = currentRoot;
+            if (this._editorTypeSelect) this._editorTypeSelect.value = currentType;
             if (this._editorStartInput) this._editorStartInput.value = (typeof ch.startTime === 'number' ? ch.startTime : 0).toFixed(2);
             if (this._editorEndInput) this._editorEndInput.value = (typeof ch.endTime === 'number' ? ch.endTime : 1).toFixed(2);
             if (this._btnDeleteModal) this._btnDeleteModal.style.display = 'inline-flex';
@@ -1228,6 +1363,28 @@ export class AudioTrackView {
             const end = Math.min(defaultTime + 2.0, dur > 0 ? dur : defaultTime + 2.0);
             if (this._editorEndInput) this._editorEndInput.value = end.toFixed(2);
             if (this._btnDeleteModal) this._btnDeleteModal.style.display = 'none';
+        }
+
+        if (this._editorNotationInput) {
+            if (!currentSymbol && this._editorRootSelect && this._editorTypeSelect) {
+                const tempChord = this._buildChordObject(parseInt(this._editorRootSelect.value, 10), this._editorTypeSelect.value, 0, 1);
+                currentSymbol = tempChord.chordSymbol;
+            }
+            this._editorNotationInput.value = currentSymbol;
+            if (this._notationFeedback) {
+                const parsed = parseChordNotation(currentSymbol);
+                if (parsed) {
+                    const latinNotes = getNoteNamesList(NOTATION_MODES.LATINA, 0);
+                    this._notationFeedback.style.color = '#15803d';
+                    this._notationFeedback.innerHTML = `<i class="fas fa-check-circle"></i> <strong>${parsed.chordSymbol}</strong> (${parsed.chordName}) · Notas: ${parsed.noteMods.map(n => latinNotes[n]).join(', ')}`;
+                } else {
+                    this._notationFeedback.innerHTML = '';
+                }
+            }
+            setTimeout(() => {
+                this._editorNotationInput.focus();
+                this._editorNotationInput.select();
+            }, 80);
         }
 
         this._modal.style.display = 'flex';
@@ -1256,6 +1413,24 @@ export class AudioTrackView {
             this._currentAnalysisData.chords = [];
         }
         const timeline = this._currentAnalysisData.chords;
+
+        // Si el usuario ingresó una notación escrita, validarla y aplicarla a los campos
+        if (this._editorNotationInput && this._editorNotationInput.value.trim() !== '') {
+            const parsed = parseChordNotation(this._editorNotationInput.value);
+            if (parsed) {
+                if (this._editorRootSelect) this._editorRootSelect.value = parsed.root;
+                if (this._editorTypeSelect) {
+                    this._editorTypeSelect.value = parsed.chordType;
+                    if (this._editorTypeSelect.value !== parsed.chordType) {
+                        const opt = document.createElement('option');
+                        opt.value = parsed.chordType;
+                        opt.textContent = parsed.chordName;
+                        this._editorTypeSelect.appendChild(opt);
+                        this._editorTypeSelect.value = parsed.chordType;
+                    }
+                }
+            }
+        }
 
         const root = parseInt(this._editorRootSelect.value, 10);
         const chordType = this._editorTypeSelect.value;
