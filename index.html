@@ -471,42 +471,7 @@
                             </label>
                         </div>
 
-                        <!-- Control de Ajuste de Tono (Pitch Shift) con Lista de Tonalidades de Acordeón -->
-                        <div class="audio-pitch-box" id="audioPitchBox" style="display: flex; flex-direction: column; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; margin-top: 5px; gap: 6px;">
-                            <!-- Fila 1: Título y Lista de Tipos de Tonalidades en Acordeones -->
-                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
-                                <label for="audioAccordionSelect" style="font-size: 0.70rem; font-weight: 800; color: #4338ca; display: flex; align-items: center; gap: 5px; margin: 0;">
-                                    <i class="fas fa-sliders-h"></i> <span>Ajustar Tono a Acordeón:</span>
-                                </label>
-                                <select id="audioAccordionSelect" class="form-select" style="font-size: 0.72rem; padding: 2px 6px; height: 25px; border-radius: 5px; border: 1.5px solid #a5b4fc; background: #f8fafc; color: #0f172a; font-weight: 700; max-width: 220px;" title="Selecciona el tipo de afinación de acordeón en el que deseas aplicar y tocar los acordes">
-                                    <!-- Tipos de afinaciones: Cinco Letras, Rey Vallenato, Sabanera, etc. -->
-                                </select>
-                            </div>
 
-                            <!-- Fila 2: Hileras de la Afinación de Acordeón Seleccionada (con su tonalidad y semitonos) -->
-                            <div id="audioAccordionRowsContainer" style="display: flex; gap: 4px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-                                <!-- Botones de las 3 hileras con su tonalidad y semitonos calculados -->
-                            </div>
-
-                            <div style="font-size: 0.64rem; color: #6d28d9; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 5px; padding: 3px 6px; display: flex; align-items: center; gap: 5px;">
-                                <i class="fas fa-eye"></i>
-                                <span>Transposición <strong>solo visual</strong>: cambia los acordes mostrados; la canción conserva su sonido original.</span>
-                            </div>
-
-                            <!-- Fila 3: Ajuste fino semitono a semitono y Botón para Aplicar al Acordeón Diapasón -->
-                            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 5px; margin-top: 1px; flex-wrap: wrap; gap: 6px;">
-                                <div style="display: flex; align-items: center; gap: 4px;">
-                                    <span style="font-size: 0.65rem; color: #64748b; font-weight: 700;">Ajuste fino:</span>
-                                    <button type="button" class="btn-action" id="btnPitchDown" title="Transponer acordes -1 semitono (el audio no cambia)" style="padding: 2px 7px; font-size: 0.68rem; height: 22px;">-1 st</button>
-                                    <span id="lblPitchShiftValue" style="font-size: 0.72rem; font-weight: 800; min-width: 42px; text-align: center; color: #0f172a; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1;">0 st</span>
-                                    <button type="button" class="btn-action" id="btnPitchUp" title="Transponer acordes +1 semitono (el audio no cambia)" style="padding: 2px 7px; font-size: 0.68rem; height: 22px;">+1 st</button>
-                                    <button type="button" class="btn-action" id="btnPitchReset" title="Restablecer al tono original (0 st)" style="padding: 2px 5px; font-size: 0.65rem; height: 22px; color: #64748b;">Reset</button>
-                                </div>
-                                <button type="button" class="btn-action btn-action--success" id="btnSyncTuningToDiapason" style="padding: 2px 8px; font-size: 0.68rem; height: 22px;" title="Configurar el acordeón virtual con esta afinación">
-                                    <i class="fas fa-check"></i> Aplicar al Acordeón
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </section>
 
