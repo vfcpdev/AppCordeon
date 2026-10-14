@@ -116,6 +116,10 @@ export class DiapasonChordSidebarView {
             `).join('');
         };
 
+        const currentAction = chord.bellowsAction || 'both';
+        const isPullChecked = currentAction === 'both' || currentAction === 'pull';
+        const isPushChecked = currentAction === 'both' || currentAction === 'push';
+
         activeBox.innerHTML = `
             <div class="sidebar-chord-card-header">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -126,9 +130,12 @@ export class DiapasonChordSidebarView {
             </div>
 
             <!-- BOTONES PARA ABRE (PULL) -->
-            <div class="sidebar-bellows-block pull-block">
-                <div class="sidebar-bellows-header" data-dir="pull" title="Clic para tocar y resaltar abriendo">
-                    <span class="sidebar-bellows-title"><i class="fas fa-arrow-left"></i> Abre (Pull)</span>
+            <div class="sidebar-bellows-block pull-block ${!isPullChecked ? 'action-dimmed' : ''}">
+                <div class="sidebar-bellows-header" data-dir="pull">
+                    <label class="sidebar-checkbox-label" title="Marcar para ejecutar Abriendo en la melodía">
+                        <input type="checkbox" class="sidebar-dir-checkbox" data-dir="pull" ${isPullChecked ? 'checked' : ''}>
+                        <span class="sidebar-bellows-title"><i class="fas fa-arrow-left"></i> Abre (Pull)</span>
+                    </label>
                     <span class="sidebar-bellows-count">${buttons.pullButtons.length} bot.</span>
                 </div>
                 <div class="sidebar-buttons-grid">
@@ -137,9 +144,12 @@ export class DiapasonChordSidebarView {
             </div>
 
             <!-- BOTONES PARA CIERRA (PUSH) -->
-            <div class="sidebar-bellows-block push-block">
-                <div class="sidebar-bellows-header" data-dir="push" title="Clic para tocar y resaltar cerrando">
-                    <span class="sidebar-bellows-title"><i class="fas fa-arrow-right"></i> Cierra (Push)</span>
+            <div class="sidebar-bellows-block push-block ${!isPushChecked ? 'action-dimmed' : ''}">
+                <div class="sidebar-bellows-header" data-dir="push">
+                    <label class="sidebar-checkbox-label" title="Marcar para ejecutar Cerrando en la melodía">
+                        <input type="checkbox" class="sidebar-dir-checkbox" data-dir="push" ${isPushChecked ? 'checked' : ''}>
+                        <span class="sidebar-bellows-title"><i class="fas fa-arrow-right"></i> Cierra (Push)</span>
+                    </label>
                     <span class="sidebar-bellows-count">${buttons.pushButtons.length} bot.</span>
                 </div>
                 <div class="sidebar-buttons-grid">
@@ -148,10 +158,49 @@ export class DiapasonChordSidebarView {
             </div>
         `;
 
-        // Eventos al hacer clic en los bloques Abre / Cierra o en botones individuales
+        // Checkbox events para definir Abre / Cierra en la ejecución
+        const dirCheckboxes = activeBox.querySelectorAll('.sidebar-dir-checkbox');
+        dirCheckboxes.forEach(chk => {
+            chk.addEventListener('click', (e) => e.stopPropagation());
+            chk.addEventListener('change', () => {
+                const pullChk = activeBox.querySelector('.sidebar-dir-checkbox[data-dir="pull"]');
+                const pushChk = activeBox.querySelector('.sidebar-dir-checkbox[data-dir="push"]');
+                let newAction = 'both';
+                if (pullChk && pushChk) {
+                    if (pullChk.checked && !pushChk.checked) {
+                        newAction = 'pull';
+                    } else if (!pullChk.checked && pushChk.checked) {
+                        newAction = 'push';
+                    } else if (pullChk.checked && pushChk.checked) {
+                        newAction = 'both';
+                    } else {
+                        chk.checked = true;
+                        newAction = chk.dataset.dir;
+                    }
+                }
+                chord.bellowsAction = newAction;
+
+                const pullBlock = activeBox.querySelector('.pull-block');
+                const pushBlock = activeBox.querySelector('.push-block');
+                if (pullBlock) pullBlock.classList.toggle('action-dimmed', newAction === 'push');
+                if (pushBlock) pushBlock.classList.toggle('action-dimmed', newAction === 'pull');
+
+                if (onButtonAction) {
+                    onButtonAction({
+                        type: 'bellows_preference_change',
+                        target: targetKey,
+                        bellowsAction: newAction,
+                        chord
+                    });
+                }
+            });
+        });
+
+        // Eventos al hacer clic en el encabezado de los bloques Abre / Cierra para previsualizar/tocar
         const pullHeader = activeBox.querySelector('.pull-block .sidebar-bellows-header');
         if (pullHeader) {
-            pullHeader.addEventListener('click', () => {
+            pullHeader.addEventListener('click', (e) => {
+                if (e.target.closest('.sidebar-dir-checkbox') || e.target.closest('.sidebar-checkbox-label')) return;
                 if (onButtonAction) {
                     onButtonAction({
                         target: targetKey,
@@ -165,7 +214,8 @@ export class DiapasonChordSidebarView {
 
         const pushHeader = activeBox.querySelector('.push-block .sidebar-bellows-header');
         if (pushHeader) {
-            pushHeader.addEventListener('click', () => {
+            pushHeader.addEventListener('click', (e) => {
+                if (e.target.closest('.sidebar-dir-checkbox') || e.target.closest('.sidebar-checkbox-label')) return;
                 if (onButtonAction) {
                     onButtonAction({
                         target: targetKey,

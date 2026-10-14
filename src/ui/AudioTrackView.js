@@ -52,12 +52,16 @@ export class AudioTrackView {
 
         // Modal de Edición de Acordes del Timeline
         this._btnAddChord = elements.btnAddChord || document.getElementById('btnAddChordAtCurrentTime');
+        this._btnMarkChordChange = document.getElementById('btnMarkChordChange');
         this._modal = document.getElementById('chordEditorModal');
         this._modalBackdrop = document.getElementById('chordEditorBackdrop');
         this._btnCloseModal = document.getElementById('btnCloseChordEditor');
         this._btnCancelModal = document.getElementById('btnCancelEditorChord');
         this._btnSaveModal = document.getElementById('btnSaveEditorChord');
         this._btnDeleteModal = document.getElementById('btnDeleteEditorChord');
+        this._btnSetStartCurrentTime = document.getElementById('btnSetStartCurrentTime');
+        this._btnSetEndCurrentTime = document.getElementById('btnSetEndCurrentTime');
+        this._chkAutoAdjustAdjacent = document.getElementById('chkAutoAdjustAdjacent');
         this._editorRootSelect = document.getElementById('editorChordRoot');
         this._editorTypeSelect = document.getElementById('editorChordType');
         this._editorStartInput = document.getElementById('editorChordStart');
@@ -66,14 +70,44 @@ export class AudioTrackView {
         this._editingChordIndex = -1;
 
         this._originalAnalysisData = null;
-        this._currentAnalysisData = null;
         this._currentPitchShift = 0;
-        this._onChordMarkerClick = null;
+        this._onChordMarkerClick = (seekTime) => {
+            audioPlayerController.seek(seekTime);
+        };
         this._selectedAccordionTuningId = null;
         this._selectedAccordionRowKey = 'row2';
         this._handlers = null;
 
+        // Progresión predeterminada (Cinco Letras / Vallenato tradicional) para que la línea de tiempo
+        // sea visible, interactiva y editable inmediatamente desde la carga inicial de la página
+        const defaultChords = [
+            { root: 10, chordType: 'major', chordName: 'Si♭ (Bb)', chordSymbol: 'Bb', noteMods: [10, 2, 5], startTime: 0, endTime: 4, confidence: 1.0, bassNote: 10, bellowsAction: 'both' },
+            { root: 3, chordType: 'major', chordName: 'Mi♭ (Eb)', chordSymbol: 'Eb', noteMods: [3, 7, 10], startTime: 4, endTime: 8, confidence: 1.0, bassNote: 3, bellowsAction: 'both' },
+            { root: 5, chordType: '7', chordName: 'Fa 7 (F7)', chordSymbol: 'F7', noteMods: [5, 9, 0, 3], startTime: 8, endTime: 12, confidence: 1.0, bassNote: 5, bellowsAction: 'both' },
+            { root: 10, chordType: 'major', chordName: 'Si♭ (Bb)', chordSymbol: 'Bb', noteMods: [10, 2, 5], startTime: 12, endTime: 16, confidence: 1.0, bassNote: 10, bellowsAction: 'both' }
+        ];
+
+        this._currentAnalysisData = {
+            duration: 16,
+            mainKey: {
+                rootMod: 10,
+                mode: 'major',
+                keyNameLat: 'Si♭ Mayor',
+                keyNameEng: 'Bb Major',
+                keyNameAle: 'Bb Major',
+                recommendedTuning: 'Cinco Letras (Bb-Eb-Ab)',
+                recommendedOffset: 10,
+                recommendedRow: 'row1'
+            },
+            chords: defaultChords
+        };
+        this._originalAnalysisData = this._currentAnalysisData;
+
         this._initChordEditor();
+
+        // Renderizar la tira de acordes inmediatamente en la carga
+        this.renderChordsStrip(this._currentAnalysisData.chords, this._onChordMarkerClick);
+        audioPlayerController.setChordsTimeline(this._currentAnalysisData.chords);
     }
 
     /**
@@ -446,12 +480,17 @@ export class AudioTrackView {
     }
 
     /**
-     * Aplica un desplazamiento de tono en semitonos (-12 a +12).
+     * Aplica un desplazamiento de tono VISUAL en semitonos (-12 a +12).
+     * El audio de la canción NO se modifica: solo se transponen los acordes,
+     * la tonalidad mostrada y las digitaciones en los diapasones.
      * @param {number} semitones
      * @param {Object} [handlers]
      */
     setPitchShift(semitones, handlers) {
         if (!this._originalAnalysisData) return;
+
+        // Conservar ediciones manuales y preferencias Abre/Cierra hechas sobre la vista transpuesta
+        this._syncOriginalFromCurrent();
 
         const clamped = Math.max(-12, Math.min(12, semitones));
         this._currentPitchShift = clamped;
@@ -460,11 +499,11 @@ export class AudioTrackView {
             this._lblPitchShift.innerText = `${clamped > 0 ? '+' : ''}${clamped} st`;
         }
 
-        // 1. Transponer reporte con audioChordAnalyzer
+        // 1. Transponer reporte con audioChordAnalyzer (solo datos visuales)
         const transposedReport = audioChordAnalyzer.transposeReport(this._originalAnalysisData, clamped);
         this._currentAnalysisData = transposedReport;
 
-        // 2. Transponer reproducción de audio en tiempo real con Web Audio detune
+        // 2. El audio conserva su tono original; solo se actualiza la línea de acordes sincronizada
         audioPlayerController.setPitchShift(clamped);
         audioPlayerController.setChordsTimeline(transposedReport.chords);
 
@@ -484,13 +523,32 @@ export class AudioTrackView {
     }
 
     /**
+     * Reconstruye el reporte original (tono real de la canción) a partir de la vista transpuesta,
+     * para que las ediciones de acordes no se pierdan al cambiar de tono.
+     * @private
+     */
+    _syncOriginalFromCurrent() {
+        if (!this._currentAnalysisData) return;
+        if (!this._currentPitchShift) {
+            this._originalAnalysisData = this._currentAnalysisData;
+            return;
+        }
+        const restored = audioChordAnalyzer.transposeReport(this._currentAnalysisData, -this._currentPitchShift);
+        if (restored && this._originalAnalysisData && this._originalAnalysisData.mainKey) {
+            // Mantener la tonalidad original detectada exactamente como estaba
+            restored.mainKey = this._originalAnalysisData.mainKey;
+        }
+        this._originalAnalysisData = restored;
+    }
+
+    /**
      * Actualiza las insignias de tonalidad y recomendación de acordeón.
      * @private
      */
     _updateKeyDisplay(mainKey) {
         if (this._mainKeyBadge && mainKey) {
             const shiftTag = this._currentPitchShift !== 0
-                ? `<span style="font-size: 0.65rem; color: #7c3aed; font-weight: 800; margin-left: 4px;">(${this._currentPitchShift > 0 ? '+' : ''}${this._currentPitchShift} st)</span>`
+                ? `<span style="font-size: 0.65rem; color: #7c3aed; font-weight: 800; margin-left: 4px;" title="Transposición visual: el audio conserva su tono original">(${this._currentPitchShift > 0 ? '+' : ''}${this._currentPitchShift} st · visual)</span>`
                 : '';
 
             this._mainKeyBadge.innerHTML = `
@@ -546,6 +604,86 @@ export class AudioTrackView {
                 this._openChordEditor(-1, curTime);
             });
         }
+        if (this._btnMarkChordChange) {
+            this._btnMarkChordChange.addEventListener('click', () => {
+                this._markChordChangeAtCurrentTime();
+            });
+        }
+        if (this._btnSetStartCurrentTime) {
+            this._btnSetStartCurrentTime.addEventListener('click', () => {
+                const curTime = audioPlayerController.currentTime || 0;
+                if (this._editorStartInput) this._editorStartInput.value = curTime.toFixed(2);
+            });
+        }
+        if (this._btnSetEndCurrentTime) {
+            this._btnSetEndCurrentTime.addEventListener('click', () => {
+                const curTime = audioPlayerController.currentTime || 0;
+                if (this._editorEndInput) this._editorEndInput.value = curTime.toFixed(2);
+            });
+        }
+    }
+
+    /**
+     * Marca un cambio de acorde en el segundo actual de reproducción:
+     * Cierra el acorde actual fijando su punto final, e inicia el nuevo acorde en ese segundo.
+     * @private
+     */
+    _markChordChangeAtCurrentTime() {
+        const curTime = audioPlayerController.currentTime || (this._timelineSeeker ? parseFloat(this._timelineSeeker.value) * (audioPlayerController.duration || 16) : 0);
+        if (!this._currentAnalysisData) {
+            this._currentAnalysisData = { duration: 16, chords: [] };
+        }
+        if (!this._currentAnalysisData.chords) {
+            this._currentAnalysisData.chords = [];
+        }
+        const timeline = this._currentAnalysisData.chords;
+
+        // Buscar si el tiempo actual cae dentro de un acorde existente
+        const chordIdx = timeline.findIndex(c => curTime >= c.startTime && curTime < c.endTime);
+
+        if (chordIdx !== -1) {
+            const curChord = timeline[chordIdx];
+            const oldEndTime = curChord.endTime;
+
+            // Fijar el final del acorde actual al segundo actual (punto de cambio)
+            curChord.endTime = Math.max(curChord.startTime + 0.1, curTime);
+
+            // Crear el nuevo acorde a partir de este segundo hasta el final previo o +3s
+            const newEndTime = Math.max(curTime + 0.5, oldEndTime > curTime ? oldEndTime : curTime + 4.0);
+            const nextRoot = (curChord.root + 5) % 12; // Cuarta diatónica como sugerencia armónica
+            const latinNotes = getNoteNamesList(NOTATION_MODES.LATIN);
+            const englishNotes = getNoteNamesList(NOTATION_MODES.ENGLISH);
+
+            const newChord = {
+                root: nextRoot,
+                chordType: 'major',
+                chordName: `${latinNotes[nextRoot] || 'Do'}`,
+                chordSymbol: `${englishNotes[nextRoot] || 'C'}`,
+                noteMods: [nextRoot, (nextRoot + 4) % 12, (nextRoot + 7) % 12],
+                startTime: curTime,
+                endTime: newEndTime,
+                confidence: 1.0,
+                bassNote: nextRoot,
+                bellowsAction: 'both'
+            };
+
+            timeline.splice(chordIdx + 1, 0, newChord);
+            timeline.sort((a, b) => a.startTime - b.startTime);
+
+            audioPlayerController.setChordsTimeline(timeline);
+            this.renderChordsStrip(timeline, this._onChordMarkerClick);
+
+            if (this._handlers && this._handlers.onChordTimelineUpdated) {
+                this._handlers.onChordTimelineUpdated(timeline);
+            }
+
+            // Abrir el editor para personalizar de inmediato el nuevo acorde
+            const newIdx = timeline.indexOf(newChord);
+            this._openChordEditor(newIdx >= 0 ? newIdx : chordIdx + 1);
+        } else {
+            // Fuera de acorde existente: agregar nuevo acorde en curTime
+            this._openChordEditor(-1, curTime);
+        }
     }
 
     /**
@@ -577,6 +715,7 @@ export class AudioTrackView {
             if (this._btnDeleteModal) this._btnDeleteModal.style.display = 'none';
         }
 
+        this._modal.style.display = 'flex';
         this._modal.classList.remove('hidden');
     }
 
@@ -586,6 +725,7 @@ export class AudioTrackView {
      */
     _closeChordEditor() {
         if (this._modal) {
+            this._modal.style.display = 'none';
             this._modal.classList.add('hidden');
         }
         this._editingChordIndex = -1;
@@ -650,6 +790,10 @@ export class AudioTrackView {
         const chordSymbol = `${rootNameEng}${symbolSuffix}`.trim();
         const noteMods = noteIntervals.map(interval => (root + interval) % 12);
 
+        // Conservar preferencia de fuelle si ya existía
+        const existingChord = (this._editingChordIndex >= 0 && this._editingChordIndex < timeline.length) ? timeline[this._editingChordIndex] : null;
+        const bellowsAction = existingChord ? (existingChord.bellowsAction || 'both') : 'both';
+
         const updatedChord = {
             root,
             chordType,
@@ -659,8 +803,26 @@ export class AudioTrackView {
             startTime,
             endTime,
             confidence: 1.0,
-            bassNote: root
+            bassNote: root,
+            bellowsAction
         };
+
+        // Ajuste automático de acordes adyacentes para una transición perfecta sin huecos
+        const autoAdjust = this._chkAutoAdjustAdjacent ? this._chkAutoAdjustAdjacent.checked : true;
+        if (autoAdjust && this._editingChordIndex >= 0 && this._editingChordIndex < timeline.length) {
+            if (this._editingChordIndex > 0) {
+                const prev = timeline[this._editingChordIndex - 1];
+                if (prev && prev.endTime > startTime) {
+                    prev.endTime = startTime;
+                }
+            }
+            if (this._editingChordIndex < timeline.length - 1) {
+                const next = timeline[this._editingChordIndex + 1];
+                if (next && next.startTime < endTime) {
+                    next.startTime = endTime;
+                }
+            }
+        }
 
         if (this._editingChordIndex >= 0 && this._editingChordIndex < timeline.length) {
             timeline[this._editingChordIndex] = updatedChord;
@@ -721,12 +883,21 @@ export class AudioTrackView {
             const btn = document.createElement('div');
             btn.className = 'chord-timeline-chip';
             btn.id = `chord-marker-${idx}`;
-            btn.title = `${chord.chordName} (${this._formatTime(chord.startTime)} - ${this._formatTime(chord.endTime)}) - Clic para reproducir, lápiz o doble clic para editar`;
+            btn.title = `${chord.chordName} (${this._formatTime(chord.startTime)} - ${this._formatTime(chord.endTime)}) - Clic para reproducir, lápiz para editar`;
+
+            const dirTag = chord.bellowsAction === 'pull'
+                ? '<span class="chip-dir-pill pull">Abre</span>'
+                : chord.bellowsAction === 'push'
+                ? '<span class="chip-dir-pill push">Cierra</span>'
+                : '';
 
             btn.innerHTML = `
                 <div style="display: flex; flex-direction: column; align-items: flex-start; pointer-events: none;">
-                    <strong class="timeline-chord-name">${chord.chordName}</strong>
-                    <span class="timeline-chord-time">${this._formatTime(chord.startTime)}</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <strong class="timeline-chord-name">${chord.chordName}</strong>
+                        ${dirTag}
+                    </div>
+                    <span class="timeline-chord-time">${this._formatTime(chord.startTime)} ➔ ${this._formatTime(chord.endTime)}</span>
                 </div>
                 <button type="button" class="chip-edit-icon" title="Editar este acorde" data-idx="${idx}">
                     <i class="fas fa-pencil-alt"></i>

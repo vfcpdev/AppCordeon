@@ -46,6 +46,7 @@ export class AudioPlayerController {
     loadTrack(buffer, chordsTimeline) {
         this.stop();
         this._audioBuffer = buffer;
+        this._isSyntheticBuffer = false;
         this._chordsTimeline = chordsTimeline || [];
         this._pausedAt = 0;
         this._currentChordIndex = -1;
@@ -61,29 +62,40 @@ export class AudioPlayerController {
      * Inicia o reanuda la reproducción.
      */
     play() {
-        if (!this._audioBuffer || this._isPlaying) return;
+        if (this._isPlaying) return;
 
         const ctx = this._getAudioContext();
+        if (ctx.state === 'suspended') {
+            ctx.resume();
+        }
+
+        const dur = this.duration;
+
+        if (!this._audioBuffer) {
+            // Buffer sintético silencioso para permitir probar la línea de tiempo y sincronización sin archivo
+            this._audioBuffer = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
+            this._isSyntheticBuffer = true;
+        }
+
         this._sourceNode = ctx.createBufferSource();
         this._sourceNode.buffer = this._audioBuffer;
 
-        // Aplicar ajuste de tono en tiempo real mediante detune (cents: semitonos * 100)
-        if (this._sourceNode.detune) {
-            this._sourceNode.detune.value = this._pitchShift * 100;
-        }
+        // El audio SIEMPRE se reproduce en su tono original (sin detune).
+        // El ajuste de tono es exclusivamente visual (transposición de acordes).
 
         this._gainNode = ctx.createGain();
         this._sourceNode.connect(this._gainNode);
         this._gainNode.connect(ctx.destination);
 
-        const offset = this._pausedAt % this._audioBuffer.duration;
+        const bufDur = this._audioBuffer.duration || dur;
+        const offset = (this._pausedAt || 0) % bufDur;
         this._startTime = ctx.currentTime - offset;
 
         this._sourceNode.start(0, offset);
         this._isPlaying = true;
 
         this._sourceNode.onended = () => {
-            if (this._isPlaying && (ctx.currentTime - this._startTime >= this._audioBuffer.duration)) {
+            if (this._isPlaying && (ctx.currentTime - this._startTime >= bufDur)) {
                 this.stop();
                 eventBus.emit('player:ended');
             }
@@ -122,7 +134,7 @@ export class AudioPlayerController {
         eventBus.emit('player:state_change', { isPlaying: false });
         eventBus.emit('player:timeupdate', {
             currentTime: 0,
-            duration: this._audioBuffer ? this._audioBuffer.duration : 0,
+            duration: this.duration,
             progress: 0
         });
     }
@@ -132,8 +144,8 @@ export class AudioPlayerController {
      * @param {number} timeSeconds
      */
     seek(timeSeconds) {
-        if (!this._audioBuffer) return;
-        const targetTime = Math.max(0, Math.min(timeSeconds, this._audioBuffer.duration));
+        const dur = this.duration;
+        const targetTime = Math.max(0, Math.min(timeSeconds, dur));
 
         const wasPlaying = this._isPlaying;
         if (wasPlaying) {
@@ -146,8 +158,8 @@ export class AudioPlayerController {
 
         eventBus.emit('player:timeupdate', {
             currentTime: targetTime,
-            duration: this._audioBuffer.duration,
-            progress: targetTime / this._audioBuffer.duration
+            duration: dur,
+            progress: dur > 0 ? targetTime / dur : 0
         });
 
         if (wasPlaying) {
@@ -243,10 +255,10 @@ export class AudioPlayerController {
     }
 
     get currentTime() {
-        if (!this._audioBuffer) return 0;
-        if (!this._isPlaying) return this._pausedAt;
+        if (!this._isPlaying) return this._pausedAt || 0;
         const ctx = this._getAudioContext();
-        return Math.min(ctx.currentTime - this._startTime, this._audioBuffer.duration);
+        const dur = this.duration;
+        return Math.min(ctx.currentTime - this._startTime, dur);
     }
 
     /**
@@ -254,12 +266,10 @@ export class AudioPlayerController {
      * @param {number} semitones
      */
     setPitchShift(semitones) {
+        // Solo se guarda el valor para la transposición visual de acordes;
+        // no se modifica el sonido original de la canción.
         this._pitchShift = Math.max(-12, Math.min(12, semitones));
-        if (this._sourceNode && this._sourceNode.detune && this._isPlaying) {
-            const ctx = this._getAudioContext();
-            this._sourceNode.detune.setValueAtTime(this._pitchShift * 100, ctx.currentTime);
-        }
-        eventBus.emit('player:pitch_shift_changed', { pitchShift: this._pitchShift });
+        eventBus.emit('player:pitch_shift_changed', { pitchShift: this._pitchShift, visualOnly: true });
     }
 
     get pitchShift() {
@@ -273,6 +283,14 @@ export class AudioPlayerController {
     setChordsTimeline(chordsTimeline) {
         this._chordsTimeline = chordsTimeline || [];
         this._currentChordIndex = -1;
+        // Si se usa el buffer silencioso de prueba (sin archivo), regenerarlo si la línea de tiempo creció
+        if (this._isSyntheticBuffer && !this._isPlaying && this._audioBuffer) {
+            const maxEnd = Math.max(16, ...this._chordsTimeline.map(c => c.endTime || 0));
+            if (maxEnd > this._audioBuffer.duration) {
+                this._audioBuffer = null;
+                this._isSyntheticBuffer = false;
+            }
+        }
         if (this._isPlaying && this._audioBuffer) {
             const ctx = this._getAudioContext();
             const currentTime = Math.min(ctx.currentTime - this._startTime, this._audioBuffer.duration);
@@ -281,7 +299,11 @@ export class AudioPlayerController {
     }
 
     get duration() {
-        return this._audioBuffer ? this._audioBuffer.duration : 0;
+        if (this._audioBuffer) return this._audioBuffer.duration;
+        if (this._chordsTimeline && this._chordsTimeline.length > 0) {
+            return Math.max(...this._chordsTimeline.map(c => c.endTime || 0), 16);
+        }
+        return 16;
     }
 }
 

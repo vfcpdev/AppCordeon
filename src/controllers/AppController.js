@@ -147,17 +147,18 @@ export class AppController {
                 this._diapasonChordSidebarView.setActiveTimelineIndex(index);
             }
             if (syncWithDiapason && this._audioTrackView && this._audioTrackView.isSyncEnabled()) {
-                // Mostrar en el diapasón los botones del acorde detectado en la canción
+                // Mostrar en el diapasón los botones del acorde respetando la preferencia Abre / Cierra definida
+                const bellowsFilter = chord.bellowsAction || this._bellowsMachine.mode;
                 this._diapasonView.highlightChord(
                     this._accordionData,
                     chord.noteMods,
                     false,
-                    this._bellowsMachine.mode
+                    bellowsFilter
                 );
                 this._syncSecondaryDiapason({
                     notes: chord.noteMods,
                     isExactMidi: false,
-                    bellowsMode: this._bellowsMachine.mode
+                    bellowsMode: bellowsFilter
                 });
             }
         });
@@ -851,6 +852,29 @@ export class AppController {
             this._currentOffset,
             this._secondaryOffset,
             (action) => {
+                if (action.type === 'bellows_preference_change') {
+                    const targetChord = action.chord;
+                    if (targetChord) {
+                        targetChord.bellowsAction = action.bellowsAction;
+                        const filterMode = action.bellowsAction === 'both' ? 'both' : action.bellowsAction;
+                        const targetView = action.target === 'primary' ? this._diapasonView : this._secondaryDiapasonView;
+                        const accData = action.target === 'primary' ? this._accordionData : this._secondaryAccordionData;
+                        if (targetView && accData) {
+                            targetView.highlightChord(
+                                accData,
+                                targetChord.noteMods,
+                                false,
+                                filterMode
+                            );
+                        }
+                        this._syncSecondaryDiapason({
+                            notes: targetChord.noteMods,
+                            isExactMidi: false,
+                            bellowsMode: filterMode
+                        });
+                    }
+                    return;
+                }
                 if (action.singleButtonId) {
                     const targetView = action.target === 'primary' ? this._diapasonView : this._secondaryDiapasonView;
                     if (targetView) {

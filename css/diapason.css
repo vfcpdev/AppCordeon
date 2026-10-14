@@ -396,15 +396,16 @@
 .primary-tuning-select,
 .secondary-tuning-select,
 .diapason-tuning-select {
-    font-size: 0.70rem;
+    font-size: 0.72rem;
     font-weight: 700;
     padding: 2px 6px;
-    height: 24px;
-    border-radius: 5px;
+    height: 26px;
+    border-radius: 6px;
     background: #1e2238;
     color: #ffffff;
     border: 1px solid rgba(255, 255, 255, 0.22);
-    max-width: 175px;
+    min-width: 170px;
+    max-width: 100%;
     flex: 1;
 }
 
@@ -425,6 +426,7 @@
     align-items: center;
     width: 100%;
     gap: 6px;
+    flex-wrap: wrap;
 }
 
 .diapason-header-lbl {
@@ -546,8 +548,8 @@
 .diapason-audio-chords-sidebar {
     display: flex;
     flex-direction: column;
-    width: 155px;
-    min-width: 155px;
+    width: 175px;
+    min-width: 165px;
     background: #111422;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 18px;
@@ -659,6 +661,17 @@
     border-left: 3px solid #ef4444;
 }
 
+.sidebar-bellows-block.action-dimmed {
+    opacity: 0.42;
+    filter: grayscale(50%);
+    border-style: dashed;
+}
+
+.sidebar-bellows-block.action-dimmed:hover {
+    opacity: 0.85;
+    filter: grayscale(0%);
+}
+
 .sidebar-bellows-header {
     display: flex;
     justify-content: space-between;
@@ -673,6 +686,28 @@
 
 .sidebar-bellows-header:hover {
     background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    margin: 0;
+    user-select: none;
+}
+
+.sidebar-dir-checkbox {
+    accent-color: #3b82f6;
+    width: 13px;
+    height: 13px;
+    cursor: pointer;
+    border-radius: 3px;
+    margin: 0;
+}
+
+.push-block .sidebar-dir-checkbox {
+    accent-color: #ef4444;
 }
 
 .sidebar-bellows-title {

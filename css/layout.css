@@ -219,17 +219,41 @@
     min-width: 0;
 }
 
-/* Responsive Breakpoints */
-@media (max-width: 1280px) {
+/* =========================================================================
+   RESPONSIVE DESIGN BREAKPOINTS
+   ========================================================================= */
+@media (max-width: 1360px) {
     .app-layout {
-        grid-template-columns: auto 1fr;
+        grid-template-columns: auto minmax(280px, 1fr);
     }
     .app-layout__col--chords {
         grid-column: span 2;
     }
 }
 
+@media (max-width: 1100px) {
+    .diapasons-stage-container {
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 100%;
+    }
+    .diapason-card-header {
+        max-width: 100%;
+    }
+}
+
 @media (max-width: 960px) {
+    .app-header {
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+        justify-content: center !important;
+        text-align: center;
+    }
+    .app-header__controls {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        width: 100%;
+    }
     .app-layout {
         display: flex;
         flex-direction: column;
@@ -238,5 +262,45 @@
     .app-layout__col--stage {
         align-items: center;
         width: 100%;
+    }
+    .app-layout__col--theory,
+    .app-layout__col--chords {
+        width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .app-container {
+        padding: 0 4px 16px 4px;
+        gap: 8px;
+    }
+    .app-header__title {
+        font-size: 0.95rem;
+    }
+    .diapason-content-row {
+        flex-direction: column;
+        align-items: center;
+    }
+    .diapason-audio-chords-sidebar {
+        width: 100% !important;
+        max-width: 340px !important;
+    }
+    .sidebar-buttons-grid {
+        max-height: 140px;
+    }
+    .diapason-card-header {
+        padding: 5px 8px;
+    }
+    .primary-tuning-select,
+    .secondary-tuning-select {
+        min-width: 140px;
+        font-size: 0.68rem;
+    }
+    .track-playback-controls {
+        padding: 6px 8px;
+    }
+    .chord-editor-card {
+        width: 95%;
+        padding: 12px 14px;
     }
 }

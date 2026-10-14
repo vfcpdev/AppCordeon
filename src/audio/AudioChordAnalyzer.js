@@ -238,16 +238,19 @@ export class AudioChordAnalyzer {
             pitchShift: semitoneShift
         };
 
-        // 2. Transponer cada segmento de acorde cronológico
+        // 2. Transponer cada segmento de acorde cronológico (incluye acordes editados manualmente)
+        const editorTypeToQuality = { minor: 'min', '7': 'dom7', m7: 'min7', dim: 'dim', aug: 'aug', sus4: 'sus4', sus2: 'sus2', major: 'maj' };
         const transposedChords = report.chords.map(seg => {
-            const rootTransposed = (seg.rootMod + shift) % 12;
-            const noteModsTransposed = seg.noteMods.map(n => (n + shift) % 12);
-            const playbackMidisTransposed = seg.playbackMidis.map(m => m + semitoneShift);
+            const baseRoot = typeof seg.rootMod === 'number' ? seg.rootMod : (typeof seg.root === 'number' ? seg.root : 0);
+            const rootTransposed = (baseRoot + shift) % 12;
+            const noteModsTransposed = (seg.noteMods || []).map(n => (n + shift) % 12);
+            const playbackMidisTransposed = (seg.playbackMidis || []).map(m => m + semitoneShift);
+            const quality = seg.quality || editorTypeToQuality[seg.chordType] || 'maj';
 
             // Reconstruir nombre y símbolo
             let qualitySuffix = '';
             let symbolSuffix = '';
-            switch (seg.quality) {
+            switch (quality) {
                 case 'min': qualitySuffix = 'Menor'; symbolSuffix = 'm'; break;
                 case 'dom7': qualitySuffix = '7ma'; symbolSuffix = '7'; break;
                 case 'min7': qualitySuffix = 'Menor 7ma'; symbolSuffix = 'm7'; break;
@@ -255,10 +258,11 @@ export class AudioChordAnalyzer {
                 case 'dim': qualitySuffix = 'Dism.'; symbolSuffix = 'dim'; break;
                 case 'aug': qualitySuffix = 'Aum.'; symbolSuffix = 'aug'; break;
                 case 'sus4': qualitySuffix = 'Sus4'; symbolSuffix = 'sus4'; break;
+                case 'sus2': qualitySuffix = 'Sus2'; symbolSuffix = 'sus2'; break;
                 default: qualitySuffix = 'Mayor'; symbolSuffix = ''; break;
             }
 
-            return {
+            const transposed = {
                 ...seg,
                 rootMod: rootTransposed,
                 chordName: `${arrLat[rootTransposed]} ${qualitySuffix}`,
@@ -266,6 +270,9 @@ export class AudioChordAnalyzer {
                 noteMods: noteModsTransposed,
                 playbackMidis: playbackMidisTransposed
             };
+            if (typeof seg.root === 'number') transposed.root = rootTransposed;
+            if (typeof seg.bassNote === 'number') transposed.bassNote = (seg.bassNote + shift) % 12;
+            return transposed;
         });
 
         return {
