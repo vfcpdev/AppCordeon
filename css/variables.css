@@ -1,0 +1,48 @@
+/**
+ * VARIABLES CSS Y SISTEMA DE DISEÑO
+ * Simulador de Acordeón Diatónico Pro
+ */
+:root {
+    /* Paleta de Fondo y Superficies */
+    --bg-color: #0c0e17;
+    --panel-bg: rgba(18, 21, 37, 0.92);
+    --panel-border: rgba(255, 255, 255, 0.08);
+    --panel-subtle: rgba(10, 12, 22, 0.7);
+
+    /* Textos */
+    --text-color: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+
+    /* Teclado y Botones */
+    --keyboard-bg: #0d0e17;
+    --btn-base: radial-gradient(circle at 14px 14px, #ffffff, #d3cbbd 70%, #9e9587 100%);
+    --btn-size: 50px;
+
+    /* Direcciones de Fuelle */
+    --push-color: #ef4444;       /* Rojo: Cerrar */
+    --push-glow: rgba(239, 68, 68, 0.6);
+    --pull-color: #3b82f6;       /* Azul: Abrir */
+    --pull-glow: rgba(59, 130, 246, 0.6);
+    --both-color: #a855f7;       /* Púrpura: Ambas */
+    --both-glow: rgba(168, 85, 247, 0.6);
+
+    /* Acentos y Señalizaciones */
+    --highlight: #facc15;        /* Amarillo neón */
+    --glow-color: #fde047;
+    --accent: #ec4899;           /* Rosa neón */
+    --success: #10b981;          /* Esmeralda vibrante */
+    --detector-purple: #8b5cf6;  /* Violeta de detección */
+    --detector-glow: rgba(139, 92, 246, 0.75);
+
+    /* Tipografías */
+    --font-main: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+    --font-mono: 'Consolas', 'Courier New', monospace;
+
+    /* Bordes y Sombras */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-pill: 9999px;
+    --shadow-panel: 0 10px 30px rgba(0, 0, 0, 0.45);
+}

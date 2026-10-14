@@ -1,0 +1,93 @@
+/**
+ * LAYOUT Y ESTRUCTURA GENERAL
+ * Simulador de Acordeón Diatónico Pro
+ */
+.app-container {
+    width: 100%;
+    max-width: 1360px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Header de la Aplicación */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(14px);
+    padding: 12px 20px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-panel);
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.app-header__branding {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-header__icon {
+    font-size: 1.6rem;
+    color: var(--accent);
+    filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.6));
+}
+
+.app-header__title {
+    font-size: 1.18rem;
+    font-weight: 900;
+    letter-spacing: -0.3px;
+    background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.app-header__subtitle {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.app-header__quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Layout Principal de 2 Columnas */
+.app-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    align-items: flex-start;
+}
+
+@media (min-width: 980px) {
+    .app-layout {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+}
+
+.app-layout__stage {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex: 0 0 auto;
+}
+
+.app-layout__sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1 1 440px;
+    width: 100%;
+    max-width: 580px;
+}
