@@ -1313,5 +1313,151 @@
     color: #ffffff;
 }
 
+/* =========================================================================
+   BARRA DE VOICING: LÍMITE DE BOTONES (DEFAULT 4) Y SELECTOR DE OCTAVA
+   ========================================================================= */
+.sidebar-voicing-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 5px 6px;
+    margin-top: 4px;
+}
+
+.sidebar-voicing-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.62rem;
+    color: #94a3b8;
+}
+
+.sidebar-voicing-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
+    color: #cbd5e1;
+}
+
+.sidebar-btn-segmented {
+    display: inline-flex;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 5px;
+    padding: 1px;
+    gap: 1px;
+}
+
+.sidebar-segment-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.60rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.sidebar-segment-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-segment-btn.active {
+    background: #6366f1;
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.sidebar-octave-stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.sidebar-stepper-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #cbd5e1;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 0.62rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.sidebar-stepper-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+}
+
+.sidebar-stepper-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.sidebar-octave-display {
+    font-size: 0.60rem;
+    font-weight: 800;
+    color: #e0e7ff;
+    padding: 1px 6px;
+    min-width: 52px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Indicador de notas faltantes por movimiento de fuelle */
+.sidebar-bellows-warning {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(239, 68, 68, 0.14);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: 5px;
+    padding: 3px 6px;
+    font-size: 0.58rem;
+    color: #fca5a5;
+    margin-top: 3px;
+    line-height: 1.25;
+}
+
+.sidebar-bellows-warning strong {
+    color: #f87171;
+}
+
+.sidebar-bellows-warning span {
+    color: #ffffff;
+    font-weight: 800;
+    text-decoration: underline;
+}
+
+.bellows-status-badge {
+    font-size: 0.52rem;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 3px;
+    letter-spacing: 0.2px;
+}
+
+.bellows-status-badge.badge-complete {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.bellows-status-badge.badge-missing {
+    background: rgba(239, 68, 68, 0.18);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
 
 

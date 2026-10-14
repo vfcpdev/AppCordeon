@@ -148,19 +148,49 @@ export class AppController {
                 this._diapasonChordSidebarView.setActiveTimelineIndex(index);
             }
             if (syncWithDiapason && this._audioTrackView && this._audioTrackView.isSyncEnabled()) {
-                // Mostrar en el diapasón los botones del acorde respetando la preferencia Abre / Cierra definida
+                // Mostrar en el diapasón los botones del acorde respetando la preferencia Abre / Cierra definida y la cantidad de botones
                 const bellowsFilter = chord.bellowsAction || this._bellowsMachine.mode;
+                const deactivated = this._diapasonChordSidebarView ? this._diapasonChordSidebarView.getDeactivatedButtons() : null;
                 this._diapasonView.highlightChord(
                     this._accordionData,
                     chord.noteMods,
                     false,
-                    bellowsFilter
+                    bellowsFilter,
+                    deactivated
                 );
                 this._syncSecondaryDiapason({
                     notes: chord.noteMods,
                     isExactMidi: false,
-                    bellowsMode: bellowsFilter
+                    bellowsMode: bellowsFilter,
+                    excludedButtons: deactivated
                 });
+            }
+
+            // Reproducir el sonido del acorde a medida que va cambiando
+            if (chord) {
+                let midis = null;
+                if (this._diapasonChordSidebarView) {
+                    const deact = this._diapasonChordSidebarView.getDeactivatedButtons();
+                    const activeDir = (chord.bellowsAction === 'push') ? 'push' : 'pull';
+                    const btns = getAccordionButtonsForChord(this._accordionData, chord.noteMods, this._currentNotation, this._currentOffset);
+                    const actBtns = (activeDir === 'push' ? btns.pushButtons : btns.pullButtons).filter(b => !deact.has(`${activeDir}_${b.id}`));
+                    if (actBtns.length > 0) {
+                        midis = actBtns.map(b => b.midi);
+                    }
+                }
+                if (!midis || midis.length === 0) {
+                    midis = chord.playbackMidis;
+                }
+                if (!midis || midis.length === 0) {
+                    if (chord.noteMods && chord.noteMods.length > 0) {
+                        midis = chord.noteMods.map(n => 60 + n);
+                    } else if (typeof chord.root === 'number') {
+                        midis = [60 + chord.root, 60 + chord.root + 4, 60 + chord.root + 7];
+                    }
+                }
+                if (midis && midis.length > 0) {
+                    audioEngine.play(midis, "4n");
+                }
             }
         });
 
@@ -308,7 +338,7 @@ export class AppController {
                 this._updateFeasibilityAndChordDisplay();
                 const chord = this._chordView.getSelectedChordData();
                 this._pinnedChordData = chord;
-                this._showFreeChordOnAccordion(chord, false);
+                this._showFreeChordOnAccordion(chord, true);
                 if (this._isChordPinned) this._holdChordAudio(chord);
 
                 const rootName = midiToName(chord.playbackMidis[0], this._currentNotation, false, this._currentOffset);

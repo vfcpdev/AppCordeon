@@ -9,6 +9,7 @@ import { getAccordionButtonsForChord } from '../theory/Scales.js';
 import { getNoteNamesList } from '../theory/MusicTheory.js';
 import { NOTATION_MODES } from '../core/Constants.js';
 import { audioPlayerController } from '../audio/AudioPlayerController.js';
+import { audioEngine } from '../audio/AudioEngine.js';
 
 export class DiapasonChordSidebarView {
     /**
@@ -27,6 +28,11 @@ export class DiapasonChordSidebarView {
         this._activeEditorSidebar = null;
         this._deactivatedButtons = new Set();
         this._collapsedGrids = { pull: false, push: false };
+
+        // Configuración de digitación y voicing (Requisitos de usuario)
+        this._buttonLimit = 4; // Cantidad de botones predeterminada: 4
+        this._octaveFilter = 'all'; // 'all' o número de octava (3, 4, 5...)
+        this._lastChordSignature = null;
     }
 
     /**
@@ -43,6 +49,123 @@ export class DiapasonChordSidebarView {
      */
     setTimelineUpdateCallback(callback) {
         this._onTimelineUpdated = callback;
+    }
+
+    /**
+     * Aplica el filtrado de cantidad de botones (por default 4) y selección de octava.
+     * @private
+     */
+    _applyVoicingFilter(buttons, chord) {
+        if (!buttons || !chord || !chord.noteMods || chord.noteMods.length === 0) return;
+
+        this._deactivatedButtons.clear();
+
+        if (this._buttonLimit === 'all') {
+            return;
+        }
+
+        const maxButtons = typeof this._buttonLimit === 'number' ? this._buttonLimit : 4;
+        const targetOctave = this._octaveFilter;
+
+        ['pull', 'push'].forEach(dir => {
+            const btnList = dir === 'pull' ? buttons.pullButtons : buttons.pushButtons;
+            if (!btnList || btnList.length === 0) return;
+
+            const selectedKeys = this._pickOptimalButtons(btnList, chord.noteMods, maxButtons, targetOctave, dir);
+
+            btnList.forEach(b => {
+                const btnKey = `${dir}_${b.id}`;
+                if (!selectedKeys.has(btnKey)) {
+                    this._deactivatedButtons.add(btnKey);
+                }
+            });
+        });
+    }
+
+    /**
+     * Selecciona los N botones óptimos de una lista respetando la octava y la cercanía ergonómica de la mano.
+     * @private
+     */
+    _pickOptimalButtons(btnList, chordNoteMods, maxButtons, targetOctave, dir) {
+        const selected = new Set();
+        if (!btnList || btnList.length === 0) return selected;
+
+        const candidates = btnList.map(b => ({
+            ...b,
+            btnKey: `${dir}_${b.id}`,
+            octave: Math.floor(b.midi / 12) - 1
+        }));
+
+        let pool = [...candidates];
+        if (typeof targetOctave === 'number') {
+            const exactOctave = candidates.filter(c => c.octave === targetOctave);
+            if (exactOctave.length >= maxButtons) {
+                pool = exactOctave;
+            } else {
+                pool = [...candidates].sort((a, b) => Math.abs(a.octave - targetOctave) - Math.abs(b.octave - targetOctave));
+            }
+        } else {
+            // Si es 'all', dar preferencia a octavas centrales (4 y 5)
+            pool = [...candidates].sort((a, b) => Math.abs(a.octave - 4) - Math.abs(b.octave - 4));
+        }
+
+        const neededMods = [...chordNoteMods];
+        const chosen = [];
+
+        // 1. Cubrir cada pitch class única requerida
+        neededMods.forEach(mod => {
+            const matches = pool.filter(c => c.noteMod === mod && !chosen.some(x => x.id === c.id));
+            if (matches.length > 0) {
+                if (chosen.length > 0) {
+                    const avgIdx = chosen.reduce((sum, c) => sum + c.btnIndex, 0) / chosen.length;
+                    matches.sort((a, b) => Math.abs(a.btnIndex - avgIdx) - Math.abs(b.btnIndex - avgIdx));
+                }
+                chosen.push(matches[0]);
+            }
+        });
+
+        // 2. Si no se alcanza maxButtons, agregar duplicaciones más cercanas ergonómicamente
+        if (chosen.length < maxButtons) {
+            const remaining = pool.filter(c => !chosen.some(x => x.id === c.id));
+            if (chosen.length > 0) {
+                const avgIdx = chosen.reduce((sum, c) => sum + c.btnIndex, 0) / chosen.length;
+                remaining.sort((a, b) => {
+                    const distA = Math.abs(a.btnIndex - avgIdx);
+                    const distB = Math.abs(b.btnIndex - avgIdx);
+                    return distA - distB;
+                });
+            }
+            while (chosen.length < maxButtons && remaining.length > 0) {
+                chosen.push(remaining.shift());
+            }
+        }
+
+        chosen.forEach(c => selected.add(c.btnKey));
+        return selected;
+    }
+
+    /**
+     * Vuelve a renderizar la barra lateral y sincroniza los resaltados del diapasón.
+     * @private
+     */
+    _reRenderAndSync(targetKey, chord, onButtonAction) {
+        this.renderActiveChord(
+            this._currentChord,
+            this._lastPrimaryData,
+            this._lastSecondaryData,
+            this._lastNotation,
+            this._lastPrimOffset,
+            this._lastSecOffset,
+            this._lastOnButtonAction
+        );
+        if (onButtonAction) {
+            onButtonAction({
+                type: 'button_toggle_active',
+                target: targetKey,
+                chord,
+                deactivatedButtons: this._deactivatedButtons
+            });
+        }
     }
 
     /**
@@ -71,6 +194,15 @@ export class DiapasonChordSidebarView {
         this._lastPrimOffset = primOffset;
         this._lastSecOffset = secOffset;
         this._lastOnButtonAction = onButtonAction;
+
+        const chordSig = chord ? `${chord.chordSymbol || chord.chordName}_${chord.root}` : null;
+        if (chordSig && chordSig !== this._lastChordSignature) {
+            this._lastChordSignature = chordSig;
+            if (primaryAccordionData && chord.noteMods) {
+                const primBtns = getAccordionButtonsForChord(primaryAccordionData, chord.noteMods, notation, primOffset);
+                this._applyVoicingFilter(primBtns, chord);
+            }
+        }
 
         if (this._primSidebar && primaryAccordionData) {
             this._renderSingleSidebar(
@@ -134,6 +266,34 @@ export class DiapasonChordSidebarView {
             tuningOffset
         );
 
+        // Nombres de notas para indicar faltantes
+        const latinNotes = getNoteNamesList(NOTATION_MODES.LATINA, tuningOffset);
+        const englishNotes = getNoteNamesList(NOTATION_MODES.ALEMANA, tuningOffset);
+        const noteNamesList = notation === 'alemana' ? englishNotes : latinNotes;
+
+        // Comprobar notas del acorde no disponibles por movimiento de fuelle (Requisito de usuario)
+        const chordNoteMods = chord.noteMods || [];
+        const pullAvailableMods = new Set(buttons.pullButtons.map(b => b.noteMod));
+        const pushAvailableMods = new Set(buttons.pushButtons.map(b => b.noteMod));
+
+        const missingPullMods = chordNoteMods.filter(m => !pullAvailableMods.has(m));
+        const missingPushMods = chordNoteMods.filter(m => !pushAvailableMods.has(m));
+
+        const missingPullNames = missingPullMods.map(m => noteNamesList[m]);
+        const missingPushNames = missingPushMods.map(m => noteNamesList[m]);
+
+        const isPullComplete = missingPullMods.length === 0;
+        const isPushComplete = missingPushMods.length === 0;
+
+        // Identificar octavas disponibles en los botones
+        const allOctaves = [...new Set([...buttons.pullButtons, ...buttons.pushButtons].map(b => Math.floor(b.midi / 12) - 1))].sort();
+
+        let octaveDisplayLabel = 'Todas';
+        if (this._octaveFilter === 3) octaveDisplayLabel = 'Grave (3)';
+        else if (this._octaveFilter === 4) octaveDisplayLabel = 'Media (4)';
+        else if (this._octaveFilter === 5) octaveDisplayLabel = 'Aguda (5)';
+        else if (typeof this._octaveFilter === 'number') octaveDisplayLabel = `Octava ${this._octaveFilter}`;
+
         const formatButtons = (btnList, dirClass, dirKey) => {
             if (!btnList || btnList.length === 0) {
                 return '<span class="sidebar-empty-msg">No disponible</span>';
@@ -184,11 +344,33 @@ export class DiapasonChordSidebarView {
                     <strong class="sidebar-chord-name">${chord.chordName}</strong>
                     <div style="display:flex; gap:3px; align-items:center;">
                         <button type="button" class="sidebar-btn-restore-all ${hasDeactivated ? 'has-deactivated' : ''}" title="Mostrar y activar todas las digitaciones de botones (restaurar todas)">
-                            <i class="fas fa-check-double"></i> Mostrar todas
+                            <i class="fas fa-check-double"></i> Todas
                         </button>
                         <button type="button" class="sidebar-card-edit-btn" title="Editar este acorde">
                             <i class="fas fa-pencil-alt"></i> Editar
                         </button>
+                    </div>
+                </div>
+
+                <!-- CONTROLES DE VOICING: CANTIDAD DE BOTONES Y OCTAVA -->
+                <div class="sidebar-voicing-toolbar">
+                    <div class="sidebar-voicing-row">
+                        <span class="sidebar-voicing-label"><i class="fas fa-hand-pointer"></i> Botones:</span>
+                        <div class="sidebar-btn-segmented sidebar-limit-segmented">
+                            <button type="button" class="sidebar-segment-btn ${this._buttonLimit === 2 ? 'active' : ''}" data-limit="2" title="Voicing de 2 botones">2</button>
+                            <button type="button" class="sidebar-segment-btn ${this._buttonLimit === 3 ? 'active' : ''}" data-limit="3" title="Voicing de 3 botones (Tríada)">3</button>
+                            <button type="button" class="sidebar-segment-btn ${this._buttonLimit === 4 ? 'active' : ''}" data-limit="4" title="Voicing de 4 botones (Predeterminado)">4</button>
+                            <button type="button" class="sidebar-segment-btn ${this._buttonLimit === 5 ? 'active' : ''}" data-limit="5" title="Voicing de 5 botones">5</button>
+                            <button type="button" class="sidebar-segment-btn ${this._buttonLimit === 'all' ? 'active' : ''}" data-limit="all" title="Mostrar todos los botones del acorde">Todas</button>
+                        </div>
+                    </div>
+                    <div class="sidebar-voicing-row">
+                        <span class="sidebar-voicing-label"><i class="fas fa-layer-group"></i> Octava:</span>
+                        <div class="sidebar-octave-stepper">
+                            <button type="button" class="sidebar-stepper-btn btn-oct-prev" title="Bajar octava"><i class="fas fa-chevron-left"></i></button>
+                            <span class="sidebar-octave-display">${octaveDisplayLabel}</span>
+                            <button type="button" class="sidebar-stepper-btn btn-oct-next" title="Aumentar octava (resalta notas más agudas)"><i class="fas fa-chevron-right"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -201,12 +383,20 @@ export class DiapasonChordSidebarView {
                         <span class="sidebar-bellows-title"><i class="fas fa-arrow-left"></i> Abre (Pull)</span>
                     </label>
                     <div style="display:flex; align-items:center; gap:5px;">
+                        <span class="bellows-status-badge ${isPullComplete ? 'badge-complete' : 'badge-missing'}">
+                            ${isPullComplete ? '<i class="fas fa-check"></i> Completo' : '⚠️ Falta ' + missingPullNames.join(', ')}
+                        </span>
                         <span class="sidebar-bellows-count" data-dir="pull">${activePullCount}/${buttons.pullButtons.length} bot.</span>
                         <button type="button" class="sidebar-btn-toggle-bellows-vis" data-dir="pull" title="Visualizar u ocultar los botones de Abre">
                             <i class="fas ${isPullCollapsed ? 'fa-eye-slash' : 'fa-eye'}"></i>
                         </button>
                     </div>
                 </div>
+                ${!isPullComplete ? `
+                    <div class="sidebar-bellows-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Imposible completo en Abre: falta <strong>${missingPullNames.join(', ')}</strong>
+                    </div>
+                ` : ''}
                 <div class="sidebar-buttons-grid pull-grid ${isPullCollapsed ? 'is-collapsed' : ''}">
                     ${formatButtons(buttons.pullButtons, 'pull-badge', 'pull')}
                 </div>
@@ -220,42 +410,93 @@ export class DiapasonChordSidebarView {
                         <span class="sidebar-bellows-title"><i class="fas fa-arrow-right"></i> Cierra (Push)</span>
                     </label>
                     <div style="display:flex; align-items:center; gap:5px;">
+                        <span class="bellows-status-badge ${isPushComplete ? 'badge-complete' : 'badge-missing'}">
+                            ${isPushComplete ? '<i class="fas fa-check"></i> Completo' : '⚠️ Falta ' + missingPushNames.join(', ')}
+                        </span>
                         <span class="sidebar-bellows-count" data-dir="push">${activePushCount}/${buttons.pushButtons.length} bot.</span>
                         <button type="button" class="sidebar-btn-toggle-bellows-vis" data-dir="push" title="Visualizar u ocultar los botones de Cierra">
                             <i class="fas ${isPushCollapsed ? 'fa-eye-slash' : 'fa-eye'}"></i>
                         </button>
                     </div>
                 </div>
+                ${!isPushComplete ? `
+                    <div class="sidebar-bellows-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Imposible completo en Cierra: falta <strong>${missingPushNames.join(', ')}</strong>
+                    </div>
+                ` : ''}
                 <div class="sidebar-buttons-grid push-grid ${isPushCollapsed ? 'is-collapsed' : ''}">
                     ${formatButtons(buttons.pushButtons, 'push-badge', 'push')}
                 </div>
             </div>
         `;
 
-        // Botón "Mostrar todas" para restaurar y activar todos los botones
+        // Eventos del Selector de Cantidad de Botones (Default 4)
+        activeBox.querySelectorAll('.sidebar-limit-segmented .sidebar-segment-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const limitVal = btn.dataset.limit;
+                this._buttonLimit = limitVal === 'all' ? 'all' : parseInt(limitVal, 10);
+                this._applyVoicingFilter(buttons, chord);
+                this._reRenderAndSync(targetKey, chord, onButtonAction);
+
+                if (audioEngine) {
+                    const activeDir = chord.bellowsAction === 'push' ? 'push' : 'pull';
+                    const activeBtns = (activeDir === 'push' ? buttons.pushButtons : buttons.pullButtons)
+                        .filter(b => !this._deactivatedButtons.has(`${activeDir}_${b.id}`));
+                    if (activeBtns.length > 0) {
+                        audioEngine.play(activeBtns.map(b => b.midi), "4n");
+                    }
+                }
+            });
+        });
+
+        // Eventos del Stepper de Octava
+        const btnPrevOct = activeBox.querySelector('.btn-oct-prev');
+        const btnNextOct = activeBox.querySelector('.btn-oct-next');
+        const octaveModes = ['all', ...allOctaves];
+
+        const changeOctave = (newOct) => {
+            this._octaveFilter = newOct;
+            this._applyVoicingFilter(buttons, chord);
+            this._reRenderAndSync(targetKey, chord, onButtonAction);
+
+            if (audioEngine) {
+                const activeDir = chord.bellowsAction === 'push' ? 'push' : 'pull';
+                const activeBtns = (activeDir === 'push' ? buttons.pushButtons : buttons.pullButtons)
+                    .filter(b => !this._deactivatedButtons.has(`${activeDir}_${b.id}`));
+                if (activeBtns.length > 0) {
+                    audioEngine.play(activeBtns.map(b => b.midi), "4n");
+                }
+            }
+        };
+
+        if (btnPrevOct) {
+            btnPrevOct.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const curIdx = octaveModes.indexOf(this._octaveFilter);
+                const nextIdx = curIdx > 0 ? curIdx - 1 : octaveModes.length - 1;
+                changeOctave(octaveModes[nextIdx]);
+            });
+        }
+
+        if (btnNextOct) {
+            btnNextOct.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const curIdx = octaveModes.indexOf(this._octaveFilter);
+                const nextIdx = curIdx < octaveModes.length - 1 ? curIdx + 1 : 0;
+                changeOctave(octaveModes[nextIdx]);
+            });
+        }
+
+        // Botón "Todas" para restaurar y activar todos los botones
         const btnRestore = activeBox.querySelector('.sidebar-btn-restore-all');
         if (btnRestore) {
             btnRestore.addEventListener('click', (e) => {
                 e.stopPropagation();
+                this._buttonLimit = 'all';
                 this._deactivatedButtons.clear();
                 this._collapsedGrids = { pull: false, push: false };
-                this.renderActiveChord(
-                    this._currentChord,
-                    this._lastPrimaryData,
-                    this._lastSecondaryData,
-                    this._lastNotation,
-                    this._lastPrimOffset,
-                    this._lastSecOffset,
-                    this._lastOnButtonAction
-                );
-                if (onButtonAction) {
-                    onButtonAction({
-                        type: 'button_toggle_active',
-                        target: targetKey,
-                        chord,
-                        deactivatedButtons: this._deactivatedButtons
-                    });
-                }
+                this._reRenderAndSync(targetKey, chord, onButtonAction);
             });
         }
 

@@ -12,6 +12,7 @@ import { getNoteNamesList, parseChordNotation } from '../theory/MusicTheory.js';
 import { NOTATION_MODES, ROW_BASE_TONICS } from '../core/Constants.js';
 import { eventBus } from '../core/EventBus.js';
 import { tuningRegistry } from '../models/Tunings.js';
+import { audioEngine } from '../audio/AudioEngine.js';
 
 export class AudioTrackView {
     /**
@@ -704,6 +705,9 @@ export class AudioTrackView {
                     this._notationFeedback.style.color = '#15803d';
                     this._notationFeedback.innerHTML = `<i class="fas fa-check-circle"></i> <strong>${parsed.chordSymbol}</strong> (${parsed.chordName}) · Notas: ${parsed.noteMods.map(n => latinNotes[n]).join(', ')}`;
                 }
+                if (audioEngine && parsed.playbackMidis) {
+                    audioEngine.play(parsed.playbackMidis, "4n");
+                }
                 return true;
             } else if (this._editorNotationInput.value.trim() !== '') {
                 if (this._notationFeedback) {
@@ -747,6 +751,9 @@ export class AudioTrackView {
             if (this._notationFeedback) {
                 this._notationFeedback.style.color = '#4338ca';
                 this._notationFeedback.innerHTML = `<i class="fas fa-music"></i> ${tempChord.chordSymbol} (${tempChord.chordName})`;
+            }
+            if (audioEngine && tempChord.playbackMidis) {
+                audioEngine.play(tempChord.playbackMidis, "4n");
             }
         };
 
@@ -1389,6 +1396,17 @@ export class AudioTrackView {
 
         this._modal.style.display = 'flex';
         this._modal.classList.remove('hidden');
+
+        if (audioEngine) {
+            const activeMidis = (idx >= 0 && timeline[idx] && timeline[idx].playbackMidis)
+                ? timeline[idx].playbackMidis
+                : (this._editorRootSelect && this._editorTypeSelect
+                    ? this._buildChordObject(parseInt(this._editorRootSelect.value, 10), this._editorTypeSelect.value, 0, 1).playbackMidis
+                    : null);
+            if (activeMidis && activeMidis.length > 0) {
+                audioEngine.play(activeMidis, "4n");
+            }
+        }
     }
 
     /**
@@ -1739,6 +1757,12 @@ export class AudioTrackView {
                         const chordIndex = chord ? chords.indexOf(chord) : -1;
                         this._openChordEditor(chordIndex, beatStart);
                         return;
+                    }
+                    if (chord && audioEngine) {
+                        const midis = chord.playbackMidis || (chord.noteMods ? chord.noteMods.map(n => 60 + n) : null);
+                        if (midis && midis.length > 0) {
+                            audioEngine.play(midis, "4n");
+                        }
                     }
                     audioPlayerController.seek(beatStart);
                 });
