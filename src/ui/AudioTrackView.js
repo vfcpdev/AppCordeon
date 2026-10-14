@@ -52,7 +52,6 @@ export class AudioTrackView {
 
         // Modal de Edición de Acordes del Timeline
         this._btnAddChord = elements.btnAddChord || document.getElementById('btnAddChordAtCurrentTime');
-        this._btnMarkChordChange = document.getElementById('btnMarkChordChange');
         this._modal = document.getElementById('chordEditorModal');
         this._modalBackdrop = document.getElementById('chordEditorBackdrop');
         this._btnCloseModal = document.getElementById('btnCloseChordEditor');
@@ -341,10 +340,14 @@ export class AudioTrackView {
 
         // Actualizar badges
         this._updateKeyDisplay(analysisData.mainKey);
+        if (analysisData.bpm) {
+            const bpmVal = document.getElementById('audioBpmValue');
+            if (bpmVal) bpmVal.innerText = `${analysisData.bpm} BPM`;
+        }
 
         // Tira de acordes secuenciales con alto contraste
         this.renderChordsStrip(analysisData.chords, onChordMarkerClick);
-        this.renderChordProgressBar(analysisData.chords, analysisData.duration);
+        this.renderChordProgressBar(analysisData.chords, analysisData.duration, analysisData.bpm);
 
         // Restablecer indicador de pitch
         if (this._lblPitchShift) {
@@ -554,7 +557,7 @@ export class AudioTrackView {
 
         // 5. Re-renderizar tira de acordes con alto contraste
         this.renderChordsStrip(transposedReport.chords, this._onChordMarkerClick);
-        this.renderChordProgressBar(transposedReport.chords, this._currentAnalysisData.duration);
+        this.renderChordProgressBar(transposedReport.chords, this._currentAnalysisData.duration, this._currentAnalysisData.bpm);
 
         // 6. Actualizar estado visual de los botones de las hileras del acordeón
         this._renderAccordionRowButtons(handlers || this._handlers);
@@ -640,11 +643,6 @@ export class AudioTrackView {
             this._btnAddChord.addEventListener('click', () => {
                 const curTime = audioPlayerController.currentTime || 0;
                 this._openChordEditor(-1, curTime);
-            });
-        }
-        if (this._btnMarkChordChange) {
-            this._btnMarkChordChange.addEventListener('click', () => {
-                this._markChordChangeAtCurrentTime();
             });
         }
         if (this._btnSetStartCurrentTime) {
@@ -946,7 +944,14 @@ export class AudioTrackView {
      * @param {Array} chords
      * @param {number} [duration]
      */
-    renderChordProgressBar(chords, duration) {
+    /**
+     * Dibuja los cuadros sobre la pista (rejilla musical basada en BPM),
+     * mostrando en el cuadro donde ocurre el cambio de acorde el símbolo en notación alemana.
+     * @param {Array} chords
+     * @param {number} [duration]
+     * @param {number} [bpm]
+     */
+    renderChordProgressBar(chords, duration, bpm) {
         if (!this._chordProgressBarTrack) return;
         this._chordProgressBarTrack.innerHTML = '';
 
@@ -955,43 +960,61 @@ export class AudioTrackView {
         const dur = duration || (this._currentAnalysisData && this._currentAnalysisData.duration) || audioPlayerController.duration || (chords.length ? chords[chords.length - 1].endTime : 16);
         if (!dur || dur <= 0) return;
 
-        chords.forEach((chord, idx) => {
-            const startPct = Math.max(0, Math.min(100, (chord.startTime / dur) * 100));
-            const endPct = Math.max(0, Math.min(100, (chord.endTime / dur) * 100));
-            const widthPct = Math.max(0.6, endPct - startPct);
+        const songBpm = bpm || (this._currentAnalysisData && this._currentAnalysisData.bpm) || 120;
+        const beatSec = 60 / songBpm;
+        const barSec = 4 * beatSec; // 1 compás = 4 tiempos
+        const totalBars = Math.max(1, Math.ceil(dur / barSec));
 
-            const block = document.createElement('div');
-            block.className = 'chord-segment-block';
-            block.id = `chord-segment-${idx}`;
-            block.style.left = `${startPct}%`;
-            block.style.width = `${widthPct}%`;
-            block.title = `${chord.chordName} [Inicio: ${this._formatTime(chord.startTime)} | Fin/Cambio: ${this._formatTime(chord.endTime)}] - Clic para opciones/reproducir o arrastra la barra derecha para extender`;
+        this._barSec = barSec;
+        this._totalBars = totalBars;
 
-            block.innerHTML = `
-                <span class="chord-segment-name">${chord.chordName}</span>
-                <div class="chord-segment-handle-right" data-idx="${idx}" title="Arrastra para extender o recortar el fin del acorde"></div>
-            `;
+        for (let m = 0; m < totalBars; m++) {
+            const barStart = m * barSec;
+            const barEnd = Math.min(dur, (m + 1) * barSec);
+            const startPct = Math.max(0, Math.min(100, (barStart / dur) * 100));
+            const endPct = Math.max(0, Math.min(100, (barEnd / dur) * 100));
+            const widthPct = Math.max(0.1, endPct - startPct);
 
-            // Clic en el cuerpo del acorde abre el toolbar de opciones y reproduce
-            block.addEventListener('click', (e) => {
-                if (e.target.classList.contains('chord-segment-handle-right')) return;
-                e.stopPropagation();
-                audioPlayerController.seek(chord.startTime);
-                this._openQuickToolbar(idx);
-            });
+            // Determinar qué acorde está sonando en este cuadro/compás
+            const checkTime = barStart + Math.min(0.1, (barEnd - barStart) * 0.5);
+            const chord = chords.find(c => c.startTime <= checkTime && c.endTime > checkTime) || chords[chords.length - 1];
 
-            // Arrastre del extremo derecho para extender/recortar
-            const handle = block.querySelector('.chord-segment-handle-right');
-            if (handle) {
-                handle.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    this._startDragExtend(e, idx, dur);
-                });
+            // Identificar si en este cuadro se produce un cambio de acorde
+            let isChordChange = false;
+            if (m === 0) {
+                isChordChange = true;
+            } else {
+                const prevTime = (m - 1) * barSec + Math.min(0.1, barSec * 0.5);
+                const prevChord = chords.find(c => c.startTime <= prevTime && c.endTime > prevTime);
+                if (!prevChord || (chord && (prevChord.rootMod !== chord.rootMod || prevChord.quality !== chord.quality))) {
+                    isChordChange = true;
+                }
             }
 
-            this._chordProgressBarTrack.appendChild(block);
-        });
+            const box = document.createElement('div');
+            box.className = `track-bpm-box ${isChordChange ? 'is-chord-change' : ''}`;
+            box.id = `track-bar-${m}`;
+            box.dataset.barIndex = m;
+            box.dataset.startTime = barStart;
+            box.style.left = `${startPct}%`;
+            box.style.width = `${widthPct}%`;
+
+            if (isChordChange && chord) {
+                box.title = `Compás ${m + 1} (${this._formatTime(barStart)} - ${this._formatTime(barEnd)}) | Cambio de acorde: ${chord.chordSymbol}`;
+                box.innerHTML = `<span class="track-box-chord-german">${chord.chordSymbol}</span>`;
+            } else {
+                box.title = `Compás ${m + 1} (${this._formatTime(barStart)} - ${this._formatTime(barEnd)})${chord ? ' | ' + chord.chordSymbol : ''}`;
+                box.innerHTML = `<span class="track-box-tick"></span>`;
+            }
+
+            // Al hacer clic sobre cualquier cuadro, reproducir desde ese compás
+            box.addEventListener('click', (e) => {
+                e.stopPropagation();
+                audioPlayerController.seek(barStart);
+            });
+
+            this._chordProgressBarTrack.appendChild(box);
+        }
     }
 
     /**
@@ -1365,6 +1388,15 @@ export class AudioTrackView {
         }
         if (this._chordTrackPlayhead) {
             this._chordTrackPlayhead.style.left = `${(progress * 100).toFixed(2)}%`;
+        }
+
+        // Resaltar el cuadro (compás) activo en tiempo real
+        if (this._barSec && this._chordProgressBarTrack) {
+            const activeBarIdx = Math.floor(currentTime / this._barSec);
+            const boxes = this._chordProgressBarTrack.querySelectorAll('.track-bpm-box');
+            boxes.forEach((bx, idx) => {
+                bx.classList.toggle('active-bar', idx === activeBarIdx);
+            });
         }
     }
 

@@ -364,11 +364,12 @@
     width: 100%;
     background: #111422;
     border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
-    padding: 6px 10px;
-    gap: 5px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    border-radius: 16px;
+    padding: 7px 9px;
+    gap: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
     box-sizing: border-box;
+    margin-bottom: 8px;
 }
 
 .diapason-badge-tag {
@@ -379,6 +380,7 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    white-space: nowrap;
 }
 
 .diapason-badge-tag--primary {
@@ -396,17 +398,26 @@
 .primary-tuning-select,
 .secondary-tuning-select,
 .diapason-tuning-select {
-    font-size: 0.72rem;
+    font-size: 0.70rem;
     font-weight: 700;
-    padding: 2px 6px;
-    height: 26px;
+    padding: 2px 22px 2px 8px;
+    height: 30px;
+    min-height: 30px;
+    line-height: normal;
     border-radius: 6px;
-    background: #1e2238;
+    background-color: #1e2238;
     color: #ffffff;
     border: 1px solid rgba(255, 255, 255, 0.22);
-    min-width: 170px;
-    max-width: 100%;
+    width: 100%;
     flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    background-size: 13px;
 }
 
 .primary-tuning-select:focus,
@@ -436,6 +447,72 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    white-space: nowrap;
+}
+
+.bellows-inline-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Barra de botones de cambio de hilera integrada en el encabezado */
+.diapason-row-selector-bar {
+    display: flex;
+    width: 100%;
+    gap: 5px;
+    margin-top: 2px;
+}
+
+.btn-row-select {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: #1e2238;
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 6px;
+    padding: 5px 3px;
+    cursor: pointer;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1.1;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+}
+
+.btn-row-select:hover {
+    background: #2a3152;
+    color: #ffffff;
+    border-color: #ec4899;
+}
+
+.btn-row-select.active {
+    background: linear-gradient(135deg, #ec4899, #f43f5e) !important;
+    color: #ffffff !important;
+    border-color: #fda4af !important;
+    box-shadow: 0 0 12px rgba(236, 72, 153, 0.55);
+}
+
+.btn-row-select .row-num {
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+
+.btn-row-select .row-tonic {
+    font-size: 0.65rem;
+    font-weight: 700;
+    opacity: 0.95;
+}
+
+/* Ocultar el encabezado redundante interno en el diapasón honeycomb */
+.diapason .row-header {
+    display: none !important;
 }
 
 .diapason-bellows-group {
@@ -739,53 +816,6 @@
 }
 
 .sidebar-btn-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    border-radius: 4px;
-    padding: 2px 4px;
-    font-size: 0.60rem;
-    border: 1px solid transparent;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    user-select: none;
-}
-
-.sidebar-btn-badge.pull-badge {
-    background: rgba(37, 99, 235, 0.2);
-    color: #93c5fd;
-    border-color: rgba(59, 130, 246, 0.4);
-}
-
-.sidebar-btn-badge.pull-badge:hover {
-    background: #2563eb;
-    color: #ffffff;
-    box-shadow: 0 0 8px rgba(37, 99, 235, 0.6);
-}
-
-.sidebar-btn-badge.push-badge {
-    background: rgba(220, 38, 38, 0.2);
-    color: #fca5a5;
-    border-color: rgba(239, 68, 68, 0.4);
-}
-
-.sidebar-btn-badge.push-badge:hover {
-    background: #dc2626;
-    color: #ffffff;
-    box-shadow: 0 0 8px rgba(220, 38, 38, 0.6);
-}
-
-.sidebar-btn-badge strong {
-    font-weight: 800;
-}
-
-.sidebar-btn-badge small {
-    font-size: 0.52rem;
-    opacity: 0.85;
-}
-
-/* Estados Activo / Desactivado de Botones en la Barra Lateral */
-.sidebar-btn-badge {
     position: relative;
     display: inline-flex;
     align-items: center;
@@ -797,66 +827,99 @@
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
     box-sizing: border-box;
-}
-
-.sidebar-btn-badge.pull-badge.is-active {
-    background: rgba(37, 99, 235, 0.25);
-    color: #93c5fd;
-    border: 1px solid rgba(59, 130, 246, 0.65);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-}
-
-.sidebar-btn-badge.pull-badge.is-active:hover {
-    background: #2563eb;
-    color: #ffffff;
-    box-shadow: 0 0 10px rgba(37, 99, 235, 0.85);
-    transform: translateY(-1px);
-}
-
-.sidebar-btn-badge.push-badge.is-active {
-    background: rgba(220, 38, 38, 0.25);
-    color: #fca5a5;
-    border: 1px solid rgba(239, 68, 68, 0.65);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-}
-
-.sidebar-btn-badge.push-badge.is-active:hover {
-    background: #dc2626;
-    color: #ffffff;
-    box-shadow: 0 0 10px rgba(220, 38, 38, 0.85);
-    transform: translateY(-1px);
-}
-
-/* Estado Desactivado: El botón permanece visible pero atenuado con borde discontinuo */
-.sidebar-btn-badge.is-deactivated {
-    opacity: 0.38;
-    filter: grayscale(85%);
-    border: 1.5px dashed #64748b !important;
-    background: rgba(15, 23, 42, 0.55) !important;
-    color: #94a3b8 !important;
+    /* Botón neutro: sin colorear el botón, fondo oscuro sutil */
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
     box-shadow: none !important;
 }
 
-.sidebar-btn-badge.is-deactivated:hover {
-    opacity: 0.80;
-    filter: grayscale(30%);
-    border-color: #cbd5e1 !important;
-    background: rgba(30, 41, 59, 0.75) !important;
-    color: #f8fafc !important;
+.sidebar-btn-badge:hover {
+    background: rgba(255, 255, 255, 0.09) !important;
+    border-color: rgba(255, 255, 255, 0.30) !important;
     transform: translateY(-1px);
 }
 
-.sidebar-btn-badge.is-deactivated strong {
+/* SOLO COLOREAR LA FUENTE */
+/* Abre (Pull): Fuente azulada */
+.sidebar-btn-badge.pull-badge {
+    color: #60a5fa !important;
+}
+
+.sidebar-btn-badge.pull-badge strong {
+    color: #93c5fd !important;
+    font-weight: 800;
+}
+
+.sidebar-btn-badge.pull-badge small {
+    color: #60a5fa !important;
+    font-size: 0.54rem;
+    opacity: 0.9;
+}
+
+.sidebar-btn-badge.pull-badge:hover strong,
+.sidebar-btn-badge.pull-badge:hover small {
+    color: #bfdbfe !important;
+    text-shadow: 0 0 6px rgba(96, 165, 250, 0.7);
+}
+
+/* Cierra (Push): Fuente rojiza */
+.sidebar-btn-badge.push-badge {
+    color: #f87171 !important;
+}
+
+.sidebar-btn-badge.push-badge strong {
+    color: #fca5a5 !important;
+    font-weight: 800;
+}
+
+.sidebar-btn-badge.push-badge small {
+    color: #f87171 !important;
+    font-size: 0.54rem;
+    opacity: 0.9;
+}
+
+.sidebar-btn-badge.push-badge:hover strong,
+.sidebar-btn-badge.push-badge:hover small {
+    color: #fecaca !important;
+    text-shadow: 0 0 6px rgba(248, 113, 113, 0.7);
+}
+
+/* Estado Desactivado: fuente atenuada tachada sin colorear botón */
+.sidebar-btn-badge.is-deactivated {
+    opacity: 0.35 !important;
+    background: transparent !important;
+    border: 1px dashed rgba(255, 255, 255, 0.16) !important;
+    color: #64748b !important;
+    box-shadow: none !important;
+}
+
+.sidebar-btn-badge.is-deactivated strong,
+.sidebar-btn-badge.is-deactivated small {
+    color: #64748b !important;
     text-decoration: line-through;
-    opacity: 0.75;
+    text-shadow: none !important;
+}
+
+.sidebar-btn-badge.is-deactivated:hover {
+    opacity: 0.65 !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.32) !important;
 }
 
 .badge-status-dot {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
+    font-size: 7.5px;
     line-height: 1;
+}
+
+.badge-status-dot.dot-active {
+    color: #22c55e;
+}
+
+.badge-status-dot.dot-inactive {
+    color: #ef4444;
 }
 
 .badge-status-dot.dot-active {

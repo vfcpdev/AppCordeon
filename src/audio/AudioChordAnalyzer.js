@@ -178,12 +178,15 @@ export class AudioChordAnalyzer {
             }
         }
 
-        // 4. Detección de la Tonalidad Principal mediante Correlación Dual (Krumhansl + Temperley)
+        // 4. Detección automática de BPM (Tempo) mediante análisis espectral y autocorrelación
+        const bpm = this._detectBPM(channelData, sampleRate);
+
+        // 5. Detección de la Tonalidad Principal mediante Correlación Dual (Krumhansl + Temperley)
         const mainKey = this._detectGlobalKey(globalChromaSum);
 
         if (onProgress) onProgress(80);
 
-        // 5. Detección de acordes cuadro a cuadro con refuerzo de bajo y supresión de notas ajenas
+        // 6. Detección de acordes cuadro a cuadro con refuerzo de bajo y supresión de notas ajenas
         const chords = this._segmentChords(
             rawChromagram,
             rawBassChromagram,
@@ -197,6 +200,7 @@ export class AudioChordAnalyzer {
 
         return {
             duration,
+            bpm,
             mainKey,
             chords,
             chromagram: rawChromagram
@@ -277,6 +281,7 @@ export class AudioChordAnalyzer {
 
         return {
             duration: report.duration,
+            bpm: report.bpm,
             mainKey: newMainKey,
             chords: transposedChords,
             chromagram: report.chromagram
@@ -661,6 +666,82 @@ export class AudioChordAnalyzer {
         }
 
         return result;
+    }
+
+    /**
+     * Identifica el tempo (BPM) del audio mediante análisis de envolvente espectral,
+     * picos de energía (onsets) y autocorrelación en el rango musical de 60 a 190 BPM.
+     * @private
+     * @param {Float32Array} channelData
+     * @param {number} sampleRate
+     * @returns {number} BPM detectado
+     */
+    _detectBPM(channelData, sampleRate) {
+        if (!channelData || channelData.length === 0) return 120;
+
+        // Tamaño de bloque para la envolvente de energía: ~23ms (1024 muestras a 44.1kHz)
+        const frameSize = 1024;
+        const numFrames = Math.floor(channelData.length / frameSize);
+        if (numFrames < 60) return 120;
+
+        const energy = new Float32Array(numFrames);
+        for (let i = 0; i < numFrames; i++) {
+            let sum = 0;
+            const offset = i * frameSize;
+            for (let j = 0; j < frameSize; j += 4) {
+                const val = channelData[offset + j];
+                sum += val * val;
+            }
+            energy[i] = Math.sqrt(sum);
+        }
+
+        // Onset envelope (diferencia positiva de energía)
+        const onsets = new Float32Array(numFrames);
+        for (let i = 1; i < numFrames; i++) {
+            const diff = energy[i] - energy[i - 1];
+            onsets[i] = diff > 0 ? diff : 0;
+        }
+
+        // Normalizar onsets
+        let maxOnset = 0;
+        for (let i = 0; i < numFrames; i++) {
+            if (onsets[i] > maxOnset) maxOnset = onsets[i];
+        }
+        if (maxOnset > 0) {
+            for (let i = 0; i < numFrames; i++) onsets[i] /= maxOnset;
+        }
+
+        const framesPerSec = sampleRate / frameSize;
+        const minBpm = 65;
+        const maxBpm = 185;
+        const minLag = Math.floor((60 / maxBpm) * framesPerSec);
+        const maxLag = Math.ceil((60 / minBpm) * framesPerSec);
+
+        // Muestrear hasta 90 segundos para alta representatividad rítmica sin demora
+        const maxAnalysisFrames = Math.min(numFrames - maxLag, Math.floor(framesPerSec * 90));
+        if (maxAnalysisFrames <= 0) return 120;
+
+        let bestLag = minLag;
+        let bestCorr = -Infinity;
+
+        for (let lag = minLag; lag <= maxLag; lag++) {
+            let corr = 0;
+            for (let i = 0; i < maxAnalysisFrames; i++) {
+                corr += onsets[i] * onsets[i + lag];
+            }
+            if (corr > bestCorr) {
+                bestCorr = corr;
+                bestLag = lag;
+            }
+        }
+
+        let bpm = Math.round((60 * framesPerSec) / bestLag);
+
+        // Ajuste armónico de octava rítmica al rango de canciones vallenatas / populares (75 - 165 BPM)
+        if (bpm < 70) bpm *= 2;
+        if (bpm > 180) bpm = Math.round(bpm / 2);
+
+        return bpm || 120;
     }
 }
 

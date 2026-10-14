@@ -103,6 +103,7 @@ export class AppController {
         // Inicializar vistas con datos
         this._chordView.populateRoots(this._currentNotation, this._currentOffset);
         this._updateMirrorButtonUI();
+        this._updateRowSelectorButtons();
         this._updatePrimaryTuningLabel();
         this._renderAll();
         this._renderSecondaryDiapason();
@@ -221,6 +222,23 @@ export class AppController {
                 document.querySelectorAll('#primaryBellowsButtonGroup .bellows-btn, #bellowsButtonGroup .bellows-btn, .bellows-group .bellows-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this._bellowsMachine.setMode(btn.dataset.mode);
+            });
+        });
+
+        // Botones de Selección / Cambio de Hilera en la barra del Acordeón 1
+        const primaryRowButtons = document.querySelectorAll('#primaryRowSelectorGroup .btn-row-select');
+        primaryRowButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const rowKey = btn.dataset.row;
+                if (!rowKey) return;
+                this._activeRowKey = rowKey;
+                this._selectedScaleRoot = 'auto'; // Restablecer a tónica de hilera
+                if (this._isChordPinned) this.unpinChord();
+                this._scaleBarView.clearActiveRelatedChord();
+                this._rebuildScale();
+                this._renderAll();
+                this.setStep(0, false);
+                this._updateRowSelectorButtons();
             });
         });
 
@@ -681,12 +699,53 @@ export class AppController {
 
         if (this._isDiapasonMirrored) {
             btnToggleMirror.classList.add('active');
-            if (lblMirrorStatus) lblMirrorStatus.innerHTML = '<i class="fas fa-arrows-rotate"></i> Hileras: 1-2-3 (Afuera a Adentro)';
-            btnToggleMirror.title = 'Orientación de hileras: 1-2-3 (Hilera 1 Afuera a la izquierda, Hilera 3 Adentro a la derecha). Clic para invertir a 3-2-1.';
+            if (lblMirrorStatus) lblMirrorStatus.textContent = 'Af->Ad';
+            btnToggleMirror.title = 'Orientación de hileras: Afuera (1) a la izquierda, Adentro (3) a la derecha (Af->Ad). Clic para alternar a Ad<-Af.';
         } else {
             btnToggleMirror.classList.remove('active');
-            if (lblMirrorStatus) lblMirrorStatus.innerHTML = '<i class="fas fa-arrows-rotate"></i> Hileras: 3-2-1 (Adentro a Afuera)';
-            btnToggleMirror.title = 'Orientación de hileras: 3-2-1 (Hilera 3 Adentro a la izquierda, Hilera 1 Afuera a la derecha). Clic para invertir a 1-2-3.';
+            if (lblMirrorStatus) lblMirrorStatus.textContent = 'Ad<-Af';
+            btnToggleMirror.title = 'Orientación de hileras: Adentro (3) a la izquierda, Afuera (1) a la derecha (Ad<-Af). Clic para alternar a Af->Ad.';
+        }
+    }
+
+    /**
+     * Actualiza el estado visual, orden y tónicas de los botones de cambio de hilera en la barra.
+     * @private
+     */
+    _updateRowSelectorButtons() {
+        const rowButtons = document.querySelectorAll('#primaryRowSelectorGroup .btn-row-select');
+        rowButtons.forEach(btn => {
+            const rowKey = btn.dataset.row;
+            btn.classList.toggle('active', rowKey === this._activeRowKey);
+            const tonicEl = btn.querySelector('.row-tonic');
+            if (tonicEl && rowKey) {
+                const tonicMidi = ROW_BASE_TONICS[rowKey] + this._currentOffset;
+                const rootName = midiToName(tonicMidi, this._currentNotation, true, this._currentOffset);
+                tonicEl.textContent = `(${rootName})`;
+            }
+        });
+
+        // Reordenar según modo espejo (Af->Ad vs Ad<-Af)
+        const group = document.getElementById('primaryRowSelectorGroup');
+        if (group) {
+            const b1 = document.getElementById('btnRowSelect_row1');
+            const b2 = document.getElementById('btnRowSelect_row2');
+            const b3 = document.getElementById('btnRowSelect_row3');
+            if (b1 && b2 && b3) {
+                if (this._isDiapasonMirrored) {
+                    if (group.firstElementChild !== b1) {
+                        group.appendChild(b1);
+                        group.appendChild(b2);
+                        group.appendChild(b3);
+                    }
+                } else {
+                    if (group.firstElementChild !== b3) {
+                        group.appendChild(b3);
+                        group.appendChild(b2);
+                        group.appendChild(b1);
+                    }
+                }
+            }
         }
     }
 
@@ -1117,6 +1176,7 @@ export class AppController {
      * @private
      */
     _renderDiapason() {
+        this._updateRowSelectorButtons();
         this._diapasonView.render(
             this._accordionData,
             this._activeRowKey,
