@@ -800,3 +800,54 @@
     box-shadow: 0 0 14px rgba(236, 72, 153, 0.7) !important;
     transform: scale(1.08) translateY(-1px);
 }
+
+/* =========================================================================
+   PALETA DE TONOS RELACIONADOS Y FAMILIA ARMÓNICA
+   ========================================================================= */
+.related-chords-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    background: rgba(10, 12, 22, 0.65);
+    padding: 8px 10px;
+    border-radius: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.related-chord-chip {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    background: #181c30;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-left-width: 4px;
+    border-radius: 7px;
+    padding: 5px 9px;
+    min-width: 82px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    text-align: left;
+}
+
+.related-chord-chip:hover {
+    background: #232948;
+    border-color: var(--highlight);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.related-chord-chip.active-related-chord {
+    background: linear-gradient(135deg, #1e2444, #2d3766) !important;
+    border-color: var(--highlight) !important;
+    box-shadow: 0 0 16px 2px rgba(250, 204, 21, 0.45) !important;
+    transform: scale(1.05) translateY(-2px);
+}
+
+.related-chord-role {
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}

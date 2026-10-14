@@ -12,7 +12,7 @@ import { audioPlayerController } from '../audio/AudioPlayerController.js';
 import { AudioChordAnalyzer } from '../audio/AudioChordAnalyzer.js';
 import { tuningRegistry } from '../models/Tunings.js';
 import { getTransposedAccordion } from '../models/AccordionData.js';
-import { generateMajorScale } from '../theory/Scales.js';
+import { generateScale, generateMajorScale, getHarmonicFamilyAndRelatedChords } from '../theory/Scales.js';
 import { HarmonicAnalysisStrategy } from '../strategies/HarmonicAnalysisStrategy.js';
 import { FeasibilityAnalysisStrategy } from '../strategies/FeasibilityAnalysisStrategy.js';
 import { getPitchClass, midiToName } from '../theory/MusicTheory.js';
@@ -49,6 +49,8 @@ export class AppController {
         this._currentOffset = DEFAULT_CONFIG.tuningOffset;
         this._currentNotation = DEFAULT_CONFIG.notation;
         this._activeRowKey = DEFAULT_CONFIG.defaultRow;
+        this._selectedScaleRoot = 'auto'; // 'auto' o pitch class (0-11, ej: 7 para Sol)
+        this._selectedScaleType = 'major'; // 'major', 'minor', 'harmonic_minor'
         this._activeScaleRoot = ROW_BASE_TONICS[this._activeRowKey] + this._currentOffset;
         this._currentStepIndex = 0;
         this._accordionData = getTransposedAccordion(this._currentOffset);
@@ -178,6 +180,22 @@ export class AppController {
                 document.body.style.backgroundColor = e.target.value;
             });
         }
+
+        // Configuración y Selección de Escala Independiente (ej: Sol en C-F-Bb)
+        this._scaleBarView.bindScaleConfigEvents({
+            onRootChange: (rootVal) => {
+                this._selectedScaleRoot = rootVal;
+                this._scaleBarView.clearActiveRelatedChord();
+                this._rebuildScale();
+                this._renderAll();
+            },
+            onTypeChange: (typeVal) => {
+                this._selectedScaleType = typeVal;
+                this._scaleBarView.clearActiveRelatedChord();
+                this._rebuildScale();
+                this._renderAll();
+            }
+        });
 
         // Transporte de Escala
         this._scaleBarView.bindTransportEvents({
@@ -321,12 +339,18 @@ export class AppController {
     }
 
     /**
-     * Reconstruye la escala mayor para la hilera activa.
+     * Reconstruye la escala para la tónica y modalidad seleccionadas.
      * @private
      */
     _rebuildScale() {
-        this._activeScaleRoot = ROW_BASE_TONICS[this._activeRowKey] + this._currentOffset;
-        this._scaleSteps = generateMajorScale(this._activeScaleRoot);
+        if (this._selectedScaleRoot === 'auto') {
+            this._activeScaleRoot = ROW_BASE_TONICS[this._activeRowKey] + this._currentOffset;
+        } else {
+            const rootMod = parseInt(this._selectedScaleRoot);
+            // Octava 4 / Central
+            this._activeScaleRoot = 60 + rootMod;
+        }
+        this._scaleSteps = generateScale(this._activeScaleRoot, this._selectedScaleType);
     }
 
     /**
@@ -335,13 +359,49 @@ export class AppController {
      */
     _renderAll() {
         this._renderDiapason();
+
+        // 1. Llenar selector de tónicas de escala (permitiendo elegir Sol o cualquier tono)
+        this._scaleBarView.populateScaleRoots(
+            this._currentNotation,
+            this._currentOffset,
+            this._selectedScaleRoot
+        );
+
+        // 2. Renderizar los 8 grados de la escala
         this._scaleBarView.render(
             this._scaleSteps,
             this._currentStepIndex,
+            this._selectedScaleType,
             this._currentNotation,
             this._currentOffset,
             (idx) => this.setStep(idx, true)
         );
+
+        // 3. Renderizar Paleta de Tonos Relacionados y Familia Armónica
+        const rootPitchClass = getPitchClass(this._activeScaleRoot);
+        const relatedChords = getHarmonicFamilyAndRelatedChords(
+            rootPitchClass,
+            this._currentNotation,
+            this._currentOffset
+        );
+
+        this._scaleBarView.renderRelatedChords(relatedChords, (chordItem) => {
+            // Al hacer clic en un tono relacionado, se resalta en el diapasón y se reproduce
+            this._diapasonView.highlightChord(
+                this._accordionData,
+                chordItem.noteMods,
+                false,
+                this._bellowsMachine.mode
+            );
+            audioEngine.play(chordItem.playbackMidis);
+            this._executionView.setNoteLabel(`${chordItem.chordName} (${chordItem.roleName})`);
+
+            const forms = this.calculateExecutionForms(chordItem.rootPitchClass, false);
+            this._executionView.renderForms(forms, (selectedForm) => {
+                this._diapasonView.highlightSingleButton(selectedForm.btnId, selectedForm.directionClass);
+                audioEngine.play(selectedForm.midi);
+            });
+        });
 
         this._updateFeasibilityAndChordDisplay();
 
@@ -373,7 +433,9 @@ export class AppController {
             {
                 onRowHeaderClick: (rowKey, tonicMidi) => {
                     this._activeRowKey = rowKey;
+                    this._selectedScaleRoot = 'auto'; // Restablecer a tónica de hilera
                     if (this._isChordPinned) this.unpinChord();
+                    this._scaleBarView.clearActiveRelatedChord();
                     this._rebuildScale();
                     this._renderAll();
                     this.setStep(0, false);

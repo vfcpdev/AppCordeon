@@ -194,7 +194,7 @@
                     </div>
                 </section>
 
-                <!-- SECCIÓN 2: ESCALA, GRADOS Y TRANSPORTE -->
+                <!-- SECCIÓN 2: ESCALA, GRADOS, TRANSPORTE Y TONOS RELACIONADOS -->
                 <section class="scale-panel">
                     <header class="scale-panel__header">
                         <div class="scale-panel__title" id="lblScaleTitle">Escala: Mi♭ Mayor</div>
@@ -204,6 +204,18 @@
                             <span>Modo Acorde Fijo</span>
                         </label>
                     </header>
+
+                    <!-- Selectores de Tónica Independiente y Modalidad de la Escala -->
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px;">
+                        <select id="scaleRootSelect" class="form-select" style="flex: 1 1 50%; font-size: 0.78rem;" title="Selecciona la tónica que deseas estudiar sobre esta afinación de acordeón">
+                            <!-- Llenado dinámicamente con las 12 notas cromáticas -->
+                        </select>
+                        <select id="scaleTypeSelect" class="form-select" style="flex: 1 1 40%; font-size: 0.78rem;" title="Modalidad de la escala">
+                            <option value="major" selected>Mayor</option>
+                            <option value="minor">Menor Natural</option>
+                            <option value="harmonic_minor">Menor Armónica</option>
+                        </select>
+                    </div>
 
                     <div class="scale-panel__chips-strip" id="scaleGrid">
                         <!-- Chips de notas y grados (I a VIII) generados por JS -->
@@ -246,6 +258,17 @@
                                 <span id="speedValueLabel">350 ms</span>
                             </div>
                             <input type="range" id="speedSlider" min="120" max="800" value="350" dir="rtl" title="Velocidad de reproducción (ms)">
+                        </div>
+                    </div>
+
+                    <!-- NUEVA SUBSECCIÓN: FAMILIA ARMÓNICA Y TONOS RELACIONADOS -->
+                    <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 6px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; color: #a78bfa; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <span><i class="fas fa-sitemap"></i> Tonos y Acordes Relacionados:</span>
+                            <span style="font-size: 0.62rem; color: var(--text-muted); font-weight: normal; text-transform: none;">Haz clic para ver y tocar en el acordeón</span>
+                        </div>
+                        <div class="related-chords-strip" id="relatedChordsStrip">
+                            <!-- Chips de tonos relacionados generados por JS -->
                         </div>
                     </div>
                 </section>

@@ -20,6 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const scaleBarView = new ScaleBarView({
         titleEl: document.getElementById('lblScaleTitle'),
         gridEl: document.getElementById('scaleGrid'),
+        scaleRootSelect: document.getElementById('scaleRootSelect'),
+        scaleTypeSelect: document.getElementById('scaleTypeSelect'),
+        relatedChordsStrip: document.getElementById('relatedChordsStrip'),
         fixChordCheckbox: document.getElementById('chkFixGradeChord'),
         btnPrev: document.getElementById('btnPrevNote'),
         btnNext: document.getElementById('btnNextNote'),

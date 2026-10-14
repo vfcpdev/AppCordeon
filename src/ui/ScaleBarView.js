@@ -1,11 +1,13 @@
 /**
- * @fileoverview Vista de Escala Diatónica, Grados y Barra de Transporte (SRP).
- * Gestiona los chips de notas I a VIII y la reproducción secuencial con loop y velocidad.
+ * @fileoverview Vista de Escala Diatónica, Grados, Transporte y Tonos Relacionados (SRP).
+ * Gestiona los chips de notas I a VIII, la selección libre de tónica (ej: Sol en C-F-Bb)
+ * y la paleta armónica de tonos relacionados (Tónica, Dominante, Subdominante, Relativa, Disminuido, etc.).
  * @module ui/ScaleBarView
  */
 
-import { midiToName } from '../theory/MusicTheory.js';
+import { midiToName, getNoteNamesList } from '../theory/MusicTheory.js';
 import { NOTATION_MODES } from '../core/Constants.js';
+import { SCALE_DEFINITIONS } from '../theory/Scales.js';
 
 export class ScaleBarView {
     /**
@@ -14,7 +16,11 @@ export class ScaleBarView {
     constructor(elements) {
         this._titleEl = elements.titleEl;
         this._gridEl = elements.gridEl;
+        this._scaleRootSelect = elements.scaleRootSelect;
+        this._scaleTypeSelect = elements.scaleTypeSelect;
+        this._relatedChordsStrip = elements.relatedChordsStrip;
         this._fixChordCheckbox = elements.fixChordCheckbox;
+
         this._btnPrev = elements.btnPrev;
         this._btnNext = elements.btnNext;
         this._btnPlay = elements.btnPlay;
@@ -27,22 +33,54 @@ export class ScaleBarView {
 
         this._isPlaying = false;
         this._isLooping = false;
+        this._activeRelatedChordId = null;
+    }
+
+    /**
+     * Llena el combobox de tónicas para permitir estudiar cualquier escala independiente (ej: Sol).
+     * @param {string} notation
+     * @param {number} tuningOffset
+     * @param {string|number} selectedVal 'auto' o número de pitch class (0-11)
+     */
+    populateScaleRoots(notation = NOTATION_MODES.LATINA, tuningOffset = 0, selectedVal = 'auto') {
+        if (!this._scaleRootSelect) return;
+        this._scaleRootSelect.innerHTML = "";
+
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = 'auto';
+        defaultOpt.innerText = "Tónica de Hilera Activa (Auto)";
+        if (selectedVal === 'auto') defaultOpt.selected = true;
+        this._scaleRootSelect.appendChild(defaultOpt);
+
+        const noteNames = getNoteNamesList(notation, tuningOffset);
+        noteNames.forEach((name, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.innerText = `Escala de ${name}`;
+            if (selectedVal !== 'auto' && parseInt(selectedVal) === i) {
+                opt.selected = true;
+            }
+            this._scaleRootSelect.appendChild(opt);
+        });
     }
 
     /**
      * Renderiza la barra con las notas y grados de la escala activa.
-     * @param {Array} scaleSteps Lista de pasos de escala de generateMajorScale()
+     * @param {Array} scaleSteps Lista de pasos de escala
      * @param {number} activeStepIndex Grado seleccionado
+     * @param {string} scaleType 'major', 'minor', 'harmonic_minor'
      * @param {string} notation
      * @param {number} tuningOffset
-     * @param {(stepIndex: number) => void} onStepSelect Callback al hacer clic en un grado
+     * @param {(stepIndex: number) => void} onStepSelect
      */
-    render(scaleSteps, activeStepIndex, notation = NOTATION_MODES.LATINA, tuningOffset = 0, onStepSelect) {
+    render(scaleSteps, activeStepIndex, scaleType = 'major', notation = NOTATION_MODES.LATINA, tuningOffset = 0, onStepSelect) {
         if (!scaleSteps || scaleSteps.length === 0) return;
 
         const rootName = midiToName(scaleSteps[0].midi, notation, true, tuningOffset);
+        const typeName = SCALE_DEFINITIONS[scaleType] ? SCALE_DEFINITIONS[scaleType].name : 'Mayor';
+
         if (this._titleEl) {
-            this._titleEl.innerText = `Escala: ${rootName} Mayor`;
+            this._titleEl.innerText = `Escala: ${rootName} ${typeName}`;
         }
 
         if (!this._gridEl) return;
@@ -70,10 +108,68 @@ export class ScaleBarView {
     }
 
     /**
-     * Actualiza el chip visual activo.
+     * Renderiza la paleta de Tonos Relacionados y Familia Armónica.
+     * @param {import('../theory/Scales.js').RelatedChordItem[]} relatedChords
+     * @param {(chordItem: Object) => void} onSelectChord
+     */
+    renderRelatedChords(relatedChords, onSelectChord) {
+        if (!this._relatedChordsStrip) return;
+        this._relatedChordsStrip.innerHTML = "";
+
+        if (!relatedChords || relatedChords.length === 0) {
+            this._relatedChordsStrip.innerHTML = `<span style="font-size:0.72rem; color:#94a3b8; font-style:italic;">No hay tonos relacionados disponibles</span>`;
+            return;
+        }
+
+        relatedChords.forEach(chord => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'related-chord-chip';
+            chip.id = `rel-chord-${chord.id}`;
+            chip.style.borderLeftColor = chord.colorBadge;
+
+            if (this._activeRelatedChordId === chord.id) {
+                chip.classList.add('active-related-chord');
+            }
+
+            chip.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%; gap:4px;">
+                    <strong style="color:#ffffff; font-size:0.80rem;">${chord.chordName}</strong>
+                    <span style="font-size:0.62rem; color:${chord.colorBadge}; font-weight:800;">${chord.chordSymbol}</span>
+                </div>
+                <span class="related-chord-role" style="color:#94a3b8;">${chord.roleName}</span>
+            `;
+
+            chip.addEventListener('click', () => {
+                this._activeRelatedChordId = chord.id;
+                const all = this._relatedChordsStrip.querySelectorAll('.related-chord-chip');
+                all.forEach(c => c.classList.remove('active-related-chord'));
+                chip.classList.add('active-related-chord');
+
+                if (onSelectChord) onSelectChord(chord);
+            });
+
+            this._relatedChordsStrip.appendChild(chip);
+        });
+    }
+
+    /**
+     * Desmarca el chip de tono relacionado activo.
+     */
+    clearActiveRelatedChord() {
+        this._activeRelatedChordId = null;
+        if (this._relatedChordsStrip) {
+            const all = this._relatedChordsStrip.querySelectorAll('.related-chord-chip');
+            all.forEach(c => c.classList.remove('active-related-chord'));
+        }
+    }
+
+    /**
+     * Actualiza el chip visual activo en la escala.
      * @param {number} activeStepIndex
      */
     setActiveStep(activeStepIndex) {
+        if (!this._gridEl) return;
         const chips = this._gridEl.querySelectorAll('.note-chip');
         chips.forEach((c, idx) => {
             c.classList.toggle('active-step', idx === activeStepIndex);
@@ -86,6 +182,23 @@ export class ScaleBarView {
      */
     isChordMode() {
         return this._fixChordCheckbox ? this._fixChordCheckbox.checked : false;
+    }
+
+    /**
+     * Vincula listeners para cambios en la configuración de la escala (tónica independiente y tipo).
+     * @param {Object} handlers
+     */
+    bindScaleConfigEvents(handlers) {
+        if (this._scaleRootSelect) {
+            this._scaleRootSelect.addEventListener('change', (e) => {
+                if (handlers.onRootChange) handlers.onRootChange(e.target.value);
+            });
+        }
+        if (this._scaleTypeSelect) {
+            this._scaleTypeSelect.addEventListener('change', (e) => {
+                if (handlers.onTypeChange) handlers.onTypeChange(e.target.value);
+            });
+        }
     }
 
     /**
