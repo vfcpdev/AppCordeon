@@ -290,8 +290,8 @@
                                 <span class="track-key-badge" id="audioBpmBadge" style="background: rgba(124, 58, 237, 0.08); color: #7c3aed; border: 1px solid #ddd6fe; font-weight: 800;" title="Tempo detectado del audio">
                                     <i class="fas fa-drum"></i> <span id="audioBpmValue">- BPM</span>
                                 </span>
-                                <button type="button" class="btn-action btn-xs" id="btnTrackSheetMusic" title="Abrir partitura de esta canción" style="padding: 2px 8px; font-size: 0.70rem; background: rgba(99, 102, 241, 0.12); color: #6366f1; border-color: #c7d2fe;">
-                                    <i class="fas fa-file-pdf"></i> Partitura
+                                <button type="button" class="btn-action btn-xs" id="btnTrackSheetMusic" title="Abrir partitura MusicXML interactiva de esta canción" style="padding: 2px 8px; font-size: 0.70rem; background: rgba(99, 102, 241, 0.12); color: #6366f1; border-color: #c7d2fe;">
+                                    <i class="fas fa-book-open"></i> Partitura
                                 </button>
                             </div>
                         </div>
@@ -408,6 +408,16 @@
                                     <option value="1.25">1.25x</option>
                                     <option value="1.5">1.5x</option>
                                 </select>
+                            </div>
+
+                            <!-- Volumen del Sonido del Acorde en el Reproductor -->
+                            <div class="player-chord-volume-group" title="Volumen del sonido del acorde en el reproductor (0% = Silencio)">
+                                <button type="button" class="btn-chord-volume-mute" id="btnToggleChordMute" title="Silenciar / Activar sonido del acorde">
+                                    <i class="fas fa-volume-high" id="iconChordVolume"></i>
+                                </button>
+                                <span class="player-chord-vol-label">Acorde:</span>
+                                <input type="range" id="playerChordVolumeSlider" class="player-chord-vol-slider" min="0" max="100" value="80" title="Ajustar volumen del acorde (0% a 100%)">
+                                <span class="player-chord-vol-val" id="playerChordVolumeDisplay">80%</span>
                             </div>
 
                             <!-- Sincronizar diapasón -->
@@ -838,41 +848,51 @@
             </div>
         </div>
 
-        <!-- Barra de herramientas: navegación de páginas, zoom, acciones -->
+        <!-- Barra de herramientas: compases, cursor, zoom, importar MusicXML y aplicar acordes -->
         <div class="sheet-modal-toolbar">
-            <div class="sheet-toolbar-group">
-                <button type="button" class="sheet-nav-btn" id="btnSheetPrevPage" title="Página anterior (←)">
-                    <i class="fas fa-chevron-left"></i> Ant.
+            <div class="sheet-toolbar-group" title="Navegación de Compases">
+                <button type="button" class="sheet-nav-btn" id="btnSheetFirstMeasure" title="Primer compás (Inicio)">
+                    <i class="fas fa-backward-step"></i>
                 </button>
-                <div class="sheet-page-indicator">
-                    <input type="number" id="sheetPageInput" class="sheet-page-input" value="1" min="1" max="48" title="Ir a página">
-                    <span>/ <strong id="sheetPageTotal">48</strong></span>
+                <button type="button" class="sheet-nav-btn" id="btnSheetPrevMeasure" title="Compás anterior (←)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="sheet-measure-indicator">
+                    <span class="sheet-lbl-compact">Compás:</span>
+                    <input type="number" id="sheetMeasureInput" class="sheet-measure-input" value="1" min="1" max="74" title="Ir a compás">
+                    <span>/ <strong id="sheetMeasureTotal">74</strong></span>
                 </div>
-                <button type="button" class="sheet-nav-btn" id="btnSheetNextPage" title="Página siguiente (→)">
-                    Sig. <i class="fas fa-chevron-right"></i>
+                <button type="button" class="sheet-nav-btn" id="btnSheetNextMeasure" title="Compás siguiente (→)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button type="button" class="sheet-nav-btn active" id="btnSheetToggleCursor" title="Mostrar / Ocultar cursor de seguimiento">
+                    <i class="fas fa-i-cursor"></i> Cursor
                 </button>
             </div>
 
-            <div class="sheet-toolbar-group">
-                <button type="button" class="sheet-zoom-btn" id="btnSheetZoomOut" title="Reducir zoom">
+            <div class="sheet-toolbar-group" title="Zoom de Partitura">
+                <button type="button" class="sheet-zoom-btn" id="btnSheetZoomOut" title="Reducir zoom (-)">
                     <i class="fas fa-search-minus"></i>
                 </button>
                 <span class="sheet-zoom-label" id="sheetZoomLabel">100%</span>
-                <button type="button" class="sheet-zoom-btn" id="btnSheetZoomIn" title="Aumentar zoom">
+                <button type="button" class="sheet-zoom-btn" id="btnSheetZoomIn" title="Aumentar zoom (+)">
                     <i class="fas fa-search-plus"></i>
+                </button>
+                <button type="button" class="sheet-zoom-btn" id="btnSheetZoomFit" title="Ajustar al ancho de la ventana">
+                    <i class="fas fa-arrows-left-right-to-line"></i>
                 </button>
             </div>
 
             <div class="sheet-toolbar-group">
-                <button type="button" class="btn-sheet-action btn-sheet-action--secondary" id="btnSheetPresetComoZaqueo" title="Cargar partitura 'Como Zaqueo' (Sol Mayor)">
-                    <i class="fas fa-music"></i> Como Zaqueo
+                <button type="button" class="btn-sheet-action btn-sheet-action--secondary" id="btnSheetPresetComoZaqueo" title="Partitura MusicXML 'Como Zaqueo' (Sol Mayor)">
+                    <i class="fas fa-music"></i> Zaqueo
                 </button>
-                <button type="button" class="btn-sheet-action btn-sheet-action--secondary" id="btnSheetUploadCustom" title="Asociar otra partitura (PDF o Imagen)">
-                    <i class="fas fa-folder-open"></i> Subir PDF
+                <button type="button" class="btn-sheet-action btn-sheet-action--secondary" id="btnSheetUploadXml" title="Importar partitura en formato MusicXML (.xml, .musicxml, .mxl)">
+                    <i class="fas fa-file-import"></i> Cargar MusicXML
                 </button>
-                <input type="file" id="sheetModalFileInput" accept=".pdf,image/*" style="display: none;">
-                <button type="button" class="btn-sheet-action" id="btnSheetApplyChords" title="Cargar todos los acordes de la partitura a la cuadrícula 4/4 y diapasón">
-                    <i class="fas fa-bolt"></i> Aplicar Acordes a Canción
+                <input type="file" id="sheetXmlFileInput" accept=".xml,.musicxml,.mxl" style="display: none;">
+                <button type="button" class="btn-sheet-action" id="btnSheetApplyChords" title="Sincronizar y cargar acordes a la cuadrícula 4/4 y diapasón">
+                    <i class="fas fa-bolt"></i> Sincronizar Cuadrícula
                 </button>
             </div>
         </div>
@@ -888,14 +908,14 @@
             </div>
         </div>
 
-        <!-- Viewport con el lienzo de la partitura -->
+        <!-- Viewport con el pentagrama vectorial SVG renderizado por OpenSheetMusicDisplay -->
         <div class="sheet-modal-viewport" id="sheetModalViewport">
-            <div class="sheet-canvas-wrapper">
-                <canvas id="sheetPdfCanvas"></canvas>
+            <div class="sheet-osmd-paper" id="sheetOsmdPaper">
+                <div class="sheet-osmd-container" id="osmdScoreContainer"></div>
             </div>
             <div class="sheet-loading-overlay" id="sheetLoadingOverlay" style="display: none;">
                 <i class="fas fa-circle-notch fa-spin fa-2x"></i>
-                <span>Cargando partitura...</span>
+                <span id="sheetLoadingText">Renderizando partitura MusicXML...</span>
             </div>
         </div>
     </div>

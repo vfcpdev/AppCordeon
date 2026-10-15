@@ -59,6 +59,12 @@ export class AudioTrackView {
         this._btnEditActiveChord = document.getElementById('btnEditActiveChord');
         this._activeMeasureBeatInfo = document.getElementById('activeMeasureBeatInfo');
 
+        // Control de volumen del sonido del acorde en el reproductor
+        this._btnToggleChordMute = document.getElementById('btnToggleChordMute');
+        this._iconChordVolume = document.getElementById('iconChordVolume');
+        this._playerChordVolumeSlider = document.getElementById('playerChordVolumeSlider');
+        this._playerChordVolumeDisplay = document.getElementById('playerChordVolumeDisplay');
+
         this._currentBpm = 120;
         this._activeBeatSlot = null;
         this._activeMeasureRow = null;
@@ -2146,8 +2152,9 @@ export class AudioTrackView {
                     e.stopPropagation();
                     if (chord && audioEngine) {
                         const midis = chord.playbackMidis || (chord.noteMods ? chord.noteMods.map(n => 60 + n) : null);
-                        if (midis && midis.length > 0) {
-                            audioEngine.play(midis, "4n");
+                        const chordVol = audioPlayerController.getChordEffectiveVolume();
+                        if (chordVol > 0 && midis && midis.length > 0) {
+                            audioEngine.play(midis, "4n", chordVol);
                         }
                     }
                     audioPlayerController.seek(beatStart);
@@ -2266,6 +2273,62 @@ export class AudioTrackView {
                 this._activeMeasureBeatInfo.innerText = `Compás ${measure + 1} · Pulso ${beat}`;
             }
         });
+
+        this._initChordVolumeControls();
+    }
+
+    /**
+     * Inicializa eventos y controles de volumen del acorde.
+     * @private
+     */
+    _initChordVolumeControls() {
+        this._updateChordVolumeUI(audioPlayerController.chordVolume, audioPlayerController.isChordMuted);
+
+        if (this._playerChordVolumeSlider) {
+            this._playerChordVolumeSlider.value = Math.round(audioPlayerController.chordVolume * 100);
+            this._playerChordVolumeSlider.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value) / 100;
+                audioPlayerController.setChordVolume(val);
+            });
+        }
+
+        if (this._btnToggleChordMute) {
+            this._btnToggleChordMute.addEventListener('click', () => {
+                audioPlayerController.toggleChordMute();
+            });
+        }
+
+        eventBus.on('player:chord_volume_changed', ({ volume, isMuted }) => {
+            this._updateChordVolumeUI(volume, isMuted);
+        });
+    }
+
+    /**
+     * Actualiza la interfaz del volumen de acorde en el reproductor.
+     * @private
+     * @param {number} volume
+     * @param {boolean} isMuted
+     */
+    _updateChordVolumeUI(volume, isMuted) {
+        const pct = Math.round(volume * 100);
+        if (this._playerChordVolumeSlider) {
+            this._playerChordVolumeSlider.value = isMuted ? 0 : pct;
+        }
+        if (this._playerChordVolumeDisplay) {
+            this._playerChordVolumeDisplay.textContent = isMuted ? 'Mudo' : `${pct}%`;
+        }
+        if (this._iconChordVolume) {
+            if (isMuted || volume === 0) {
+                this._iconChordVolume.className = 'fas fa-volume-xmark';
+                if (this._btnToggleChordMute) this._btnToggleChordMute.classList.add('is-muted');
+            } else if (volume < 0.45) {
+                this._iconChordVolume.className = 'fas fa-volume-low';
+                if (this._btnToggleChordMute) this._btnToggleChordMute.classList.remove('is-muted');
+            } else {
+                this._iconChordVolume.className = 'fas fa-volume-high';
+                if (this._btnToggleChordMute) this._btnToggleChordMute.classList.remove('is-muted');
+            }
+        }
     }
 
     /**

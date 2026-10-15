@@ -62,11 +62,13 @@ class AudioEngine {
      * Toca una nota o acorde individual/múltiple.
      * @param {number|number[]} midi Nota(s) MIDI.
      * @param {string} [duration="8n"]
+     * @param {number} [velocity=1.0] Factor de ganancia/velocidad (0.0 a 1.0)
      */
-    play(midi, duration = "8n") {
+    play(midi, duration = "8n", velocity = 1.0) {
+        if (velocity <= 0) return; // Silenciado
         this.init().then(() => {
-            this._engine.triggerAttackRelease(midi, duration);
-            eventBus.emit('audio:played', { midi, duration });
+            this._engine.triggerAttackRelease(midi, duration, velocity);
+            eventBus.emit('audio:played', { midi, duration, velocity });
         }).catch(err => {
             console.warn('[AudioEngine] No se pudo reproducir audio:', err);
         });

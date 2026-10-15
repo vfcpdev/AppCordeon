@@ -146,6 +146,22 @@ export class SheetMusicModalView {
             this._btnApplyChords.addEventListener('click', () => this.applyChordsToApp());
         }
 
+        // Arrastrar y soltar archivos MusicXML directamente en el visor de partituras
+        const dropTargets = [this._modal, this._viewport].filter(Boolean);
+        dropTargets.forEach(target => {
+            target.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            target.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    this.loadMusicXmlFile(e.dataTransfer.files[0]);
+                }
+            });
+        });
+
         // Navegación con teclado dentro del modal
         window.addEventListener('keydown', (e) => {
             if (!this.isOpen()) return;
@@ -335,7 +351,20 @@ export class SheetMusicModalView {
      */
     async loadMusicXmlFile(file) {
         if (!file) return;
-        const name = file.name.toLowerCase();
+        const name = (file.name || '').toLowerCase();
+
+        // Validación estricta: NO admitir PDF para partituras
+        if (name.endsWith('.pdf')) {
+            alert('Formato no compatible:\nLas partituras no se importan en formato PDF.\n\nPor favor importa la partitura en formato MusicXML (.xml, .musicxml o .mxl) para renderizado interactivo con OpenSheetMusicDisplay.');
+            return;
+        }
+
+        const isMusicXml = name.endsWith('.xml') || name.endsWith('.musicxml') || name.endsWith('.mxl');
+        if (!isMusicXml) {
+            alert(`El archivo "${file.name}" no es compatible.\n\nLas partituras solo se pueden importar en formato MusicXML (.xml, .musicxml, .mxl).`);
+            return;
+        }
+
         this._showLoading(true, `Cargando ${file.name}...`);
 
         try {

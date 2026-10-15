@@ -194,7 +194,10 @@ export class AppController {
                     }
                 }
                 if (midis && midis.length > 0) {
-                    audioEngine.play(midis, "4n");
+                    const chordVol = audioPlayerController.getChordEffectiveVolume();
+                    if (chordVol > 0) {
+                        audioEngine.play(midis, "4n", chordVol);
+                    }
                 }
             }
         });
@@ -506,6 +509,19 @@ export class AppController {
         if (this._audioTrackView) {
             this._audioTrackView.bindEvents({
                 onFileSelected: async (file) => {
+                    const fname = (file.name || '').toLowerCase();
+                    if (fname.endsWith('.pdf')) {
+                        alert('Formato no admitido:\nLos archivos PDF no son compatibles.\n\n- Para partituras interactivas: Abre la ventana "Partitura" e importa en formato MusicXML (.xml, .musicxml, .mxl).\n- Para canciones de acompañamiento: Carga un archivo de audio (MP3, WAV, OGG).');
+                        return;
+                    }
+                    if (fname.endsWith('.xml') || fname.endsWith('.musicxml') || fname.endsWith('.mxl')) {
+                        if (this._sheetMusicModalView) {
+                            this._sheetMusicModalView.open();
+                            await this._sheetMusicModalView.loadMusicXmlFile(file);
+                        }
+                        return;
+                    }
+
                     try {
                         this._audioTrackView.showProgress(10, 'Decodificando archivo de audio...');
                         const buffer = await this._audioChordAnalyzer.decodeAudio(file);
@@ -1748,8 +1764,9 @@ export class AppController {
         };
 
         if (this._audioTrackView) {
+            const scoreTitle = scoreInfo ? (scoreInfo.title || 'Partitura MusicXML') : 'Partitura MusicXML';
             const fakeFile = {
-                name: scoreInfo ? `${scoreInfo.title}.pdf` : 'Partitura.pdf',
+                name: `${scoreTitle} (MusicXML)`,
                 size: 0
             };
             this._audioTrackView.renderAnalysis(fakeFile, report, (seekTime) => {

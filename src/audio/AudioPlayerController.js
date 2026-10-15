@@ -24,6 +24,11 @@ export class AudioPlayerController {
         this._currentChordIndex = -1;
         this._syncWithDiapason = true;
         this._pitchShift = 0; // Desplazamiento de tono en semitonos (-12 a +12)
+
+        // Control de volumen para el sonido sintetizado del acorde en el reproductor
+        const savedVol = localStorage.getItem('acordeon_player_chord_volume');
+        this._chordVolume = savedVol !== null ? Math.max(0, Math.min(1, parseFloat(savedVol))) : 0.8;
+        this._isChordMuted = localStorage.getItem('acordeon_player_chord_muted') === 'true';
     }
 
     /**
@@ -346,12 +351,80 @@ export class AudioPlayerController {
         }
     }
 
-    get duration() {
-        if (this._audioBuffer) return this._audioBuffer.duration;
-        if (this._chordsTimeline && this._chordsTimeline.length > 0) {
-            return Math.max(...this._chordsTimeline.map(c => c.endTime || 0), 16);
+    /**
+     * Obtiene el volumen configurado del sonido del acorde (0.0 a 1.0).
+     * @returns {number}
+     */
+    get chordVolume() {
+        return this._chordVolume;
+    }
+
+    /**
+     * Indica si el sonido del acorde está silenciado en el reproductor.
+     * @returns {boolean}
+     */
+    get isChordMuted() {
+        return this._isChordMuted;
+    }
+
+    /**
+     * Obtiene el volumen efectivo considerando el estado de silencio (0.0 si está silenciado).
+     * @returns {number}
+     */
+    getChordEffectiveVolume() {
+        return this._isChordMuted ? 0 : this._chordVolume;
+    }
+
+    /**
+     * Ajusta el volumen del sonido del acorde en el reproductor.
+     * @param {number} volume Valor numérico de 0.0 a 1.0 (o 0 a 100)
+     */
+    setChordVolume(volume) {
+        let val = parseFloat(volume);
+        if (isNaN(val)) return;
+        if (val > 1.0) val = val / 100.0; // Soporta porcentaje 0-100
+        val = Math.max(0, Math.min(1, Math.round(val * 100) / 100));
+
+        this._chordVolume = val;
+        try {
+            localStorage.setItem('acordeon_player_chord_volume', val.toString());
+        } catch (e) {}
+
+        if (val > 0 && this._isChordMuted) {
+            this._isChordMuted = false;
+            try {
+                localStorage.setItem('acordeon_player_chord_muted', 'false');
+            } catch (e) {}
+        } else if (val === 0) {
+            this._isChordMuted = true;
+            try {
+                localStorage.setItem('acordeon_player_chord_muted', 'true');
+            } catch (e) {}
         }
-        return 16;
+
+        eventBus.emit('player:chord_volume_changed', {
+            volume: this._chordVolume,
+            isMuted: this._isChordMuted,
+            effectiveVolume: this.getChordEffectiveVolume()
+        });
+    }
+
+    /**
+     * Alterna el silencio (Mute) del sonido del acorde.
+     * @returns {boolean} Nuevo estado de silencio.
+     */
+    toggleChordMute() {
+        this._isChordMuted = !this._isChordMuted;
+        try {
+            localStorage.setItem('acordeon_player_chord_muted', this._isChordMuted ? 'true' : 'false');
+        } catch (e) {}
+
+        eventBus.emit('player:chord_volume_changed', {
+            volume: this._chordVolume,
+            isMuted: this._isChordMuted,
+            effectiveVolume: this.getChordEffectiveVolume()
+        });
+        return this._isChordMuted;
     }
 }
 

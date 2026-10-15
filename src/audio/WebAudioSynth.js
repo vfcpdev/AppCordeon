@@ -54,20 +54,24 @@ export class WebAudioSynth extends IAudioEngine {
     /**
      * @param {number|number[]} midi Nota o notas MIDI.
      * @param {string} [duration="8n"]
+     * @param {number} [velocity=1.0] Factor de ganancia/velocidad (0.0 a 1.0)
      */
-    triggerAttackRelease(midi, duration = "8n") {
+    triggerAttackRelease(midi, duration = "8n", velocity = 1.0) {
         if (!this._isInitialized || !this._synth) {
-            this.init().then(() => this.triggerAttackRelease(midi, duration)).catch(() => {});
+            this.init().then(() => this.triggerAttackRelease(midi, duration, velocity)).catch(() => {});
             return;
         }
 
+        if (velocity <= 0) return; // Si el volumen es 0 (silenciado), no emitir sonido
+
         try {
+            const clampedVel = Math.max(0.01, Math.min(1.0, velocity));
             if (Array.isArray(midi)) {
                 const freqs = midi.map(m => Tone.Frequency(m, "midi").toNote());
-                this._synth.triggerAttackRelease(freqs, duration);
+                this._synth.triggerAttackRelease(freqs, duration, undefined, clampedVel);
             } else {
                 const freq = Tone.Frequency(midi, "midi").toNote();
-                this._synth.triggerAttackRelease(freq, duration);
+                this._synth.triggerAttackRelease(freq, duration, undefined, clampedVel);
             }
         } catch (err) {
             console.error('[WebAudioSynth] Error en triggerAttackRelease:', err);

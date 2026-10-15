@@ -25,7 +25,7 @@ export class IAudioEngine {
      * @param {string} [duration="8n"] Duración en notación de tiempo.
      * @param {number} [time] Tiempo de disparo.
      */
-    triggerAttackRelease(midi, duration = "8n", time) {
+    triggerAttackRelease(midi, duration = "8n", velocity = 1.0) {
         throw new Error('El método triggerAttackRelease() debe ser implementado.');
     }
 
