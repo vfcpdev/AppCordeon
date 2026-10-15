@@ -79,8 +79,24 @@ export class AudioTrackView {
         this._btnMiniDelete = document.getElementById('btnMiniPopoverDelete');
         this._btnMiniCancel = document.getElementById('btnMiniPopoverCancel');
         this._btnMiniSave = document.getElementById('btnMiniPopoverSave');
+        this._btnMiniNext = document.getElementById('btnMiniPopoverNext');
         this._btnMiniClose = document.getElementById('btnMiniPopoverClose');
         this._activeMiniSlot = null;
+
+        // Botones de gestión de cuadrícula: Borrar Todo, + Compás, Digitar Manualmente
+        this._btnClearAllGridChords = document.getElementById('btnClearAllGridChords');
+        this._btnAddMeasureRow = document.getElementById('btnAddMeasureRow');
+        this._btnManualProgressionInput = document.getElementById('btnManualProgressionInput');
+
+        // Modal emergente para digitar progresión completa
+        this._manualProgModal = document.getElementById('manualProgressionModal');
+        this._manualProgInput = document.getElementById('manualProgressionInput');
+        this._manualProgDurationSelect = document.getElementById('manualProgDurationSelect');
+        this._chkManualProgReplaceAll = document.getElementById('chkManualProgReplaceAll');
+        this._manualProgFeedback = document.getElementById('manualProgFeedback');
+        this._btnManualProgClose = document.getElementById('btnManualProgClose');
+        this._btnManualProgCancel = document.getElementById('btnManualProgCancel');
+        this._btnManualProgApply = document.getElementById('btnManualProgApply');
 
         // Controles de Ajuste de Tono (Pitch Shift)
         this._btnPitchDown = elements.btnPitchDown;

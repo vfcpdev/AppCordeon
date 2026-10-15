@@ -317,9 +317,15 @@
                                 <span class="grid-header-title">
                                     <i class="fas fa-table-cells-large"></i> Cuadrícula de Acordes (4/4)
                                 </span>
-                                <div style="display: flex; gap: 4px; align-items: center;">
-                                    <button type="button" class="btn-action btn-xs" id="btnAddChordAtCurrentTime" title="Insertar o editar acorde en el segundo actual">
-                                        <i class="fas fa-plus"></i> + Acorde
+                                <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+                                    <button type="button" class="btn-action btn-xs" id="btnManualProgressionInput" title="Digitar progresión de acordes manualmente (ej: G | Em | C | D)">
+                                        <i class="fas fa-keyboard"></i> Digitar Acordes
+                                    </button>
+                                    <button type="button" class="btn-action btn-xs" id="btnAddMeasureRow" title="Agregar un compás vacío al final">
+                                        <i class="fas fa-plus"></i> Compás
+                                    </button>
+                                    <button type="button" class="btn-action btn-xs btn-action--danger" id="btnClearAllGridChords" title="Borrar todos los acordes de la cuadrícula">
+                                        <i class="fas fa-trash-can"></i> Borrar Todo
                                     </button>
                                 </div>
                             </div>
@@ -344,9 +350,49 @@
                                     <button type="button" class="btn-mini-action btn-mini-cancel" id="btnMiniPopoverCancel" title="Cancelar">
                                         <i class="fas fa-xmark"></i> Cancelar
                                     </button>
-                                    <button type="button" class="btn-mini-action btn-mini-save" id="btnMiniPopoverSave" title="Guardar cambios del acorde">
-                                        <i class="fas fa-check"></i> Editar
+                                    <button type="button" class="btn-mini-action btn-mini-save" id="btnMiniPopoverSave" title="Guardar cambios del acorde (Enter)">
+                                        <i class="fas fa-check"></i> Guardar
                                     </button>
+                                    <button type="button" class="btn-mini-action btn-mini-next" id="btnMiniPopoverNext" title="Guardar y pasar al siguiente compás (Tab)">
+                                        <i class="fas fa-arrow-right"></i> Sig.
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Modal emergente para digitar progresión completa manualmente -->
+                            <div class="manual-progression-modal hidden" id="manualProgressionModal" style="display: none;">
+                                <div class="manual-progression-card">
+                                    <div class="manual-progression-header">
+                                        <span class="manual-progression-title"><i class="fas fa-keyboard"></i> Digitar Progresión Manualmente</span>
+                                        <button type="button" class="mini-popover-btn-close" id="btnManualProgClose" title="Cerrar">&times;</button>
+                                    </div>
+                                    <div class="manual-progression-body">
+                                        <div style="font-size: 0.70rem; color: #94a3b8; margin-bottom: 5px;">
+                                            Escribe los acordes separados por barra (<code>|</code>), espacio o coma. Ej: <code>Sol | Re | Mim | Do</code> o <code>G | D | Em | C</code>
+                                        </div>
+                                        <textarea id="manualProgressionInput" class="manual-progression-textarea" rows="2" placeholder="ej: G | D/F# | Em7 | C | G/B | Am7 | D"></textarea>
+                                        <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 6px; flex-wrap: wrap;">
+                                            <div style="display: flex; align-items: center; gap: 4px; font-size: 0.68rem; color: #cbd5e1;">
+                                                <span>Duración:</span>
+                                                <select id="manualProgDurationSelect" class="form-select" style="padding: 1px 4px; height: 22px; font-size: 0.68rem; background: #0f172a; color: #fff; border-color: #334155;">
+                                                    <option value="1bar" selected>1 Compás completo</option>
+                                                    <option value="2beats">2 Tiempos (medio compás)</option>
+                                                    <option value="1beat">1 Tiempo (cada tiempo)</option>
+                                                </select>
+                                            </div>
+                                            <label style="font-size: 0.68rem; color: #cbd5e1; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                                <input type="checkbox" id="chkManualProgReplaceAll" checked>
+                                                <span>Reemplazar todo</span>
+                                            </label>
+                                        </div>
+                                        <div id="manualProgFeedback" style="font-size: 0.68rem; color: #38bdf8; min-height: 16px; margin-top: 4px; font-weight: 700;"></div>
+                                    </div>
+                                    <div class="manual-progression-actions">
+                                        <button type="button" class="btn-action" id="btnManualProgCancel">Cancelar</button>
+                                        <button type="button" class="btn-action btn-action--primary" id="btnManualProgApply">
+                                            <i class="fas fa-check"></i> Cargar a Cuadrícula
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

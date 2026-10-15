@@ -1756,23 +1756,10 @@ export class AppController {
         if (!timelineChords || timelineChords.length === 0) return;
 
         const duration = timelineChords[timelineChords.length - 1].endTime;
-        const report = {
-            mainKey: scoreInfo ? scoreInfo.key : 'G',
-            bpm: bpm,
-            duration: duration,
-            chords: timelineChords
-        };
 
         if (this._audioTrackView) {
-            const scoreTitle = scoreInfo ? (scoreInfo.title || 'Partitura MusicXML') : 'Partitura MusicXML';
-            const fakeFile = {
-                name: `${scoreTitle} (MusicXML)`,
-                size: 0
-            };
-            this._audioTrackView.renderAnalysis(fakeFile, report, (seekTime) => {
-                audioPlayerController.seek(seekTime);
-            });
-            this._audioTrackView.setBPM(bpm);
+            // No cargar archivos ni alterar el reproductor de audio: solo aplicar los acordes a la cuadrícula 4/4
+            this._audioTrackView.applyChordsToGrid(timelineChords, duration, bpm);
         }
 
         audioPlayerController.setChordsTimeline(timelineChords);
