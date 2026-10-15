@@ -626,8 +626,8 @@
     display: flex;
     flex-direction: column;
     align-self: flex-start;
-    width: 250px;
-    min-width: 240px;
+    width: 370px;
+    min-width: 350px;
     background: #111422;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 18px;
@@ -743,6 +743,14 @@
     letter-spacing: 0.2px;
 }
 
+.sidebar-bellows-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+    align-items: stretch;
+}
+
 .sidebar-bellows-block {
     display: flex;
     flex-direction: column;
@@ -750,7 +758,8 @@
     background: rgba(15, 23, 42, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
-    padding: 4px 6px;
+    padding: 5px 6px;
+    min-width: 0;
 }
 
 .sidebar-bellows-block.pull-block {
@@ -774,18 +783,18 @@
 
 .sidebar-bellows-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.62rem;
-    cursor: pointer;
+    flex-direction: column;
+    gap: 3px;
     user-select: none;
-    padding: 1px 2px;
-    border-radius: 3px;
-    transition: background 0.15s ease;
+    padding-bottom: 3px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.sidebar-bellows-header:hover {
-    background: rgba(255, 255, 255, 0.08);
+.sidebar-bellows-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4px;
 }
 
 .sidebar-checkbox-label {
@@ -815,6 +824,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
+    font-size: 0.66rem;
 }
 
 .pull-block .sidebar-bellows-title {
@@ -826,26 +836,30 @@
 }
 
 .sidebar-bellows-count {
-    font-size: 0.55rem;
+    font-size: 0.58rem;
     color: #94a3b8;
+    white-space: nowrap;
 }
 
 .sidebar-buttons-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 3px;
-    max-height: 110px;
+    gap: 4px;
+    max-height: 220px;
     overflow-y: auto;
+    align-content: flex-start;
 }
 
+/* BOTONES NUMERADOS DEL ACORDE (AUMENTADOS 20% DE TAMAÑO) */
 .sidebar-btn-badge {
     position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    border-radius: 5px;
-    padding: 2.5px 6px;
-    font-size: 0.62rem;
+    justify-content: center;
+    gap: 5px;
+    border-radius: 6px;
+    padding: 3.5px 7px;
+    font-size: 0.74rem;
     cursor: pointer;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
@@ -854,6 +868,9 @@
     background: rgba(255, 255, 255, 0.04) !important;
     border: 1px solid rgba(255, 255, 255, 0.14) !important;
     box-shadow: none !important;
+    flex: 1 1 calc(50% - 4px);
+    min-width: 65px;
+    white-space: nowrap;
 }
 
 .sidebar-btn-badge:hover {
@@ -871,11 +888,12 @@
 .sidebar-btn-badge.pull-badge strong {
     color: #93c5fd !important;
     font-weight: 800;
+    font-size: 0.76rem;
 }
 
 .sidebar-btn-badge.pull-badge small {
     color: #60a5fa !important;
-    font-size: 0.54rem;
+    font-size: 0.65rem;
     opacity: 0.9;
 }
 
@@ -893,11 +911,12 @@
 .sidebar-btn-badge.push-badge strong {
     color: #fca5a5 !important;
     font-weight: 800;
+    font-size: 0.76rem;
 }
 
 .sidebar-btn-badge.push-badge small {
     color: #f87171 !important;
-    font-size: 0.54rem;
+    font-size: 0.65rem;
     opacity: 0.9;
 }
 
@@ -933,7 +952,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 7.5px;
+    font-size: 9px;
     line-height: 1;
 }
 
@@ -1369,19 +1388,19 @@
     display: inline-flex;
     background: rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 5px;
-    padding: 1px;
-    gap: 1px;
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
 }
 
 .sidebar-segment-btn {
     background: transparent;
     border: none;
     color: #94a3b8;
-    font-size: 0.60rem;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 3px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 4px;
     cursor: pointer;
     transition: all 0.15s ease;
 }
@@ -1408,8 +1427,8 @@
     border: 1px solid rgba(255, 255, 255, 0.14);
     color: #cbd5e1;
     border-radius: 4px;
-    padding: 1px 6px;
-    font-size: 0.62rem;
+    padding: 2.5px 7px;
+    font-size: 0.72rem;
     cursor: pointer;
     transition: all 0.15s ease;
 }
@@ -1425,14 +1444,14 @@
 }
 
 .sidebar-octave-display {
-    font-size: 0.60rem;
+    font-size: 0.72rem;
     font-weight: 800;
     color: #e0e7ff;
-    padding: 1px 6px;
-    min-width: 52px;
+    padding: 2px 8px;
+    min-width: 58px;
     text-align: center;
     background: rgba(0, 0, 0, 0.35);
-    border-radius: 3px;
+    border-radius: 4px;
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -1467,6 +1486,10 @@
     padding: 1px 5px;
     border-radius: 3px;
     letter-spacing: 0.2px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: 105px;
 }
 
 .bellows-status-badge.badge-complete {

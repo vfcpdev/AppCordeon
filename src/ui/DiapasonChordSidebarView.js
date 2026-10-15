@@ -397,57 +397,63 @@ export class DiapasonChordSidebarView {
                 </div>
             </div>
 
-            <!-- BOTONES PARA ABRE (PULL) -->
-            <div class="sidebar-bellows-block pull-block ${!isPullChecked ? 'action-dimmed' : ''}">
-                <div class="sidebar-bellows-header" data-dir="pull">
-                    <label class="sidebar-checkbox-label" title="Marcar para ejecutar Abriendo en la melodía">
-                        <input type="checkbox" class="sidebar-dir-checkbox" data-dir="pull" ${isPullChecked ? 'checked' : ''}>
-                        <span class="sidebar-bellows-title"><i class="fas fa-arrow-left"></i> Abre (Pull)</span>
-                    </label>
-                    <div style="display:flex; align-items:center; gap:5px;">
-                        <span class="bellows-status-badge ${isPullComplete ? 'badge-complete' : 'badge-missing'}">
-                            ${isPullComplete ? '<i class="fas fa-check"></i> Completo' : '⚠️ Falta ' + missingPullNames.join(', ')}
-                        </span>
-                        <span class="sidebar-bellows-count" data-dir="pull">${activePullCount}/${buttons.pullButtons.length} bot.</span>
-                        <button type="button" class="sidebar-btn-toggle-bellows-vis" data-dir="pull" title="Visualizar u ocultar los botones de Abre">
-                            <i class="fas ${isPullCollapsed ? 'fa-eye-slash' : 'fa-eye'}"></i>
-                        </button>
+            <div class="sidebar-bellows-columns">
+                <!-- COLUMNA IZQUIERDA: ABRE (PULL) -->
+                <div class="sidebar-bellows-block pull-block ${!isPullChecked ? 'action-dimmed' : ''}">
+                    <div class="sidebar-bellows-header" data-dir="pull">
+                        <div class="sidebar-bellows-header-row">
+                            <label class="sidebar-checkbox-label" title="Marcar para ejecutar Abriendo en la melodía">
+                                <input type="checkbox" class="sidebar-dir-checkbox" data-dir="pull" ${isPullChecked ? 'checked' : ''}>
+                                <span class="sidebar-bellows-title"><i class="fas fa-arrow-left"></i> Abre (Pull)</span>
+                            </label>
+                            <button type="button" class="sidebar-btn-toggle-bellows-vis" data-dir="pull" title="Visualizar u ocultar los botones de Abre">
+                                <i class="fas ${isPullCollapsed ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar-bellows-header-row">
+                            <span class="bellows-status-badge ${isPullComplete ? 'badge-complete' : 'badge-missing'}">
+                                ${isPullComplete ? '<i class="fas fa-check"></i> Completo' : '⚠️ Falta ' + missingPullNames.join(', ')}
+                            </span>
+                            <span class="sidebar-bellows-count" data-dir="pull">${activePullCount}/${buttons.pullButtons.length} bot.</span>
+                        </div>
+                    </div>
+                    ${!isPullComplete ? `
+                        <div class="sidebar-bellows-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Falta: <strong>${missingPullNames.join(', ')}</strong>
+                        </div>
+                    ` : ''}
+                    <div class="sidebar-buttons-grid pull-grid ${isPullCollapsed ? 'is-collapsed' : ''}">
+                        ${formatButtons(buttons.pullButtons, 'pull-badge', 'pull')}
                     </div>
                 </div>
-                ${!isPullComplete ? `
-                    <div class="sidebar-bellows-warning">
-                        <i class="fas fa-exclamation-triangle"></i> Imposible completo en Abre: falta <strong>${missingPullNames.join(', ')}</strong>
-                    </div>
-                ` : ''}
-                <div class="sidebar-buttons-grid pull-grid ${isPullCollapsed ? 'is-collapsed' : ''}">
-                    ${formatButtons(buttons.pullButtons, 'pull-badge', 'pull')}
-                </div>
-            </div>
 
-            <!-- BOTONES PARA CIERRA (PUSH) -->
-            <div class="sidebar-bellows-block push-block ${!isPushChecked ? 'action-dimmed' : ''}">
-                <div class="sidebar-bellows-header" data-dir="push">
-                    <label class="sidebar-checkbox-label" title="Marcar para ejecutar Cerrando en la melodía">
-                        <input type="checkbox" class="sidebar-dir-checkbox" data-dir="push" ${isPushChecked ? 'checked' : ''}>
-                        <span class="sidebar-bellows-title"><i class="fas fa-arrow-right"></i> Cierra (Push)</span>
-                    </label>
-                    <div style="display:flex; align-items:center; gap:5px;">
-                        <span class="bellows-status-badge ${isPushComplete ? 'badge-complete' : 'badge-missing'}">
-                            ${isPushComplete ? '<i class="fas fa-check"></i> Completo' : '⚠️ Falta ' + missingPushNames.join(', ')}
-                        </span>
-                        <span class="sidebar-bellows-count" data-dir="push">${activePushCount}/${buttons.pushButtons.length} bot.</span>
-                        <button type="button" class="sidebar-btn-toggle-bellows-vis" data-dir="push" title="Visualizar u ocultar los botones de Cierra">
-                            <i class="fas ${isPushCollapsed ? 'fa-eye-slash' : 'fa-eye'}"></i>
-                        </button>
+                <!-- COLUMNA DERECHA: CIERRA (PUSH) -->
+                <div class="sidebar-bellows-block push-block ${!isPushChecked ? 'action-dimmed' : ''}">
+                    <div class="sidebar-bellows-header" data-dir="push">
+                        <div class="sidebar-bellows-header-row">
+                            <label class="sidebar-checkbox-label" title="Marcar para ejecutar Cerrando en la melodía">
+                                <input type="checkbox" class="sidebar-dir-checkbox" data-dir="push" ${isPushChecked ? 'checked' : ''}>
+                                <span class="sidebar-bellows-title"><i class="fas fa-arrow-right"></i> Cierra (Push)</span>
+                            </label>
+                            <button type="button" class="sidebar-btn-toggle-bellows-vis" data-dir="push" title="Visualizar u ocultar los botones de Cierra">
+                                <i class="fas ${isPushCollapsed ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar-bellows-header-row">
+                            <span class="bellows-status-badge ${isPushComplete ? 'badge-complete' : 'badge-missing'}">
+                                ${isPushComplete ? '<i class="fas fa-check"></i> Completo' : '⚠️ Falta ' + missingPushNames.join(', ')}
+                            </span>
+                            <span class="sidebar-bellows-count" data-dir="push">${activePushCount}/${buttons.pushButtons.length} bot.</span>
+                        </div>
                     </div>
-                </div>
-                ${!isPushComplete ? `
-                    <div class="sidebar-bellows-warning">
-                        <i class="fas fa-exclamation-triangle"></i> Imposible completo en Cierra: falta <strong>${missingPushNames.join(', ')}</strong>
+                    ${!isPushComplete ? `
+                        <div class="sidebar-bellows-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Falta: <strong>${missingPushNames.join(', ')}</strong>
+                        </div>
+                    ` : ''}
+                    <div class="sidebar-buttons-grid push-grid ${isPushCollapsed ? 'is-collapsed' : ''}">
+                        ${formatButtons(buttons.pushButtons, 'push-badge', 'push')}
                     </div>
-                ` : ''}
-                <div class="sidebar-buttons-grid push-grid ${isPushCollapsed ? 'is-collapsed' : ''}">
-                    ${formatButtons(buttons.pushButtons, 'push-badge', 'push')}
                 </div>
             </div>
         `;
