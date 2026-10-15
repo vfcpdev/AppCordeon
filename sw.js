@@ -2,7 +2,7 @@
  * Service Worker para Acordeón Diatónico Pro (PWA)
  * Estrategia Network-First con fallback a caché para soporte offline confiable
  */
-const CACHE_NAME = 'acordeon-pro-v62';
+const CACHE_NAME = 'acordeon-pro-v63';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -12,6 +12,7 @@ const ASSETS_TO_CACHE = [
     './css/layout.css',
     './css/diapason.css',
     './css/controls.css',
+    './css/sheet_music.css',
     './css/main.css',
     './src/app.js',
     './src/core/Constants.js',
@@ -25,6 +26,7 @@ const ASSETS_TO_CACHE = [
     './src/audio/MetronomeEngine.js',
     './src/models/AccordionData.js',
     './src/models/Tunings.js',
+    './src/models/SheetMusicData.js',
     './src/theory/MusicTheory.js',
     './src/theory/Scales.js',
     './src/theory/ChordTemplates.js',
@@ -39,6 +41,7 @@ const ASSETS_TO_CACHE = [
     './src/ui/AudioTrackView.js',
     './src/ui/CadenceView.js',
     './src/ui/DiapasonChordSidebarView.js',
+    './src/ui/SheetMusicModalView.js',
     './src/controllers/AppController.js'
 ];
 

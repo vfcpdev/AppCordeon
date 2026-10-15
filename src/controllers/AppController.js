@@ -15,7 +15,7 @@ import { getTransposedAccordion } from '../models/AccordionData.js';
 import { generateScale, generateMajorScale, getHarmonicFamilyAndRelatedChords, getCadenceChords, getAccordionButtonsForChord } from '../theory/Scales.js';
 import { HarmonicAnalysisStrategy } from '../strategies/HarmonicAnalysisStrategy.js';
 import { FeasibilityAnalysisStrategy } from '../strategies/FeasibilityAnalysisStrategy.js';
-import { getPitchClass, midiToName, getNoteNamesList } from '../theory/MusicTheory.js';
+import { getPitchClass, midiToName, getNoteNamesList, parseChordNotation } from '../theory/MusicTheory.js';
 import {
     ROW_NAMES,
     ROW_BASE_TONICS,
@@ -47,6 +47,7 @@ export class AppController {
         this._audioTrackView = views.audioTrackView;
         this._cadenceView = views.cadenceView;
         this._diapasonChordSidebarView = views.diapasonChordSidebarView;
+        this._sheetMusicModalView = views.sheetMusicModalView || null;
 
         this._audioChordAnalyzer = new AudioChordAnalyzer();
 
@@ -146,6 +147,10 @@ export class AppController {
             if (this._diapasonChordSidebarView) {
                 this._updateSidebarChordsView(chord);
                 this._diapasonChordSidebarView.setActiveTimelineIndex(index);
+            }
+            if (this._sheetMusicModalView && chord) {
+                const barNum = chord.barNumber || (typeof index === 'number' ? index + 1 : 1);
+                this._sheetMusicModalView.syncPlaybackBar(barNum, chord.chordSymbol);
             }
             if (syncWithDiapason && this._audioTrackView && this._audioTrackView.isSyncEnabled()) {
                 // Mostrar en el diapasón los botones del acorde respetando la preferencia Abre / Cierra definida y la cantidad de botones
@@ -1723,5 +1728,87 @@ export class AppController {
         }
 
         this._detectorView.setArpeggioPlaying(false);
+    }
+
+    /**
+     * Aplica los acordes de la partitura (ej. Como Zaqueo) al reproductor y diapasón.
+     * @param {Array<Object>} timelineChords
+     * @param {number} [bpm=70]
+     * @param {Object} [scoreInfo=null]
+     */
+    applySheetMusicChords(timelineChords, bpm = 70, scoreInfo = null) {
+        if (!timelineChords || timelineChords.length === 0) return;
+
+        const duration = timelineChords[timelineChords.length - 1].endTime;
+        const report = {
+            mainKey: scoreInfo ? scoreInfo.key : 'G',
+            bpm: bpm,
+            duration: duration,
+            chords: timelineChords
+        };
+
+        if (this._audioTrackView) {
+            const fakeFile = {
+                name: scoreInfo ? `${scoreInfo.title}.pdf` : 'Partitura.pdf',
+                size: 0
+            };
+            this._audioTrackView.renderAnalysis(fakeFile, report, (seekTime) => {
+                audioPlayerController.seek(seekTime);
+            });
+            this._audioTrackView.setBPM(bpm);
+        }
+
+        audioPlayerController.setChordsTimeline(timelineChords);
+
+        if (this._diapasonChordSidebarView) {
+            this._diapasonChordSidebarView.renderChordsList(
+                timelineChords,
+                0,
+                (selectedChord) => {
+                    audioPlayerController.seek(selectedChord.startTime);
+                }
+            );
+            this._updateSidebarChordsView(timelineChords[0]);
+        }
+
+        if (timelineChords[0]) {
+            eventBus.emit('player:chord_active', {
+                chord: timelineChords[0],
+                index: 0,
+                syncWithDiapason: true
+            });
+        }
+    }
+
+    /**
+     * Toca y visualiza en el diapasón un acorde seleccionado desde la tira de la partitura.
+     * @param {Object} chordItem
+     */
+    playSheetMusicChord(chordItem) {
+        if (!chordItem) return;
+        const parsed = parseChordNotation(chordItem.chord);
+        if (parsed) {
+            if (audioEngine && parsed.playbackMidis) {
+                audioEngine.play(parsed.playbackMidis, "4n");
+            }
+            if (this._audioTrackView && this._audioTrackView.isSyncEnabled()) {
+                this._diapasonView.highlightChord(
+                    this._accordionData,
+                    parsed.noteMods,
+                    false,
+                    'both',
+                    null
+                );
+                this._syncSecondaryDiapason({
+                    notes: parsed.noteMods,
+                    isExactMidi: false,
+                    bellowsMode: 'both',
+                    excludedButtons: null
+                });
+            }
+            if (this._diapasonChordSidebarView) {
+                this._updateSidebarChordsView(parsed);
+            }
+        }
     }
 }

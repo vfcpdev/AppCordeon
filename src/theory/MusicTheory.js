@@ -105,6 +105,38 @@ export function parseChordNotation(notation) {
     let s = notation.trim();
     if (!s) return null;
 
+    let slashBass = null;
+    let bassPc = null;
+    if (s.includes('/')) {
+        const parts = s.split('/');
+        s = parts[0].trim();
+        const rawBass = parts.slice(1).join('/').trim();
+        if (rawBass) {
+            slashBass = rawBass;
+            // Parsear nota de bajo (Latina o Alemana)
+            const bassLower = rawBass.toLowerCase();
+            const BASS_MAP = {
+                'do': 0, 'c': 0,
+                're': 2, 'd': 2,
+                'mi': 4, 'e': 4,
+                'fa': 5, 'f': 5,
+                'sol': 7, 'g': 7,
+                'la': 9, 'a': 9,
+                'si': 11, 'b': 11
+            };
+            for (const [k, v] of Object.entries(BASS_MAP)) {
+                if (bassLower.startsWith(k)) {
+                    let pc = v;
+                    const rem = bassLower.slice(k.length);
+                    if (rem.includes('#') || rem.includes('♯')) pc = (pc + 1) % 12;
+                    else if (rem.includes('b') || rem.includes('♭')) pc = (pc + 11) % 12;
+                    bassPc = pc;
+                    break;
+                }
+            }
+        }
+    }
+
     const LATIN_ROOTS = [
         { name: 'sol', pc: 7 },
         { name: 'la', pc: 9 },
@@ -295,9 +327,20 @@ export function parseChordNotation(notation) {
     const rootLat = latNames[root];
     const rootEng = engNames[root];
 
-    const chordSymbol = `${rootEng}${symbolSuffix}`;
-    const chordName = `${rootLat} ${nameSuffix}`.trim();
+    let chordSymbol = `${rootEng}${symbolSuffix}`;
+    let chordName = `${rootLat} ${nameSuffix}`.trim();
+    if (slashBass) {
+        chordSymbol += `/${slashBass}`;
+        chordName += `/${slashBass}`;
+    }
     const noteMods = intervals.map(i => (root + i) % 12);
+    let playbackMidis = intervals.map(i => 60 + root + i);
+    if (bassPc !== null) {
+        const bassMidi = 48 + bassPc;
+        if (!playbackMidis.includes(bassMidi)) {
+            playbackMidis = [bassMidi, ...playbackMidis];
+        }
+    }
 
     return {
         root,
@@ -306,6 +349,7 @@ export function parseChordNotation(notation) {
         chordName,
         intervals,
         noteMods,
-        playbackMidis: intervals.map(i => 60 + root + i)
+        playbackMidis,
+        bass: bassPc
     };
 }

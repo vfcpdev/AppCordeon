@@ -12,6 +12,7 @@ import { ExecutionView } from './ui/ExecutionView.js';
 import { AudioTrackView } from './ui/AudioTrackView.js';
 import { CadenceView } from './ui/CadenceView.js';
 import { DiapasonChordSidebarView } from './ui/DiapasonChordSidebarView.js';
+import { SheetMusicModalView } from './ui/SheetMusicModalView.js';
 import { AppController } from './controllers/AppController.js';
 import { audioEngine } from './audio/AudioEngine.js';
 
@@ -131,6 +132,24 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSyncTuningToDiapason: document.getElementById('btnSyncTuningToDiapason')
     });
 
+    const sheetMusicModalView = new SheetMusicModalView({
+        onApplyChords: (timelineChords, bpm, scoreInfo) => {
+            appController.applySheetMusicChords(timelineChords, bpm, scoreInfo);
+        },
+        onChordSelected: (chordItem) => {
+            appController.playSheetMusicChord(chordItem);
+        }
+    });
+
+    const btnOpenSheet = document.getElementById('btnOpenSheetMusic');
+    if (btnOpenSheet) {
+        btnOpenSheet.addEventListener('click', () => sheetMusicModalView.open());
+    }
+    const btnTrackSheet = document.getElementById('btnTrackSheetMusic');
+    if (btnTrackSheet) {
+        btnTrackSheet.addEventListener('click', () => sheetMusicModalView.open());
+    }
+
     // 2. Creación del Controlador Principal
     const appController = new AppController({
         diapasonView,
@@ -141,7 +160,8 @@ document.addEventListener('DOMContentLoaded', () => {
         executionView,
         audioTrackView,
         cadenceView,
-        diapasonChordSidebarView
+        diapasonChordSidebarView,
+        sheetMusicModalView
     });
 
     // 3. Inicialización
