@@ -315,6 +315,29 @@
                             <div class="chord-measure-grid" id="audioMeasureGridContainer">
                                 <!-- Filas de compases con 4 tiempos (Beats 1..4) generadas dinámicamente -->
                             </div>
+
+                            <!-- Mini-Modal / Popover para edición rápida de acorde en cuadrícula -->
+                            <div class="grid-chord-mini-popover hidden" id="gridChordMiniPopover" style="display: none;">
+                                <div class="mini-popover-header">
+                                    <span class="mini-popover-title" id="miniPopoverTitle"><i class="fas fa-music"></i> Compás 1 · Pulso 1</span>
+                                    <button type="button" class="mini-popover-btn-close" id="btnMiniPopoverClose" title="Cerrar">&times;</button>
+                                </div>
+                                <div class="mini-popover-body">
+                                    <input type="text" id="miniPopoverChordInput" class="mini-popover-input" placeholder="ej. Bb, Cm, F#7..." maxlength="12" autofocus>
+                                    <div class="mini-popover-feedback" id="miniPopoverFeedback"></div>
+                                </div>
+                                <div class="mini-popover-actions">
+                                    <button type="button" class="btn-mini-action btn-mini-delete" id="btnMiniPopoverDelete" title="Eliminar este acorde del compás">
+                                        <i class="fas fa-trash-can"></i> Eliminar
+                                    </button>
+                                    <button type="button" class="btn-mini-action btn-mini-cancel" id="btnMiniPopoverCancel" title="Cancelar">
+                                        <i class="fas fa-xmark"></i> Cancelar
+                                    </button>
+                                    <button type="button" class="btn-mini-action btn-mini-save" id="btnMiniPopoverSave" title="Guardar cambios del acorde">
+                                        <i class="fas fa-check"></i> Editar
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Barra de Tiempo y Scrubbing con Cuadro de Progreso -->

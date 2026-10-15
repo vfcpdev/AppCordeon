@@ -64,6 +64,18 @@ export class AudioTrackView {
         this._activeMeasureRow = null;
         this._lastScrollMeasure = -1;
 
+        // Mini-popover para edición rápida en cuadrícula
+        this._chordMeasureGridWrapper = document.getElementById('chordMeasureGridWrapper');
+        this._miniPopover = document.getElementById('gridChordMiniPopover');
+        this._miniPopoverTitle = document.getElementById('miniPopoverTitle');
+        this._miniPopoverInput = document.getElementById('miniPopoverChordInput');
+        this._miniPopoverFeedback = document.getElementById('miniPopoverFeedback');
+        this._btnMiniDelete = document.getElementById('btnMiniPopoverDelete');
+        this._btnMiniCancel = document.getElementById('btnMiniPopoverCancel');
+        this._btnMiniSave = document.getElementById('btnMiniPopoverSave');
+        this._btnMiniClose = document.getElementById('btnMiniPopoverClose');
+        this._activeMiniSlot = null;
+
         // Controles de Ajuste de Tono (Pitch Shift)
         this._btnPitchDown = elements.btnPitchDown;
         this._btnPitchUp = elements.btnPitchUp;
@@ -150,6 +162,7 @@ export class AudioTrackView {
         this._initChordEditor();
         this._initChordQuickToolbar();
         this._initTransportAndMetronome();
+        this._initMiniChordPopover();
 
         if (this._btnEditActiveChord) {
             this._btnEditActiveChord.addEventListener('click', (e) => {
@@ -780,9 +793,22 @@ export class AudioTrackView {
             this._btnDeleteModal.addEventListener('click', () => this._deleteEditedChord());
         }
         if (this._btnAddChord) {
-            this._btnAddChord.addEventListener('click', () => {
+            this._btnAddChord.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const curTime = audioPlayerController.currentTime || 0;
-                this._openChordEditor(-1, curTime);
+                const bpm = this.getBPM();
+                const beatSec = 60 / bpm;
+                const barSec = 4 * beatSec;
+                const m = Math.floor(curTime / barSec);
+                const b = Math.floor((curTime % barSec) / beatSec);
+                const beatStart = (m * barSec) + (b * beatSec);
+                const beatMid = beatStart + (beatSec * 0.25);
+                const chords = (this._currentAnalysisData && this._currentAnalysisData.chords) || [];
+                const chord = chords.find(c => c.startTime <= beatMid && c.endTime > beatMid);
+                const slot = document.getElementById(`beat-slot-${m}-${b}`) || document.querySelector('.measure-beat-slot');
+                if (slot) {
+                    this._openMiniChordPopover(slot, chord, m, b, beatStart, beatSec);
+                }
             });
         }
         if (this._btnSetStartCurrentTime) {
@@ -1536,6 +1562,297 @@ export class AudioTrackView {
     }
 
     /**
+     * Inicializa el mini-popover de edición rápida de acordes en la cuadrícula.
+     * @private
+     */
+    _initMiniChordPopover() {
+        if (!this._miniPopover) return;
+
+        if (this._btnMiniClose) {
+            this._btnMiniClose.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._closeMiniChordPopover();
+            });
+        }
+        if (this._btnMiniCancel) {
+            this._btnMiniCancel.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._closeMiniChordPopover();
+            });
+        }
+        if (this._btnMiniSave) {
+            this._btnMiniSave.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._saveMiniChord();
+            });
+        }
+        if (this._btnMiniDelete) {
+            this._btnMiniDelete.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._deleteMiniChord();
+            });
+        }
+
+        if (this._miniPopoverInput) {
+            this._miniPopoverInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this._saveMiniChord();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this._closeMiniChordPopover();
+                }
+            });
+
+            this._miniPopoverInput.addEventListener('input', () => {
+                const val = this._miniPopoverInput.value.trim();
+                if (!val) {
+                    if (this._miniPopoverFeedback) {
+                        this._miniPopoverFeedback.textContent = '';
+                    }
+                    return;
+                }
+                const parsed = parseChordNotation(val, this._currentNotation, this._currentOffset);
+                if (parsed && this._miniPopoverFeedback) {
+                    this._miniPopoverFeedback.style.color = '#38bdf8';
+                    this._miniPopoverFeedback.textContent = `${parsed.chordSymbol} (${parsed.chordName})`;
+                    if (audioEngine && parsed.playbackMidis) {
+                        audioEngine.play(parsed.playbackMidis, "4n");
+                    }
+                } else if (this._miniPopoverFeedback) {
+                    this._miniPopoverFeedback.style.color = '#f59e0b';
+                    this._miniPopoverFeedback.textContent = 'Escribe ej: C, Dm, G7, Bb, Em7';
+                }
+            });
+        }
+
+        if (this._measureGridContainer) {
+            this._measureGridContainer.addEventListener('scroll', () => {
+                if (this._miniPopover && this._miniPopover.style.display !== 'none') {
+                    this._closeMiniChordPopover();
+                }
+            }, { passive: true });
+        }
+
+        // Cerrar al hacer clic fuera del popover y de la celda activa
+        document.addEventListener('pointerdown', (e) => {
+            if (this._miniPopover && this._miniPopover.style.display !== 'none' && !this._miniPopover.classList.contains('hidden')) {
+                if (!e.target.closest('#gridChordMiniPopover') && !e.target.closest('.measure-beat-slot') && !e.target.closest('#btnAddChordAtCurrentTime')) {
+                    this._closeMiniChordPopover();
+                }
+            }
+        });
+    }
+
+    /**
+     * Abre el modal/popover de dimensión pequeña para editar o eliminar el acorde directamente bajo la celda.
+     * @private
+     */
+    _openMiniChordPopover(slotElement, chord, barIndex, beatIndex, beatStart, beatSec) {
+        if (!this._miniPopover || !slotElement) return;
+
+        this._activeMiniSlot = {
+            slotElement,
+            chord,
+            barIndex,
+            beatIndex,
+            beatStart,
+            beatSec
+        };
+
+        if (this._miniPopoverTitle) {
+            this._miniPopoverTitle.innerHTML = `<i class="fas fa-music"></i> Compás ${barIndex + 1} · Pulso ${beatIndex + 1}`;
+        }
+
+        const currentSymbol = chord ? chord.chordSymbol : '';
+        if (this._miniPopoverInput) {
+            this._miniPopoverInput.value = currentSymbol;
+        }
+
+        if (this._miniPopoverFeedback) {
+            this._miniPopoverFeedback.textContent = chord ? `${chord.chordSymbol} (${chord.chordName})` : '';
+            this._miniPopoverFeedback.style.color = '#38bdf8';
+        }
+
+        if (this._btnMiniDelete) {
+            this._btnMiniDelete.style.display = chord ? 'inline-flex' : 'none';
+        }
+
+        // Posicionar el mini-modal directamente debajo de la celda de la cuadrícula
+        const wrapper = this._chordMeasureGridWrapper || document.getElementById('chordMeasureGridWrapper') || this._measureGridContainer;
+        if (wrapper) {
+            const slotRect = slotElement.getBoundingClientRect();
+            const wrapperRect = wrapper.getBoundingClientRect();
+            const popoverWidth = 220;
+
+            let top = slotRect.bottom - wrapperRect.top + 6;
+            // Si el slot está cerca del borde inferior del wrapper, posicionarlo encima
+            if (top + 100 > wrapperRect.height && (slotRect.top - wrapperRect.top) > 110) {
+                top = slotRect.top - wrapperRect.top - 105;
+            }
+
+            let left = (slotRect.left - wrapperRect.left) + (slotRect.width / 2) - (popoverWidth / 2);
+            left = Math.max(8, Math.min(left, wrapperRect.width - popoverWidth - 8));
+
+            this._miniPopover.style.top = `${Math.round(top)}px`;
+            this._miniPopover.style.left = `${Math.round(left)}px`;
+        }
+
+        this._miniPopover.classList.remove('hidden');
+        this._miniPopover.style.display = 'flex';
+
+        setTimeout(() => {
+            if (this._miniPopoverInput) {
+                this._miniPopoverInput.focus();
+                this._miniPopoverInput.select();
+            }
+        }, 50);
+    }
+
+    /**
+     * Cierra el popover de edición rápida de cuadrícula.
+     * @private
+     */
+    _closeMiniChordPopover() {
+        if (this._miniPopover) {
+            this._miniPopover.style.display = 'none';
+            this._miniPopover.classList.add('hidden');
+        }
+        this._activeMiniSlot = null;
+    }
+
+    /**
+     * Guarda el texto editado del acorde desde el mini-popover.
+     * @private
+     */
+    _saveMiniChord() {
+        if (!this._activeMiniSlot) return;
+        const text = (this._miniPopoverInput ? this._miniPopoverInput.value : '').trim();
+
+        if (!text) {
+            this._deleteMiniChord();
+            return;
+        }
+
+        const parsed = parseChordNotation(text, this._currentNotation, this._currentOffset);
+        if (!parsed) {
+            if (this._miniPopoverFeedback) {
+                this._miniPopoverFeedback.style.color = '#ef4444';
+                this._miniPopoverFeedback.textContent = 'Notación no válida (ej. C, Dm, G7, Bb)';
+            }
+            if (this._miniPopoverInput) {
+                this._miniPopoverInput.focus();
+            }
+            return;
+        }
+
+        if (!this._currentAnalysisData) {
+            this._currentAnalysisData = {
+                duration: audioPlayerController.duration || 16,
+                chords: []
+            };
+        }
+        if (!this._currentAnalysisData.chords) {
+            this._currentAnalysisData.chords = [];
+        }
+
+        const timeline = this._currentAnalysisData.chords;
+        const { chord, beatStart, beatSec } = this._activeMiniSlot;
+        let activeTargetChord = chord;
+        let targetIndex = -1;
+
+        if (chord) {
+            chord.chordSymbol = parsed.chordSymbol;
+            chord.chordName = parsed.chordName;
+            chord.root = parsed.root;
+            chord.noteMods = parsed.noteMods;
+            chord.playbackMidis = parsed.playbackMidis;
+            chord.chordType = parsed.chordType;
+            activeTargetChord = chord;
+            targetIndex = timeline.indexOf(chord);
+        } else {
+            let endTime = beatStart + beatSec;
+            const nextChord = timeline.find(c => c.startTime > beatStart);
+            if (nextChord && nextChord.startTime < endTime) {
+                endTime = nextChord.startTime;
+            }
+            const newChord = {
+                startTime: beatStart,
+                endTime: endTime,
+                chordSymbol: parsed.chordSymbol,
+                chordName: parsed.chordName,
+                root: parsed.root,
+                noteMods: parsed.noteMods,
+                playbackMidis: parsed.playbackMidis,
+                chordType: parsed.chordType,
+                bellowsAction: 'both'
+            };
+            timeline.push(newChord);
+            timeline.sort((a, b) => a.startTime - b.startTime);
+            activeTargetChord = newChord;
+            targetIndex = timeline.indexOf(newChord);
+        }
+
+        if (audioEngine && parsed.playbackMidis) {
+            audioEngine.play(parsed.playbackMidis, "4n");
+        }
+
+        audioPlayerController.setChordsTimeline(timeline);
+        this.renderChordsStrip(timeline, this._onChordMarkerClick);
+        this.renderChordProgressBar(timeline, this._currentAnalysisData.duration, this.getBPM());
+        this.renderMeasureGrid(timeline, this._currentAnalysisData.duration, this.getBPM());
+
+        if (this._handlers && this._handlers.onChordTimelineUpdated) {
+            this._handlers.onChordTimelineUpdated(timeline);
+        }
+
+        if (activeTargetChord) {
+            eventBus.emit('player:chord_active', {
+                chord: activeTargetChord,
+                index: targetIndex >= 0 ? targetIndex : 0,
+                syncWithDiapason: this.isSyncEnabled()
+            });
+        }
+
+        this._closeMiniChordPopover();
+    }
+
+    /**
+     * Elimina el acorde seleccionado en la cuadrícula.
+     * @private
+     */
+    _deleteMiniChord() {
+        if (!this._activeMiniSlot) return;
+        const { chord, beatStart, beatSec } = this._activeMiniSlot;
+
+        if (this._currentAnalysisData && this._currentAnalysisData.chords) {
+            const timeline = this._currentAnalysisData.chords;
+            let targetIdx = -1;
+            if (chord) {
+                targetIdx = timeline.indexOf(chord);
+            }
+            if (targetIdx === -1) {
+                const beatMid = beatStart + (beatSec * 0.25);
+                targetIdx = timeline.findIndex(c => c.startTime <= beatMid && c.endTime > beatMid);
+            }
+
+            if (targetIdx >= 0) {
+                timeline.splice(targetIdx, 1);
+                audioPlayerController.setChordsTimeline(timeline);
+                this.renderChordsStrip(timeline, this._onChordMarkerClick);
+                this.renderChordProgressBar(timeline, this._currentAnalysisData.duration, this.getBPM());
+                this.renderMeasureGrid(timeline, this._currentAnalysisData.duration, this.getBPM());
+
+                if (this._handlers && this._handlers.onChordTimelineUpdated) {
+                    this._handlers.onChordTimelineUpdated(timeline);
+                }
+            }
+        }
+
+        this._closeMiniChordPopover();
+    }
+
+    /**
      * Renderiza la tira con los bloques de acordes detectados garantizando alto contraste y editabilidad.
      * @param {Array} chords
      * @param {(time: number) => void} onClick
@@ -1749,15 +2066,10 @@ export class AudioTrackView {
                     slot.innerHTML = `<span class="slot-empty-dot"></span>`;
                 }
 
-                slot.title = `Compás ${m + 1}, Pulso ${b + 1} (${this._formatTime(beatStart)})${currentSymbol ? ' - Acorde: ' + currentSymbol + ' (Doble clic o clic en acorde para editar)' : ' (Doble clic para agregar acorde aquí)'}`;
+                slot.title = `Compás ${m + 1}, Pulso ${b + 1} (${this._formatTime(beatStart)})${currentSymbol ? ' - Acorde: ' + currentSymbol + ' (Clic para editar o eliminar)' : ' (Clic para agregar acorde)'}`;
 
                 slot.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    if (e.target.closest('.slot-chord-text')) {
-                        const chordIndex = chord ? chords.indexOf(chord) : -1;
-                        this._openChordEditor(chordIndex, beatStart);
-                        return;
-                    }
                     if (chord && audioEngine) {
                         const midis = chord.playbackMidis || (chord.noteMods ? chord.noteMods.map(n => 60 + n) : null);
                         if (midis && midis.length > 0) {
@@ -1765,12 +2077,12 @@ export class AudioTrackView {
                         }
                     }
                     audioPlayerController.seek(beatStart);
+                    this._openMiniChordPopover(slot, chord, m, b, beatStart, beatSec);
                 });
 
                 slot.addEventListener('dblclick', (e) => {
                     e.stopPropagation();
-                    const chordIndex = chord ? chords.indexOf(chord) : -1;
-                    this._openChordEditor(chordIndex, beatStart);
+                    this._openMiniChordPopover(slot, chord, m, b, beatStart, beatSec);
                 });
 
                 beats.appendChild(slot);

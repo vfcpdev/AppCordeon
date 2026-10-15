@@ -1028,6 +1028,167 @@
     flex-direction: column;
     gap: 6px;
     box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+    position: relative;
+}
+
+/* Mini-Modal / Popover para edición rápida de notas/acordes en la cuadrícula */
+.grid-chord-mini-popover {
+    position: absolute;
+    width: 220px;
+    background: #111422;
+    border: 1.5px solid #3b82f6;
+    border-radius: 10px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.8), 0 0 12px rgba(59, 130, 246, 0.35);
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 1000;
+    animation: popoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popoverFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.mini-popover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 4px;
+}
+
+.mini-popover-title {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #93c5fd;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.mini-popover-btn-close {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 3px;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+}
+
+.mini-popover-btn-close:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.mini-popover-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mini-popover-input {
+    width: 100%;
+    height: 30px;
+    background: #1e2238;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 0.86rem;
+    font-weight: 800;
+    text-align: center;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mini-popover-input:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+    background: #191d30;
+}
+
+.mini-popover-feedback {
+    font-size: 0.64rem;
+    font-weight: 700;
+    min-height: 14px;
+    text-align: center;
+    color: #38bdf8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mini-popover-actions {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.btn-mini-action {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 5px 6px;
+    border-radius: 6px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.btn-mini-delete {
+    background: rgba(239, 68, 68, 0.18);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+}
+
+.btn-mini-delete:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.btn-mini-cancel {
+    background: rgba(100, 116, 139, 0.2);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #cbd5e1;
+}
+
+.btn-mini-cancel:hover {
+    background: #475569;
+    color: #ffffff;
+}
+
+.btn-mini-save {
+    background: linear-gradient(135deg, #0284c7, #2563eb);
+    border: 1px solid #38bdf8;
+    color: #ffffff;
+}
+
+.btn-mini-save:hover {
+    background: #0284c7;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    transform: translateY(-1px);
 }
 
 .chord-measure-grid-header {
