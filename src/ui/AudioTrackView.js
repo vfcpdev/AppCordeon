@@ -1601,6 +1601,9 @@ export class AudioTrackView {
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
                     this._closeMiniChordPopover();
+                } else if (e.key === 'Delete' || e.key === 'Del') {
+                    e.preventDefault();
+                    this._deleteMiniChord();
                 }
             });
 
@@ -1634,6 +1637,25 @@ export class AudioTrackView {
             }, { passive: true });
         }
 
+        // Tecla Supr para borrar el acorde seleccionado en la cuadrícula
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Delete' || e.key === 'Del') {
+                if (this._activeMiniSlot && this._activeMiniSlot.chord) {
+                    const activeEl = document.activeElement;
+                    const tag = activeEl ? activeEl.tagName.toLowerCase() : '';
+                    const id = activeEl ? activeEl.id : '';
+                    if (tag === 'input' && id !== 'miniPopoverChordInput') {
+                        return;
+                    }
+                    if (tag === 'textarea' || tag === 'select') {
+                        return;
+                    }
+                    e.preventDefault();
+                    this._deleteMiniChord();
+                }
+            }
+        });
+
         // Cerrar al hacer clic fuera del popover y de la celda activa
         document.addEventListener('pointerdown', (e) => {
             if (this._miniPopover && this._miniPopover.style.display !== 'none' && !this._miniPopover.classList.contains('hidden')) {
@@ -1650,6 +1672,14 @@ export class AudioTrackView {
      */
     _openMiniChordPopover(slotElement, chord, barIndex, beatIndex, beatStart, beatSec) {
         if (!this._miniPopover || !slotElement) return;
+
+        // Limpiar selección previa en la cuadrícula y resaltar la celda seleccionada
+        if (this._measureGridContainer) {
+            this._measureGridContainer.querySelectorAll('.measure-beat-slot.selected-slot').forEach(el => {
+                el.classList.remove('selected-slot');
+            });
+        }
+        slotElement.classList.add('selected-slot');
 
         this._activeMiniSlot = {
             slotElement,
@@ -1711,14 +1741,22 @@ export class AudioTrackView {
 
     /**
      * Cierra el popover de edición rápida de cuadrícula.
+     * @param {boolean} [keepSlotSelection=false] Si es verdadero, no deselecciona la celda visualmente
      * @private
      */
-    _closeMiniChordPopover() {
+    _closeMiniChordPopover(keepSlotSelection = false) {
         if (this._miniPopover) {
             this._miniPopover.style.display = 'none';
             this._miniPopover.classList.add('hidden');
         }
-        this._activeMiniSlot = null;
+        if (!keepSlotSelection) {
+            if (this._measureGridContainer) {
+                this._measureGridContainer.querySelectorAll('.measure-beat-slot.selected-slot').forEach(el => {
+                    el.classList.remove('selected-slot');
+                });
+            }
+            this._activeMiniSlot = null;
+        }
     }
 
     /**
@@ -1823,7 +1861,7 @@ export class AudioTrackView {
      */
     _deleteMiniChord() {
         if (!this._activeMiniSlot) return;
-        const { chord, beatStart, beatSec } = this._activeMiniSlot;
+        const { chord, beatStart, beatSec, barIndex, beatIndex } = this._activeMiniSlot;
 
         if (this._currentAnalysisData && this._currentAnalysisData.chords) {
             const timeline = this._currentAnalysisData.chords;
@@ -1846,10 +1884,46 @@ export class AudioTrackView {
                 if (this._handlers && this._handlers.onChordTimelineUpdated) {
                     this._handlers.onChordTimelineUpdated(timeline);
                 }
+
+                // Actualizar acorde activo en el diapasón si era el que estaba activo
+                const curTime = audioPlayerController.currentTime || 0;
+                const curActive = timeline.find(c => curTime >= c.startTime && curTime < c.endTime);
+                if (curActive) {
+                    const actIdx = timeline.indexOf(curActive);
+                    this.setActiveChord(curActive, actIdx);
+                    eventBus.emit('player:chord_active', {
+                        chord: curActive,
+                        index: actIdx,
+                        syncWithDiapason: this.isSyncEnabled()
+                    });
+                } else {
+                    this.setActiveChord(null, -1);
+                    eventBus.emit('player:chord_active', {
+                        chord: null,
+                        index: -1,
+                        syncWithDiapason: this.isSyncEnabled()
+                    });
+                }
             }
         }
 
-        this._closeMiniChordPopover();
+        this._closeMiniChordPopover(true);
+
+        if (typeof barIndex === 'number' && typeof beatIndex === 'number') {
+            const slotEl = document.getElementById(`beat-slot-${barIndex}-${beatIndex}`);
+            if (slotEl) {
+                slotEl.classList.add('selected-slot');
+                slotEl.focus();
+                this._activeMiniSlot = {
+                    slotElement: slotEl,
+                    chord: null,
+                    barIndex,
+                    beatIndex,
+                    beatStart,
+                    beatSec
+                };
+            }
+        }
     }
 
     /**
@@ -2083,6 +2157,17 @@ export class AudioTrackView {
                 slot.addEventListener('dblclick', (e) => {
                     e.stopPropagation();
                     this._openMiniChordPopover(slot, chord, m, b, beatStart, beatSec);
+                });
+
+                slot.addEventListener('keydown', (e) => {
+                    if (e.key === 'Delete' || e.key === 'Del') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this._deleteMiniChord();
+                    } else if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        this._openMiniChordPopover(slot, chord, m, b, beatStart, beatSec);
+                    }
                 });
 
                 beats.appendChild(slot);

@@ -1304,6 +1304,14 @@
     background: rgba(255, 255, 255, 0.15);
 }
 
+.measure-beat-slot.selected-slot,
+.measure-beat-slot:focus-visible {
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.45), 0 0 12px rgba(245, 158, 11, 0.35) !important;
+    outline: none;
+    z-index: 2;
+}
+
 .measure-beat-slot.active-beat {
     background: linear-gradient(135deg, #0284c7, #0369a1) !important;
     border-color: #38bdf8 !important;
