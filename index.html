@@ -15,8 +15,8 @@
     <!-- Librería Tone.js para Síntesis Polifónica Web Audio -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 
-    <!-- Librería PDF.js para Renderizado de Partituras en Canvas -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Librería OpenSheetMusicDisplay (OSMD) para Renderizado Interactivo de Partituras MusicXML -->
+    <script src="./libs/opensheetmusicdisplay.min.js"></script>
 
     <!-- Iconos FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -73,8 +73,8 @@
                             <input type="file" id="audioFileInput" accept="audio/*" style="display: none;">
                         </div>
 
-                        <!-- Botón de Partitura (PDF) -->
-                        <button type="button" class="btn-topbar-sheet" id="btnOpenSheetMusic" title="Ver partitura asociada (PDF) y guía de acordes">
+                        <!-- Botón de Partitura (MusicXML / OSMD) -->
+                        <button type="button" class="btn-topbar-sheet" id="btnOpenSheetMusic" title="Ver partitura interactiva (MusicXML) y guía de acordes">
                             <i class="fas fa-book-open"></i> <span>Partitura</span>
                         </button>
 

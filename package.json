@@ -17,5 +17,8 @@
     "pwa"
   ],
   "author": "Antigravity Pair Programmer",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "opensheetmusicdisplay": "^2.2.1"
+  }
 }
