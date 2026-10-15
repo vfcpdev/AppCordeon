@@ -715,10 +715,32 @@
     border-radius: 3px;
 }
 
+/* Insignia / Nombre del Acorde ubicado sobre el diapasón */
+.diapason-active-chord-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: linear-gradient(180deg, #181b2e 0%, #0d0f1c 100%);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
+    padding: 2px 14px;
+    margin: 0 0 6px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    z-index: 4;
+    transition: all 0.2s ease;
+}
+
+.diapason-active-chord-badge i {
+    color: #818cf8;
+    font-size: 0.65rem;
+}
+
 .sidebar-chord-name {
-    font-size: 0.88rem;
+    font-size: 0.74rem;
     color: #ffffff;
-    font-weight: 900;
+    font-weight: 800;
+    letter-spacing: 0.2px;
 }
 
 .sidebar-bellows-block {

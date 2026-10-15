@@ -204,6 +204,29 @@ export class DiapasonChordSidebarView {
             }
         }
 
+        // Actualizar el nombre del acorde ubicado sobre el diapasón (Acordeón 1 y 2)
+        const primChordNameEl = document.getElementById('primaryDiapasonChordName');
+        const primBadgeEl = document.getElementById('primaryDiapasonChordBadge');
+        if (primChordNameEl && primBadgeEl) {
+            if (chord && chord.chordName) {
+                primChordNameEl.textContent = chord.chordName;
+                primBadgeEl.style.display = 'inline-flex';
+            } else {
+                primBadgeEl.style.display = 'none';
+            }
+        }
+
+        const secChordNameEl = document.getElementById('secondaryDiapasonChordName');
+        const secBadgeEl = document.getElementById('secondaryDiapasonChordBadge');
+        if (secChordNameEl && secBadgeEl) {
+            if (chord && chord.chordName) {
+                secChordNameEl.textContent = chord.chordName;
+                secBadgeEl.style.display = 'inline-flex';
+            } else {
+                secBadgeEl.style.display = 'none';
+            }
+        }
+
         if (this._primSidebar && primaryAccordionData) {
             this._renderSingleSidebar(
                 this._primSidebar,
@@ -336,12 +359,11 @@ export class DiapasonChordSidebarView {
 
         activeBox.innerHTML = `
             <div class="sidebar-chord-card-header">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="sidebar-acc-tag">${accordionTitle}</span>
-                    <span class="sidebar-chord-symbol">${chord.chordSymbol || ''}</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; gap:4px;">
-                    <strong class="sidebar-chord-name">${chord.chordName}</strong>
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:4px;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span class="sidebar-acc-tag">${accordionTitle}</span>
+                        <span class="sidebar-chord-symbol">${chord.chordSymbol || ''}</span>
+                    </div>
                     <div style="display:flex; gap:3px; align-items:center;">
                         <button type="button" class="sidebar-btn-restore-all ${hasDeactivated ? 'has-deactivated' : ''}" title="Mostrar y activar todas las digitaciones de botones (restaurar todas)">
                             <i class="fas fa-check-double"></i> Todas
