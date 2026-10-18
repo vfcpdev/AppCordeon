@@ -120,18 +120,18 @@ export class FeasibilityAnalysisStrategy {
                 cssClass = 'both';
                 icon = '<i class="fas fa-arrows-alt-h"></i>';
                 label = 'Cerrando o Abriendo';
-                description = 'El arpegio es 100% posible tanto cerrando (Push) como abriendo (Pull) el fuelle.';
+                description = 'El arpegio es 100% posible tanto cerrando como abriendo el fuelle.';
             } else if (allCanPush && !allCanPull) {
                 status = 'push';
                 cssClass = 'push';
                 icon = '<i class="fas fa-arrow-right"></i>';
-                label = 'Solo Cerrando (Push)';
+                label = 'Solo Cerrando';
                 description = 'El arpegio es posible únicamente cerrando el fuelle.';
             } else if (!allCanPush && allCanPull) {
                 status = 'pull';
                 cssClass = 'pull';
                 icon = '<i class="fas fa-arrow-left"></i>';
-                label = 'Solo Abriendo (Pull)';
+                label = 'Solo Abriendo';
                 description = 'El arpegio es posible únicamente abriendo el fuelle.';
             } else {
                 status = 'mixed';

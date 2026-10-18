@@ -213,25 +213,7 @@
 
                 </div>
 
-                <!-- ARMONÍA DIATÓNICA: CUARTA Y QUINTA (POSICIONES Y ACORDES) -->
-                <section class="control-panel cadence-panel" id="cadenceSection" style="width: 100%; margin-top: 10px;">
-                    <header class="control-panel__header" style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <h2 class="control-panel__title" style="color: #6366f1; font-size: 0.85rem; margin: 0;">
-                                <i class="fas fa-cubes-stacked"></i> Armonía Diatónica: Cuarta y Quinta
-                            </h2>
-                            <span id="lblCadenceActiveTone" style="font-size: 0.72rem; font-weight: 800; color: #4338ca; background: #e0e7ff; padding: 2px 8px; border-radius: 4px;">
-                                Tónica: Do
-                            </span>
-                        </div>
-                        <span style="font-size: 0.65rem; color: #64748b; font-weight: 600;">
-                            Clic para escuchar y sincronizar en ambos acordeones
-                        </span>
-                    </header>
-                    <div class="cadence-cards-container" id="cadenceCardsContainer">
-                        <!-- Generado dinámicamente: Tónica (I), Cuarta (IV), Quinta (V) -->
-                    </div>
-                </section>
+
 
                 <!-- POSICIONES DE EJECUCIÓN (DIGITACIONES) JUSTO DEBAJO DEL DIAPASÓN -->
                 <section class="control-panel execution-panel" style="width: 100%; margin-top: 10px;">
@@ -290,6 +272,9 @@
                                 <span class="track-key-badge" id="audioBpmBadge" style="background: rgba(124, 58, 237, 0.08); color: #7c3aed; border: 1px solid #ddd6fe; font-weight: 800;" title="Tempo detectado del audio">
                                     <i class="fas fa-drum"></i> <span id="audioBpmValue">- BPM</span>
                                 </span>
+                                <span class="track-key-badge" id="audioEngineBadge" style="background: rgba(234, 88, 12, 0.08); color: #ea580c; border: 1px solid #fed7aa; font-weight: 800;" title="Motor de detección armónica">
+                                    <i class="fas fa-microchip"></i> <span id="lblAnalysisEngine">Motor: -</span>
+                                </span>
                                 <button type="button" class="btn-action btn-xs" id="btnTrackSheetMusic" title="Abrir partitura MusicXML interactiva de esta canción" style="padding: 2px 8px; font-size: 0.70rem; background: rgba(99, 102, 241, 0.12); color: #6366f1; border-color: #c7d2fe;">
                                     <i class="fas fa-book-open"></i> Partitura
                                 </button>
@@ -312,51 +297,74 @@
                         </div>
 
                         <!-- CUADRÍCULA DE ACORDES (COMPASES DE 4 TIEMPOS) ESTILO MOISES / CHORDIFY -->
-                        <div class="chord-measure-grid-wrapper" id="chordMeasureGridWrapper">
-                            <div class="chord-measure-grid-header">
-                                <span class="grid-header-title">
-                                    <i class="fas fa-table-cells-large"></i> Cuadrícula de Acordes (4/4)
-                                </span>
-                                <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
-                                    <button type="button" class="btn-action btn-xs" id="btnManualProgressionInput" title="Digitar progresión de acordes manualmente (ej: G | Em | C | D)">
-                                        <i class="fas fa-keyboard"></i> Digitar Acordes
-                                    </button>
-                                    <button type="button" class="btn-action btn-xs" id="btnAddMeasureRow" title="Agregar un compás vacío al final">
-                                        <i class="fas fa-plus"></i> Compás
-                                    </button>
-                                    <button type="button" class="btn-action btn-xs btn-action--danger" id="btnClearAllGridChords" title="Borrar todos los acordes de la cuadrícula">
-                                        <i class="fas fa-trash-can"></i> Borrar Todo
-                                    </button>
+                        <div class="chord-measure-grid-header">
+                            <span class="grid-header-title">
+                                <i class="fas fa-table-cells-large"></i> Cuadrícula de Acordes (4/4)
+                            </span>
+                            <div class="chord-grid-header-actions" style="display: flex; gap: 4px; align-items: center; flex-shrink: 0;">
+                                <button type="button" class="btn-action btn-xs" id="btnSelectAllGridSlots" title="Seleccionar todas las cuadrículas (Ctrl+A)">
+                                    <i class="fas fa-check-double"></i>
+                                </button>
+                                <button type="button" class="btn-action btn-xs btn-action--danger" id="btnDeleteSelectedSlots" title="Borrar acordes de las cuadrículas seleccionadas (Supr)" style="display: none;">
+                                    <i class="fas fa-eraser"></i>
+                                </button>
+                                <button type="button" class="btn-action btn-xs" id="btnExportChordsCsv" title="Guardar / Exportar acordes a archivo CSV">
+                                    <i class="fas fa-file-arrow-down"></i>
+                                </button>
+                                <button type="button" class="btn-action btn-xs" id="btnImportChordsCsv" title="Cargar / Importar acordes desde archivo CSV">
+                                    <i class="fas fa-file-arrow-up"></i>
+                                </button>
+                                <input type="file" id="inputImportChordsCsv" accept=".csv,.txt" style="display: none;">
+                                <button type="button" class="btn-action btn-xs" id="btnManualProgressionInput" title="Digitar progresión de acordes manualmente (ej: G | Em | C | D)">
+                                    <i class="fas fa-keyboard"></i>
+                                </button>
+                                <button type="button" class="btn-action btn-xs" id="btnAddMeasureRow" title="Agregar un compás vacío al final">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button type="button" class="btn-action btn-xs btn-action--danger" id="btnClearAllGridChords" title="Borrar todos los acordes de la cuadrícula">
+                                    <i class="fas fa-trash-can"></i>
+                                </button>
+                                <button type="button" class="btn-action btn-xs" id="btnConfigGridRows" title="Configurar cantidad de filas visibles en la cuadrícula">
+                                    <i class="fas fa-gear"></i>
+                                </button>
+                                <div class="grid-cols-pill-group" id="gridColsPillGroup" style="display: none; align-items: center; gap: 2px; margin-left: 6px;">
+                                    <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 700; margin-right: 2px;"><i class="fas fa-columns"></i> Compases:</span>
+                                    <button type="button" class="btn-action btn-xs btn-col-select" data-cols="auto" title="Automático según ancho de pantalla">Auto</button>
+                                    <button type="button" class="btn-action btn-xs btn-col-select" data-cols="2" title="2 Compases por fila (8 tiempos)">2x</button>
+                                    <button type="button" class="btn-action btn-xs btn-col-select active" data-cols="4" title="4 Compases por fila (Estilo Partitura)">4x</button>
                                 </div>
+                                <button type="button" class="btn-action btn-xs btn-action--primary" id="btnUndockChordGrid" title="Desacoplar a ventana completa para ver más compases (F / Doble clic)" style="margin-left: 4px;">
+                                    <i class="fas fa-up-right-and-down-left-from-center" id="iconUndockChordGrid"></i>
+                                    <span id="lblUndockChordGrid" style="margin-left: 3px; font-weight: 700;">Desacoplar</span>
+                                </button>
                             </div>
+                        </div>
+                        <div class="chord-measure-grid-wrapper" id="chordMeasureGridWrapper">
                             <div class="chord-measure-grid" id="audioMeasureGridContainer">
                                 <!-- Filas de compases con 4 tiempos (Beats 1..4) generadas dinámicamente -->
                             </div>
 
-                            <!-- Mini-Modal / Popover para edición rápida de acorde en cuadrícula -->
+                            <!-- Mini-Barra Popover Horizontal para edición rápida de acorde en cuadrícula -->
                             <div class="grid-chord-mini-popover hidden" id="gridChordMiniPopover" style="display: none;">
-                                <div class="mini-popover-header">
-                                    <span class="mini-popover-title" id="miniPopoverTitle"><i class="fas fa-music"></i> Compás 1 · Pulso 1</span>
-                                    <button type="button" class="mini-popover-btn-close" id="btnMiniPopoverClose" title="Cerrar">&times;</button>
+                                <div class="mini-popover-single-row">
+                                    <span class="mini-popover-title" id="miniPopoverTitle" title="Compás y pulso activo"><i class="fas fa-music"></i> #1</span>
+                                    <input type="text" id="miniPopoverChordInput" class="mini-popover-input" placeholder="Acorde(s)..." maxlength="160" autofocus>
+                                    <div class="mini-popover-actions">
+                                        <button type="button" class="btn-mini-action btn-mini-delete" id="btnMiniPopoverDelete" title="Borrar acorde (Supr / Del)">
+                                            <i class="fas fa-trash-can"></i>
+                                        </button>
+                                        <button type="button" class="btn-mini-action btn-mini-cancel" id="btnMiniPopoverCancel" title="Cancelar (Esc)">
+                                            <i class="fas fa-xmark"></i>
+                                        </button>
+                                        <button type="button" class="btn-mini-action btn-mini-save" id="btnMiniPopoverSave" title="Forzar y aplicar acorde (Enter)">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button type="button" class="btn-mini-action btn-mini-next" id="btnMiniPopoverNext" title="Siguiente pulso (Tab)">
+                                            <i class="fas fa-arrow-right"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="mini-popover-body">
-                                    <input type="text" id="miniPopoverChordInput" class="mini-popover-input" placeholder="ej. Bb, Cm, F#7..." maxlength="12" autofocus>
-                                    <div class="mini-popover-feedback" id="miniPopoverFeedback"></div>
-                                </div>
-                                <div class="mini-popover-actions">
-                                    <button type="button" class="btn-mini-action btn-mini-delete" id="btnMiniPopoverDelete" title="Resetear / Vaciar acorde de los cuadros seleccionados (Tecla Supr)">
-                                        <i class="fas fa-rotate-left"></i> Resetear
-                                    </button>
-                                    <button type="button" class="btn-mini-action btn-mini-cancel" id="btnMiniPopoverCancel" title="Cancelar">
-                                        <i class="fas fa-xmark"></i> Cancelar
-                                    </button>
-                                    <button type="button" class="btn-mini-action btn-mini-save" id="btnMiniPopoverSave" title="Forzar y aplicar acorde digitado (Enter)">
-                                        <i class="fas fa-check"></i> Forzar
-                                    </button>
-                                    <button type="button" class="btn-mini-action btn-mini-next" id="btnMiniPopoverNext" title="Forzar y avanzar al siguiente cuadro (Tab)">
-                                        <i class="fas fa-arrow-right"></i> Sig.
-                                    </button>
-                                </div>
+                                <div class="mini-popover-feedback" id="miniPopoverFeedback"></div>
                             </div>
 
                             <!-- Modal emergente para digitar progresión completa manualmente -->
@@ -395,10 +403,44 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Modal emergente para configurar número de filas visibles en la cuadrícula -->
+                            <div class="manual-progression-modal hidden" id="gridRowsConfigModal" style="display: none;">
+                                <div class="manual-progression-card" style="max-width: 360px;">
+                                    <div class="manual-progression-header">
+                                        <span class="manual-progression-title"><i class="fas fa-gear"></i> Configurar Filas Visibles</span>
+                                        <button type="button" class="mini-popover-btn-close" id="btnGridRowsModalClose" title="Cerrar">&times;</button>
+                                    </div>
+                                    <div class="manual-progression-body">
+                                        <div style="font-size: 0.72rem; color: #94a3b8; margin-bottom: 8px;">
+                                            Digita cuántas filas de compases deseas ver simultáneamente en la cuadrícula:
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                                            <label for="inputGridRowsCount" style="font-size: 0.78rem; font-weight: 700; color: #cbd5e1;">Número de filas:</label>
+                                            <input type="number" id="inputGridRowsCount" class="form-control" min="1" max="50" step="1" value="3" style="width: 80px; text-align: center; font-size: 1rem; font-weight: 800; background: #090d16; color: #38bdf8; border: 1.5px solid #38bdf8; border-radius: 6px; padding: 4px 6px;">
+                                        </div>
+                                        <div style="display: flex; gap: 4px; align-items: center; margin-top: 6px;">
+                                            <span style="font-size: 0.68rem; color: #64748b; font-weight: 700;">Atajos:</span>
+                                            <button type="button" class="btn-action btn-xs btn-row-preset" data-preset="2">2</button>
+                                            <button type="button" class="btn-action btn-xs btn-row-preset" data-preset="3">3</button>
+                                            <button type="button" class="btn-action btn-xs btn-row-preset" data-preset="4">4</button>
+                                            <button type="button" class="btn-action btn-xs btn-row-preset" data-preset="6">6</button>
+                                            <button type="button" class="btn-action btn-xs btn-row-preset" data-preset="all">Ver todas</button>
+                                        </div>
+                                        <div id="gridRowsModalFeedback" style="font-size: 0.68rem; color: #10b981; min-height: 16px; margin-top: 8px; font-weight: 700;"></div>
+                                    </div>
+                                    <div class="manual-progression-actions">
+                                        <button type="button" class="btn-action" id="btnGridRowsModalCancel">Cancelar</button>
+                                        <button type="button" class="btn-action btn-action--primary" id="btnGridRowsModalApply">
+                                            <i class="fas fa-check"></i> Aplicar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Barra de Tiempo y Scrubbing con Cuadro de Progreso -->
-                        <div class="player-scrubber-row">
+                        <!-- Barra de Tiempo y Scrubbing con Cuadro de Progreso (Inmediatamente debajo de la Cuadrícula) -->
+                        <div class="player-scrubber-row" id="playerScrubberRow">
                             <span class="scrubber-time" id="audioTimeCurrent">0:00</span>
                             <div class="scrubber-slider-container">
                                 <input type="range" id="audioSeeker" class="player-seeker-range" min="0" max="1" step="0.001" value="0" title="Arrastra para avanzar o retroceder en la canción">
@@ -408,12 +450,38 @@
                             <span class="scrubber-time" id="audioTimeRemaining">-0:00</span>
                         </div>
 
-                        <!-- Barra de Controles de Reproducción, Transporte, Metrónomo y Velocidad -->
+                        <!-- Barra de Controles de Reproducción, Transporte y Metrónomo -->
                         <div class="player-transport-toolbar">
+                            <!-- Botones de Transporte (Atrás, Play, Adelante, Stop) -->
+                            <div class="player-transport-buttons">
+                                <button type="button" class="btn-action btn-transport" id="btnPrevMeasure" title="Retroceder 1 compás (Atrás)">
+                                    <i class="fas fa-backward-step"></i>
+                                </button>
+                                <button type="button" class="btn-action btn-action--primary btn-play" id="btnPlayPauseAudio" title="Reproducir / Pausar">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <button type="button" class="btn-action btn-transport" id="btnNextMeasure" title="Avanzar 1 compás (Adelante)">
+                                    <i class="fas fa-forward-step"></i>
+                                </button>
+                                <button type="button" class="btn-action btn-transport" id="btnStopAudio" title="Detener">
+                                    <i class="fas fa-stop"></i>
+                                </button>
+                            </div>
+
                             <!-- Metrónomo -->
                             <button type="button" class="btn-action btn-metronome-toggle" id="btnToggleMetronome" title="Activar / Desactivar metrónomo sincronizado con el audio">
                                 <i class="fas fa-drum"></i> <span id="metronomeToggleLabel">Metrónomo: <strong>OFF</strong></span>
                             </button>
+
+                            <!-- Volumen del Metrónomo -->
+                            <div class="player-chord-volume-group" title="Volumen del sonido del metrónomo (0% = Silencio)">
+                                <button type="button" class="btn-chord-volume-mute" id="btnToggleMetronomeMute" title="Silenciar / Activar sonido del metrónomo">
+                                    <i class="fas fa-volume-high" id="iconMetronomeVolume"></i>
+                                </button>
+                                <span class="player-chord-vol-label">Metrónomo:</span>
+                                <input type="range" id="playerMetronomeVolumeSlider" class="player-chord-vol-slider" min="0" max="100" value="70" title="Ajustar volumen del metrónomo (0% a 100%)">
+                                <span class="player-chord-vol-val" id="playerMetronomeVolumeDisplay">70%</span>
+                            </div>
 
                             <!-- BPM con Ajuste Rápido y Edición Directa -->
                             <div class="player-bpm-group" title="Tempo de la pista (BPM). Escribe el número directamente o ajusta con - / +">
@@ -424,22 +492,6 @@
                                 </div>
                                 <span class="player-bpm-val" id="playerBpmDisplay" style="display: none;">120 BPM</span>
                                 <button type="button" class="btn-action btn-stepper" id="btnBpmPlus" title="Aumentar 1 BPM">+</button>
-                            </div>
-
-                            <!-- Botones de Transporte (Atrás, Play, Adelante, Stop) -->
-                            <div class="player-transport-buttons">
-                                <button type="button" class="btn-action btn-transport" id="btnPrevMeasure" title="Retroceder 1 compás (Atrás)">
-                                    <i class="fas fa-backward-step"></i>
-                                </button>
-                                <button type="button" class="btn-action btn-action--primary btn-play" id="btnPlayPauseAudio" title="Reproducir / Pausar">
-                                    <i class="fas fa-play"></i> Reproducir
-                                </button>
-                                <button type="button" class="btn-action btn-transport" id="btnNextMeasure" title="Avanzar 1 compás (Adelante)">
-                                    <i class="fas fa-forward-step"></i>
-                                </button>
-                                <button type="button" class="btn-action btn-transport" id="btnStopAudio" title="Detener">
-                                    <i class="fas fa-stop"></i>
-                                </button>
                             </div>
 
                             <!-- Selector de Velocidad -->
@@ -623,11 +675,11 @@
                             <button type="button" class="segment-btn active" data-mode="both" title="Mostrar en ambas direcciones de fuelle">
                                 <i class="fas fa-arrows-alt-h"></i> Ambos
                             </button>
-                            <button type="button" class="segment-btn" data-mode="push" title="Filtrar notas que se tocan Cerrando (Push)">
-                                <i class="fas fa-arrow-right-to-line"></i> Cerrar (Push)
+                            <button type="button" class="segment-btn" data-mode="push" title="Filtrar notas que se tocan Cerrando">
+                                <i class="fas fa-arrow-right-to-line"></i> Cerrar
                             </button>
-                            <button type="button" class="segment-btn" data-mode="pull" title="Filtrar notas que se tocan Abriendo (Pull)">
-                                <i class="fas fa-arrow-left-to-line"></i> Abrir (Pull)
+                            <button type="button" class="segment-btn" data-mode="pull" title="Filtrar notas que se tocan Abriendo">
+                                <i class="fas fa-arrow-left-to-line"></i> Abrir
                             </button>
                         </div>
                     </div>

@@ -10,6 +10,7 @@ import { CHORD_TEMPLATES } from '../theory/ChordTemplates.js';
 import { getPitchClass, getNoteNamesList } from '../theory/MusicTheory.js';
 import { NOTATION_MODES, ROW_BASE_TONICS } from '../core/Constants.js';
 import { tuningRegistry } from '../models/Tunings.js';
+import { wasmChordBridge } from './WasmChordBridge.js';
 
 // Perfiles Krumhansl-Kessler para estimación de tonalidad
 const KRUMHANSL_MAJOR = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
@@ -55,6 +56,16 @@ const TEMPERLEY_MINOR = [5.0, 2.0, 3.5, 4.5, 2.0, 4.0, 2.0, 4.5, 3.5, 2.0, 1.5, 
 export class AudioChordAnalyzer {
     constructor() {
         this._audioContext = null;
+        // Inicialización en segundo plano del motor en Rust (WebAssembly)
+        wasmChordBridge.init().catch(() => {});
+    }
+
+    /**
+     * Retorna el nombre del motor activo ('Rust (WebAssembly)' o 'JavaScript (Fallback)').
+     * @returns {string}
+     */
+    getEngineName() {
+        return wasmChordBridge.isReady() ? 'Rust (WebAssembly)' : 'JavaScript (Fallback)';
     }
 
     /**
@@ -86,6 +97,8 @@ export class AudioChordAnalyzer {
 
     /**
      * Analiza un AudioBuffer y genera la línea de acordes y tonalidad principal con precisión avanzada.
+     * Si el módulo WebAssembly en Rust está disponible, lo ejecuta a velocidad nativa.
+     * Si no está compilado, recurre al motor JavaScript integrado.
      * @param {AudioBuffer} audioBuffer
      * @param {(progress: number) => void} [onProgress] Callback de progreso (0 a 100)
      * @returns {Promise<AudioAnalysisReport>}
@@ -97,7 +110,22 @@ export class AudioChordAnalyzer {
         // 1. Mezcla a canal mono Float32
         const channelData = this._mixDownToMono(audioBuffer);
 
-        // 2. Parámetros de ventana para análisis espectral (alta resolución)
+        // 2. Comprobar si el motor en Rust (WebAssembly) está disponible
+        const wasmReady = wasmChordBridge.isReady() || await wasmChordBridge.init();
+        if (wasmReady) {
+            if (onProgress) onProgress(25);
+            try {
+                const rustReport = wasmChordBridge.analyze(channelData, sampleRate);
+                if (onProgress) onProgress(100);
+                rustReport.engine = 'Rust (WebAssembly)';
+                console.info('⚡ [AudioChordAnalyzer] Análisis ejecutado exitosamente con motor en Rust (WebAssembly).');
+                return rustReport;
+            } catch (wasmErr) {
+                console.error('⚠️ [AudioChordAnalyzer] Error en ejecución de WASM en Rust, usando fallback JS:', wasmErr);
+            }
+        }
+
+        // 3. Fallback en JavaScript (si WASM no está disponible)
         const windowSize = 4096;
         const hopSize = 2048;
         const totalFrames = Math.floor((channelData.length - windowSize) / hopSize);
@@ -106,7 +134,7 @@ export class AudioChordAnalyzer {
             throw new Error('El archivo de audio es demasiado corto para el análisis.');
         }
 
-        // 3. Matriz de filtros cromáticos dividida en Bajo (50-260Hz) y Armonía (260-2200Hz)
+        // Matriz de filtros cromáticos dividida en Bajo (50-260Hz) y Armonía (260-2200Hz)
         const filterbank = this._buildChromaFilterbank(windowSize, sampleRate);
 
         const rawChromagram = [];
@@ -203,7 +231,8 @@ export class AudioChordAnalyzer {
             bpm,
             mainKey,
             chords,
-            chromagram: rawChromagram
+            chromagram: rawChromagram,
+            engine: 'JavaScript (Fallback)'
         };
     }
 
@@ -291,7 +320,8 @@ export class AudioChordAnalyzer {
             bpm: report.bpm,
             mainKey: newMainKey,
             chords: transposedChords,
-            chromagram: report.chromagram
+            chromagram: report.chromagram,
+            engine: report.engine
         };
     }
 

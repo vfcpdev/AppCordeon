@@ -10,7 +10,6 @@ import { ChordView } from './ui/ChordView.js';
 import { DetectorView } from './ui/DetectorView.js';
 import { ExecutionView } from './ui/ExecutionView.js';
 import { AudioTrackView } from './ui/AudioTrackView.js';
-import { CadenceView } from './ui/CadenceView.js';
 import { DiapasonChordSidebarView } from './ui/DiapasonChordSidebarView.js';
 import { SheetMusicModalView } from './ui/SheetMusicModalView.js';
 import { AppController } from './controllers/AppController.js';
@@ -20,12 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Instanciación de Vistas con referencias a elementos del DOM
     const diapasonView = new DiapasonView(document.getElementById('diapason'), '');
     const secondaryDiapasonView = new DiapasonView(document.getElementById('secondaryDiapason'), 'sec_');
-
-    const cadenceView = new CadenceView({
-        container: document.getElementById('cadenceSection'),
-        cardsContainer: document.getElementById('cadenceCardsContainer'),
-        activeToneLabel: document.getElementById('lblCadenceActiveTone')
-    });
 
     const diapasonChordSidebarView = new DiapasonChordSidebarView({
         primarySidebar: document.getElementById('primaryDiapasonChordSidebar'),
@@ -159,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
         detectorView,
         executionView,
         audioTrackView,
-        cadenceView,
         diapasonChordSidebarView,
         sheetMusicModalView
     });

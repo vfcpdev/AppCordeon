@@ -34,7 +34,6 @@ export class AppController {
      * @param {import('../ui/DetectorView.js').DetectorView} views.detectorView
      * @param {import('../ui/ExecutionView.js').ExecutionView} views.executionView
      * @param {import('../ui/AudioTrackView.js').AudioTrackView} [views.audioTrackView]
-     * @param {import('../ui/CadenceView.js').CadenceView} [views.cadenceView]
      * @param {import('../ui/DiapasonChordSidebarView.js').DiapasonChordSidebarView} [views.diapasonChordSidebarView]
      */
     constructor(views) {
@@ -45,7 +44,6 @@ export class AppController {
         this._detectorView = views.detectorView;
         this._executionView = views.executionView;
         this._audioTrackView = views.audioTrackView;
-        this._cadenceView = views.cadenceView;
         this._diapasonChordSidebarView = views.diapasonChordSidebarView;
         this._sheetMusicModalView = views.sheetMusicModalView || null;
 
@@ -153,22 +151,29 @@ export class AppController {
                 this._sheetMusicModalView.syncPlaybackBar(barNum, chord.chordSymbol);
             }
             if (syncWithDiapason && this._audioTrackView && this._audioTrackView.isSyncEnabled()) {
-                // Mostrar en el diapasón los botones del acorde respetando la preferencia Abre / Cierra definida y la cantidad de botones
-                const bellowsFilter = chord.bellowsAction || this._bellowsMachine.mode;
-                const deactivated = this._diapasonChordSidebarView ? this._diapasonChordSidebarView.getDeactivatedButtons() : null;
-                this._diapasonView.highlightChord(
-                    this._accordionData,
-                    chord.noteMods,
-                    false,
-                    bellowsFilter,
-                    deactivated
-                );
-                this._syncSecondaryDiapason({
-                    notes: chord.noteMods,
-                    isExactMidi: false,
-                    bellowsMode: bellowsFilter,
-                    excludedButtons: deactivated
-                });
+                if (chord) {
+                    // Mostrar en el diapasón los botones del acorde respetando la preferencia Abre / Cierra definida y la cantidad de botones
+                    const bellowsFilter = chord.bellowsAction || this._bellowsMachine.mode;
+                    const deactivated = this._diapasonChordSidebarView ? this._diapasonChordSidebarView.getDeactivatedButtons() : null;
+                    this._diapasonView.highlightChord(
+                        this._accordionData,
+                        chord.noteMods,
+                        false,
+                        bellowsFilter,
+                        deactivated
+                    );
+                    this._syncSecondaryDiapason({
+                        notes: chord.noteMods,
+                        isExactMidi: false,
+                        bellowsMode: bellowsFilter,
+                        excludedButtons: deactivated
+                    });
+                } else {
+                    this._diapasonView.clearHighlights();
+                    if (this._isSecondaryDiapasonVisible && this._secondaryDiapasonView) {
+                        this._secondaryDiapasonView.clearHighlights();
+                    }
+                }
             }
 
             // Reproducir el sonido del acorde a medida que va cambiando
@@ -526,9 +531,9 @@ export class AppController {
                         this._audioTrackView.showProgress(10, 'Decodificando archivo de audio...');
                         const buffer = await this._audioChordAnalyzer.decodeAudio(file);
 
-                        this._audioTrackView.showProgress(25, 'Calculando cromagrama espectral...');
+                        this._audioTrackView.showProgress(25, `Calculando cromagrama [${this._audioChordAnalyzer.getEngineName()}]...`);
                         const report = await this._audioChordAnalyzer.analyze(buffer, (pct) => {
-                            this._audioTrackView.showProgress(pct, 'Detectando acordes y tonalidad...');
+                            this._audioTrackView.showProgress(pct, `Detectando acordes [${this._audioChordAnalyzer.getEngineName()}]...`);
                         });
 
                         this._audioTrackView.hideProgress();
@@ -713,7 +718,6 @@ export class AppController {
         });
 
         this._updateFeasibilityAndChordDisplay();
-        this._updateCadenceView();
         this._updateSidebarChordsView();
         this._restoreActiveHighlights();
     }
@@ -882,73 +886,9 @@ export class AppController {
                     this._renderSecondaryDiapason();
                     this._syncSecondaryDiapason();
                 }
-                this._updateCadenceView();
                 this._updateSidebarChordsView();
             });
         }
-    }
-
-    /**
-     * Actualiza la sección de Armonía Diatónica: Cuarta y Quinta.
-     * @private
-     */
-    _updateCadenceView() {
-        if (!this._cadenceView) return;
-
-        const rootPitchClass = getPitchClass(this._activeScaleRoot);
-        const cadenceChords = getCadenceChords(
-            rootPitchClass,
-            this._selectedScaleType,
-            this._currentNotation,
-            this._currentOffset
-        );
-
-        const secAccordion = this._isSecondaryDiapasonVisible ? this._secondaryAccordionData : null;
-
-        this._cadenceView.render(
-            cadenceChords,
-            this._accordionData,
-            secAccordion,
-            this._currentNotation,
-            this._currentOffset,
-            this._secondaryOffset,
-            (selectedCadenceChord) => {
-                // Al hacer clic en Tónica, Cuarta o Quinta:
-                // 1. Resaltar en Diapasón 1
-                this._diapasonView.highlightChord(
-                    this._accordionData,
-                    selectedCadenceChord.noteMods,
-                    false,
-                    this._bellowsMachine.mode
-                );
-
-                // 2. Resaltar en Diapasón 2 (Segundo Acordeón)
-                this._syncSecondaryDiapason({
-                    notes: selectedCadenceChord.noteMods,
-                    isExactMidi: false,
-                    bellowsMode: this._secondaryBellowsMode || this._bellowsMachine.mode
-                });
-
-                // 3. Reproducir sonido del acorde
-                audioEngine.play(selectedCadenceChord.playbackMidis);
-
-                // 4. Actualizar las barras laterales de acordes a la derecha de ambos diapasones
-                this._updateSidebarChordsView(selectedCadenceChord);
-
-                // 5. Actualizar digitaciones en ejecución
-                const forms = this.calculateExecutionForms(selectedCadenceChord.rootPitchClass, false);
-                this._executionView.setNoteLabel(`${selectedCadenceChord.chordName} (${selectedCadenceChord.roleName})`);
-                this._executionView.renderForms(forms, (selectedForm) => {
-                    this._diapasonView.highlightSingleButton(selectedForm.btnId, selectedForm.directionClass);
-                    this._syncSecondaryDiapason({
-                        notes: [selectedCadenceChord.rootPitchClass],
-                        isExactMidi: false,
-                        bellowsMode: this._secondaryBellowsMode || this._bellowsMachine.mode
-                    });
-                    audioEngine.play(selectedForm.midi);
-                });
-            }
-        );
     }
 
     /**
@@ -1374,7 +1314,7 @@ export class AppController {
                         rowName: ROW_NAMES[r],
                         rowKey: r,
                         btnNum: b.btnIndex,
-                        direction: 'Cerrar (Push)',
+                        direction: 'Cerrar',
                         directionClass: 'push',
                         midi: b.push,
                         isNatural: r === this._activeRowKey
@@ -1386,7 +1326,7 @@ export class AppController {
                         rowName: ROW_NAMES[r],
                         rowKey: r,
                         btnNum: b.btnIndex,
-                        direction: 'Abrir (Pull)',
+                        direction: 'Abrir',
                         directionClass: 'pull',
                         midi: b.pull,
                         isNatural: r === this._activeRowKey
@@ -1443,7 +1383,7 @@ export class AppController {
                             rowName: ROW_NAMES[r],
                             rowKey: r,
                             btnNum: b.btnIndex,
-                            direction: 'Cerrar (Push)',
+                            direction: 'Cerrar',
                             directionClass: 'push',
                             midi: b.push,
                             isNatural: false,
@@ -1457,7 +1397,7 @@ export class AppController {
                             rowName: ROW_NAMES[r],
                             rowKey: r,
                             btnNum: b.btnIndex,
-                            direction: 'Abrir (Pull)',
+                            direction: 'Abrir',
                             directionClass: 'pull',
                             midi: b.pull,
                             isNatural: false,

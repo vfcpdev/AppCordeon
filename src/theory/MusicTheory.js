@@ -212,6 +212,7 @@ export function parseChordNotation(notation) {
 
     // 4. Analizar la cualidad/estructura en el remanente
     let qual = remainder.toLowerCase().replace(/[\s\-_()]/g, '');
+    const rawRemainder = remainder.trim();
 
     let chordType = 'major';
     let intervals = [0, 4, 7];
@@ -223,12 +224,12 @@ export function parseChordNotation(notation) {
         intervals = [0, 3, 6, 10];
         symbolSuffix = 'm7(♭5)';
         nameSuffix = 'm7(♭5)';
-    } else if (/^(maj7|major7|7m|delta7|δ7|Δ7|delta|δ|Δ|mayor7|mayor7ma)$/.test(qual) || remainder === 'M7' || remainder === 'Maj7' || remainder.startsWith('M7')) {
+    } else if (/^(maj7|major7|7m|delta7|δ7|Δ7|delta|δ|Δ|mayor7|mayor7ma)$/.test(qual) || rawRemainder === 'M7' || rawRemainder === 'Maj7' || rawRemainder.startsWith('M7')) {
         chordType = 'maj7';
         intervals = [0, 4, 7, 11];
         symbolSuffix = 'Maj7';
         nameSuffix = 'Mayor 7ma';
-    } else if (/^(min7|m7|-7|menor7|menor7ma)$/.test(qual) || remainder === 'm7' || remainder.startsWith('m7')) {
+    } else if (/^(min7|m7|-7|menor7|menor7ma)$/.test(qual) || rawRemainder === 'm7' || rawRemainder.startsWith('m7')) {
         chordType = 'm7';
         intervals = [0, 3, 7, 10];
         symbolSuffix = 'm7';
@@ -278,12 +279,12 @@ export function parseChordNotation(notation) {
         intervals = [0, 2, 4, 7];
         symbolSuffix = 'add9';
         nameSuffix = 'Add9';
-    } else if (/^(maj9|mayor9)$/.test(qual) || remainder === 'M9' || remainder.startsWith('M9')) {
+    } else if (/^(maj9|mayor9)$/.test(qual) || rawRemainder === 'M9' || rawRemainder.startsWith('M9')) {
         chordType = 'maj9';
         intervals = [0, 2, 4, 7, 11];
         symbolSuffix = 'Maj9';
         nameSuffix = 'Mayor 9na';
-    } else if (/^(min9|m9|menor9)$/.test(qual) || remainder === 'm9' || remainder.startsWith('m9')) {
+    } else if (/^(min9|m9|menor9)$/.test(qual) || rawRemainder === 'm9' || rawRemainder.startsWith('m9')) {
         chordType = 'min9';
         intervals = [0, 2, 3, 7, 10];
         symbolSuffix = 'm9';
@@ -293,12 +294,12 @@ export function parseChordNotation(notation) {
         intervals = [0, 2, 4, 7, 10];
         symbolSuffix = '9';
         nameSuffix = '9na Dominante';
-    } else if (/^(6|maj6|mayor6|6ta)$/.test(qual)) {
+    } else if (/^(6|maj6|mayor6|6ta)$/.test(qual) || rawRemainder === 'M6' || rawRemainder.startsWith('M6')) {
         chordType = 'maj6';
         intervals = [0, 4, 7, 9];
         symbolSuffix = '6';
         nameSuffix = '6ta Mayor';
-    } else if (/^(m6|min6|menor6)$/.test(qual)) {
+    } else if (/^(m6|min6|menor6)$/.test(qual) || rawRemainder === 'm6' || rawRemainder.startsWith('m6')) {
         chordType = 'min6';
         intervals = [0, 3, 7, 9];
         symbolSuffix = 'm6';
@@ -308,12 +309,20 @@ export function parseChordNotation(notation) {
         intervals = [0, 7];
         symbolSuffix = '5';
         nameSuffix = '5ta (Power Chord)';
-    } else if (/^(m|min|minor|-|menor)$/.test(qual) || remainder === 'm' || remainder.startsWith('m')) {
+    } else if (rawRemainder === 'M' || /^(maj|major|mayor)$/i.test(rawRemainder)) {
+        // Explícitamente 'M' mayúscula para Mayor
+        chordType = 'major';
+        intervals = [0, 4, 7];
+        symbolSuffix = (rawRemainder === 'M') ? 'M' : '';
+        nameSuffix = 'Mayor';
+    } else if (rawRemainder === 'm' || /^(min|minor|-|menor)$/i.test(rawRemainder)) {
+        // Explícitamente 'm' minúscula para Menor
         chordType = 'minor';
         intervals = [0, 3, 7];
         symbolSuffix = 'm';
         nameSuffix = 'Menor';
-    } else if (!qual || /^(maj|major|mayor)$/.test(qual) || remainder === 'M') {
+    } else if (!qual) {
+        // Sin cualidad (ej. "C", "Sol", "Eb") -> Mayor por defecto
         chordType = 'major';
         intervals = [0, 4, 7];
         symbolSuffix = '';
@@ -352,4 +361,117 @@ export function parseChordNotation(notation) {
         playbackMidis,
         bass: bassPc
     };
+}
+
+/**
+ * Formatea un token individual de acorde asegurando que las notas de la notación
+ * alemana (A, B, C, D, E, F, G) queden siempre en mayúscula, respetando 'M' para mayor
+ * y 'm' para menor, y bemoles como 'b' minúscula.
+ *
+ * @param {string} token
+ * @returns {string}
+ */
+export function autoFormatChordToken(token) {
+    if (!token || typeof token !== 'string') return token;
+
+    if (token.includes('/')) {
+        const parts = token.split('/');
+        return parts.map(p => autoFormatChordToken(p)).join('/');
+    }
+
+    const t = token.trim();
+    if (!t) return token;
+
+    // 1. Raíces latinas (Sol, La, Si, Do, Re, Mi, Fa)
+    const latinRoots = [
+        { re: /^sol/i, name: 'Sol' },
+        { re: /^la/i, name: 'La' },
+        { re: /^si/i, name: 'Si' },
+        { re: /^do/i, name: 'Do' },
+        { re: /^re/i, name: 'Re' },
+        { re: /^mi/i, name: 'Mi' },
+        { re: /^fa/i, name: 'Fa' }
+    ];
+
+    for (const lat of latinRoots) {
+        if (lat.re.test(t)) {
+            const rem = t.slice(lat.name.length);
+            return lat.name + formatChordRemainder(rem);
+        }
+    }
+
+    // 2. Raíces anglosajonas / alemanas (A, B, C, D, E, F, G)
+    const angloMatch = t.match(/^([a-gA-G])(.*)$/);
+    if (angloMatch) {
+        const root = angloMatch[1].toUpperCase();
+        const rem = angloMatch[2];
+        return root + formatChordRemainder(rem);
+    }
+
+    return token;
+}
+
+/**
+ * Formatea el remanente de alteración y cualidad de un acorde.
+ * @private
+ * @param {string} rem
+ * @returns {string}
+ */
+function formatChordRemainder(rem) {
+    if (!rem) return '';
+    let res = '';
+    let idx = 0;
+
+    // Alteración (#, ♯, b, ♭)
+    if (rem[idx] === '#' || rem[idx] === '♯') {
+        res += rem[idx];
+        idx++;
+    } else if (rem[idx] === '♭') {
+        res += rem[idx];
+        idx++;
+    } else if (rem[idx] === 'b' || rem[idx] === 'B') {
+        // En alteración de bemol siempre es 'b' minúscula
+        res += 'b';
+        idx++;
+    }
+
+    const rest = rem.slice(idx);
+    if (!rest) return res;
+
+    // Si es exactamente 'm' o 'M'
+    if (rest === 'm' || rest === 'M') {
+        return res + rest;
+    }
+
+    // Si empieza por 'M' mayúscula (ej. M7, Maj, Maj7, M9, M6)
+    if (rest.startsWith('M') && !/^min/i.test(rest)) {
+        return res + rest;
+    }
+
+    // Si empieza por 'm' minúscula (ej. m7, min, min7, m6, m7b5)
+    if (rest.startsWith('m') && !/^maj/i.test(rest)) {
+        return res + rest;
+    }
+
+    // Si es solo números (ej. 7, 9, 6)
+    if (/^[0-9]/.test(rest)) {
+        return res + rest;
+    }
+
+    return res + rest;
+}
+
+/**
+ * Ajusta y formatea automáticamente una cadena de texto completa que contenga acordes
+ * separados por comas, espacios o barras (ej: "c, cm, cM" -> "C, Cm, CM").
+ * Mantiene intactos delimitadores, espacios y cursores de edición.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function formatChordInputString(text) {
+    if (!text || typeof text !== 'string') return text;
+    return text.replace(/([^\s,;|]+)/g, (match) => {
+        return autoFormatChordToken(match);
+    });
 }

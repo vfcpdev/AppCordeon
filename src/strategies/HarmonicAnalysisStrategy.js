@@ -47,8 +47,8 @@ export class HarmonicAnalysisStrategy {
         if (!notes || notes.length === 0) return 'Sin notas';
         const pushes = notes.filter(n => n.direction === 'push').length;
         const pulls = notes.filter(n => n.direction === 'pull').length;
-        if (pushes > 0 && pulls === 0) return 'Todos Cerrando (Push)';
-        if (pulls > 0 && pushes === 0) return 'Todos Abriendo (Pull)';
+        if (pushes > 0 && pulls === 0) return 'Todos Cerrando';
+        if (pulls > 0 && pushes === 0) return 'Todos Abriendo';
         return `Mixto (${pushes} Cerrar / ${pulls} Abrir)`;
     }
 

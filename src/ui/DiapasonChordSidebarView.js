@@ -404,7 +404,7 @@ export class DiapasonChordSidebarView {
                         <div class="sidebar-bellows-header-row">
                             <label class="sidebar-checkbox-label" title="Marcar para ejecutar Abriendo en la melodía">
                                 <input type="checkbox" class="sidebar-dir-checkbox" data-dir="pull" ${isPullChecked ? 'checked' : ''}>
-                                <span class="sidebar-bellows-title"><i class="fas fa-arrow-left"></i> Abre (Pull)</span>
+                                <span class="sidebar-bellows-title"><i class="fas fa-arrow-left"></i> Abre</span>
                             </label>
                             <button type="button" class="sidebar-btn-toggle-bellows-vis" data-dir="pull" title="Visualizar u ocultar los botones de Abre">
                                 <i class="fas ${isPullCollapsed ? 'fa-eye-slash' : 'fa-eye'}"></i>
@@ -427,13 +427,13 @@ export class DiapasonChordSidebarView {
                     </div>
                 </div>
 
-                <!-- COLUMNA DERECHA: CIERRA (PUSH) -->
+                <!-- COLUMNA DERECHA: CIERRA -->
                 <div class="sidebar-bellows-block push-block ${!isPushChecked ? 'action-dimmed' : ''}">
                     <div class="sidebar-bellows-header" data-dir="push">
                         <div class="sidebar-bellows-header-row">
                             <label class="sidebar-checkbox-label" title="Marcar para ejecutar Cerrando en la melodía">
                                 <input type="checkbox" class="sidebar-dir-checkbox" data-dir="push" ${isPushChecked ? 'checked' : ''}>
-                                <span class="sidebar-bellows-title"><i class="fas fa-arrow-right"></i> Cierra (Push)</span>
+                                <span class="sidebar-bellows-title"><i class="fas fa-arrow-right"></i> Cierra</span>
                             </label>
                             <button type="button" class="sidebar-btn-toggle-bellows-vis" data-dir="push" title="Visualizar u ocultar los botones de Cierra">
                                 <i class="fas ${isPushCollapsed ? 'fa-eye-slash' : 'fa-eye'}"></i>
