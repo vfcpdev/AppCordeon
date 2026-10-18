@@ -744,4 +744,56 @@ export class SheetMusicModalView {
             isDragging = false;
         });
     }
+
+    /**
+     * Sincroniza los acordes de la partitura actual con la cuadrícula 4/4 y diapasón,
+     * sin cargar archivos ni sustituir el reproductor de audio principal.
+     */
+    applyChordsToApp() {
+        if (!this._currentChords || this._currentChords.length === 0) return;
+        const bpm = (this._currentScoreInfo && this._currentScoreInfo.bpm) || 70;
+
+        let timelineChords;
+        if (this._currentScoreInfo && this._currentScoreInfo.sourceFile === COMO_ZAQUEO_SCORE_INFO.sourceFile) {
+            timelineChords = buildComoZaqueoTimelineChords(bpm);
+        } else {
+            const barDuration = (60 / bpm) * 4;
+            timelineChords = this._currentChords.map(barItem => {
+                const parsed = parseChordNotation(barItem.chord);
+                const mIndex = barItem.bar - 1;
+                const startTime = mIndex * barDuration;
+                const endTime = startTime + barDuration;
+                const baseMidi = 60 + (parsed ? parsed.root : 0);
+                const noteMods = parsed && parsed.noteMods ? parsed.noteMods : [0, 4, 7];
+                const playbackMidis = parsed && parsed.playbackMidis ? parsed.playbackMidis : [60, 64, 67];
+
+                return {
+                    chordSymbol: barItem.chord,
+                    root: parsed ? parsed.root : 0,
+                    type: parsed ? parsed.type : 'major',
+                    noteMods: noteMods,
+                    playbackMidis: playbackMidis,
+                    startTime: startTime,
+                    endTime: endTime,
+                    bar: barItem.bar
+                };
+            });
+        }
+
+        if (this._onApplyChordsCallback) {
+            this._onApplyChordsCallback(timelineChords, bpm, this._currentScoreInfo);
+        }
+
+        // Feedback visual en el botón de sincronización
+        if (this._btnApplyChords) {
+            const originalHtml = this._btnApplyChords.innerHTML;
+            this._btnApplyChords.innerHTML = '<i class="fas fa-check"></i> ¡Sincronizado!';
+            this._btnApplyChords.classList.add('btn-sheet-action--success');
+            setTimeout(() => {
+                this._btnApplyChords.innerHTML = originalHtml;
+                this._btnApplyChords.classList.remove('btn-sheet-action--success');
+            }, 2000);
+        }
+    }
 }
+

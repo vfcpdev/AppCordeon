@@ -1318,6 +1318,265 @@
     color: #ffffff !important;
     box-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
     transform: scale(1.02);
+.measure-beat-slot.slot-in-range {
+    background: rgba(56, 189, 248, 0.22) !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.6), inset 0 0 10px rgba(56, 189, 248, 0.35) !important;
+    z-index: 2;
+}
+
+.measure-beat-slot.slot-range-start {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+
+.measure-beat-slot.slot-range-end {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.measure-beat-slot.has-chord-continue .slot-chord-continue {
+    font-size: 0.72rem;
+    font-weight: 700;
+    opacity: 0.45;
+    color: #94a3b8;
+}
+
+/* Mini Popover de Edición Rápida y Forzado de Acordes en Cuadrícula */
+.grid-chord-mini-popover {
+    position: absolute;
+    z-index: 120;
+    background: rgba(15, 23, 42, 0.97);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    border-radius: 10px;
+    box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.85), 0 0 20px rgba(56, 189, 248, 0.25);
+    padding: 10px 12px;
+    width: 290px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: miniPopoverPop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes miniPopoverPop {
+    from {
+        opacity: 0;
+        transform: scale(0.94) translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.mini-popover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 5px;
+}
+
+.mini-popover-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #38bdf8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.mini-popover-btn-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.15rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+}
+
+.mini-popover-btn-close:hover {
+    color: #f87171;
+}
+
+.mini-popover-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mini-popover-input {
+    background: #090d16;
+    border: 1.5px solid #38bdf8;
+    border-radius: 6px;
+    color: #ffffff;
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    font-weight: 800;
+    padding: 6px 10px;
+    width: 100%;
+    text-align: center;
+    text-transform: uppercase;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.25) inset;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mini-popover-input:focus {
+    border-color: #7dd3fc;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.4), 0 0 12px rgba(56, 189, 248, 0.4);
+}
+
+.mini-popover-feedback {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    text-align: center;
+    min-height: 14px;
+    line-height: 1.2;
+}
+
+.mini-popover-actions {
+    display: flex;
+    gap: 5px;
+    justify-content: space-between;
+}
+
+.btn-mini-action {
+    padding: 5px 8px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.btn-mini-delete {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+}
+
+.btn-mini-delete:hover {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+}
+
+.btn-mini-cancel {
+    background: #1e293b;
+    border-color: #475569;
+    color: #cbd5e1;
+}
+
+.btn-mini-cancel:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+.btn-mini-save {
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    border-color: #38bdf8;
+    color: #ffffff;
+}
+
+.btn-mini-save:hover {
+    background: #38bdf8;
+    color: #0f172a;
+}
+
+.btn-mini-next {
+    background: #0f766e;
+    border-color: #14b8a6;
+    color: #ffffff;
+}
+
+.btn-mini-next:hover {
+    background: #14b8a6;
+    color: #042f2e;
+}
+
+/* Modal Emergente de Progresión Manual Completa */
+.manual-progression-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(5px);
+}
+
+.manual-progression-card {
+    background: #0f172a;
+    border: 1px solid #38bdf8;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.85), 0 0 25px rgba(56, 189, 248, 0.25);
+    overflow: hidden;
+    animation: miniPopoverPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.manual-progression-header {
+    background: #1e293b;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+}
+
+.manual-progression-title {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #38bdf8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.manual-progression-body {
+    padding: 14px;
+}
+
+.manual-progression-textarea {
+    width: 100%;
+    background: #090d16;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: #f8fafc;
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    padding: 8px 10px;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.manual-progression-textarea:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.manual-progression-actions {
+    padding: 10px 14px;
+    background: #131d31;
+    border-top: 1px solid #334155;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
 }
 
 /* =========================================================================
