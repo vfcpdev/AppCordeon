@@ -121,6 +121,13 @@ export class AppController {
         this._applyPrimaryVolume(this._diapasonVolume, this._isDiapasonMuted, false);
         this._applySecondaryVolume(this._secondaryDiapasonVolume, this._isSecondaryDiapasonMuted, false);
         this._updateVolumeSyncUI();
+
+        if (this._sheetMusicModalView) {
+            this._sheetMusicModalView.setReplicateCallbacks({
+                onReplicateMelodyNote: (note, target) => this.replicateMelodyNote(note, target),
+                findAccordionButton: (midi, target) => this.findAccordionButtonForMidi(midi, target)
+            });
+        }
     }
 
     /**
@@ -2028,5 +2035,85 @@ export class AppController {
                 this._updateSidebarChordsView(parsed);
             }
         }
+    }
+
+    /**
+     * Resuelve el botón físico del acordeón seleccionado (1 o 2) que produce una nota MIDI.
+     * @param {number} midi
+     * @param {string} [targetAccordion='primary'] 'primary' | 'secondary'
+     * @returns {Object|null} { id, rowKey, btnIndex, btnLabel, direction, bellowsText }
+     */
+    findAccordionButtonForMidi(midi, targetAccordion = 'primary') {
+        const isPrimary = targetAccordion === 'primary';
+        const accData = isPrimary ? this._accordionData : this._secondaryAccordionData;
+        if (!accData || !midi) return null;
+
+        // Preferencia ergonómica de hileras: row2 (Medio), row1 (Afuera), row3 (Adentro)
+        const rowKeys = ['row2', 'row1', 'row3'];
+        const ROW_SHORT = { row1: 'H1', row2: 'H2', row3: 'H3' };
+
+        for (const rk of rowKeys) {
+            if (!accData[rk]) continue;
+            for (const b of accData[rk]) {
+                if (b.push === midi) {
+                    return {
+                        id: b.id,
+                        rowKey: rk,
+                        btnIndex: b.btnIndex,
+                        rowLabel: ROW_SHORT[rk] || rk,
+                        btnLabel: `${ROW_SHORT[rk] || rk}-B${b.btnIndex}`,
+                        direction: 'push',
+                        bellowsText: 'Cierra'
+                    };
+                }
+                if (b.pull === midi) {
+                    return {
+                        id: b.id,
+                        rowKey: rk,
+                        btnIndex: b.btnIndex,
+                        rowLabel: ROW_SHORT[rk] || rk,
+                        btnLabel: `${ROW_SHORT[rk] || rk}-B${b.btnIndex}`,
+                        direction: 'pull',
+                        bellowsText: 'Abre'
+                    };
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Toca e ilumina una nota melódica en el diapasón seleccionado (Acordeón 1 o 2).
+     * @param {Object|null} note
+     * @param {string} [targetAccordion='primary'] 'primary' | 'secondary'
+     * @returns {Object|null}
+     */
+    replicateMelodyNote(note, targetAccordion = 'primary') {
+        const isPrimary = targetAccordion === 'primary';
+        const targetView = isPrimary ? this._diapasonView : this._secondaryDiapasonView;
+        if (!targetView) return null;
+
+        if (!note || note.is_rest || !note.midi) {
+            targetView.clearHighlights();
+            return null;
+        }
+
+        const match = this.findAccordionButtonForMidi(note.midi, targetAccordion);
+        const vol = isPrimary
+            ? (this._isDiapasonMuted ? 0 : this._diapasonVolume / 100)
+            : (this._isSecondaryDiapasonMuted ? 0 : this._secondaryDiapasonVolume / 100);
+
+        if (match) {
+            targetView.highlightSingleButton(match.id, match.direction);
+        } else {
+            targetView.clearHighlights();
+        }
+
+        if (vol > 0 && note.midi) {
+            const dur = note.duration_beats >= 2 ? "2n" : (note.duration_beats >= 1 ? "4n" : "8n");
+            audioEngine.play(note.midi, dur, vol);
+        }
+
+        return match;
     }
 }
