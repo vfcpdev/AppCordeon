@@ -2,7 +2,7 @@
  * Service Worker para Acordeón Diatónico Pro (PWA)
  * Estrategia Network-First con fallback a caché para soporte offline confiable
  */
-const CACHE_NAME = 'acordeon-pro-v86';
+const CACHE_NAME = 'acordeon-pro-v89';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',

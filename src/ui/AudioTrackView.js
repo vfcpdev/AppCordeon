@@ -44,6 +44,9 @@ export class AudioTrackView {
 
         // Nuevos controles de transporte, metrónomo, velocidad y cuadrícula
         this._measureGridContainer = document.getElementById('audioMeasureGridContainer');
+        this._secondaryMeasureGridContainer = document.getElementById('secondaryAudioMeasureGridContainer');
+        this._secondaryGridWrapper = document.getElementById('secondaryChordMeasureGridWrapper');
+        this._gridPanel = document.getElementById('primaryChordGridPanel');
         this._btnPrevMeasure = document.getElementById('btnPrevMeasure');
         this._btnNextMeasure = document.getElementById('btnNextMeasure');
         this._btnToggleMetronome = document.getElementById('btnToggleMetronome');
@@ -68,6 +71,8 @@ export class AudioTrackView {
         this._currentBpm = 120;
         this._activeBeatSlot = null;
         this._activeMeasureRow = null;
+        this._secActiveBeatSlot = null;
+        this._secActiveMeasureRow = null;
         this._lastScrollMeasure = -1;
         this._lblAnalysisEngine = document.getElementById('lblAnalysisEngine');
 
@@ -1707,7 +1712,7 @@ export class AudioTrackView {
         if (this._activeChordTitle) {
             this._activeChordTitle.innerHTML = chord
                 ? `Acorde: <strong>${chord.chordSymbol}</strong> (${chord.chordName})`
-                : 'Presiona reproducir para sincronizar';
+                : '';
         }
 
         if (this._btnEditActiveChord) {
@@ -1777,6 +1782,16 @@ export class AudioTrackView {
             this._activeBeatSlot = newBeatSlot;
         }
 
+        // Resaltar pulso en cuadrícula de Acordeón 2
+        if (this._secActiveBeatSlot) {
+            this._secActiveBeatSlot.classList.remove('active-beat');
+        }
+        const newSecBeatSlot = document.getElementById(`sec-beat-slot-${curBar}-${curBeat}`);
+        if (newSecBeatSlot) {
+            newSecBeatSlot.classList.add('active-beat');
+            this._secActiveBeatSlot = newSecBeatSlot;
+        }
+
         if (this._activeMeasureRow) {
             this._activeMeasureRow.classList.remove('active-measure');
         }
@@ -1785,13 +1800,32 @@ export class AudioTrackView {
             newRow.classList.add('active-measure');
             this._activeMeasureRow = newRow;
 
-            // Auto-scroll suave para mantener el compás actual a la vista
-            if (this._lastScrollMeasure !== curBar && this._measureGridContainer) {
+            // Auto-scroll suave para mantener el compás actual a la vista en ambas cuadrículas
+            if (this._lastScrollMeasure !== curBar) {
                 this._lastScrollMeasure = curBar;
-                const rowTop = newRow.offsetTop - this._measureGridContainer.offsetTop;
-                const targetScroll = Math.max(0, rowTop - 40);
-                this._measureGridContainer.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                if (this._measureGridContainer) {
+                    const rowTop = newRow.offsetTop - this._measureGridContainer.offsetTop;
+                    const targetScroll = Math.max(0, rowTop - 40);
+                    this._measureGridContainer.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                }
+                if (this._secondaryMeasureGridContainer) {
+                    const secRow = document.getElementById(`sec-measure-row-${curBar}`);
+                    if (secRow) {
+                        const secTop = secRow.offsetTop - this._secondaryMeasureGridContainer.offsetTop;
+                        const targetScroll = Math.max(0, secTop - 40);
+                        this._secondaryMeasureGridContainer.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                    }
+                }
             }
+        }
+
+        if (this._secActiveMeasureRow) {
+            this._secActiveMeasureRow.classList.remove('active-measure');
+        }
+        const newSecRow = document.getElementById(`sec-measure-row-${curBar}`);
+        if (newSecRow) {
+            newSecRow.classList.add('active-measure');
+            this._secActiveMeasureRow = newSecRow;
         }
     }
 
@@ -1915,6 +1949,75 @@ export class AudioTrackView {
         }
 
         this._measureGridContainer.appendChild(fragment);
+
+        if (this._secondaryMeasureGridContainer) {
+            this._secondaryMeasureGridContainer.innerHTML = '';
+            const secFragment = document.createDocumentFragment();
+            let secLastChordSymbol = null;
+
+            for (let m = 0; m < totalBars; m++) {
+                const secRow = document.createElement('div');
+                secRow.className = 'measure-grid-row';
+                secRow.id = `sec-measure-row-${m}`;
+                secRow.dataset.barIndex = m;
+
+                const secNum = document.createElement('div');
+                secNum.className = 'measure-grid-num';
+                secNum.textContent = (m + 1);
+                secRow.appendChild(secNum);
+
+                const secBeats = document.createElement('div');
+                secBeats.className = 'measure-grid-beats';
+
+                for (let b = 0; b < 4; b++) {
+                    const globalBeatIndex = (m * 4) + b;
+                    const beatStart = (m * barSec) + (b * beatSec);
+                    const beatMid = beatStart + (beatSec * 0.25);
+                    const chord = (chords || []).find(c => c.startTime <= beatMid && c.endTime > beatMid);
+
+                    const secSlot = document.createElement('button');
+                    secSlot.type = 'button';
+                    secSlot.className = 'measure-beat-slot';
+                    secSlot.id = `sec-beat-slot-${m}-${b}`;
+                    secSlot.dataset.barIndex = m;
+                    secSlot.dataset.beatIndex = b;
+                    secSlot.dataset.globalBeat = globalBeatIndex;
+                    secSlot.dataset.startTime = beatStart;
+
+                    const currentSymbol = chord ? chord.chordSymbol : '';
+                    const isChordStart = chord && Math.abs(chord.startTime - beatStart) < 0.05;
+
+                    if (currentSymbol) {
+                        if (isChordStart || (m === 0 && b === 0) || currentSymbol !== secLastChordSymbol) {
+                            secSlot.classList.add('has-chord');
+                            secSlot.innerHTML = `<span class="slot-chord-text" title="Clic para saltar a ${currentSymbol}">${currentSymbol}</span>`;
+                            secLastChordSymbol = currentSymbol;
+                        } else {
+                            secSlot.classList.add('has-chord-continue');
+                            secSlot.innerHTML = `<span class="slot-chord-text slot-chord-continue" title="Continúa ${currentSymbol}">${currentSymbol}</span>`;
+                        }
+                    } else {
+                        secSlot.innerHTML = `<span class="slot-empty-dot">·</span>`;
+                        secLastChordSymbol = null;
+                    }
+
+                    secSlot.title = `2do Acordeón: Compás ${m + 1}, Pulso ${b + 1} (${this._formatTime(beatStart)})${currentSymbol ? ' - ' + currentSymbol : ''}`;
+
+                    secSlot.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const primSlot = document.getElementById(`beat-slot-${m}-${b}`);
+                        this._toggleSlotInSequence(globalBeatIndex, m, b, beatStart, beatSec, primSlot || secSlot);
+                    });
+
+                    secBeats.appendChild(secSlot);
+                }
+
+                secRow.appendChild(secBeats);
+                secFragment.appendChild(secRow);
+            }
+            this._secondaryMeasureGridContainer.appendChild(secFragment);
+        }
+
         this._refreshSequenceBadges();
     }
 
@@ -1941,6 +2044,24 @@ export class AudioTrackView {
                 slot.appendChild(badge);
             }
         });
+
+        if (this._secondaryMeasureGridContainer) {
+            this._secondaryMeasureGridContainer.querySelectorAll('.slot-seq-badge').forEach(b => b.remove());
+            this._secondaryMeasureGridContainer.querySelectorAll('.measure-beat-slot.selected-seq-slot').forEach(s => {
+                s.classList.remove('selected-seq-slot');
+            });
+            this._selectedSequence.forEach((item, index) => {
+                const secSlot = document.getElementById(`sec-beat-slot-${item.barIndex}-${item.beatIndex}`);
+                if (secSlot) {
+                    secSlot.classList.add('selected-seq-slot');
+                    const badge = document.createElement('span');
+                    badge.className = 'slot-seq-badge';
+                    badge.textContent = (index + 1);
+                    badge.title = `Orden de selección: #${index + 1}`;
+                    secSlot.appendChild(badge);
+                }
+            });
+        }
 
         if (this._btnDeleteSelectedSlots) {
             this._btnDeleteSelectedSlots.style.display = this._selectedSequence.length > 0 ? 'inline-flex' : 'none';
@@ -2290,7 +2411,7 @@ export class AudioTrackView {
         const nextState = forceState !== undefined ? forceState : !this._isGridUndocked;
         this._isGridUndocked = nextState;
 
-        const target = this._playbackControls || document.getElementById('trackPlaybackControls');
+        const target = this._gridPanel || document.getElementById('primaryChordGridPanel') || this._playbackControls || document.getElementById('trackPlaybackControls');
         if (!target) return;
 
         if (this._isGridUndocked) {
@@ -2404,11 +2525,17 @@ export class AudioTrackView {
 
         if (this._gridRows === 'all') {
             this._measureGridContainer.style.maxHeight = 'none';
+            if (this._secondaryMeasureGridContainer) {
+                this._secondaryMeasureGridContainer.style.maxHeight = 'none';
+            }
         } else {
             const num = parseInt(this._gridRows, 10) || 3;
             // Cada fila de compás mide aproximadamente 46-52px de altura con padding y gap
             const calculatedHeight = Math.max(52, num * 52);
             this._measureGridContainer.style.maxHeight = `${calculatedHeight}px`;
+            if (this._secondaryMeasureGridContainer) {
+                this._secondaryMeasureGridContainer.style.maxHeight = `${calculatedHeight}px`;
+            }
         }
     }
 
