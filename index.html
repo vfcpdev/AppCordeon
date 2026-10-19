@@ -972,6 +972,16 @@ M                </section>
                 </button>
             </div>
 
+            <div class="sheet-toolbar-group" title="Replicar melodía en Acordeón">
+                <span class="sheet-lbl-compact"><i class="fas fa-bullseye"></i> Replicar en:</span>
+                <button type="button" class="sheet-target-btn active" id="btnSheetTargetPrimary" title="Replicar notas y secuencia en Acordeón 1">
+                    <i class="fas fa-star"></i> Acordeón 1
+                </button>
+                <button type="button" class="sheet-target-btn" id="btnSheetTargetSecondary" title="Replicar notas y secuencia en Acordeón 2">
+                    <i class="fas fa-columns"></i> Acordeón 2
+                </button>
+            </div>
+
             <div class="sheet-toolbar-group">
                 <button type="button" class="btn-sheet-action btn-sheet-action--secondary" id="btnSheetPresetComoZaqueo" title="Partitura MusicXML 'Como Zaqueo' (Sol Mayor)">
                     <i class="fas fa-music"></i> Zaqueo
@@ -986,14 +996,56 @@ M                </section>
             </div>
         </div>
 
-        <!-- Tira guía interactiva de acordes compás a compás -->
-        <div class="sheet-chords-guide-container">
-            <div class="sheet-chords-guide-header">
-                <span><i class="fas fa-layer-group"></i> Acordes de la Partitura (Compás por Compás)</span>
-                <span style="font-size: 0.58rem; color: #a5b4fc; text-transform: none;">Clic para escuchar y saltar</span>
+        <!-- PANEL COMBINADO: GUÍA DE ACORDES Y SECUENCIA MELÓDICA NOTA POR NOTA -->
+        <div class="sheet-combined-guide-container" id="sheetCombinedGuideContainer">
+            <!-- SECCIÓN 1: ACORDES DE LA PARTITURA -->
+            <div class="sheet-guide-section sheet-guide-section--chords">
+                <div class="sheet-chords-guide-header">
+                    <span><i class="fas fa-layer-group"></i> Acordes de la Partitura (Compás por Compás)</span>
+                    <span style="font-size: 0.58rem; color: #a5b4fc; text-transform: none;">Clic para escuchar acorde y saltar</span>
+                </div>
+                <div class="sheet-chords-scroll-strip" id="sheetChordsScrollStrip">
+                    <!-- Fichas de acordes generadas dinámicamente -->
+                </div>
             </div>
-            <div class="sheet-chords-scroll-strip" id="sheetChordsScrollStrip">
-                <!-- Fichas de acordes generadas dinámicamente -->
+
+            <!-- SECCIÓN 2: MELODÍA NOTA POR NOTA Y REPLICADOR INTERACTIVO -->
+            <div class="sheet-guide-section sheet-guide-section--melody">
+                <div class="sheet-melody-guide-header">
+                    <div class="sheet-melody-header-left">
+                        <span><i class="fas fa-music"></i> Melodía Nota por Nota</span>
+                        <span class="sheet-melody-count-badge" id="sheetMelodyCount">0 notas</span>
+                        <span class="sheet-melody-engine-tag" id="sheetMelodyEngineTag" title="Motor de extracción melódica"><i class="fas fa-bolt"></i> Rust WASM</span>
+                    </div>
+
+                    <div class="sheet-melody-player-controls">
+                        <button type="button" class="sheet-player-btn" id="btnSheetMelodyPrev" title="Nota anterior (Shift+←)">
+                            <i class="fas fa-step-backward"></i>
+                        </button>
+                        <button type="button" class="sheet-player-btn sheet-player-btn--play" id="btnSheetMelodyPlay" title="Reproducir y replicar melodía en acordeón seleccionado">
+                            <i class="fas fa-play"></i> <span id="lblSheetMelodyPlay">Replicar</span>
+                        </button>
+                        <button type="button" class="sheet-player-btn" id="btnSheetMelodyStop" title="Detener reproducción">
+                            <i class="fas fa-stop"></i>
+                        </button>
+                        <button type="button" class="sheet-player-btn" id="btnSheetMelodyNext" title="Nota siguiente (Shift+→)">
+                            <i class="fas fa-step-forward"></i>
+                        </button>
+
+                        <div class="sheet-tempo-wrap" title="Velocidad de reproducción melódica">
+                            <span>Tempo:</span>
+                            <input type="number" id="sheetMelodyBpm" class="sheet-measure-input sheet-tempo-input" value="70" min="40" max="220" step="5">
+                            <span>BPM</span>
+                        </div>
+
+                        <div class="sheet-melody-progress" id="sheetMelodyProgress" title="Progreso de notas">
+                            0 / 0
+                        </div>
+                    </div>
+                </div>
+                <div class="sheet-melody-scroll-strip" id="sheetMelodyScrollStrip">
+                    <!-- Fichas de notas melódicas generadas dinámicamente -->
+                </div>
             </div>
         </div>
 

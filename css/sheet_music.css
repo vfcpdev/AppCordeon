@@ -253,21 +253,62 @@
     box-shadow: none;
 }
 
-/* TIRA GUÍA DE ACORDES INTERACTIVA SOBRE LA PARTITURA */
-.sheet-chords-guide-container {
+/* SELECTOR DE ACORDEÓN DE DESTINO */
+.sheet-target-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    border-radius: 5px;
+    background: rgba(30, 41, 59, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.sheet-target-btn:hover {
+    background: #334155;
+    color: #f1f5f9;
+}
+
+.sheet-target-btn.active {
+    background: linear-gradient(135deg, #4f46e5, #4338ca);
+    border-color: #818cf8;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+}
+
+/* PANEL COMBINADO: TIRA DE ACORDES + TIRA DE MELODÍA */
+.sheet-combined-guide-container {
     display: flex;
     flex-direction: column;
     background: #090d16;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-    padding: 5px 10px;
-    gap: 4px;
+    padding: 4px 10px;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
+.sheet-guide-section {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.sheet-guide-section--chords {
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+    padding-bottom: 4px;
+}
+
+/* TIRA GUÍA DE ACORDES */
 .sheet-chords-guide-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.64rem;
+    font-size: 0.62rem;
     font-weight: 800;
     color: #94a3b8;
     text-transform: uppercase;
@@ -279,7 +320,7 @@
     align-items: center;
     gap: 5px;
     overflow-x: auto;
-    padding: 3px 2px;
+    padding: 2px 2px;
     scrollbar-width: thin;
 }
 
@@ -289,14 +330,14 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 3px 8px;
+    padding: 2px 7px;
     border-radius: 6px;
     background: rgba(30, 41, 59, 0.8);
     border: 1px solid rgba(255, 255, 255, 0.12);
     cursor: pointer;
     user-select: none;
     transition: all 0.15s ease;
-    min-width: 48px;
+    min-width: 44px;
 }
 
 .sheet-chord-chip:hover {
@@ -313,19 +354,218 @@
 }
 
 .sheet-chord-chip-name {
-    font-size: 0.76rem;
+    font-size: 0.72rem;
     font-weight: 800;
     color: #ffffff;
 }
 
 .sheet-chord-chip-bar {
-    font-size: 0.55rem;
+    font-size: 0.52rem;
     font-weight: 700;
     color: #94a3b8;
 }
 
 .sheet-chord-chip.active-chord .sheet-chord-chip-bar {
     color: #bae6fd;
+}
+
+/* SECCIÓN DE MELODÍA NOTA POR NOTA Y CONTROLES DE REPRODUCCIÓN */
+.sheet-melody-guide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #cbd5e1;
+}
+
+.sheet-melody-header-left {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.sheet-melody-count-badge {
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    color: #a5b4fc;
+    font-size: 0.58rem;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.sheet-melody-engine-tag {
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(16, 185, 129, 0.45);
+    color: #34d399;
+    font-size: 0.58rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.sheet-melody-player-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.sheet-player-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 2px 7px;
+    height: 22px;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    color: #cbd5e1;
+    font-size: 0.65rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.sheet-player-btn:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+.sheet-player-btn--play {
+    background: #059669;
+    border-color: #10b981;
+    color: #ffffff;
+    padding: 2px 9px;
+}
+
+.sheet-player-btn--play:hover {
+    background: #10b981;
+}
+
+.sheet-player-btn--play.is-playing {
+    background: #d97706;
+    border-color: #f59e0b;
+}
+
+.sheet-tempo-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.60rem;
+    color: #94a3b8;
+}
+
+.sheet-tempo-input {
+    width: 38px !important;
+    height: 20px !important;
+    font-size: 0.68rem !important;
+    padding: 1px !important;
+}
+
+.sheet-melody-progress {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #a5b4fc;
+    min-width: 44px;
+    text-align: right;
+}
+
+/* TIRA DE CHIPS DE MELODÍA */
+.sheet-melody-scroll-strip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    overflow-x: auto;
+    padding: 2px 2px;
+    scrollbar-width: thin;
+}
+
+.sheet-melody-chip {
+    flex: 0 0 auto;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 6px;
+    border-radius: 6px;
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+    min-width: 52px;
+    gap: 1px;
+}
+
+.sheet-melody-chip:hover {
+    background: #334155;
+    border-color: #818cf8;
+    transform: translateY(-1px);
+}
+
+.sheet-melody-chip.active-melody-note {
+    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+    border-color: #c7d2fe !important;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.8);
+    transform: scale(1.08);
+}
+
+.sheet-melody-chip-pitch {
+    font-size: 0.74rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.1;
+}
+
+.sheet-melody-chip-pos {
+    font-size: 0.50rem;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+.sheet-melody-chip.active-melody-note .sheet-melody-chip-pos {
+    color: #e0e7ff;
+}
+
+.sheet-melody-chip-btn {
+    font-size: 0.54rem;
+    font-weight: 800;
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-top: 2px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.sheet-melody-chip-btn--push {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.sheet-melody-chip-btn--pull {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.sheet-melody-chip-btn--rest {
+    background: #475569;
+    color: #cbd5e1;
+}
+
+.sheet-melody-chip-btn--unmapped {
+    background: #64748b;
+    color: #ffffff;
 }
 
 .sheet-measure-indicator {
