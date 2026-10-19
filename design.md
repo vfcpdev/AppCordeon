@@ -22,31 +22,27 @@ Contiene la barra superior (`.diapason-top-bar`), los diapasones (`.diapasons-st
     1. **Izquierda**: `.diapason-wrapper` (Diapasón con sus 31 botones y header de afinación/fuelle).
     2. **Derecha**: `.diapason-side-stack` (`width: 370px; min-width: 350px; display: flex; flex-direction: column; gap: 8px;`).
 
-- **Estructura Interna del Stack Apilado (`.diapason-side-stack`)**:
-  - **Arriba**: `.diapason-audio-chords-sidebar` ("Acordes Canción" o "2do Acordeón (Equiv.)").
-    - Altura aproximada: ~320px.
+- **Estructura Interna del Stack Apilado (`#primaryDiapasonSideStack`)**:
+  - **Superior**: `.diapason-audio-chords-sidebar` ("Acordes Canción").
     - Contiene los botones de voicing (2, 3, 4, 5, Todas), selector de octava y lista de botones activos de Abre/Cierra.
-  - **Abajo**: `.diapason-chord-grid-panel` ("Cuadrícula de Acordes (4/4)").
-    - Altura aproximada: ~240-280px con scroll vertical interno suave.
-    - Encabezado: Los botones de acción (selección, exportar/importar CSV, progresión manual, agregar compás, borrar, config filas, desacoplar) se ubican a la izquierda del encabezado, y el título "Cuadrícula (4/4)" a la derecha.
-    - Mini-popover (`#gridChordMiniPopover`): Se expande exactamente al mismo ancho (100%) que la sección de la cuadrícula, alineado a sus bordes laterales, con la flecha superior apuntando al cuadro/pulso seleccionado.
+  - **Medio**: `.diapason-chord-grid-panel` ("Cuadrícula de Acordes (4/4)").
+    - Encabezado: Los botones de acción se ubican a la izquierda del encabezado, y el título "Cuadrícula (4/4)" a la derecha.
+    - Mini-popover (`#gridChordMiniPopover`): Se expande exactamente al mismo ancho (100%) que la sección de la cuadrícula.
+  - **Inferior**: `#audioAnalysisSection` ("Analizador & Reproductor MP3").
+    - Situado directamente debajo de la cuadrícula de acordes.
+    - Contiene la insignia de acorde y pulso activo (`#audioActiveChordBadge`), barra de tiempo y scrubbing (`#playerScrubberRow`), controles de transporte (Play/Pausa, Detener, Atrás/Adelante), metrónomo sincronizado, BPM, velocidad, volumen y sincronización de diapasón.
 
 ### Sincronización con el Segundo Acordeón
-- El segundo acordeón (`#secondaryDiapasonCol`) replica idénticamente este diseño apilado:
+- El segundo acordeón (`#secondaryDiapasonCol`) replica este diseño apilado en su propio stack:
   - Arriba: `#secondaryDiapasonChordSidebar` ("2do Acordeón (Equiv.)").
   - Abajo: `#secondaryChordGridPanel` con su contenedor `#secondaryAudioMeasureGridContainer`.
 - Ambas cuadrículas se renderizan y sincronizan en tiempo real:
-  - Pulso activo (`.active-beat`) y compás activo (`.active-measure`) se iluminan simultáneamente al reproducir audio.
+  - Pulso activo (`.active-beat`) y compás activo (`.active-measure`) se iluminan simultáneamente al reproducir audio desde el analizador/reproductor.
   - Al hacer clic en un compás/pulso de cualquiera de las dos cuadrículas, el audio salta a ese instante y ambos diapasones muestran sus digitaciones correspondientes.
 
 ---
 
 ## 3. Columna 2: `.app-layout__col--chords`
-- **Analizador & Reproductor MP3 (`#audioAnalysisSection`)**:
-  - Encabezado: "Analizador & Reproductor MP3".
-  - Insignia de acorde y compás activo (`#audioActiveChordBadge`).
-  - Barra de scrubber y tiempo (`#playerScrubberRow`).
-  - Barra de transporte y reproducción (Atrás, Play/Pausa, Adelante, Stop, Metrónomo, Volúmenes, BPM, Pitch Shift, Selector de Acordeón).
 - **Acorde Libre (`#freeChordSection`)**:
   - Selector de tónica, tipo de acorde, 4ta nota y octava.
   - Dirección de fuelle y tira de notas de arpegio.
