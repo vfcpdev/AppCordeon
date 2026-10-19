@@ -3014,5 +3014,87 @@ body.grid-undocked-open {
     font-weight: 800 !important;
 }
 
+/* =========================================================================
+   SELECTORES Y BOTONES DE OCTAVA EN UNA SOLA FILA (ACORDE LIBRE)
+   ========================================================================= */
+.free-chord-selectors-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 4px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin-top: 6px;
+}
 
+.free-chord-select-root {
+    flex: 0 0 auto !important;
+    width: 62px !important;
+    min-width: 52px !important;
+    padding: 3px 6px !important;
+    font-size: 0.74rem !important;
+    font-weight: 700 !important;
+    height: 28px !important;
+    box-sizing: border-box !important;
+}
 
+.free-chord-select-type {
+    flex: 1 1 0 !important;
+    min-width: 72px !important;
+    padding: 3px 6px !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    height: 28px !important;
+    box-sizing: border-box !important;
+    text-overflow: ellipsis;
+}
+
+.free-chord-select-fourth {
+    flex: 1.1 1 0 !important;
+    min-width: 82px !important;
+    padding: 3px 6px !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    height: 28px !important;
+    box-sizing: border-box !important;
+    text-overflow: ellipsis;
+}
+
+.chord-octave-toggle {
+    display: inline-flex !important;
+    flex-shrink: 0 !important;
+    margin-left: auto !important;
+    height: 28px !important;
+    align-items: center !important;
+    padding: 2px !important;
+    border-radius: 6px !important;
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
+    box-sizing: border-box !important;
+}
+
+.chord-octave-toggle .segment-btn {
+    padding: 2px 7px !important;
+    font-size: 0.70rem !important;
+    font-weight: 700 !important;
+    height: 22px !important;
+    line-height: 1 !important;
+    border-radius: 4px !important;
+    border: none;
+    background: transparent;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.chord-octave-toggle .segment-btn:hover {
+    color: #0f172a;
+}
+
+.chord-octave-toggle .segment-btn.active {
+    background: #ffffff !important;
+    color: #059669 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid #10b981 !important;
+}

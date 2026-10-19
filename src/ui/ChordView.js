@@ -17,6 +17,8 @@ export class ChordView {
         this._typeSelect = elements.typeSelect;
         this._fourthSelect = elements.fourthSelect;
         this._octaveSelect = elements.octaveSelect;
+        this._octaveButtons = elements.octaveButtons || null;
+        this._currentOctave = this._octaveSelect ? this._octaveSelect.value : 'all';
         this._notesDisplay = elements.notesDisplay;
         this._feasibilityBadge = elements.feasibilityBadge;
         this._strip = elements.strip;
@@ -88,6 +90,22 @@ export class ChordView {
     }
 
     /**
+     * Establece la octava seleccionada ('all', '3', '4', '5').
+     * @param {string} octave
+     */
+    setOctave(octave) {
+        this._currentOctave = String(octave);
+        if (this._octaveSelect) {
+            this._octaveSelect.value = String(octave);
+        }
+        if (this._octaveButtons) {
+            this._octaveButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.octave === String(octave));
+            });
+        }
+    }
+
+    /**
      * Llena el combobox de tónicas con los nombres según la afinación y notación actual.
      * @param {string} notation
      * @param {number} tuningOffset
@@ -119,7 +137,7 @@ export class ChordView {
         const root = parseInt(this._rootSelect ? this._rootSelect.value : "0") || 0;
         const type = this._typeSelect ? this._typeSelect.value : 'maj';
         const fourth = this._fourthSelect ? this._fourthSelect.value : 'none';
-        const octaveVal = this._octaveSelect ? this._octaveSelect.value : 'all';
+        const octaveVal = this._currentOctave || (this._octaveSelect ? this._octaveSelect.value : 'all');
 
         let baseIntervals = [0, 4, 7];
         let baseRoles = ['Tónica', '3ra Mayor', '5ta Justa'];
@@ -437,6 +455,16 @@ export class ChordView {
         if (this._octaveSelect) {
             this._octaveSelect.addEventListener('change', notifyChange);
             this._octaveSelect.addEventListener('input', notifyChange);
+        }
+
+        if (this._octaveButtons) {
+            this._octaveButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const oct = btn.dataset.octave || 'all';
+                    this.setOctave(oct);
+                    notifyChange();
+                });
+            });
         }
 
         if (this._bellowsButtons) {

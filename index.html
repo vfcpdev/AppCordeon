@@ -666,31 +666,32 @@
                         </div>
                     </div>
 
-                    <div class="control-panel__row">
-                        <select id="chordRoot" class="form-select" title="Tónica del acorde" style="flex: 1 1 20%;">
+                    <div class="control-panel__row free-chord-selectors-row" id="freeChordSelectorsRow">
+                        <select id="chordRoot" class="form-select free-chord-select-root" title="Tónica del acorde">
                             <!-- Llenado dinámicamente -->
                         </select>
-                        <select id="chordType" class="form-select" title="Tipo de acorde base" style="flex: 1 1 24%;">
-                            <option value="maj">Mayor (3 notas)</option>
-                            <option value="min">Menor (3 notas)</option>
-                            <option value="dim">Disminuido (3 notas)</option>
-                            <option value="aug">Aumentado (3 notas)</option>
-                            <option value="sus4">Suspendido 4 (3 notas)</option>
+                        <select id="chordType" class="form-select free-chord-select-type" title="Tipo de acorde base">
+                            <option value="maj">Mayor</option>
+                            <option value="min">Menor</option>
+                            <option value="dim">Disminuido</option>
+                            <option value="aug">Aumentado</option>
+                            <option value="sus4">Suspendido 4</option>
                         </select>
-                        <select id="chord4thNote" class="form-select" title="Seleccionar 4ta nota opcional" style="flex: 1 1 26%;">
-                            <option value="none">Sin 4ta nota (Tríada)</option>
+                        <select id="chord4thNote" class="form-select free-chord-select-fourth" title="Seleccionar 4ta nota opcional">
+                            <option value="none">Sin 4ta (Tríada)</option>
                             <option value="octave">+ Octava (+8va)</option>
-                            <option value="dom7">+ 7ma Dominante / Menor</option>
+                            <option value="dom7">+ 7ma Dominante</option>
                             <option value="maj7">+ 7ma Mayor (Maj7)</option>
                             <option value="maj6">+ 6ta Mayor</option>
-                            <option value="add9">+ 9na / 2da (Add9)</option>
+                            <option value="add9">+ 9na (Add9)</option>
                         </select>
-                        <select id="chordOctave" class="form-select" title="Filtrar por Octava" style="flex: 1 1 22%;">
-                            <option value="all">Todas las Octavas</option>
-                            <option value="3">Octava 3 (Grave)</option>
-                            <option value="4">Octava 4 (Media)</option>
-                            <option value="5">Octava 5 (Aguda)</option>
-                        </select>
+                        <input type="hidden" id="chordOctave" value="all">
+                        <div class="toggle-segmented chord-octave-toggle" id="chordOctaveToggle" title="Filtrar notas del acorde por Octava">
+                            <button type="button" class="segment-btn active" data-octave="all" title="Todas las Octavas">Todas</button>
+                            <button type="button" class="segment-btn" data-octave="3" title="Octava 3 (Grave)">3</button>
+                            <button type="button" class="segment-btn" data-octave="4" title="Octava 4 (Media)">4</button>
+                            <button type="button" class="segment-btn" data-octave="5" title="Octava 5 (Aguda)">5</button>
+                        </div>
                     </div>
 
                     <!-- Tira de Notas del Arpegio Libre -->

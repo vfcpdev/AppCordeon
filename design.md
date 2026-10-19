@@ -44,7 +44,7 @@ Contiene la barra superior (`.diapason-top-bar`), los diapasones (`.diapasons-st
 
 ## 3. Columna 2: `.app-layout__col--chords`
 - **Acorde Libre (`#freeChordSection`)**:
-  - Selector de tónica, tipo de acorde, 4ta nota y octava.
+  - Selectores en una sola fila horizontal (`#freeChordSelectorsRow`): tónica (`#chordRoot`), modalidad (`#chordType`), 4ta nota opcional (`#chord4thNote`) y botones de octava segmentados (`#chordOctaveToggle`: Todas, 3, 4, 5).
   - Dirección de fuelle y tira de notas de arpegio.
   - Escala generada del acorde con botón "Cargar en Escalas".
 - **Escala Diatónica (`#scaleSection`)**:
