@@ -782,25 +782,102 @@
     border-radius: 3px;
 }
 
+/* Fila contenedora del Acorde Activo y la Barra de Volumen del Diapasón */
+.diapason-chord-bar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 250px;
+    gap: 6px;
+    margin: 0 0 6px 0;
+    z-index: 4;
+}
+
 /* Insignia / Nombre del Acorde ubicado sobre el diapasón */
 .diapason-active-chord-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 5px;
     background: linear-gradient(180deg, #181b2e 0%, #0d0f1c 100%);
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 12px;
-    padding: 2px 14px;
-    margin: 0 0 6px 0;
+    padding: 2px 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
-    z-index: 4;
+    height: 24px;
+    box-sizing: border-box;
     transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .diapason-active-chord-badge i {
     color: #818cf8;
     font-size: 0.65rem;
+}
+
+/* Barra de Volumen del Diapasón (Slider + Icono Mute) */
+.diapason-volume-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(180deg, #181b2e 0%, #0d0f1c 100%);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
+    padding: 2px 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    height: 24px;
+    box-sizing: border-box;
+}
+
+.btn-diapason-volume-mute {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.68rem;
+    padding: 0 2px;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s ease;
+}
+
+.btn-diapason-volume-mute:hover {
+    color: #ffffff;
+}
+
+.btn-diapason-volume-mute.is-muted {
+    color: #f87171;
+}
+
+.diapason-volume-slider {
+    width: 44px;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.diapason-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6366f1;
+    cursor: pointer;
+    box-shadow: 0 0 4px rgba(99, 102, 241, 0.6);
+}
+
+.diapason-volume-label {
+    font-size: 0.60rem;
+    font-weight: 800;
+    color: #cbd5e1;
+    min-width: 22px;
+    text-align: right;
 }
 
 .sidebar-chord-name {

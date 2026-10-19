@@ -77,9 +77,9 @@ export class AppController {
         this._isChordPinned = false;
         this._pinnedChordData = null;
         this._detectorSelectedButtons = [];
-        this._isScalePlaying = false;
-        this._isPrimaryMuted = false;
-        this._isSecondaryMuted = false;
+        this._diapasonVolume = 80;
+        this._isDiapasonMuted = false;
+        this._lastDiapasonVolume = 80;
 
         // Modo Espejo (Intercambiar Hileras 1 y 3)
         this._isDiapasonMirrored = typeof localStorage !== 'undefined' && localStorage.getItem('acordeon_is_mirrored') === 'true';
@@ -109,6 +109,42 @@ export class AppController {
         this._renderAll();
         this._renderSecondaryDiapason();
         this._syncSecondaryDiapason();
+        this._applyDiapasonVolume(this._diapasonVolume, this._isDiapasonMuted);
+    }
+
+    /**
+     * Aplica el volumen del diapasón al motor de síntesis y sincroniza la interfaz.
+     * @param {number} vol Porcentaje (0 a 100)
+     * @param {boolean} isMuted
+     * @private
+     */
+    _applyDiapasonVolume(vol, isMuted) {
+        this._diapasonVolume = vol;
+        this._isDiapasonMuted = isMuted;
+
+        const effectiveVol = isMuted ? 0 : vol;
+        const db = effectiveVol === 0 ? -80 : (20 * Math.log10(effectiveVol / 100));
+        audioEngine.setVolume(db);
+
+        // Sincronizar UI en Acordeón 1 y Acordeón 2
+        const slider1 = document.getElementById('diapasonVolumeSlider');
+        const slider2 = document.getElementById('secondaryDiapasonVolumeSlider');
+        const lbl1 = document.getElementById('lblDiapasonVolume');
+        const lbl2 = document.getElementById('lblSecondaryDiapasonVolume');
+        const icon1 = document.getElementById('iconDiapasonVolume');
+        const icon2 = document.getElementById('iconSecondaryDiapasonVolume');
+        const btnMute1 = document.getElementById('btnDiapasonVolumeMute');
+        const btnMute2 = document.getElementById('btnSecondaryDiapasonVolumeMute');
+
+        [slider1, slider2].forEach(s => { if (s) s.value = effectiveVol; });
+        [lbl1, lbl2].forEach(l => { if (l) l.textContent = isMuted ? 'Mudo' : `${effectiveVol}%`; });
+
+        const iconClass = (isMuted || effectiveVol === 0)
+            ? 'fas fa-volume-xmark'
+            : (effectiveVol < 45 ? 'fas fa-volume-low' : 'fas fa-volume-high');
+
+        [icon1, icon2].forEach(i => { if (i) i.className = iconClass; });
+        [btnMute1, btnMute2].forEach(b => { if (b) b.classList.toggle('is-muted', isMuted || effectiveVol === 0); });
     }
 
     /**
@@ -247,33 +283,37 @@ export class AppController {
             });
         }
 
-        // Control de volumen / silencio para Acordeón 1
-        const btnPrimaryVol = document.getElementById('btnPrimaryDiapasonVolume');
-        if (btnPrimaryVol) {
-            btnPrimaryVol.addEventListener('click', () => {
-                this._isPrimaryMuted = !this._isPrimaryMuted;
-                btnPrimaryVol.classList.toggle('is-muted', this._isPrimaryMuted);
-                const icon = btnPrimaryVol.querySelector('i');
-                if (icon) {
-                    icon.className = this._isPrimaryMuted ? 'fas fa-volume-xmark' : 'fas fa-volume-high';
-                }
-                btnPrimaryVol.title = this._isPrimaryMuted ? 'Activar sonido de Acordeón 1' : 'Silenciar sonido de Acordeón 1';
-            });
-        }
+        // Controles de volumen de los diapasones (ambos acordeones)
+        const initVolSlider = (sliderId) => {
+            const slider = document.getElementById(sliderId);
+            if (slider) {
+                slider.addEventListener('input', (e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (val > 0) this._lastDiapasonVolume = val;
+                    this._applyDiapasonVolume(val, val === 0);
+                });
+            }
+        };
+        initVolSlider('diapasonVolumeSlider');
+        initVolSlider('secondaryDiapasonVolumeSlider');
 
-        // Control de volumen / silencio para Acordeón 2
-        const btnSecondaryVol = document.getElementById('btnSecondaryDiapasonVolume');
-        if (btnSecondaryVol) {
-            btnSecondaryVol.addEventListener('click', () => {
-                this._isSecondaryMuted = !this._isSecondaryMuted;
-                btnSecondaryVol.classList.toggle('is-muted', this._isSecondaryMuted);
-                const icon = btnSecondaryVol.querySelector('i');
-                if (icon) {
-                    icon.className = this._isSecondaryMuted ? 'fas fa-volume-xmark' : 'fas fa-volume-high';
-                }
-                btnSecondaryVol.title = this._isSecondaryMuted ? 'Activar sonido de Acordeón 2' : 'Silenciar sonido de Acordeón 2';
-            });
-        }
+        const initMuteBtn = (btnId) => {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    const willMute = !this._isDiapasonMuted;
+                    if (willMute) {
+                        this._lastDiapasonVolume = this._diapasonVolume > 0 ? this._diapasonVolume : 80;
+                        this._applyDiapasonVolume(0, true);
+                    } else {
+                        const restored = this._lastDiapasonVolume > 0 ? this._lastDiapasonVolume : 80;
+                        this._applyDiapasonVolume(restored, false);
+                    }
+                });
+            }
+        };
+        initMuteBtn('btnDiapasonVolumeMute');
+        initMuteBtn('btnSecondaryDiapasonVolumeMute');
 
         // Segmentado de Notación (Latina / Alemana)
         document.querySelectorAll('#notationToggle .segment-btn, .toggle-segmented__btn[data-val]').forEach(btn => {
@@ -1096,7 +1136,7 @@ export class AppController {
             direction = (noteToPlay === buttonData.pull) ? 'pull' : 'push';
         }
 
-        if (!this._isSecondaryMuted) {
+        if (!this._isDiapasonMuted && this._diapasonVolume > 0) {
             audioEngine.play(noteToPlay);
         }
         this._secondaryDiapasonView.triggerGlowOnElement(btnEl, direction);
@@ -1252,7 +1292,7 @@ export class AppController {
 
         const noteToPlay = this._bellowsMachine.resolveMidi(buttonData, isRightClick);
         const direction = (noteToPlay === buttonData.pull) ? 'pull' : 'push';
-        if (!this._isPrimaryMuted) {
+        if (!this._isDiapasonMuted && this._diapasonVolume > 0) {
             audioEngine.play(noteToPlay);
         }
         this._diapasonView.triggerGlowOnElement(btnEl, direction);

@@ -19,7 +19,7 @@ Contiene la barra superior (`.diapason-top-bar`), los diapasones (`.diapasons-st
 
 - **Estructura por Diapasón (`#primaryDiapasonCol` y `#secondaryDiapasonCol`)**:
   - Cada diapasón se compone de `.diapason-content-row`, que contiene:
-    1. **Izquierda**: `.diapason-wrapper` (Diapasón con sus 31 botones, header de afinación/fuelle y botón de volumen [solo ícono] para silenciar/activar).
+    1. **Izquierda**: `.diapason-wrapper` (Diapasón con sus 31 botones, header de afinación/fuelle, e insignia del acorde activo acompañada a su derecha por la barra de volumen con slider y botón de mute que controla ambos diapasones).
     2. **Derecha**: `.diapason-side-stack` (`width: 370px; min-width: 350px; display: flex; flex-direction: column; gap: 8px;`).
 
 - **Estructura Interna del Stack Apilado (`#primaryDiapasonSideStack`)**:
