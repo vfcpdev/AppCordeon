@@ -78,6 +78,8 @@ export class AppController {
         this._pinnedChordData = null;
         this._detectorSelectedButtons = [];
         this._isScalePlaying = false;
+        this._isPrimaryMuted = false;
+        this._isSecondaryMuted = false;
 
         // Modo Espejo (Intercambiar Hileras 1 y 3)
         this._isDiapasonMirrored = typeof localStorage !== 'undefined' && localStorage.getItem('acordeon_is_mirrored') === 'true';
@@ -242,6 +244,34 @@ export class AppController {
                 this._renderAll();
                 this._updateDetectorUI();
                 this._syncSecondaryDiapason();
+            });
+        }
+
+        // Control de volumen / silencio para Acordeón 1
+        const btnPrimaryVol = document.getElementById('btnPrimaryDiapasonVolume');
+        if (btnPrimaryVol) {
+            btnPrimaryVol.addEventListener('click', () => {
+                this._isPrimaryMuted = !this._isPrimaryMuted;
+                btnPrimaryVol.classList.toggle('is-muted', this._isPrimaryMuted);
+                const icon = btnPrimaryVol.querySelector('i');
+                if (icon) {
+                    icon.className = this._isPrimaryMuted ? 'fas fa-volume-xmark' : 'fas fa-volume-high';
+                }
+                btnPrimaryVol.title = this._isPrimaryMuted ? 'Activar sonido de Acordeón 1' : 'Silenciar sonido de Acordeón 1';
+            });
+        }
+
+        // Control de volumen / silencio para Acordeón 2
+        const btnSecondaryVol = document.getElementById('btnSecondaryDiapasonVolume');
+        if (btnSecondaryVol) {
+            btnSecondaryVol.addEventListener('click', () => {
+                this._isSecondaryMuted = !this._isSecondaryMuted;
+                btnSecondaryVol.classList.toggle('is-muted', this._isSecondaryMuted);
+                const icon = btnSecondaryVol.querySelector('i');
+                if (icon) {
+                    icon.className = this._isSecondaryMuted ? 'fas fa-volume-xmark' : 'fas fa-volume-high';
+                }
+                btnSecondaryVol.title = this._isSecondaryMuted ? 'Activar sonido de Acordeón 2' : 'Silenciar sonido de Acordeón 2';
             });
         }
 
@@ -1066,7 +1096,9 @@ export class AppController {
             direction = (noteToPlay === buttonData.pull) ? 'pull' : 'push';
         }
 
-        audioEngine.play(noteToPlay);
+        if (!this._isSecondaryMuted) {
+            audioEngine.play(noteToPlay);
+        }
         this._secondaryDiapasonView.triggerGlowOnElement(btnEl, direction);
     }
 
@@ -1220,7 +1252,9 @@ export class AppController {
 
         const noteToPlay = this._bellowsMachine.resolveMidi(buttonData, isRightClick);
         const direction = (noteToPlay === buttonData.pull) ? 'pull' : 'push';
-        audioEngine.play(noteToPlay);
+        if (!this._isPrimaryMuted) {
+            audioEngine.play(noteToPlay);
+        }
         this._diapasonView.triggerGlowOnElement(btnEl, direction);
     }
 

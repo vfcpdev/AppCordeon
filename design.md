@@ -19,12 +19,12 @@ Contiene la barra superior (`.diapason-top-bar`), los diapasones (`.diapasons-st
 
 - **Estructura por Diapasón (`#primaryDiapasonCol` y `#secondaryDiapasonCol`)**:
   - Cada diapasón se compone de `.diapason-content-row`, que contiene:
-    1. **Izquierda**: `.diapason-wrapper` (Diapasón con sus 31 botones y header de afinación/fuelle).
+    1. **Izquierda**: `.diapason-wrapper` (Diapasón con sus 31 botones, header de afinación/fuelle y botón de volumen [solo ícono] para silenciar/activar).
     2. **Derecha**: `.diapason-side-stack` (`width: 370px; min-width: 350px; display: flex; flex-direction: column; gap: 8px;`).
 
 - **Estructura Interna del Stack Apilado (`#primaryDiapasonSideStack`)**:
   - **Superior**: `.diapason-audio-chords-sidebar` ("Acordes Canción").
-    - Contiene los botones de voicing (2, 3, 4, 5, Todas), selector de octava y lista de botones activos de Abre/Cierra.
+    - Controles de voicing (2, 3, 4, 5, Todas) y selector de octava organizados en una sola fila compacta (sin la palabra "Botones"). Lista de botones activos de Abre/Cierra.
   - **Medio**: `.diapason-chord-grid-panel` ("Cuadrícula de Acordes (4/4)").
     - Encabezado: Los botones de acción se ubican en el encabezado de forma limpia sin título redundante.
     - Mini-popover (`#gridChordMiniPopover`): Se expande exactamente al mismo ancho (100%) que la sección de la cuadrícula.

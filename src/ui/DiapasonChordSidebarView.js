@@ -359,26 +359,10 @@ export class DiapasonChordSidebarView {
 
         activeBox.innerHTML = `
             <div class="sidebar-chord-card-header">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:4px;">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <span class="sidebar-acc-tag">${accordionTitle}</span>
-                        <span class="sidebar-chord-symbol">${chord.chordSymbol || ''}</span>
-                    </div>
-                    <div style="display:flex; gap:3px; align-items:center;">
-                        <button type="button" class="sidebar-btn-restore-all ${hasDeactivated ? 'has-deactivated' : ''}" title="Mostrar y activar todas las digitaciones de botones (restaurar todas)">
-                            <i class="fas fa-check-double"></i> Todas
-                        </button>
-                        <button type="button" class="sidebar-card-edit-btn" title="Editar este acorde">
-                            <i class="fas fa-pencil-alt"></i> Editar
-                        </button>
-                    </div>
-                </div>
-
-                <!-- CONTROLES DE VOICING: CANTIDAD DE BOTONES Y OCTAVA -->
-                <div class="sidebar-voicing-toolbar">
-                    <div class="sidebar-voicing-row">
-                        <span class="sidebar-voicing-label"><i class="fas fa-hand-pointer"></i> Botones:</span>
-                        <div class="sidebar-btn-segmented sidebar-limit-segmented">
+                <!-- CONTROLES DE VOICING: CANTIDAD DE BOTONES Y OCTAVA EN UNA SOLA FILA (SIN PALABRA BOTONES) -->
+                <div class="sidebar-voicing-toolbar sidebar-voicing-toolbar--single-row">
+                    <div class="sidebar-voicing-col">
+                        <div class="sidebar-btn-segmented sidebar-limit-segmented" title="Límite de botones de digitación">
                             <button type="button" class="sidebar-segment-btn ${this._buttonLimit === 2 ? 'active' : ''}" data-limit="2" title="Voicing de 2 botones">2</button>
                             <button type="button" class="sidebar-segment-btn ${this._buttonLimit === 3 ? 'active' : ''}" data-limit="3" title="Voicing de 3 botones (Tríada)">3</button>
                             <button type="button" class="sidebar-segment-btn ${this._buttonLimit === 4 ? 'active' : ''}" data-limit="4" title="Voicing de 4 botones (Predeterminado)">4</button>
@@ -386,9 +370,8 @@ export class DiapasonChordSidebarView {
                             <button type="button" class="sidebar-segment-btn ${this._buttonLimit === 'all' ? 'active' : ''}" data-limit="all" title="Mostrar todos los botones del acorde">Todas</button>
                         </div>
                     </div>
-                    <div class="sidebar-voicing-row">
-                        <span class="sidebar-voicing-label"><i class="fas fa-layer-group"></i> Octava:</span>
-                        <div class="sidebar-octave-stepper">
+                    <div class="sidebar-voicing-col">
+                        <div class="sidebar-octave-stepper" title="Filtrar por octava">
                             <button type="button" class="sidebar-stepper-btn btn-oct-prev" title="Bajar octava"><i class="fas fa-chevron-left"></i></button>
                             <span class="sidebar-octave-display">${octaveDisplayLabel}</span>
                             <button type="button" class="sidebar-stepper-btn btn-oct-next" title="Aumentar octava (resalta notas más agudas)"><i class="fas fa-chevron-right"></i></button>
