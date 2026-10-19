@@ -717,3 +717,203 @@
     border-color: #818cf8;
     color: #ffffff;
 }
+
+/* =========================================================================
+   MODAL DE SELECCIÓN DE ACORDEÓN DE DESTINO (POPUP TRAS SUBIR PARTITURA)
+   ========================================================================= */
+.sheet-target-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 8, 16, 0.82);
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    transition: all 0.2s ease;
+}
+
+.sheet-target-modal-overlay.hidden {
+    display: none !important;
+}
+
+.sheet-target-dialog {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7), 0 0 25px rgba(99, 102, 241, 0.25);
+    width: 100%;
+    max-width: 580px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.sheet-target-dialog__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: rgba(30, 41, 59, 0.6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sheet-target-dialog__icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 1rem;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    flex-shrink: 0;
+}
+
+.sheet-target-dialog__titles {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.sheet-target-dialog__title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #f8fafc;
+    margin: 0;
+}
+
+.sheet-target-dialog__subtitle {
+    font-size: 0.70rem;
+    color: #94a3b8;
+    margin: 0;
+}
+
+.sheet-target-dialog__btn-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px;
+    transition: color 0.15s ease;
+}
+
+.sheet-target-dialog__btn-close:hover {
+    color: #ffffff;
+}
+
+.sheet-target-dialog__body {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sheet-target-dialog__intro {
+    font-size: 0.78rem;
+    color: #cbd5e1;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.sheet-target-options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.sheet-target-option-card {
+    background: rgba(30, 41, 59, 0.7);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.sheet-target-option-card:hover {
+    background: #1e293b;
+    border-color: #818cf8;
+    transform: translateY(-2px);
+}
+
+.sheet-target-option-card.active {
+    background: linear-gradient(145deg, rgba(79, 70, 229, 0.3), rgba(30, 41, 59, 0.95));
+    border-color: #6366f1;
+    box-shadow: 0 0 14px rgba(99, 102, 241, 0.4);
+}
+
+.sheet-target-option-badge {
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #a5b4fc;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sheet-target-option-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.sheet-target-option-desc {
+    font-size: 0.62rem;
+    color: #94a3b8;
+    line-height: 1.35;
+}
+
+.sheet-target-dialog__footer {
+    padding: 12px 18px;
+    background: rgba(15, 23, 42, 0.85);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-sheet-action--confirm {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #ffffff;
+    border: 1px solid #34d399;
+    font-weight: 800;
+    font-size: 0.76rem;
+    padding: 6px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+    transition: all 0.15s ease;
+}
+
+.btn-sheet-action--confirm:hover {
+    background: #10b981;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.5);
+    transform: translateY(-1px);
+}

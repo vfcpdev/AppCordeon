@@ -42,9 +42,20 @@ export class SheetMusicModalView {
         this._btnZoomFit = document.getElementById('btnSheetZoomFit');
         this._zoomLabel = document.getElementById('sheetZoomLabel');
 
-        // Selector de Acordeón de Destino
+        // Selector de Acordeón de Destino (Barra de Herramientas)
         this._btnTargetPrimary = document.getElementById('btnSheetTargetPrimary');
         this._btnTargetSecondary = document.getElementById('btnSheetTargetSecondary');
+        this._btnTargetBoth = document.getElementById('btnSheetTargetBoth');
+
+        // Modal de Selección de Acordeón tras Subir Partitura
+        this._targetModalOverlay = document.getElementById('sheetTargetModalOverlay');
+        this._targetDialogScoreName = document.getElementById('sheetTargetDialogScoreName');
+        this._btnTargetModalClose = document.getElementById('btnSheetTargetModalClose');
+        this._btnTargetModalConfirm = document.getElementById('btnSheetTargetModalConfirm');
+        this._targetOptionCards = document.querySelectorAll('.sheet-target-option-card');
+        this._cardPrimaryTuning = document.getElementById('sheetTargetCardPrimaryTuning');
+        this._cardSecondaryTuning = document.getElementById('sheetTargetCardSecondaryTuning');
+        this._tempSelectedTarget = 'primary';
 
         // Controles de Melodía y Reproductor
         this._melodyStrip = document.getElementById('sheetMelodyScrollStrip');
@@ -81,8 +92,8 @@ export class SheetMusicModalView {
         this._activeChordChip = null;
         this._currentMusicXmlContent = null;
 
-        // Estado de Replicación Melódica
-        this._targetAccordion = 'primary'; // 'primary' | 'secondary'
+        // Estado de Replicación Melódica ('primary' | 'secondary' | 'both')
+        this._targetAccordion = 'primary';
         this._melodyNotes = [];
         this._activeMelodyIndex = -1;
         this._activeMelodyChip = null;
@@ -95,6 +106,7 @@ export class SheetMusicModalView {
         this._onChordSelectedCallback = options.onChordSelected || null;
         this._onReplicateMelodyNoteCallback = options.onReplicateMelodyNote || null;
         this._findAccordionButtonCallback = options.findAccordionButton || null;
+        this._getAccordionTuningsCallback = options.getAccordionTunings || null;
 
         this._initEvents();
         this._initMelodyEvents();
@@ -440,6 +452,11 @@ export class SheetMusicModalView {
 
                 await this.loadScore(text);
             }
+
+            // Mostrar modal para seleccionar en qué acordeón se ejecutará la melodía (Acordeón 1, 2 o Ambos)
+            setTimeout(() => {
+                this.openTargetModal(this._currentScoreInfo.title || file.name.replace(/\.[^/.]+$/, ''));
+            }, 350);
         } catch (err) {
             console.error('[OSMD] Error al importar archivo MusicXML:', err);
             alert(`No se pudo cargar la partitura MusicXML: ${err.message}`);
@@ -874,12 +891,39 @@ export class SheetMusicModalView {
      * @private
      */
     _initMelodyEvents() {
-        // Selector de acordeón de destino
+        // Selector de acordeón de destino (Barra de Herramientas)
         if (this._btnTargetPrimary) {
             this._btnTargetPrimary.addEventListener('click', () => this.setTargetAccordion('primary'));
         }
         if (this._btnTargetSecondary) {
             this._btnTargetSecondary.addEventListener('click', () => this.setTargetAccordion('secondary'));
+        }
+        if (this._btnTargetBoth) {
+            this._btnTargetBoth.addEventListener('click', () => this.setTargetAccordion('both'));
+        }
+
+        // Modal Diálogo de Selección de Acordeón
+        if (this._btnTargetModalClose) {
+            this._btnTargetModalClose.addEventListener('click', () => this.closeTargetModal());
+        }
+        if (this._btnTargetModalConfirm) {
+            this._btnTargetModalConfirm.addEventListener('click', () => {
+                this.setTargetAccordion(this._tempSelectedTarget || 'primary');
+                this.closeTargetModal();
+            });
+        }
+        if (this._targetOptionCards && this._targetOptionCards.length > 0) {
+            this._targetOptionCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    this._targetOptionCards.forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+                    this._tempSelectedTarget = card.dataset.target || 'primary';
+                });
+                card.addEventListener('dblclick', () => {
+                    this.setTargetAccordion(card.dataset.target || 'primary');
+                    this.closeTargetModal();
+                });
+            });
         }
 
         // Controles de reproducción secuencial
@@ -921,21 +965,65 @@ export class SheetMusicModalView {
             this._findAccordionButtonCallback = callbacks.findAccordionButton;
             this.renderMelodyStrip();
         }
+        if (callbacks.getAccordionTunings) {
+            this._getAccordionTuningsCallback = callbacks.getAccordionTunings;
+        }
     }
 
     /**
-     * Establece el acordeón de destino ('primary' para Acordeón 1 o 'secondary' para Acordeón 2).
-     * @param {string} target 'primary' | 'secondary'
+     * Abre el modal emergente para seleccionar en qué acordeón se ejecutará la melodía.
+     * @param {string} [scoreTitle='']
+     */
+    openTargetModal(scoreTitle = '') {
+        if (!this._targetModalOverlay) return;
+
+        if (this._targetDialogScoreName) {
+            this._targetDialogScoreName.textContent = scoreTitle || (this._currentScoreInfo && this._currentScoreInfo.title) || 'Partitura Cargada';
+        }
+
+        if (this._getAccordionTuningsCallback) {
+            try {
+                const tunings = this._getAccordionTuningsCallback();
+                if (tunings) {
+                    if (this._cardPrimaryTuning) this._cardPrimaryTuning.textContent = `Acordeón 1 (${tunings.primaryName || 'Cinco Letras'})`;
+                    if (this._cardSecondaryTuning) this._cardSecondaryTuning.textContent = `Acordeón 2 (${tunings.secondaryName || 'Cinco Letras'})`;
+                }
+            } catch (e) {}
+        }
+
+        this._tempSelectedTarget = this._targetAccordion || 'primary';
+        if (this._targetOptionCards) {
+            this._targetOptionCards.forEach(card => {
+                card.classList.toggle('active', card.dataset.target === this._tempSelectedTarget);
+            });
+        }
+
+        this._targetModalOverlay.classList.remove('hidden');
+    }
+
+    /**
+     * Cierra el modal de selección de acordeón de destino.
+     */
+    closeTargetModal() {
+        if (!this._targetModalOverlay) return;
+        this._targetModalOverlay.classList.add('hidden');
+    }
+
+    /**
+     * Establece el acordeón de destino ('primary', 'secondary' o 'both').
+     * @param {string} target 'primary' | 'secondary' | 'both'
      */
     setTargetAccordion(target) {
-        this._targetAccordion = target === 'secondary' ? 'secondary' : 'primary';
-        const isPrimary = this._targetAccordion === 'primary';
+        this._targetAccordion = ['primary', 'secondary', 'both'].includes(target) ? target : 'primary';
 
         if (this._btnTargetPrimary) {
-            this._btnTargetPrimary.classList.toggle('active', isPrimary);
+            this._btnTargetPrimary.classList.toggle('active', this._targetAccordion === 'primary');
         }
         if (this._btnTargetSecondary) {
-            this._btnTargetSecondary.classList.toggle('active', !isPrimary);
+            this._btnTargetSecondary.classList.toggle('active', this._targetAccordion === 'secondary');
+        }
+        if (this._btnTargetBoth) {
+            this._btnTargetBoth.classList.toggle('active', this._targetAccordion === 'both');
         }
 
         // Re-renderizar la tira para actualizar la digitación correspondiente a la afinación del acordeón seleccionado
@@ -1006,8 +1094,21 @@ export class SheetMusicModalView {
             let btnBadgeHtml = '';
             if (note.is_rest) {
                 btnBadgeHtml = '<span class="sheet-melody-chip-btn sheet-melody-chip-btn--rest">Silencio</span>';
+            } else if (this._targetAccordion === 'both') {
+                const btn1 = this._findButtonForNote(note.midi, 'primary');
+                const btn2 = this._findButtonForNote(note.midi, 'secondary');
+
+                const b1Html = btn1
+                    ? `<span class="sheet-melody-chip-btn ${btn1.direction === 'push' ? 'sheet-melody-chip-btn--push' : 'sheet-melody-chip-btn--pull'}" title="Acordeón 1: ${btn1.btnLabel} (${btn1.bellowsText})">1: ${btn1.btnLabel}</span>`
+                    : '<span class="sheet-melody-chip-btn sheet-melody-chip-btn--unmapped" title="Acordeón 1: Sin botón">1: -</span>';
+                
+                const b2Html = btn2
+                    ? `<span class="sheet-melody-chip-btn ${btn2.direction === 'push' ? 'sheet-melody-chip-btn--push' : 'sheet-melody-chip-btn--pull'}" title="Acordeón 2: ${btn2.btnLabel} (${btn2.bellowsText})">2: ${btn2.btnLabel}</span>`
+                    : '<span class="sheet-melody-chip-btn sheet-melody-chip-btn--unmapped" title="Acordeón 2: Sin botón">2: -</span>';
+
+                btnBadgeHtml = `<div style="display:flex; flex-direction:column; gap:2px; width:100%; margin-top:2px;">${b1Html}${b2Html}</div>`;
             } else {
-                const btnMatch = this._findButtonForNote(note.midi);
+                const btnMatch = this._findButtonForNote(note.midi, this._targetAccordion);
                 if (btnMatch) {
                     const isPush = btnMatch.direction === 'push';
                     const dirClass = isPush ? 'sheet-melody-chip-btn--push' : 'sheet-melody-chip-btn--pull';
@@ -1024,7 +1125,8 @@ export class SheetMusicModalView {
                 ${btnBadgeHtml}
             `;
 
-            chip.title = `Nota ${idx + 1}: ${note.pitch_name} (Compás ${note.bar}, pulso ${note.beat})${note.lyric ? ' - "' + note.lyric + '"' : ''} - Clic para reproducir e iluminar en ${this._targetAccordion === 'primary' ? 'Acordeón 1' : 'Acordeón 2'}`;
+            const targetName = this._targetAccordion === 'both' ? 'Ambos Acordeones' : (this._targetAccordion === 'primary' ? 'Acordeón 1' : 'Acordeón 2');
+            chip.title = `Nota ${idx + 1}: ${note.pitch_name} (Compás ${note.bar}, pulso ${note.beat})${note.lyric ? ' - "' + note.lyric + '"' : ''} - Clic para reproducir e iluminar en ${targetName}`;
 
             chip.addEventListener('click', () => {
                 if (this._isMelodyPlaying) {
@@ -1041,12 +1143,13 @@ export class SheetMusicModalView {
      * Resuelve el botón físico para una nota MIDI en el acordeón de destino.
      * @private
      * @param {number} midi
+     * @param {string} [target=this._targetAccordion]
      * @returns {Object|null}
      */
-    _findButtonForNote(midi) {
+    _findButtonForNote(midi, target = this._targetAccordion) {
         if (!midi) return null;
         if (this._findAccordionButtonCallback) {
-            return this._findAccordionButtonCallback(midi, this._targetAccordion);
+            return this._findAccordionButtonCallback(midi, target);
         }
         return null;
     }

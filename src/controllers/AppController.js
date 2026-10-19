@@ -125,7 +125,8 @@ export class AppController {
         if (this._sheetMusicModalView) {
             this._sheetMusicModalView.setReplicateCallbacks({
                 onReplicateMelodyNote: (note, target) => this.replicateMelodyNote(note, target),
-                findAccordionButton: (midi, target) => this.findAccordionButtonForMidi(midi, target)
+                findAccordionButton: (midi, target) => this.findAccordionButtonForMidi(midi, target),
+                getAccordionTunings: () => this.getAccordionTuningsInfo()
             });
         }
     }
@@ -2083,19 +2084,65 @@ export class AppController {
     }
 
     /**
-     * Toca e ilumina una nota melódica en el diapasón seleccionado (Acordeón 1 o 2).
+     * Retorna los nombres de afinación de ambos acordeones para mostrar en la interfaz.
+     * @returns {{ primaryName: string, secondaryName: string }}
+     */
+    getAccordionTuningsInfo() {
+        const primSelect = document.getElementById('tuningSelect');
+        const primText = primSelect && primSelect.options[primSelect.selectedIndex] ? primSelect.options[primSelect.selectedIndex].text : 'Cinco Letras (Bb - Eb - Ab)';
+        const secSelect = document.getElementById('secondaryTuningSelect');
+        const secText = secSelect && secSelect.options[secSelect.selectedIndex] ? secSelect.options[secSelect.selectedIndex].text : 'Cinco Letras (Bb - Eb - Ab)';
+        return {
+            primaryName: primText,
+            secondaryName: secText
+        };
+    }
+
+    /**
+     * Toca e ilumina una nota melódica en el acordeón seleccionado (1, 2 o Ambos).
      * @param {Object|null} note
-     * @param {string} [targetAccordion='primary'] 'primary' | 'secondary'
+     * @param {string} [targetAccordion='primary'] 'primary' | 'secondary' | 'both'
      * @returns {Object|null}
      */
     replicateMelodyNote(note, targetAccordion = 'primary') {
+        if (!note || note.is_rest || !note.midi) {
+            if (this._diapasonView) this._diapasonView.clearHighlights();
+            if (this._secondaryDiapasonView) this._secondaryDiapasonView.clearHighlights();
+            return null;
+        }
+
+        if (targetAccordion === 'both') {
+            const match1 = this.findAccordionButtonForMidi(note.midi, 'primary');
+            const match2 = this.findAccordionButtonForMidi(note.midi, 'secondary');
+
+            if (this._diapasonView) {
+                if (match1) this._diapasonView.highlightSingleButton(match1.id, match1.direction);
+                else this._diapasonView.clearHighlights();
+            }
+            if (this._secondaryDiapasonView) {
+                if (match2) this._secondaryDiapasonView.highlightSingleButton(match2.id, match2.direction);
+                else this._secondaryDiapasonView.clearHighlights();
+            }
+
+            const vol1 = this._isDiapasonMuted ? 0 : this._diapasonVolume / 100;
+            const vol2 = this._isSecondaryDiapasonMuted ? 0 : this._secondaryDiapasonVolume / 100;
+            const effectiveVol = Math.max(vol1, vol2);
+
+            if (effectiveVol > 0 && note.midi) {
+                const dur = note.duration_beats >= 2 ? "2n" : (note.duration_beats >= 1 ? "4n" : "8n");
+                audioEngine.play(note.midi, dur, effectiveVol);
+            }
+
+            return { primary: match1, secondary: match2 };
+        }
+
         const isPrimary = targetAccordion === 'primary';
         const targetView = isPrimary ? this._diapasonView : this._secondaryDiapasonView;
+        const otherView = isPrimary ? this._secondaryDiapasonView : this._diapasonView;
         if (!targetView) return null;
 
-        if (!note || note.is_rest || !note.midi) {
-            targetView.clearHighlights();
-            return null;
+        if (otherView) {
+            otherView.clearHighlights();
         }
 
         const match = this.findAccordionButtonForMidi(note.midi, targetAccordion);
