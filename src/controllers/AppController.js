@@ -1300,7 +1300,10 @@ export class AppController {
             this._secondaryOffset,
             {
                 onRowHeaderClick: (rowKey, tonicMidi) => {
-                    audioEngine.play(tonicMidi);
+                    const effectiveVol = this._isSecondaryDiapasonMuted ? 0 : this._secondaryDiapasonVolume;
+                    if (effectiveVol > 0) {
+                        audioEngine.play(tonicMidi, "8n", effectiveVol / 100);
+                    }
                 },
                 onButtonClick: (buttonData, btnEl) => {
                     this._handleSecondaryButtonClick(buttonData, btnEl, false);
@@ -1332,8 +1335,9 @@ export class AppController {
             direction = (noteToPlay === buttonData.pull) ? 'pull' : 'push';
         }
 
-        if (!this._isDiapasonMuted && this._diapasonVolume > 0) {
-            audioEngine.play(noteToPlay);
+        const effectiveVol = this._isSecondaryDiapasonMuted ? 0 : this._secondaryDiapasonVolume;
+        if (effectiveVol > 0) {
+            audioEngine.play(noteToPlay, "8n", effectiveVol / 100);
         }
         this._secondaryDiapasonView.triggerGlowOnElement(btnEl, direction);
     }
