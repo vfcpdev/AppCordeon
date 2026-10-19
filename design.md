@@ -41,8 +41,23 @@ Contiene la barra superior (`.diapason-top-bar`), los diapasones (`.diapasons-st
 ---
 
 ## 3. Columna 2: `.app-layout__col--chords`
-Al mover las cuadrículas debajo de las secciones de acordes de canción, la Columna 2 queda optimizada y limpia:
-- Encabezado: "Analizador & Reproductor MP3".
-- Insignia de acorde y compás activo (`#audioActiveChordBadge`).
-- Barra de scrubber y tiempo (`#playerScrubberRow`).
-- Barra de transporte y reproducción (Atrás, Play/Pausa, Adelante, Stop, Metrónomo, Volúmenes, BPM, Pitch Shift, Selector de Acordeón).
+- **Analizador & Reproductor MP3 (`#audioAnalysisSection`)**:
+  - Encabezado: "Analizador & Reproductor MP3".
+  - Insignia de acorde y compás activo (`#audioActiveChordBadge`).
+  - Barra de scrubber y tiempo (`#playerScrubberRow`).
+  - Barra de transporte y reproducción (Atrás, Play/Pausa, Adelante, Stop, Metrónomo, Volúmenes, BPM, Pitch Shift, Selector de Acordeón).
+- **Acorde Libre (`#freeChordSection`)**:
+  - Selector de tónica, tipo de acorde, 4ta nota y octava.
+  - Dirección de fuelle y tira de notas de arpegio.
+  - Escala generada del acorde con botón "Cargar en Escalas".
+- **Escala Diatónica & Tonos Relacionados (`#scaleSection`)**:
+  - Situada directamente debajo de Acorde Libre.
+  - Modos Melódico y Armónico, selectores de escala, tira interactiva de grados I a VIII.
+  - Barra de transporte de escala, loop, velocidad y acordes relacionados colapsables.
+
+---
+
+## 4. Columna 3: `.app-layout__col--theory`
+- **Detector de Acordes (`#detectorSection`)**:
+  - Modo selección manual de botones, reproducción de acorde y arpegio detectado.
+
