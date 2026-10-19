@@ -639,11 +639,19 @@
     align-self: stretch;
 }
 
-.diapason-side-stack #audioAnalysisSection {
+.diapason-side-stack #audioAnalysisSection,
+.audio-analysis-clean {
     width: 100%;
     box-sizing: border-box;
     align-self: stretch;
-    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .diapason-chord-grid-panel {
