@@ -785,33 +785,33 @@
     border-radius: 3px;
 }
 
-/* Fila contenedora del Acorde Activo y la Barra de Volumen del Diapasón */
-.diapason-chord-bar-row {
+/* Fila contenedora del Diapasón y su Control de Volumen Vertical a la izquierda */
+.diapason-stage-body-row {
     display: flex;
+    flex-direction: row;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
     width: 100%;
-    max-width: 250px;
-    gap: 6px;
-    margin: 0 0 6px 0;
-    z-index: 4;
 }
 
-/* Insignia / Nombre del Acorde ubicado sobre el diapasón */
+/* Insignia / Nombre del Acorde ubicado a la derecha de los botones de fuelle */
 .diapason-active-chord-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 5px;
-    background: #f8fafc;
+    background: #ffffff;
     border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    padding: 2px 10px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    height: 24px;
+    border-radius: 6px;
+    padding: 2px 8px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    height: 26px;
     box-sizing: border-box;
     transition: all 0.2s ease;
     flex-shrink: 0;
+    margin-left: auto;
 }
 
 .diapason-active-chord-badge i {
@@ -824,68 +824,108 @@
     font-size: 0.74rem;
 }
 
-/* Barra de Volumen del Diapasón (Slider + Icono Mute) - Sin estilo píldora */
-.diapason-volume-bar {
-    display: inline-flex;
+/* Control de Volumen Vertical a la izquierda de cada Diapasón */
+.diapason-vertical-volume-control {
+    display: flex;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 5px;
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    padding: 0 2px;
-    box-shadow: none;
-    height: 24px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 7px 5px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    width: 38px;
     box-sizing: border-box;
+    user-select: none;
+    z-index: 5;
+    align-self: center;
 }
 
-.btn-diapason-volume-mute {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
-    font-size: 0.68rem;
-    padding: 0 2px;
+.diapason-vertical-volume-control .diapason-volume-label {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #334155;
+    text-align: center;
+    min-width: 0;
+    line-height: 1;
+}
+
+.diapason-volume-slider-vertical-wrap {
+    height: 90px;
     display: flex;
     align-items: center;
-    transition: color 0.15s ease;
+    justify-content: center;
+    padding: 2px 0;
 }
 
-.btn-diapason-volume-mute:hover {
-    color: #ffffff;
-}
-
-.btn-diapason-volume-mute.is-muted {
-    color: #f87171;
-}
-
-.diapason-volume-slider {
-    width: 44px;
-    height: 4px;
-    -webkit-appearance: none;
-    appearance: none;
-    background: rgba(255, 255, 255, 0.22);
-    border-radius: 2px;
-    outline: none;
+.diapason-volume-slider-vertical {
+    -webkit-appearance: slider-vertical;
+    appearance: slider-vertical;
+    writing-mode: vertical-lr;
+    direction: rtl;
+    width: 6px;
+    height: 84px;
     cursor: pointer;
+    accent-color: #4f46e5;
+    background: transparent;
 }
 
-.diapason-volume-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #6366f1;
+.diapason-vertical-volume-control .btn-diapason-volume-mute {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    width: 26px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    box-shadow: 0 0 4px rgba(99, 102, 241, 0.6);
+    font-size: 0.70rem;
+    color: #475569;
+    padding: 0;
+    transition: all 0.15s ease;
 }
 
-.diapason-volume-label {
-    font-size: 0.60rem;
+.diapason-vertical-volume-control .btn-diapason-volume-mute:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+.diapason-vertical-volume-control .btn-diapason-volume-mute.is-muted {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #ef4444;
+}
+
+.diapason-mute-checkbox-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    margin: 0;
+    font-size: 0.52rem;
     font-weight: 800;
-    color: #cbd5e1;
-    min-width: 22px;
-    text-align: right;
+    color: #475569;
+    user-select: none;
+}
+
+.diapason-mute-checkbox {
+    cursor: pointer;
+    width: 13px;
+    height: 13px;
+    accent-color: #ef4444;
+    margin: 0;
+}
+
+.diapason-mute-text {
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-size: 0.50rem;
+    color: #475569;
 }
 
 .sidebar-chord-name {
