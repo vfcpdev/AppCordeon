@@ -26,7 +26,7 @@ Contiene la barra superior (`.diapason-top-bar`), los diapasones (`.diapasons-st
   - **Superior**: `.diapason-audio-chords-sidebar` ("Acordes Canción").
     - Contiene los botones de voicing (2, 3, 4, 5, Todas), selector de octava y lista de botones activos de Abre/Cierra.
   - **Medio**: `.diapason-chord-grid-panel` ("Cuadrícula de Acordes (4/4)").
-    - Encabezado: Los botones de acción se ubican a la izquierda del encabezado, y el título "Cuadrícula (4/4)" a la derecha.
+    - Encabezado: Los botones de acción se ubican en el encabezado de forma limpia sin título redundante.
     - Mini-popover (`#gridChordMiniPopover`): Se expande exactamente al mismo ancho (100%) que la sección de la cuadrícula.
   - **Inferior**: `#audioAnalysisSection` ("Controles del Reproductor & Analizador").
     - Situado directamente debajo de la cuadrícula de acordes de forma limpia (sin contenedor exterior, sin borde grueso, sin marco ni título redundante).
