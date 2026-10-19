@@ -47,10 +47,10 @@ Contiene la barra superior (`.diapason-top-bar`), los diapasones (`.diapasons-st
   - Selector de tónica, tipo de acorde, 4ta nota y octava.
   - Dirección de fuelle y tira de notas de arpegio.
   - Escala generada del acorde con botón "Cargar en Escalas".
-- **Escala Diatónica & Tonos Relacionados (`#scaleSection`)**:
+- **Escala Diatónica (`#scaleSection`)**:
   - Situada directamente debajo de Acorde Libre.
   - Modos Melódico y Armónico, selectores de escala, tira interactiva de grados I a VIII.
-  - Barra de transporte de escala, loop, velocidad y acordes relacionados colapsables.
+  - Barra de transporte de escala, loop y velocidad.
 
 ---
 
