@@ -49,6 +49,67 @@
     white-space: nowrap;
 }
 
+/* Conmutadores A1 y A2 para activar/desactivar diapasones */
+.header-diapason-toggles {
+    display: inline-flex;
+    align-items: center;
+    background: #e2e8f0;
+    padding: 2px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    gap: 3px;
+    margin-left: 8px;
+}
+
+.header-btn-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background: transparent;
+    color: #64748b;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 2px 9px;
+    font-size: 0.74rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    height: 26px;
+    box-sizing: border-box;
+}
+
+.header-btn-toggle:hover {
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.header-btn-toggle.active {
+    background: #ffffff;
+    color: #1e1b4b;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+    border: 1px solid #cbd5e1;
+}
+
+.header-btn-toggle#btnTogglePrimaryDiapason.active i {
+    color: #eab308;
+}
+
+.header-btn-toggle#btnToggleSecondaryDiapason.active i {
+    color: #059669;
+}
+
+/* Contenedor central de acciones en la cabecera */
+.app-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-left: auto;
+    margin-right: 12px;
+}
+
 .app-header__controls {
     display: flex !important;
     flex-direction: row !important;

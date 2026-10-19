@@ -68,6 +68,9 @@ export class AppController {
         this._secondaryOffset = 0; // Por defecto Cinco Letras (Bb - Eb - Ab)
         this._secondaryEquivalenceMode = 'pitch'; // 'pitch' (Mismo Tono) | 'relative' (Misma Hilera)
         this._secondaryBellowsMode = BELLOWS_MODES.BOTH;
+        this._isPrimaryDiapasonVisible = typeof localStorage !== 'undefined'
+            ? localStorage.getItem('acordeon_primary_visible') !== 'false'
+            : true;
         this._isSecondaryDiapasonVisible = typeof localStorage !== 'undefined'
             ? localStorage.getItem('acordeon_secondary_visible') !== 'false'
             : true;
@@ -944,7 +947,38 @@ export class AppController {
             });
         });
 
-        // Botón de alternancia de visibilidad del 2do diapasón con texto dinámico y persistencia
+        // Botón de alternancia de visibilidad del 1er diapasón (A1)
+        const btnTogglePrimary = document.getElementById('btnTogglePrimaryDiapason');
+        const primaryCol = document.getElementById('primaryDiapasonCol');
+
+        const updatePrimaryToggleBtnState = () => {
+            if (!btnTogglePrimary || !primaryCol) return;
+            if (this._isPrimaryDiapasonVisible) {
+                btnTogglePrimary.classList.add('active');
+                primaryCol.classList.remove('hidden');
+                primaryCol.style.display = '';
+            } else {
+                btnTogglePrimary.classList.remove('active');
+                primaryCol.classList.add('hidden');
+                primaryCol.style.display = 'none';
+            }
+        };
+
+        if (btnTogglePrimary && primaryCol) {
+            updatePrimaryToggleBtnState();
+            btnTogglePrimary.addEventListener('click', () => {
+                this._isPrimaryDiapasonVisible = !this._isPrimaryDiapasonVisible;
+                try {
+                    localStorage.setItem('acordeon_primary_visible', this._isPrimaryDiapasonVisible.toString());
+                } catch (e) {
+                    console.warn('[AppController] No se pudo persistir visibilidad 1er diapasón:', e);
+                }
+                updatePrimaryToggleBtnState();
+                this._updateSidebarChordsView();
+            });
+        }
+
+        // Botón de alternancia de visibilidad del 2do diapasón (A2)
         const btnToggle = document.getElementById('btnToggleSecondaryDiapason');
         const secondaryCol = document.getElementById('secondaryDiapasonCol');
 
@@ -952,12 +986,10 @@ export class AppController {
             if (!btnToggle || !secondaryCol) return;
             if (this._isSecondaryDiapasonVisible) {
                 btnToggle.classList.add('active');
-                btnToggle.innerHTML = '<i class="fas fa-columns"></i> 2do Acordeón: ON';
                 secondaryCol.classList.remove('hidden');
                 secondaryCol.style.display = '';
             } else {
                 btnToggle.classList.remove('active');
-                btnToggle.innerHTML = '<i class="fas fa-columns"></i> 2do Acordeón: OFF';
                 secondaryCol.classList.add('hidden');
                 secondaryCol.style.display = 'none';
             }

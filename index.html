@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Hojas de Estilos Modulares (BEM + Custom Properties) -->
-    <link rel="stylesheet" href="./css/main.css?v=14">
+    <link rel="stylesheet" href="./css/main.css?v=15">
 </head>
 
 <body>
@@ -34,6 +34,37 @@
             <div class="app-header__branding">
                 <i class="fas fa-compact-disc app-header__icon"></i>
                 <h1 class="app-header__title">Acordeón Diatónico Pro</h1>
+
+                <!-- Selectores A1 y A2 directamente a la derecha del título -->
+                <div class="header-diapason-toggles" id="diapasonTogglesGroup" title="Activar / Desactivar Diapasones">
+                    <button type="button" class="header-btn-toggle active" id="btnTogglePrimaryDiapason" title="Activar / Desactivar Acordeón 1 (A1)">
+                        <i class="fas fa-star"></i> <span>A1</span>
+                    </button>
+                    <button type="button" class="header-btn-toggle active" id="btnToggleSecondaryDiapason" title="Activar / Desactivar Acordeón 2 (A2)">
+                        <i class="fas fa-clone"></i> <span>A2</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Acciones trasladadas desde la barra superior de los diapasones -->
+            <div class="app-header__actions">
+                <!-- Botón de Carga de Archivo: Únicamente ícono de subida y nota musical negra -->
+                <div class="audio-dropzone audio-dropzone--topbar" id="audioDropZone" title="Cargar canción (MP3, WAV, OGG) - Haz clic o arrastra">
+                    <i class="fas fa-cloud-arrow-up audio-dropzone__icon"></i>
+                    <i class="fas fa-music audio-dropzone__note-icon"></i>
+                    <input type="file" id="audioFileInput" accept="audio/*" style="display: none;">
+                </div>
+
+                <!-- Botón de Partitura (MusicXML / OSMD) -->
+                <button type="button" class="btn-topbar-sheet" id="btnOpenSheetMusic" title="Ver partitura interactiva (MusicXML) y guía de acordes">
+                    <i class="fas fa-book-open"></i> <span>Partitura</span>
+                </button>
+
+                <!-- Toggle Notación (Latina / Alemana) -->
+                <div class="toggle-segmented notation-toggle-compact" id="notationToggle">
+                    <button type="button" class="segment-btn active" data-val="latina" title="Cifrado Latino (Do, Re, Mi...)">Latina</button>
+                    <button type="button" class="segment-btn" data-val="alemana" title="Cifrado Alemán / Anglosajón (C, D, E...)">Alemana</button>
+                </div>
             </div>
 
             <div class="app-header__controls">
@@ -49,35 +80,6 @@
 
             <!-- ================= COLUMNA 1: DIAPASONES & POSICIONES DE EJECUCIÓN ================= -->
             <div class="app-layout__col app-layout__col--stage" aria-label="Diapasón del Acordeón">
-                <!-- Barra superior directamente sobre los diapasones -->
-                <div class="diapason-top-bar">
-                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                        <!-- Botón para Activar / Desactivar Segundo Diapasón -->
-                        <button type="button" class="btn-dual-toggle active" id="btnToggleSecondaryDiapason" title="Activar o desactivar visualización del 2do Diapasón">
-                            <i class="fas fa-toggle-on"></i> <span id="lblSecondaryDiapasonStatus">2do Acordeón: ON</span>
-                        </button>
-                    </div>
-
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                        <!-- Botón de Carga de Archivo: Únicamente ícono de subida y nota musical negra -->
-                        <div class="audio-dropzone audio-dropzone--topbar" id="audioDropZone" title="Cargar canción (MP3, WAV, OGG) - Haz clic o arrastra">
-                            <i class="fas fa-cloud-arrow-up audio-dropzone__icon"></i>
-                            <i class="fas fa-music audio-dropzone__note-icon"></i>
-                            <input type="file" id="audioFileInput" accept="audio/*" style="display: none;">
-                        </div>
-
-                        <!-- Botón de Partitura (MusicXML / OSMD) -->
-                        <button type="button" class="btn-topbar-sheet" id="btnOpenSheetMusic" title="Ver partitura interactiva (MusicXML) y guía de acordes">
-                            <i class="fas fa-book-open"></i> <span>Partitura</span>
-                        </button>
-
-                        <!-- Toggle Notación (Latina / Alemana) -->
-                        <div class="toggle-segmented notation-toggle-compact" id="notationToggle">
-                            <button type="button" class="segment-btn active" data-val="latina" title="Cifrado Latino (Do, Re, Mi...)">Latina</button>
-                            <button type="button" class="segment-btn" data-val="alemana" title="Cifrado Alemán / Anglosajón (C, D, E...)">Alemana</button>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Contenedor de Diapasones en Paralelo -->
                 <div class="diapasons-stage-container" id="diapasonsStageContainer">
