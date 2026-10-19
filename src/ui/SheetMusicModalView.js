@@ -5,11 +5,13 @@ import {
     parseMusicXml, 
     buildComoZaqueoTimelineChords 
 } from '../models/SheetMusicData.js';
+import { wasmMelodyBridge } from '../audio/WasmMelodyBridge.js';
 
 /**
  * Controlador de la Ventana Modal de Partituras basada en OpenSheetMusicDisplay (OSMD)
  * Renderiza partituras interactivas en formato MusicXML / MXL directamente en el navegador,
  * con pentagramas, notas, clave, acordes, letra, zoom, navegación por compás y cursor de seguimiento.
+ * Incorpora extracción melódica ultrarrápida con Rust (WASM) y replicación interactiva en el acordeón seleccionado.
  */
 export class SheetMusicModalView {
     constructor(options = {}) {
@@ -40,6 +42,22 @@ export class SheetMusicModalView {
         this._btnZoomFit = document.getElementById('btnSheetZoomFit');
         this._zoomLabel = document.getElementById('sheetZoomLabel');
 
+        // Selector de Acordeón de Destino
+        this._btnTargetPrimary = document.getElementById('btnSheetTargetPrimary');
+        this._btnTargetSecondary = document.getElementById('btnSheetTargetSecondary');
+
+        // Controles de Melodía y Reproductor
+        this._melodyStrip = document.getElementById('sheetMelodyScrollStrip');
+        this._melodyCountBadge = document.getElementById('sheetMelodyCount');
+        this._melodyEngineTag = document.getElementById('sheetMelodyEngineTag');
+        this._btnMelodyPlay = document.getElementById('btnSheetMelodyPlay');
+        this._lblMelodyPlay = document.getElementById('lblSheetMelodyPlay');
+        this._btnMelodyStop = document.getElementById('btnSheetMelodyStop');
+        this._btnMelodyPrev = document.getElementById('btnSheetMelodyPrev');
+        this._btnMelodyNext = document.getElementById('btnSheetMelodyNext');
+        this._melodyBpmInput = document.getElementById('sheetMelodyBpm');
+        this._melodyProgressLabel = document.getElementById('sheetMelodyProgress');
+
         // Acciones e importación
         this._btnUploadXml = document.getElementById('btnSheetUploadXml');
         this._fileInput = document.getElementById('sheetXmlFileInput');
@@ -63,13 +81,26 @@ export class SheetMusicModalView {
         this._activeChordChip = null;
         this._currentMusicXmlContent = null;
 
+        // Estado de Replicación Melódica
+        this._targetAccordion = 'primary'; // 'primary' | 'secondary'
+        this._melodyNotes = [];
+        this._activeMelodyIndex = -1;
+        this._activeMelodyChip = null;
+        this._isMelodyPlaying = false;
+        this._melodyTimer = null;
+        this._melodyBpm = 70;
+
         // Callbacks de integración
         this._onApplyChordsCallback = options.onApplyChords || null;
         this._onChordSelectedCallback = options.onChordSelected || null;
+        this._onReplicateMelodyNoteCallback = options.onReplicateMelodyNote || null;
+        this._findAccordionButtonCallback = options.findAccordionButton || null;
 
         this._initEvents();
+        this._initMelodyEvents();
         this._initDraggable();
         this.renderChordsStrip();
+        this._initWasmEngine();
     }
 
     /**
