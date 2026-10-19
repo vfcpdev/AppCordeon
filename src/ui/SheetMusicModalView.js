@@ -198,7 +198,16 @@ export class SheetMusicModalView {
             if (!this.isOpen()) return;
             if (e.target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
 
-            if (e.key === 'ArrowLeft') {
+            if (e.shiftKey && e.key === 'ArrowLeft') {
+                e.preventDefault();
+                this.prevMelodyNote();
+            } else if (e.shiftKey && e.key === 'ArrowRight') {
+                e.preventDefault();
+                this.nextMelodyNote();
+            } else if (e.code === 'Space' && !e.target.closest('input')) {
+                e.preventDefault();
+                this.toggleMelodyPlay();
+            } else if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 this.prevMeasure();
             } else if (e.key === 'ArrowRight') {
@@ -480,6 +489,11 @@ export class SheetMusicModalView {
             }
 
             this.goToMeasure(1);
+
+            if (typeof source === 'string') {
+                this.loadMelodyFromXml(source);
+            }
+
             this._showLoading(false);
         } catch (err) {
             console.error('[OSMD] Error al renderizar la partitura:', err);
@@ -824,6 +838,367 @@ export class SheetMusicModalView {
                 this._btnApplyChords.innerHTML = originalHtml;
                 this._btnApplyChords.classList.remove('btn-sheet-action--success');
             }, 2000);
+        }
+    }
+
+    /**
+     * Inicializa en segundo plano el motor de extracción en Rust (WebAssembly).
+     * @private
+     */
+    async _initWasmEngine() {
+        try {
+            await wasmMelodyBridge.init();
+            this._updateMelodyEngineUI();
+        } catch (e) {
+            console.warn('[SheetMusicModalView] Error inicializando motor Rust WASM:', e);
+        }
+    }
+
+    /**
+     * Actualiza el badge visual del motor de extracción activo (Rust WASM o JS).
+     * @private
+     */
+    _updateMelodyEngineUI() {
+        if (!this._melodyEngineTag) return;
+        const engineName = wasmMelodyBridge.getEngineName();
+        const isRust = engineName.includes('Rust');
+        this._melodyEngineTag.innerHTML = `<i class="fas fa-bolt"></i> ${engineName}`;
+        this._melodyEngineTag.style.background = isRust ? 'rgba(16, 185, 129, 0.2)' : 'rgba(99, 102, 241, 0.2)';
+        this._melodyEngineTag.style.borderColor = isRust ? 'rgba(16, 185, 129, 0.5)' : 'rgba(99, 102, 241, 0.4)';
+        this._melodyEngineTag.style.color = isRust ? '#34d399' : '#a5b4fc';
+        this._melodyEngineTag.title = `Motor de extracción melódica: ${engineName}`;
+    }
+
+    /**
+     * Inicializa los eventos de la sección melódica y reproductor secuencial.
+     * @private
+     */
+    _initMelodyEvents() {
+        // Selector de acordeón de destino
+        if (this._btnTargetPrimary) {
+            this._btnTargetPrimary.addEventListener('click', () => this.setTargetAccordion('primary'));
+        }
+        if (this._btnTargetSecondary) {
+            this._btnTargetSecondary.addEventListener('click', () => this.setTargetAccordion('secondary'));
+        }
+
+        // Controles de reproducción secuencial
+        if (this._btnMelodyPlay) {
+            this._btnMelodyPlay.addEventListener('click', () => this.toggleMelodyPlay());
+        }
+        if (this._btnMelodyStop) {
+            this._btnMelodyStop.addEventListener('click', () => this.stopMelodySequence());
+        }
+        if (this._btnMelodyPrev) {
+            this._btnMelodyPrev.addEventListener('click', () => this.prevMelodyNote());
+        }
+        if (this._btnMelodyNext) {
+            this._btnMelodyNext.addEventListener('click', () => this.nextMelodyNote());
+        }
+
+        // Control de tempo BPM
+        if (this._melodyBpmInput) {
+            this._melodyBpmInput.addEventListener('change', (e) => {
+                const bpm = parseInt(e.target.value, 10);
+                if (!isNaN(bpm) && bpm >= 40 && bpm <= 240) {
+                    this._melodyBpm = bpm;
+                } else {
+                    e.target.value = this._melodyBpm;
+                }
+            });
+        }
+    }
+
+    /**
+     * Enlaza los callbacks de replicación melódica y búsqueda de botones en los acordeones.
+     * @param {Object} callbacks
+     */
+    setReplicateCallbacks(callbacks = {}) {
+        if (callbacks.onReplicateMelodyNote) {
+            this._onReplicateMelodyNoteCallback = callbacks.onReplicateMelodyNote;
+        }
+        if (callbacks.findAccordionButton) {
+            this._findAccordionButtonCallback = callbacks.findAccordionButton;
+            this.renderMelodyStrip();
+        }
+    }
+
+    /**
+     * Establece el acordeón de destino ('primary' para Acordeón 1 o 'secondary' para Acordeón 2).
+     * @param {string} target 'primary' | 'secondary'
+     */
+    setTargetAccordion(target) {
+        this._targetAccordion = target === 'secondary' ? 'secondary' : 'primary';
+        const isPrimary = this._targetAccordion === 'primary';
+
+        if (this._btnTargetPrimary) {
+            this._btnTargetPrimary.classList.toggle('active', isPrimary);
+        }
+        if (this._btnTargetSecondary) {
+            this._btnTargetSecondary.classList.toggle('active', !isPrimary);
+        }
+
+        // Re-renderizar la tira para actualizar la digitación correspondiente a la afinación del acordeón seleccionado
+        this.renderMelodyStrip();
+
+        // Si hay una nota activa, replicarla en el nuevo acordeón seleccionado
+        if (this._activeMelodyIndex >= 0 && this._melodyNotes[this._activeMelodyIndex]) {
+            this.selectMelodyNote(this._activeMelodyIndex, true);
+        }
+    }
+
+    /**
+     * Extrae las notas melódicas desde una cadena MusicXML mediante Rust WASM (o fallback JS).
+     * @param {string} xmlText
+     */
+    loadMelodyFromXml(xmlText) {
+        if (!xmlText || typeof xmlText !== 'string') return;
+        try {
+            const report = wasmMelodyBridge.extractMelody(xmlText);
+            this._melodyNotes = report && report.notes ? report.notes : [];
+            this._activeMelodyIndex = -1;
+            this._activeMelodyChip = null;
+
+            if (report.bpm && (!this._melodyBpm || this._melodyBpm === 70)) {
+                this._melodyBpm = Math.round(report.bpm);
+                if (this._melodyBpmInput) {
+                    this._melodyBpmInput.value = this._melodyBpm;
+                }
+            }
+
+            if (this._melodyCountBadge) {
+                this._melodyCountBadge.textContent = `${this._melodyNotes.length} notas`;
+            }
+
+            this._updateMelodyEngineUI();
+            this.renderMelodyStrip();
+        } catch (err) {
+            console.warn('[SheetMusicModalView] Error extrayendo notas melódicas:', err);
+        }
+    }
+
+    /**
+     * Renderiza la tira interactiva de notas melódicas con mapeo al acordeón seleccionado.
+     */
+    renderMelodyStrip() {
+        if (!this._melodyStrip) return;
+        this._melodyStrip.innerHTML = '';
+
+        if (!this._melodyNotes || this._melodyNotes.length === 0) {
+            this._melodyStrip.innerHTML = '<span style="font-size:0.64rem; color:#64748b; padding:4px 8px;">No se encontraron notas melódicas en la partitura.</span>';
+            if (this._melodyProgressLabel) this._melodyProgressLabel.textContent = '0 / 0';
+            return;
+        }
+
+        if (this._melodyProgressLabel) {
+            const current = this._activeMelodyIndex >= 0 ? this._activeMelodyIndex + 1 : 0;
+            this._melodyProgressLabel.textContent = `${current} / ${this._melodyNotes.length}`;
+        }
+
+        this._melodyNotes.forEach((note, idx) => {
+            const chip = document.createElement('div');
+            chip.className = `sheet-melody-chip ${idx === this._activeMelodyIndex ? 'active-melody-note' : ''}`;
+            chip.dataset.index = idx;
+            chip.dataset.bar = note.bar;
+            chip.dataset.midi = note.midi;
+
+            // Mapeo en el acordeón seleccionado
+            let btnBadgeHtml = '';
+            if (note.is_rest) {
+                btnBadgeHtml = '<span class="sheet-melody-chip-btn sheet-melody-chip-btn--rest">Silencio</span>';
+            } else {
+                const btnMatch = this._findButtonForNote(note.midi);
+                if (btnMatch) {
+                    const isPush = btnMatch.direction === 'push';
+                    const dirClass = isPush ? 'sheet-melody-chip-btn--push' : 'sheet-melody-chip-btn--pull';
+                    const arrowIcon = isPush ? '▾' : '▴';
+                    btnBadgeHtml = `<span class="sheet-melody-chip-btn ${dirClass}" title="${btnMatch.btnLabel} (${btnMatch.bellowsText})">${btnMatch.btnLabel} ${arrowIcon} ${btnMatch.bellowsText}</span>`;
+                } else {
+                    btnBadgeHtml = '<span class="sheet-melody-chip-btn sheet-melody-chip-btn--unmapped" title="Nota fuera del registro del acordeón seleccionado">Sin botón</span>';
+                }
+            }
+
+            chip.innerHTML = `
+                <span class="sheet-melody-chip-pitch">${note.is_rest ? '𝄽' : note.pitch_name}</span>
+                <span class="sheet-melody-chip-pos">c.${note.bar} · p.${note.beat}</span>
+                ${btnBadgeHtml}
+            `;
+
+            chip.title = `Nota ${idx + 1}: ${note.pitch_name} (Compás ${note.bar}, pulso ${note.beat})${note.lyric ? ' - "' + note.lyric + '"' : ''} - Clic para reproducir e iluminar en ${this._targetAccordion === 'primary' ? 'Acordeón 1' : 'Acordeón 2'}`;
+
+            chip.addEventListener('click', () => {
+                if (this._isMelodyPlaying) {
+                    this.pauseMelodySequence();
+                }
+                this.selectMelodyNote(idx, true);
+            });
+
+            this._melodyStrip.appendChild(chip);
+        });
+    }
+
+    /**
+     * Resuelve el botón físico para una nota MIDI en el acordeón de destino.
+     * @private
+     * @param {number} midi
+     * @returns {Object|null}
+     */
+    _findButtonForNote(midi) {
+        if (!midi) return null;
+        if (this._findAccordionButtonCallback) {
+            return this._findAccordionButtonCallback(midi, this._targetAccordion);
+        }
+        return null;
+    }
+
+    /**
+     * Selecciona una nota melódica, sincroniza el pentagrama, actualiza la tira y la replica en el acordeón.
+     * @param {number} index
+     * @param {boolean} [triggerAction=true]
+     */
+    selectMelodyNote(index, triggerAction = true) {
+        if (!this._melodyNotes || index < 0 || index >= this._melodyNotes.length) return;
+        this._activeMelodyIndex = index;
+        const note = this._melodyNotes[index];
+
+        // Actualizar chips en la tira
+        if (this._melodyStrip) {
+            if (this._activeMelodyChip) {
+                this._activeMelodyChip.classList.remove('active-melody-note');
+            }
+            const targetChip = this._melodyStrip.querySelector(`.sheet-melody-chip[data-index="${index}"]`);
+            if (targetChip) {
+                targetChip.classList.add('active-melody-note');
+                this._activeMelodyChip = targetChip;
+                targetChip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+        }
+
+        // Actualizar indicador de progreso
+        if (this._melodyProgressLabel) {
+            this._melodyProgressLabel.textContent = `${index + 1} / ${this._melodyNotes.length}`;
+        }
+
+        // Sincronizar compás en OSMD
+        if (note.bar && note.bar !== this._currentMeasure) {
+            this.goToMeasure(note.bar);
+        }
+
+        // Replicar en el acordeón seleccionado
+        if (triggerAction && this._onReplicateMelodyNoteCallback) {
+            this._onReplicateMelodyNoteCallback(note, this._targetAccordion);
+        }
+    }
+
+    /**
+     * Alterna la reproducción automática y secuencial de la melodía.
+     */
+    toggleMelodyPlay() {
+        if (this._isMelodyPlaying) {
+            this.pauseMelodySequence();
+        } else {
+            this.playMelodySequence();
+        }
+    }
+
+    /**
+     * Inicia la reproducción secuencial de la melodía en el acordeón seleccionado.
+     */
+    playMelodySequence() {
+        if (!this._melodyNotes || this._melodyNotes.length === 0) return;
+        this._isMelodyPlaying = true;
+        this._updateMelodyPlayButtonUI();
+
+        if (this._activeMelodyIndex < 0 || this._activeMelodyIndex >= this._melodyNotes.length - 1) {
+            this._activeMelodyIndex = 0;
+        }
+
+        const playNext = () => {
+            if (!this._isMelodyPlaying) return;
+            if (this._activeMelodyIndex >= this._melodyNotes.length) {
+                this.stopMelodySequence();
+                return;
+            }
+
+            const currentIdx = this._activeMelodyIndex;
+            const note = this._melodyNotes[currentIdx];
+            this.selectMelodyNote(currentIdx, true);
+
+            // Calcular duración en ms a partir del tempo BPM
+            const durationBeats = note.duration_beats || 1.0;
+            const noteDurationMs = Math.max(120, Math.round((durationBeats * 60 / (this._melodyBpm || 70)) * 1000));
+
+            this._activeMelodyIndex++;
+            this._melodyTimer = setTimeout(playNext, noteDurationMs);
+        };
+
+        playNext();
+    }
+
+    /**
+     * Pausa la reproducción secuencial de la melodía.
+     */
+    pauseMelodySequence() {
+        this._isMelodyPlaying = false;
+        if (this._melodyTimer) {
+            clearTimeout(this._melodyTimer);
+            this._melodyTimer = null;
+        }
+        this._updateMelodyPlayButtonUI();
+    }
+
+    /**
+     * Detiene la reproducción secuencial y restablece la posición al inicio.
+     */
+    stopMelodySequence() {
+        this.pauseMelodySequence();
+        this._activeMelodyIndex = -1;
+        if (this._melodyProgressLabel && this._melodyNotes) {
+            this._melodyProgressLabel.textContent = `0 / ${this._melodyNotes.length}`;
+        }
+        if (this._activeMelodyChip) {
+            this._activeMelodyChip.classList.remove('active-melody-note');
+            this._activeMelodyChip = null;
+        }
+        if (this._onReplicateMelodyNoteCallback) {
+            this._onReplicateMelodyNoteCallback(null, this._targetAccordion);
+        }
+    }
+
+    /**
+     * Retrocede a la nota melódica anterior.
+     */
+    prevMelodyNote() {
+        if (!this._melodyNotes || this._melodyNotes.length === 0) return;
+        if (this._isMelodyPlaying) this.pauseMelodySequence();
+        const prevIdx = Math.max(0, (this._activeMelodyIndex <= 0 ? 0 : this._activeMelodyIndex - 1));
+        this.selectMelodyNote(prevIdx, true);
+    }
+
+    /**
+     * Avanza a la siguiente nota melódica.
+     */
+    nextMelodyNote() {
+        if (!this._melodyNotes || this._melodyNotes.length === 0) return;
+        if (this._isMelodyPlaying) this.pauseMelodySequence();
+        const nextIdx = Math.min(this._melodyNotes.length - 1, this._activeMelodyIndex + 1);
+        this.selectMelodyNote(nextIdx, true);
+    }
+
+    /**
+     * Actualiza la apariencia del botón Play/Pausa de la melodía.
+     * @private
+     */
+    _updateMelodyPlayButtonUI() {
+        if (!this._btnMelodyPlay) return;
+        if (this._isMelodyPlaying) {
+            this._btnMelodyPlay.classList.add('is-playing');
+            this._btnMelodyPlay.innerHTML = '<i class="fas fa-pause"></i> <span id="lblSheetMelodyPlay">Pausar</span>';
+            this._btnMelodyPlay.title = 'Pausar reproducción secuencial (Espacio)';
+        } else {
+            this._btnMelodyPlay.classList.remove('is-playing');
+            this._btnMelodyPlay.innerHTML = '<i class="fas fa-play"></i> <span id="lblSheetMelodyPlay">Replicar</span>';
+            this._btnMelodyPlay.title = 'Reproducir y replicar melodía en acordeón seleccionado (Espacio)';
         }
     }
 }
