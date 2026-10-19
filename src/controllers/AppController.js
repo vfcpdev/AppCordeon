@@ -86,11 +86,12 @@ export class AppController {
 
         // Modo Espejo (Intercambiar Hileras 1 y 3)
         this._isDiapasonMirrored = typeof localStorage !== 'undefined' && localStorage.getItem('acordeon_is_mirrored') === 'true';
+        this._isSecondaryDiapasonMirrored = typeof localStorage !== 'undefined' && localStorage.getItem('acordeon_secondary_is_mirrored') === 'true';
         if (this._diapasonView) {
             this._diapasonView.setMirrored(this._isDiapasonMirrored);
         }
         if (this._secondaryDiapasonView) {
-            this._secondaryDiapasonView.setMirrored(this._isDiapasonMirrored);
+            this._secondaryDiapasonView.setMirrored(this._isSecondaryDiapasonMirrored);
         }
     }
 
@@ -107,6 +108,7 @@ export class AppController {
         // Inicializar vistas con datos
         this._chordView.populateRoots(this._currentNotation, this._currentOffset);
         this._updateMirrorButtonUI();
+        this._updateSecondaryMirrorButtonUI();
         this._updateRowSelectorButtons();
         this._updatePrimaryTuningLabel();
         this._renderAll();
@@ -387,7 +389,7 @@ export class AppController {
             });
         }
 
-        // Modo Espejo del Diapasón (Intercambiar Hileras 1 y 3)
+        // Modo Espejo del Diapasón 1 (Intercambiar Hileras 1 y 3)
         const btnToggleMirror = document.getElementById('btnToggleMirror');
         if (btnToggleMirror) {
             btnToggleMirror.addEventListener('click', () => {
@@ -398,12 +400,8 @@ export class AppController {
                     console.warn('[AppController] No se pudo persistir modo espejo:', e);
                 }
                 this._diapasonView.setMirrored(this._isDiapasonMirrored);
-                if (this._secondaryDiapasonView) {
-                    this._secondaryDiapasonView.setMirrored(this._isDiapasonMirrored);
-                }
                 this._updateMirrorButtonUI();
                 this._renderDiapason();
-                this._renderSecondaryDiapason();
                 this._restoreActiveHighlights();
             });
         }
@@ -858,6 +856,26 @@ export class AppController {
     }
 
     /**
+     * Actualiza el estado visual y texto del botón de Modo Espejo para el 2do Acordeón.
+     * @private
+     */
+    _updateSecondaryMirrorButtonUI() {
+        const btnToggleMirrorSecondary = document.getElementById('btnToggleMirrorSecondary');
+        const lblSecondaryMirrorStatus = document.getElementById('lblSecondaryMirrorStatus');
+        if (!btnToggleMirrorSecondary) return;
+
+        if (this._isSecondaryDiapasonMirrored) {
+            btnToggleMirrorSecondary.classList.add('active');
+            if (lblSecondaryMirrorStatus) lblSecondaryMirrorStatus.textContent = 'Af->Ad';
+            btnToggleMirrorSecondary.title = 'Orientación de hileras (2do Acordeón): Afuera (1) a la izquierda, Adentro (3) a la derecha (Af->Ad). Clic para alternar a Ad<-Af.';
+        } else {
+            btnToggleMirrorSecondary.classList.remove('active');
+            if (lblSecondaryMirrorStatus) lblSecondaryMirrorStatus.textContent = 'Ad<-Af';
+            btnToggleMirrorSecondary.title = 'Orientación de hileras (2do Acordeón): Adentro (3) a la izquierda, Afuera (1) a la derecha (Ad<-Af). Clic para alternar a Af->Ad.';
+        }
+    }
+
+    /**
      * Actualiza el estado visual, orden y tónicas de los botones de cambio de hilera en la barra.
      * @private
      */
@@ -926,15 +944,24 @@ export class AppController {
             });
         }
 
-        // Toggle de Modo de Equivalencia (Mismo Tono / Misma Hilera)
-        document.querySelectorAll('#secondaryEquivalenceToggle .segment-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('#secondaryEquivalenceToggle .segment-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                this._secondaryEquivalenceMode = btn.dataset.mode;
+        // Modo Espejo del 2do Diapasón (Intercambiar Hileras 1 y 3 para Acordeón 2)
+        const btnToggleMirrorSecondary = document.getElementById('btnToggleMirrorSecondary');
+        if (btnToggleMirrorSecondary) {
+            btnToggleMirrorSecondary.addEventListener('click', () => {
+                this._isSecondaryDiapasonMirrored = !this._isSecondaryDiapasonMirrored;
+                try {
+                    localStorage.setItem('acordeon_secondary_is_mirrored', this._isSecondaryDiapasonMirrored.toString());
+                } catch (e) {
+                    console.warn('[AppController] No se pudo persistir modo espejo secundario:', e);
+                }
+                if (this._secondaryDiapasonView) {
+                    this._secondaryDiapasonView.setMirrored(this._isSecondaryDiapasonMirrored);
+                }
+                this._updateSecondaryMirrorButtonUI();
+                this._renderSecondaryDiapason();
                 this._syncSecondaryDiapason();
             });
-        });
+        }
 
         // Botones de Fuelle para el Segundo Diapasón
         document.querySelectorAll('#secondaryBellowsButtonGroup .bellows-btn').forEach(btn => {
