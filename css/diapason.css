@@ -228,10 +228,10 @@
 /* Número indicador del orden del botón por cada hilera (1..10 / 1..11), ubicado por fuera del botón a la izquierda, centrado (sin chips) */
 .btn-accordion .btn-order-number {
     position: absolute;
-    right: calc(100% + 4px);
+    right: calc(100% + 5px);
     top: 50%;
     transform: translateY(-50%);
-    font-size: 0.64rem;
+    font-size: 0.71rem;
     font-weight: 800;
     color: #ffffff !important;
     background: transparent !important;
