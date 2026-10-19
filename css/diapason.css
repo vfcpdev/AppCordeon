@@ -23,6 +23,38 @@
     box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
 }
 
+/* Selector de Inversión / Modo Espejo de Hileras */
+.mirror-toggle-segmented {
+    padding: 1px;
+    height: 26px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    background: #e2e8f0;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+}
+
+.mirror-toggle-segmented .segment-btn {
+    padding: 2px 7px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    height: 22px;
+    box-sizing: border-box;
+    border-radius: 5px;
+    background: #ffffff;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mirror-toggle-segmented .segment-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
 /* Botón de Inversión / Modo Espejo de Hileras */
 .btn-mirror-toggle {
     display: inline-flex;
