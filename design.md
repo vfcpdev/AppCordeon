@@ -30,7 +30,7 @@ Contiene la barra superior (`.diapason-top-bar`), los diapasones (`.diapasons-st
     - Mini-popover (`#gridChordMiniPopover`): Se expande exactamente al mismo ancho (100%) que la sección de la cuadrícula.
   - **Inferior**: `#audioAnalysisSection` ("Controles del Reproductor & Analizador").
     - Situado directamente debajo de la cuadrícula de acordes de forma limpia (sin contenedor exterior, sin borde grueso, sin marco ni título redundante).
-    - Contiene la insignia de acorde y pulso activo (`#audioActiveChordBadge`), barra de tiempo y scrubbing (`#playerScrubberRow`), controles de transporte (Play/Pausa, Detener, Atrás/Adelante), metrónomo sincronizado, BPM, velocidad, volumen y sincronización de diapasón.
+    - Contiene la barra de tiempo y scrubbing (`#playerScrubberRow`), controles de transporte (Play/Pausa, Detener, Atrás/Adelante), metrónomo sincronizado, BPM, velocidad, volumen y sincronización de diapasón.
 
 ### Sincronización con el Segundo Acordeón
 - El segundo acordeón (`#secondaryDiapasonCol`) replica este diseño apilado en su propio stack:
