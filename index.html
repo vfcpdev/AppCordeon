@@ -650,18 +650,20 @@
                         </div>
                     </header>
 
-                    <!-- Selector de Acción de Fuelle en Acorde Libre -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.70rem; color: #475569; background: #ffffff; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; gap: 6px; flex-wrap: wrap;">
-                        <span><i class="fas fa-wind" style="color: #059669;"></i> <strong>Acción de Fuelle:</strong></span>
-                        <div class="toggle-segmented" id="chordBellowsToggle">
-                            <button type="button" class="segment-btn active" data-mode="both" title="Mostrar en ambas direcciones de fuelle">
-                                <i class="fas fa-arrows-alt-h"></i> Ambos
+                    <!-- Selector de Acción de Fuelle en Acorde Libre (Estilo Diapasón) -->
+                    <div class="free-chord-bellows-row" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: #1e2238; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px;">
+                        <span style="font-size: 0.74rem; font-weight: 700; color: #e2e8f0; display: flex; align-items: center; gap: 5px;">
+                            <i class="fas fa-wind" style="color: #10b981;"></i> Fuelle:
+                        </span>
+                        <div class="header-bellows-group diapason-bellows-group" id="chordBellowsToggle">
+                            <button type="button" class="bellows-btn active" data-mode="both" title="Ambos (Abrir y Cerrar)">
+                                <i class="fas fa-arrows-left-right"></i>
                             </button>
-                            <button type="button" class="segment-btn" data-mode="push" title="Filtrar notas que se tocan Cerrando">
-                                <i class="fas fa-arrow-right-to-line"></i> Cerrar
+                            <button type="button" class="bellows-btn" data-mode="pull" title="Abrir (Pull - Azul)">
+                                <i class="fas fa-arrow-left"></i>
                             </button>
-                            <button type="button" class="segment-btn" data-mode="pull" title="Filtrar notas que se tocan Abriendo">
-                                <i class="fas fa-arrow-left-to-line"></i> Abrir
+                            <button type="button" class="bellows-btn" data-mode="push" title="Cerrar (Push - Rojo)">
+                                <i class="fas fa-arrow-right"></i>
                             </button>
                         </div>
                     </div>

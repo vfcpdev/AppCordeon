@@ -2094,19 +2094,20 @@
 }
 
 .chord-step-chip {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: baseline !important;
+    justify-content: center !important;
+    gap: 6px !important;
     background: #ffffff;
     border: 1px solid #cbd5e1;
-    border-radius: 7px;
-    padding: 3px 7px;
+    border-radius: 8px;
+    padding: 6px 12px;
     min-width: 44px;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .chord-step-chip:hover {
@@ -2115,26 +2116,30 @@
     background: #ecfdf5;
 }
 
-.chord-step-chip strong {
-    font-size: 0.88rem;
+.chord-step-chip strong,
+.chord-step-chip .chord-chip-note {
+    font-size: 0.95rem;
     color: #0f172a;
     font-weight: 800;
+    line-height: 1;
 }
 
 .chord-step-chip .chord-role {
-    font-size: 0.58rem;
+    font-size: 0.68rem;
     color: #64748b;
     font-weight: 700;
+    line-height: 1;
 }
 
 .chord-step-chip.active-chord-step {
     background: #059669 !important;
     border-color: #047857 !important;
     box-shadow: 0 0 10px rgba(5, 150, 105, 0.5) !important;
-    transform: scale(1.05) translateY(-2px);
+    transform: scale(1.04) translateY(-2px);
 }
 
 .chord-step-chip.active-chord-step strong,
+.chord-step-chip.active-chord-step .chord-chip-note,
 .chord-step-chip.active-chord-step .chord-role {
     color: #ffffff !important;
 }

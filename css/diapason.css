@@ -816,16 +816,16 @@
     font-size: 0.65rem;
 }
 
-/* Barra de Volumen del Diapasón (Slider + Icono Mute) */
+/* Barra de Volumen del Diapasón (Slider + Icono Mute) - Sin estilo píldora */
 .diapason-volume-bar {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    background: linear-gradient(180deg, #181b2e 0%, #0d0f1c 100%);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 12px;
-    padding: 2px 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    gap: 5px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0 2px;
+    box-shadow: none;
     height: 24px;
     box-sizing: border-box;
 }

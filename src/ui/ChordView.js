@@ -366,38 +366,9 @@ export class ChordView {
 
             const roleName = chordData.roles[idx] || '';
 
-            const noteFeat = feasibility ? feasibility.noteDetails[idx] : null;
-            let bellowsBadge = '';
-            if (noteFeat) {
-                if (this._currentBellowsMode === 'push') {
-                    if (noteFeat.canPush) {
-                        bellowsBadge = '<span class="note-bellows-dir push">Cerrar</span>';
-                    } else {
-                        bellowsBadge = '<span class="note-bellows-dir unavailable" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;">Falta al Cerrar</span>';
-                    }
-                } else if (this._currentBellowsMode === 'pull') {
-                    if (noteFeat.canPull) {
-                        bellowsBadge = '<span class="note-bellows-dir pull">Abrir</span>';
-                    } else {
-                        bellowsBadge = '<span class="note-bellows-dir unavailable" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;">Falta al Abrir</span>';
-                    }
-                } else {
-                    if (noteFeat.canPush && noteFeat.canPull) {
-                        bellowsBadge = '<span class="note-bellows-dir both">Abrir/Cerrar</span>';
-                    } else if (noteFeat.canPush) {
-                        bellowsBadge = '<span class="note-bellows-dir push">Cerrar</span>';
-                    } else if (noteFeat.canPull) {
-                        bellowsBadge = '<span class="note-bellows-dir pull">Abrir</span>';
-                    } else {
-                        bellowsBadge = '<span class="note-bellows-dir none">Falta</span>';
-                    }
-                }
-            }
-
             chip.innerHTML = `
-                <strong>${noteName}</strong>
+                <strong class="chord-chip-note">${noteName}</strong>
                 <span class="chord-role">${roleName}</span>
-                ${bellowsBadge}
             `;
 
             chip.addEventListener('click', (e) => {
