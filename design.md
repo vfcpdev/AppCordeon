@@ -28,7 +28,8 @@ Contiene la barra superior (`.diapason-top-bar`), los diapasones (`.diapasons-st
     - Contiene los botones de voicing (2, 3, 4, 5, Todas), selector de octava y lista de botones activos de Abre/Cierra.
   - **Abajo**: `.diapason-chord-grid-panel` ("Cuadrícula de Acordes (4/4)").
     - Altura aproximada: ~240-280px con scroll vertical interno suave.
-    - Contiene la barra de herramientas (selección, exportar/importar CSV, progresión manual, agregar compás, borrar, config filas, desacoplar) y la cuadrícula interactiva de 4 pulsos por compás.
+    - Encabezado: Los botones de acción (selección, exportar/importar CSV, progresión manual, agregar compás, borrar, config filas, desacoplar) se ubican a la izquierda del encabezado, y el título "Cuadrícula (4/4)" a la derecha.
+    - Mini-popover (`#gridChordMiniPopover`): Se expande exactamente al mismo ancho (100%) que la sección de la cuadrícula, alineado a sus bordes laterales, con la flecha superior apuntando al cuadro/pulso seleccionado.
 
 ### Sincronización con el Segundo Acordeón
 - El segundo acordeón (`#secondaryDiapasonCol`) replica idénticamente este diseño apilado:

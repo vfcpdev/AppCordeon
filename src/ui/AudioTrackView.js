@@ -2631,33 +2631,26 @@ export class AudioTrackView {
         this._miniPopover.style.display = 'flex';
         this._miniPopover.classList.remove('hidden');
 
-        // Posicionar popover debajo de la cuadrícula, sobre la línea de tiempo del audio
+        // Posicionar popover debajo de la cuadrícula con el mismo ancho que la sección de la cuadrícula
         const targetSlot = anchorSlot || last.slot || document.getElementById(`beat-slot-${last.barIndex}-${last.beatIndex}`);
-        const wrapperRect = this._chordMeasureGridWrapper.getBoundingClientRect();
-        const popoverWidth = this._miniPopover.offsetWidth || 330;
+        const wrapper = targetSlot?.closest('.chord-measure-grid-wrapper') || this._chordMeasureGridWrapper;
+        if (wrapper && this._miniPopover.parentElement !== wrapper) {
+            wrapper.appendChild(this._miniPopover);
+        }
+        const wrapperRect = wrapper ? wrapper.getBoundingClientRect() : this._chordMeasureGridWrapper.getBoundingClientRect();
 
-        let left = (wrapperRect.width - popoverWidth) / 2;
-        let arrowX = popoverWidth / 2;
-
+        let arrowX = wrapperRect.width / 2;
         if (targetSlot) {
             const slotRect = targetSlot.getBoundingClientRect();
-            // Centrar horizontalmente respecto al centro de la columna del cuadro seleccionado
             const slotCenterX = slotRect.left - wrapperRect.left + (slotRect.width / 2);
-            left = slotCenterX - (popoverWidth / 2);
-
-            // Mantener dentro de los bordes laterales de la cuadrícula
-            if (left < 8) left = 8;
-            if (left + popoverWidth > wrapperRect.width - 8) {
-                left = Math.max(8, wrapperRect.width - popoverWidth - 8);
-            }
-
-            arrowX = Math.max(16, Math.min(popoverWidth - 16, slotCenterX - left));
+            arrowX = Math.max(16, Math.min(wrapperRect.width - 16, slotCenterX));
         }
 
-        // Posicionar debajo de la cuadrícula, sobre la línea de tiempo del audio
         const top = wrapperRect.height + 6;
 
-        this._miniPopover.style.left = `${Math.round(left)}px`;
+        this._miniPopover.style.left = '0px';
+        this._miniPopover.style.width = '100%';
+        this._miniPopover.style.boxSizing = 'border-box';
         this._miniPopover.style.top = `${Math.round(top)}px`;
         this._miniPopover.style.setProperty('--popover-arrow-x', `${Math.round(arrowX)}px`);
 
