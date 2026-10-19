@@ -135,9 +135,12 @@ export class AppController {
         const icon2 = document.getElementById('iconSecondaryDiapasonVolume');
         const btnMute1 = document.getElementById('btnDiapasonVolumeMute');
         const btnMute2 = document.getElementById('btnSecondaryDiapasonVolumeMute');
+        const chk1 = document.getElementById('chkDiapasonMute');
+        const chk2 = document.getElementById('chkSecondaryDiapasonMute');
 
         [slider1, slider2].forEach(s => { if (s) s.value = effectiveVol; });
         [lbl1, lbl2].forEach(l => { if (l) l.textContent = isMuted ? 'Mudo' : `${effectiveVol}%`; });
+        [chk1, chk2].forEach(c => { if (c) c.checked = isMuted; });
 
         const iconClass = (isMuted || effectiveVol === 0)
             ? 'fas fa-volume-xmark'
@@ -314,6 +317,24 @@ export class AppController {
         };
         initMuteBtn('btnDiapasonVolumeMute');
         initMuteBtn('btnSecondaryDiapasonVolumeMute');
+
+        const initMuteCheckbox = (chkId) => {
+            const chk = document.getElementById(chkId);
+            if (chk) {
+                chk.addEventListener('change', (e) => {
+                    const willMute = e.target.checked;
+                    if (willMute) {
+                        this._lastDiapasonVolume = this._diapasonVolume > 0 ? this._diapasonVolume : 80;
+                        this._applyDiapasonVolume(0, true);
+                    } else {
+                        const restored = this._lastDiapasonVolume > 0 ? this._lastDiapasonVolume : 80;
+                        this._applyDiapasonVolume(restored, false);
+                    }
+                });
+            }
+        };
+        initMuteCheckbox('chkDiapasonMute');
+        initMuteCheckbox('chkSecondaryDiapasonMute');
 
         // Segmentado de Notación (Latina / Alemana)
         document.querySelectorAll('#notationToggle .segment-btn, .toggle-segmented__btn[data-val]').forEach(btn => {
