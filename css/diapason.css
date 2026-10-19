@@ -890,7 +890,7 @@
 
 .sidebar-chord-name {
     font-size: 0.74rem;
-    color: #ffffff;
+    color: #0f172a;
     font-weight: 800;
     letter-spacing: 0.2px;
 }
@@ -907,19 +907,19 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
     padding: 5px 6px;
     min-width: 0;
 }
 
 .sidebar-bellows-block.pull-block {
-    border-left: 3px solid #3b82f6;
+    border-left: 3px solid #2563eb;
 }
 
 .sidebar-bellows-block.push-block {
-    border-left: 3px solid #ef4444;
+    border-left: 3px solid #dc2626;
 }
 
 .sidebar-bellows-block.action-dimmed {
@@ -939,7 +939,7 @@
     gap: 3px;
     user-select: none;
     padding-bottom: 3px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .sidebar-bellows-header-row {
@@ -959,7 +959,7 @@
 }
 
 .sidebar-dir-checkbox {
-    accent-color: #3b82f6;
+    accent-color: #2563eb;
     width: 13px;
     height: 13px;
     cursor: pointer;
@@ -968,7 +968,7 @@
 }
 
 .push-block .sidebar-dir-checkbox {
-    accent-color: #ef4444;
+    accent-color: #dc2626;
 }
 
 .sidebar-bellows-title {
@@ -980,16 +980,16 @@
 }
 
 .pull-block .sidebar-bellows-title {
-    color: #60a5fa;
+    color: #1d4ed8;
 }
 
 .push-block .sidebar-bellows-title {
-    color: #f87171;
+    color: #b91c1c;
 }
 
 .sidebar-bellows-count {
     font-size: 0.58rem;
-    color: #94a3b8;
+    color: #64748b;
     white-space: nowrap;
 }
 
@@ -1016,88 +1016,86 @@
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
     box-sizing: border-box;
-    /* Botón neutro: sin colorear el botón, fondo oscuro sutil */
-    background: rgba(255, 255, 255, 0.04) !important;
-    border: 1px solid rgba(255, 255, 255, 0.14) !important;
-    box-shadow: none !important;
+    /* Botón neutro: fondo claro elegante */
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
     flex: 1 1 calc(50% - 4px);
     min-width: 65px;
     white-space: nowrap;
 }
 
 .sidebar-btn-badge:hover {
-    background: rgba(255, 255, 255, 0.09) !important;
-    border-color: rgba(255, 255, 255, 0.30) !important;
+    background: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
     transform: translateY(-1px);
 }
 
 /* SOLO COLOREAR LA FUENTE */
 /* Abre (Pull): Fuente azulada */
 .sidebar-btn-badge.pull-badge {
-    color: #60a5fa !important;
+    color: #1d4ed8 !important;
 }
 
 .sidebar-btn-badge.pull-badge strong {
-    color: #93c5fd !important;
+    color: #1e40af !important;
     font-weight: 800;
     font-size: 0.76rem;
 }
 
 .sidebar-btn-badge.pull-badge small {
-    color: #60a5fa !important;
+    color: #2563eb !important;
     font-size: 0.65rem;
     opacity: 0.9;
 }
 
 .sidebar-btn-badge.pull-badge:hover strong,
 .sidebar-btn-badge.pull-badge:hover small {
-    color: #bfdbfe !important;
-    text-shadow: 0 0 6px rgba(96, 165, 250, 0.7);
+    color: #1e3a8a !important;
 }
 
 /* Cierra (Push): Fuente rojiza */
 .sidebar-btn-badge.push-badge {
-    color: #f87171 !important;
+    color: #b91c1c !important;
 }
 
 .sidebar-btn-badge.push-badge strong {
-    color: #fca5a5 !important;
+    color: #991b1b !important;
     font-weight: 800;
     font-size: 0.76rem;
 }
 
 .sidebar-btn-badge.push-badge small {
-    color: #f87171 !important;
+    color: #dc2626 !important;
     font-size: 0.65rem;
     opacity: 0.9;
 }
 
 .sidebar-btn-badge.push-badge:hover strong,
 .sidebar-btn-badge.push-badge:hover small {
-    color: #fecaca !important;
-    text-shadow: 0 0 6px rgba(248, 113, 113, 0.7);
+    color: #7f1d1d !important;
 }
 
 /* Estado Desactivado: fuente atenuada tachada sin colorear botón */
 .sidebar-btn-badge.is-deactivated {
     opacity: 0.35 !important;
-    background: transparent !important;
-    border: 1px dashed rgba(255, 255, 255, 0.16) !important;
-    color: #64748b !important;
+    background: #f8fafc !important;
+    border: 1px dashed #cbd5e1 !important;
+    color: #94a3b8 !important;
     box-shadow: none !important;
 }
 
 .sidebar-btn-badge.is-deactivated strong,
 .sidebar-btn-badge.is-deactivated small {
-    color: #64748b !important;
+    color: #94a3b8 !important;
     text-decoration: line-through;
     text-shadow: none !important;
 }
 
 .sidebar-btn-badge.is-deactivated:hover {
     opacity: 0.65 !important;
-    background: rgba(255, 255, 255, 0.05) !important;
-    border-color: rgba(255, 255, 255, 0.32) !important;
+    background: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
 }
 
 .badge-status-dot {
@@ -1513,8 +1511,8 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    background: rgba(15, 23, 42, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
     border-radius: 8px;
     padding: 5px 6px;
     margin-top: 4px;
@@ -1537,9 +1535,9 @@
 
 /* BOTÓN DE VOLUMEN DE DIAPASÓN */
 .btn-diapason-volume {
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    color: #e2e8f0;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
     width: 26px;
     height: 24px;
     border-radius: 6px;
@@ -1555,15 +1553,15 @@
 }
 
 .btn-diapason-volume:hover {
-    background: rgba(255, 255, 255, 0.25);
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.45);
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
 }
 
 .btn-diapason-volume.is-muted {
-    background: rgba(239, 68, 68, 0.25);
-    border-color: rgba(239, 68, 68, 0.5);
-    color: #fca5a5;
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #ef4444;
 }
 
 .sidebar-voicing-row {
@@ -1571,7 +1569,7 @@
     align-items: center;
     justify-content: space-between;
     font-size: 0.62rem;
-    color: #94a3b8;
+    color: #475569;
 }
 
 .sidebar-voicing-label {
@@ -1579,13 +1577,13 @@
     align-items: center;
     gap: 4px;
     font-weight: 700;
-    color: #cbd5e1;
+    color: #334155;
 }
 
 .sidebar-btn-segmented {
     display: inline-flex;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
     border-radius: 6px;
     padding: 2px;
     gap: 2px;
@@ -1594,7 +1592,7 @@
 .sidebar-segment-btn {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: #475569;
     font-size: 0.72rem;
     font-weight: 800;
     padding: 3px 8px;
@@ -1604,14 +1602,14 @@
 }
 
 .sidebar-segment-btn:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.08);
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.6);
 }
 
 .sidebar-segment-btn.active {
-    background: #6366f1;
+    background: #4338ca;
     color: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .sidebar-octave-stepper {
@@ -1621,9 +1619,9 @@
 }
 
 .sidebar-stepper-btn {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    color: #cbd5e1;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
     border-radius: 4px;
     padding: 2.5px 7px;
     font-size: 0.72rem;
@@ -1632,8 +1630,9 @@
 }
 
 .sidebar-stepper-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.18);
-    color: #ffffff;
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
 }
 
 .sidebar-stepper-btn:disabled {
@@ -1644,13 +1643,13 @@
 .sidebar-octave-display {
     font-size: 0.72rem;
     font-weight: 800;
-    color: #e0e7ff;
+    color: #0f172a;
     padding: 2px 8px;
     min-width: 58px;
     text-align: center;
-    background: rgba(0, 0, 0, 0.35);
+    background: #ffffff;
     border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid #cbd5e1;
 }
 
 /* Indicador de notas faltantes por movimiento de fuelle */
@@ -1658,22 +1657,22 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    background: rgba(239, 68, 68, 0.14);
-    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: #fef2f2;
+    border: 1px solid #fecaca;
     border-radius: 5px;
     padding: 3px 6px;
     font-size: 0.58rem;
-    color: #fca5a5;
+    color: #b91c1c;
     margin-top: 3px;
     line-height: 1.25;
 }
 
 .sidebar-bellows-warning strong {
-    color: #f87171;
+    color: #991b1b;
 }
 
 .sidebar-bellows-warning span {
-    color: #ffffff;
+    color: #7f1d1d;
     font-weight: 800;
     text-decoration: underline;
 }
@@ -1691,15 +1690,15 @@
 }
 
 .bellows-status-badge.badge-complete {
-    background: rgba(16, 185, 129, 0.18);
-    color: #34d399;
-    border: 1px solid rgba(16, 185, 129, 0.35);
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
 }
 
 .bellows-status-badge.badge-missing {
-    background: rgba(239, 68, 68, 0.18);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
 }
 
 
