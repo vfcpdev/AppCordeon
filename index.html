@@ -117,23 +117,29 @@
                                                 </button>
                                             </div>
                                         </div>
+                                        <div class="diapason-active-chord-badge" id="primaryDiapasonChordBadge" title="Acorde activo en Diapasón 1">
+                                            <i class="fas fa-music"></i>
+                                            <strong class="sidebar-chord-name" id="primaryDiapasonChordName">Mi♭ Mayor</strong>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="diapason-chord-bar-row">
-                                    <div class="diapason-active-chord-badge" id="primaryDiapasonChordBadge" title="Acorde activo en Diapasón 1">
-                                        <i class="fas fa-music"></i>
-                                        <strong class="sidebar-chord-name" id="primaryDiapasonChordName">Mib Mayor</strong>
-                                    </div>
-                                    <div class="diapason-volume-bar" id="primaryDiapasonVolumeBar" title="Volumen del acordeón (ambos diapasones)">
+                                <div class="diapason-stage-body-row">
+                                    <div class="diapason-vertical-volume-control" id="primaryDiapasonVolumeBar" title="Volumen del acordeón (Diapasón 1)">
+                                        <span class="diapason-volume-label" id="lblDiapasonVolume">80%</span>
+                                        <div class="diapason-volume-slider-vertical-wrap">
+                                            <input type="range" id="diapasonVolumeSlider" class="diapason-volume-slider-vertical" min="0" max="100" value="80" orient="vertical" title="Ajustar volumen (0% a 100%)">
+                                        </div>
                                         <button type="button" class="btn-diapason-volume-mute" id="btnDiapasonVolumeMute" title="Silenciar / Activar sonido del acordeón">
                                             <i class="fas fa-volume-high" id="iconDiapasonVolume"></i>
                                         </button>
-                                        <input type="range" id="diapasonVolumeSlider" class="diapason-volume-slider" min="0" max="100" value="80" title="Ajustar volumen de los diapasones (0% a 100%)">
-                                        <span class="diapason-volume-label" id="lblDiapasonVolume">80%</span>
+                                        <label class="diapason-mute-checkbox-label" title="Marcar para silenciar">
+                                            <input type="checkbox" id="chkDiapasonMute" class="diapason-mute-checkbox">
+                                            <span class="diapason-mute-text">Mudo</span>
+                                        </label>
                                     </div>
-                                </div>
-                                <div class="diapason" id="diapason">
-                                    <!-- Hileras de botones 10-11-10 generadas dinámicamente -->
+                                    <div class="diapason" id="diapason">
+                                        <!-- Hileras de botones 10-11-10 generadas dinámicamente -->
+                                    </div>
                                 </div>
                             </div>
                             <div class="diapason-side-stack" id="primaryDiapasonSideStack">
@@ -547,27 +553,33 @@
                                                 </button>
                                             </div>
                                         </div>
+                                        <div class="diapason-active-chord-badge" id="secondaryDiapasonChordBadge" title="Acorde activo en Diapasón 2">
+                                            <i class="fas fa-music"></i>
+                                            <strong class="sidebar-chord-name" id="secondaryDiapasonChordName">Mi♭ Mayor</strong>
+                                        </div>
                                         <div class="toggle-segmented" id="secondaryEquivalenceToggle" style="padding: 2px;">
                                             <button type="button" class="segment-btn active" data-mode="pitch" style="padding: 2px 5px; font-size: 0.62rem;" title="Mismo Tono Real (Tonalidad y notas exactas)">Mismo Tono</button>
                                             <button type="button" class="segment-btn" data-mode="relative" style="padding: 2px 5px; font-size: 0.62rem;" title="Misma Posición / Hilera (Transportado)">Misma Hilera</button>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="diapason-chord-bar-row">
-                                    <div class="diapason-active-chord-badge" id="secondaryDiapasonChordBadge" title="Acorde activo en Diapasón 2">
-                                        <i class="fas fa-music"></i>
-                                        <strong class="sidebar-chord-name" id="secondaryDiapasonChordName">Mib Mayor</strong>
-                                    </div>
-                                    <div class="diapason-volume-bar" id="secondaryDiapasonVolumeBar" title="Volumen del acordeón (ambos diapasones)">
+                                <div class="diapason-stage-body-row">
+                                    <div class="diapason-vertical-volume-control" id="secondaryDiapasonVolumeBar" title="Volumen del acordeón (Diapasón 2)">
+                                        <span class="diapason-volume-label" id="lblSecondaryDiapasonVolume">80%</span>
+                                        <div class="diapason-volume-slider-vertical-wrap">
+                                            <input type="range" id="secondaryDiapasonVolumeSlider" class="diapason-volume-slider-vertical" min="0" max="100" value="80" orient="vertical" title="Ajustar volumen (0% a 100%)">
+                                        </div>
                                         <button type="button" class="btn-diapason-volume-mute" id="btnSecondaryDiapasonVolumeMute" title="Silenciar / Activar sonido del acordeón">
                                             <i class="fas fa-volume-high" id="iconSecondaryDiapasonVolume"></i>
                                         </button>
-                                        <input type="range" id="secondaryDiapasonVolumeSlider" class="diapason-volume-slider" min="0" max="100" value="80" title="Ajustar volumen de los diapasones (0% a 100%)">
-                                        <span class="diapason-volume-label" id="lblSecondaryDiapasonVolume">80%</span>
+                                        <label class="diapason-mute-checkbox-label" title="Marcar para silenciar">
+                                            <input type="checkbox" id="chkSecondaryDiapasonMute" class="diapason-mute-checkbox">
+                                            <span class="diapason-mute-text">Mudo</span>
+                                        </label>
                                     </div>
-                                </div>
-                                <div class="diapason diapason--secondary" id="secondaryDiapason">
-                                    <!-- Hileras de botones del segundo acordeón generadas dinámicamente -->
+                                    <div class="diapason diapason--secondary" id="secondaryDiapason">
+                                        <!-- Hileras de botones del segundo acordeón generadas dinámicamente -->
+                                    </div>
                                 </div>
                             </div>
                             <div class="diapason-side-stack" id="secondaryDiapasonSideStack">
