@@ -80,9 +80,13 @@ export class AppController {
         this._isChordPinned = false;
         this._pinnedChordData = null;
         this._detectorSelectedButtons = [];
+        this._isVolumeSynced = typeof localStorage !== 'undefined' ? localStorage.getItem('acordeon_volume_synced') !== 'false' : true;
         this._diapasonVolume = 80;
         this._isDiapasonMuted = false;
         this._lastDiapasonVolume = 80;
+        this._secondaryDiapasonVolume = 80;
+        this._isSecondaryDiapasonMuted = false;
+        this._lastSecondaryDiapasonVolume = 80;
 
         // Modo Espejo (Intercambiar Hileras 1 y 3)
         this._isDiapasonMirrored = typeof localStorage !== 'undefined' && localStorage.getItem('acordeon_is_mirrored') === 'true';
@@ -114,45 +118,114 @@ export class AppController {
         this._renderAll();
         this._renderSecondaryDiapason();
         this._syncSecondaryDiapason();
-        this._applyDiapasonVolume(this._diapasonVolume, this._isDiapasonMuted);
+        this._applyPrimaryVolume(this._diapasonVolume, this._isDiapasonMuted, false);
+        this._applySecondaryVolume(this._secondaryDiapasonVolume, this._isSecondaryDiapasonMuted, false);
+        this._updateVolumeSyncUI();
     }
 
     /**
-     * Aplica el volumen del diapasón al motor de síntesis y sincroniza la interfaz.
+     * Aplica el volumen del Diapasón 1 y actualiza su interfaz.
      * @param {number} vol Porcentaje (0 a 100)
      * @param {boolean} isMuted
+     * @param {boolean} [syncOther=true]
      * @private
      */
-    _applyDiapasonVolume(vol, isMuted) {
+    _applyPrimaryVolume(vol, isMuted, syncOther = true) {
         this._diapasonVolume = vol;
         this._isDiapasonMuted = isMuted;
 
         const effectiveVol = isMuted ? 0 : vol;
-        const db = effectiveVol === 0 ? -80 : (20 * Math.log10(effectiveVol / 100));
-        audioEngine.setVolume(db);
+        const slider = document.getElementById('diapasonVolumeSlider');
+        const lbl = document.getElementById('lblDiapasonVolume');
+        const icon = document.getElementById('iconDiapasonVolume');
+        const btnMute = document.getElementById('btnDiapasonVolumeMute');
+        const chk = document.getElementById('chkDiapasonMute');
 
-        // Sincronizar UI en Acordeón 1 y Acordeón 2
-        const slider1 = document.getElementById('diapasonVolumeSlider');
-        const slider2 = document.getElementById('secondaryDiapasonVolumeSlider');
-        const lbl1 = document.getElementById('lblDiapasonVolume');
-        const lbl2 = document.getElementById('lblSecondaryDiapasonVolume');
-        const icon1 = document.getElementById('iconDiapasonVolume');
-        const icon2 = document.getElementById('iconSecondaryDiapasonVolume');
-        const btnMute1 = document.getElementById('btnDiapasonVolumeMute');
-        const btnMute2 = document.getElementById('btnSecondaryDiapasonVolumeMute');
-        const chk1 = document.getElementById('chkDiapasonMute');
-        const chk2 = document.getElementById('chkSecondaryDiapasonMute');
-
-        [slider1, slider2].forEach(s => { if (s) s.value = effectiveVol; });
-        [lbl1, lbl2].forEach(l => { if (l) l.textContent = isMuted ? 'Mudo' : `${effectiveVol}%`; });
-        [chk1, chk2].forEach(c => { if (c) c.checked = isMuted; });
+        if (slider) slider.value = effectiveVol;
+        if (lbl) lbl.textContent = isMuted ? 'Mudo' : `${effectiveVol}%`;
+        if (chk) chk.checked = isMuted;
 
         const iconClass = (isMuted || effectiveVol === 0)
             ? 'fas fa-volume-xmark'
             : (effectiveVol < 45 ? 'fas fa-volume-low' : 'fas fa-volume-high');
+        if (icon) icon.className = iconClass;
+        if (btnMute) btnMute.classList.toggle('is-muted', isMuted || effectiveVol === 0);
 
-        [icon1, icon2].forEach(i => { if (i) i.className = iconClass; });
-        [btnMute1, btnMute2].forEach(b => { if (b) b.classList.toggle('is-muted', isMuted || effectiveVol === 0); });
+        this._updateMasterAudioVolume();
+
+        if (this._isVolumeSynced && syncOther) {
+            this._applySecondaryVolume(vol, isMuted, false);
+        }
+    }
+
+    /**
+     * Aplica el volumen del Diapasón 2 y actualiza su interfaz.
+     * @param {number} vol Porcentaje (0 a 100)
+     * @param {boolean} isMuted
+     * @param {boolean} [syncOther=true]
+     * @private
+     */
+    _applySecondaryVolume(vol, isMuted, syncOther = true) {
+        this._secondaryDiapasonVolume = vol;
+        this._isSecondaryDiapasonMuted = isMuted;
+
+        const effectiveVol = isMuted ? 0 : vol;
+        const slider = document.getElementById('secondaryDiapasonVolumeSlider');
+        const lbl = document.getElementById('lblSecondaryDiapasonVolume');
+        const icon = document.getElementById('iconSecondaryDiapasonVolume');
+        const btnMute = document.getElementById('btnSecondaryDiapasonVolumeMute');
+        const chk = document.getElementById('chkSecondaryDiapasonMute');
+
+        if (slider) slider.value = effectiveVol;
+        if (lbl) lbl.textContent = isMuted ? 'Mudo' : `${effectiveVol}%`;
+        if (chk) chk.checked = isMuted;
+
+        const iconClass = (isMuted || effectiveVol === 0)
+            ? 'fas fa-volume-xmark'
+            : (effectiveVol < 45 ? 'fas fa-volume-low' : 'fas fa-volume-high');
+        if (icon) icon.className = iconClass;
+        if (btnMute) btnMute.classList.toggle('is-muted', isMuted || effectiveVol === 0);
+
+        this._updateMasterAudioVolume();
+
+        if (this._isVolumeSynced && syncOther) {
+            this._applyPrimaryVolume(vol, isMuted, false);
+        }
+    }
+
+    /**
+     * Actualiza el volumen maestro en dB para el sintetizador.
+     * @private
+     */
+    _updateMasterAudioVolume() {
+        const eff1 = this._isDiapasonMuted ? 0 : this._diapasonVolume;
+        const eff2 = this._isSecondaryDiapasonMuted ? 0 : this._secondaryDiapasonVolume;
+        const maxEff = Math.max(eff1, eff2);
+        const db = maxEff === 0 ? -80 : (20 * Math.log10(maxEff / 100));
+        audioEngine.setVolume(db);
+    }
+
+    /**
+     * Actualiza la interfaz de los botones de vinculación/sincronización de volumen.
+     * @private
+     */
+    _updateVolumeSyncUI() {
+        const btn1 = document.getElementById('btnSyncVolumePrimary');
+        const btn2 = document.getElementById('btnSyncVolumeSecondary');
+        const icon1 = document.getElementById('iconSyncVolumePrimary');
+        const icon2 = document.getElementById('iconSyncVolumeSecondary');
+
+        [btn1, btn2].forEach(btn => {
+            if (!btn) return;
+            btn.classList.toggle('active', this._isVolumeSynced);
+            btn.title = this._isVolumeSynced
+                ? 'Volumen sincronizado (A1 y A2 vinculados). Clic para independizar controles de volumen.'
+                : 'Volumen independiente (A1 y A2 separados). Clic para sincronizar controles de volumen.';
+        });
+
+        const iconClass = this._isVolumeSynced ? 'fas fa-link' : 'fas fa-link-slash';
+        if (icon1) icon1.className = iconClass;
+        if (icon2) icon2.className = iconClass;
     }
 
     /**
@@ -291,55 +364,98 @@ export class AppController {
             });
         }
 
-        // Controles de volumen de los diapasones (ambos acordeones)
-        const initVolSlider = (sliderId) => {
-            const slider = document.getElementById(sliderId);
-            if (slider) {
-                slider.addEventListener('input', (e) => {
-                    const val = parseInt(e.target.value, 10);
-                    if (val > 0) this._lastDiapasonVolume = val;
-                    this._applyDiapasonVolume(val, val === 0);
-                });
-            }
-        };
-        initVolSlider('diapasonVolumeSlider');
-        initVolSlider('secondaryDiapasonVolumeSlider');
+        // Sliders de volumen independiente/sincronizado
+        const slider1 = document.getElementById('diapasonVolumeSlider');
+        if (slider1) {
+            slider1.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value, 10);
+                if (val > 0) this._lastDiapasonVolume = val;
+                this._applyPrimaryVolume(val, val === 0, true);
+            });
+        }
+        const slider2 = document.getElementById('secondaryDiapasonVolumeSlider');
+        if (slider2) {
+            slider2.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value, 10);
+                if (val > 0) this._lastSecondaryDiapasonVolume = val;
+                this._applySecondaryVolume(val, val === 0, true);
+            });
+        }
 
-        const initMuteBtn = (btnId) => {
-            const btn = document.getElementById(btnId);
-            if (btn) {
-                btn.addEventListener('click', () => {
-                    const willMute = !this._isDiapasonMuted;
-                    if (willMute) {
-                        this._lastDiapasonVolume = this._diapasonVolume > 0 ? this._diapasonVolume : 80;
-                        this._applyDiapasonVolume(0, true);
-                    } else {
-                        const restored = this._lastDiapasonVolume > 0 ? this._lastDiapasonVolume : 80;
-                        this._applyDiapasonVolume(restored, false);
-                    }
-                });
-            }
-        };
-        initMuteBtn('btnDiapasonVolumeMute');
-        initMuteBtn('btnSecondaryDiapasonVolumeMute');
+        // Botones de Mudo
+        const btnMute1 = document.getElementById('btnDiapasonVolumeMute');
+        if (btnMute1) {
+            btnMute1.addEventListener('click', () => {
+                const willMute = !this._isDiapasonMuted;
+                if (willMute) {
+                    this._lastDiapasonVolume = this._diapasonVolume > 0 ? this._diapasonVolume : 80;
+                    this._applyPrimaryVolume(0, true, true);
+                } else {
+                    const restored = this._lastDiapasonVolume > 0 ? this._lastDiapasonVolume : 80;
+                    this._applyPrimaryVolume(restored, false, true);
+                }
+            });
+        }
+        const btnMute2 = document.getElementById('btnSecondaryDiapasonVolumeMute');
+        if (btnMute2) {
+            btnMute2.addEventListener('click', () => {
+                const willMute = !this._isSecondaryDiapasonMuted;
+                if (willMute) {
+                    this._lastSecondaryDiapasonVolume = this._secondaryDiapasonVolume > 0 ? this._secondaryDiapasonVolume : 80;
+                    this._applySecondaryVolume(0, true, true);
+                } else {
+                    const restored = this._lastSecondaryDiapasonVolume > 0 ? this._lastSecondaryDiapasonVolume : 80;
+                    this._applySecondaryVolume(restored, false, true);
+                }
+            });
+        }
 
-        const initMuteCheckbox = (chkId) => {
-            const chk = document.getElementById(chkId);
-            if (chk) {
-                chk.addEventListener('change', (e) => {
-                    const willMute = e.target.checked;
-                    if (willMute) {
-                        this._lastDiapasonVolume = this._diapasonVolume > 0 ? this._diapasonVolume : 80;
-                        this._applyDiapasonVolume(0, true);
-                    } else {
-                        const restored = this._lastDiapasonVolume > 0 ? this._lastDiapasonVolume : 80;
-                        this._applyDiapasonVolume(restored, false);
-                    }
-                });
+        // Checkboxes de Mudo
+        const chk1 = document.getElementById('chkDiapasonMute');
+        if (chk1) {
+            chk1.addEventListener('change', (e) => {
+                const willMute = e.target.checked;
+                if (willMute) {
+                    this._lastDiapasonVolume = this._diapasonVolume > 0 ? this._diapasonVolume : 80;
+                    this._applyPrimaryVolume(0, true, true);
+                } else {
+                    const restored = this._lastDiapasonVolume > 0 ? this._lastDiapasonVolume : 80;
+                    this._applyPrimaryVolume(restored, false, true);
+                }
+            });
+        }
+        const chk2 = document.getElementById('chkSecondaryDiapasonMute');
+        if (chk2) {
+            chk2.addEventListener('change', (e) => {
+                const willMute = e.target.checked;
+                if (willMute) {
+                    this._lastSecondaryDiapasonVolume = this._secondaryDiapasonVolume > 0 ? this._secondaryDiapasonVolume : 80;
+                    this._applySecondaryVolume(0, true, true);
+                } else {
+                    const restored = this._lastSecondaryDiapasonVolume > 0 ? this._lastSecondaryDiapasonVolume : 80;
+                    this._applySecondaryVolume(restored, false, true);
+                }
+            });
+        }
+
+        // Botones de vinculación / sincronización de volumen entre acordeones
+        const toggleVolumeSync = () => {
+            this._isVolumeSynced = !this._isVolumeSynced;
+            try {
+                localStorage.setItem('acordeon_volume_synced', this._isVolumeSynced.toString());
+            } catch (e) {
+                console.warn('[AppController] No se pudo guardar sync de volumen:', e);
+            }
+            this._updateVolumeSyncUI();
+            if (this._isVolumeSynced) {
+                this._applySecondaryVolume(this._diapasonVolume, this._isDiapasonMuted, false);
             }
         };
-        initMuteCheckbox('chkDiapasonMute');
-        initMuteCheckbox('chkSecondaryDiapasonMute');
+
+        const btnSync1 = document.getElementById('btnSyncVolumePrimary');
+        if (btnSync1) btnSync1.addEventListener('click', toggleVolumeSync);
+        const btnSync2 = document.getElementById('btnSyncVolumeSecondary');
+        if (btnSync2) btnSync2.addEventListener('click', toggleVolumeSync);
 
         // Segmentado de Notación (Latina / Alemana)
         document.querySelectorAll('#notationToggle .segment-btn, .toggle-segmented__btn[data-val]').forEach(btn => {
