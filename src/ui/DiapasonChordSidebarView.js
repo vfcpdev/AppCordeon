@@ -528,13 +528,20 @@ export class DiapasonChordSidebarView {
             });
         });
 
-        // Botón editar en el header del acorde activo (Sin Ventana Modal)
-        const btnEditHeader = activeBox.querySelector('.sidebar-card-edit-btn');
-        if (btnEditHeader) {
-            btnEditHeader.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const targetIdx = this._activeTimelineIndex >= 0 ? this._activeTimelineIndex : 0;
-                this._openSidebarInlineEditor(sidebarEl, targetIdx);
+        // Clic en el header del acorde activo para restaurar acorde completo en ambos diapasones
+        const cardHeader = activeBox.querySelector('.sidebar-chord-card-header');
+        if (cardHeader) {
+            cardHeader.style.cursor = 'pointer';
+            cardHeader.addEventListener('click', (e) => {
+                if (e.target.closest('button') || e.target.closest('input')) return;
+                if (onButtonAction) {
+                    onButtonAction({
+                        type: 'bellows_preference_change',
+                        target: targetKey,
+                        bellowsAction: chord.bellowsAction || 'both',
+                        chord
+                    });
+                }
             });
         }
 

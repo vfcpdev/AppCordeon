@@ -1493,7 +1493,7 @@ export class AppController {
         const noteToPlay = this._bellowsMachine.resolveMidi(buttonData, isRightClick);
         const direction = (noteToPlay === buttonData.pull) ? 'pull' : 'push';
         if (!this._isDiapasonMuted && this._diapasonVolume > 0) {
-            audioEngine.play(noteToPlay);
+            audioEngine.play(noteToPlay, "8n", this._diapasonVolume / 100);
         }
         this._diapasonView.triggerGlowOnElement(btnEl, direction);
     }
