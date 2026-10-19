@@ -5,6 +5,7 @@ Este documento especifica las reglas de estructura visual y componentes para ase
 ---
 
 ## 1. Regla Crítica: Preservación Absoluta de los Diapasones
+
 1. **Integridad de los 31 Botones**:
    - Cada diapasón (Acordeón 1 y Acordeón 2) contiene 31 botones organizados en 3 hileras (10, 11, 10).
    - Ninguna regla CSS de ancho, margen, padding o flexbox debe comprimir, desbordar o truncar los diapasones ni sus botones.
@@ -15,6 +16,7 @@ Este documento especifica las reglas de estructura visual y componentes para ase
 ## 2. Disposición de las Columnas y Apilamiento de Cuadrículas
 
 ### Columna 1: `.app-layout__col--stage`
+
 Contiene la barra superior (`.diapason-top-bar`), los diapasones (`.diapasons-stage-container`) y las posiciones de ejecución.
 
 - **Estructura por Diapasón (`#primaryDiapasonCol` y `#secondaryDiapasonCol`)**:
@@ -33,6 +35,7 @@ Contiene la barra superior (`.diapason-top-bar`), los diapasones (`.diapasons-st
     - Contiene la barra de tiempo y scrubbing (`#playerScrubberRow`), controles de transporte (Play/Pausa, Detener, Atrás/Adelante), metrónomo sincronizado, BPM, velocidad, volumen y sincronización de diapasón.
 
 ### Sincronización con el Segundo Acordeón
+
 - El segundo acordeón (`#secondaryDiapasonCol`) replica este diseño apilado en su propio stack:
   - Arriba: `#secondaryDiapasonChordSidebar` ("2do Acordeón (Equiv.)").
   - Abajo: `#secondaryChordGridPanel` con su contenedor `#secondaryAudioMeasureGridContainer`.
@@ -43,6 +46,7 @@ Contiene la barra superior (`.diapason-top-bar`), los diapasones (`.diapasons-st
 ---
 
 ## 3. Columna 2: `.app-layout__col--chords`
+
 - **Acorde Libre (`#freeChordSection`)**:
   - Selectores en una sola fila horizontal (`#freeChordSelectorsRow`): tónica (`#chordRoot`), modalidad (`#chordType`), 4ta nota opcional (`#chord4thNote`) y botones de octava segmentados (`#chordOctaveToggle`: Todas, 3, 4, 5).
   - Dirección de fuelle y tira de notas de arpegio.
@@ -55,6 +59,6 @@ Contiene la barra superior (`.diapason-top-bar`), los diapasones (`.diapasons-st
 ---
 
 ## 4. Columna 3: `.app-layout__col--theory`
+
 - **Detector de Acordes (`#detectorSection`)**:
   - Modo selección manual de botones, reproducción de acorde y arpegio detectado.
-
