@@ -257,11 +257,24 @@
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
+/* En Cerrar (Push): Resaltar la nota de cerrar, la otra nota (pull) se pone en gris */
 .btn-accordion.push .btn-note-push,
-.btn-accordion.push .btn-note-pull,
 .btn-accordion.push .btn-note-single {
     color: #ffffff !important;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.btn-accordion.push .btn-note-pull {
+    color: #cbd5e1 !important;
+    opacity: 0.35 !important;
+    text-shadow: none !important;
+    font-weight: 500 !important;
+    filter: grayscale(1) !important;
+}
+
+.btn-accordion.push .btn-separator {
+    color: rgba(255, 255, 255, 0.30) !important;
+    text-shadow: none !important;
 }
 
 .btn-accordion.pull {
@@ -271,11 +284,24 @@
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
-.btn-accordion.pull .btn-note-push,
+/* En Abrir (Pull): Resaltar la nota de abrir, la otra nota (push) se pone en gris */
 .btn-accordion.pull .btn-note-pull,
 .btn-accordion.pull .btn-note-single {
     color: #ffffff !important;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.btn-accordion.pull .btn-note-push {
+    color: #cbd5e1 !important;
+    opacity: 0.35 !important;
+    text-shadow: none !important;
+    font-weight: 500 !important;
+    filter: grayscale(1) !important;
+}
+
+.btn-accordion.pull .btn-separator {
+    color: rgba(255, 255, 255, 0.30) !important;
+    text-shadow: none !important;
 }
 
 .btn-accordion.both {
@@ -310,7 +336,10 @@
     z-index: 9;
 }
 
-/* Micro-resaltado de notas que integran el acorde en botones duales */
+/* Micro-resaltado de notas que integran el acorde o nota enfocada */
+.btn-accordion .btn-note-push.note-matched,
+.btn-accordion .btn-note-pull.note-matched,
+.btn-accordion .btn-note-single.note-matched,
 .btn-accordion.chord-glow .btn-note-push.note-matched,
 .btn-accordion.chord-glow .btn-note-pull.note-matched,
 .btn-accordion.chord-glow .btn-note-single.note-matched,
@@ -322,11 +351,22 @@
     text-shadow: 0 0 8px rgba(250, 204, 21, 0.95), 0 1px 2px #000000 !important;
     text-decoration: underline;
     text-underline-offset: 2px;
+    opacity: 1 !important;
+    filter: none !important;
 }
 
+/* La otra nota no coincidente se atenúa y se muestra en gris */
+.btn-accordion .btn-note-push.note-dimmed,
+.btn-accordion .btn-note-pull.note-dimmed,
 .btn-accordion.chord-glow .btn-note-push.note-dimmed,
-.btn-accordion.chord-glow .btn-note-pull.note-dimmed {
-    opacity: 0.30 !important;
+.btn-accordion.chord-glow .btn-note-pull.note-dimmed,
+.btn-accordion.single-focus .btn-note-push.note-dimmed,
+.btn-accordion.single-focus .btn-note-pull.note-dimmed {
+    color: #cbd5e1 !important;
+    opacity: 0.35 !important;
+    text-shadow: none !important;
+    text-decoration: none !important;
+    font-weight: 500 !important;
     filter: grayscale(1) !important;
 }
 
@@ -685,9 +725,9 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: 370px;
-    min-width: 350px;
-    max-width: 390px;
+    width: 390px;
+    min-width: 360px;
+    max-width: 420px;
     align-self: flex-start;
     box-sizing: border-box;
 }
@@ -752,8 +792,9 @@
     display: flex;
     flex-direction: column;
     align-self: flex-start;
-    width: 370px;
-    min-width: 350px;
+    width: 410px;
+    min-width: 380px;
+    max-width: 440px;
     background: #ffffff;
     border: 1px solid #cbd5e1;
     border-radius: 14px;
@@ -1129,42 +1170,157 @@
     white-space: nowrap;
 }
 
-.sidebar-buttons-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    max-height: 220px;
+.sidebar-buttons-grid,
+.sidebar-columns-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3.5px;
+    max-height: 250px;
     overflow-y: auto;
-    align-content: flex-start;
+    overflow-x: hidden;
+    padding: 2px 0;
+    align-items: start;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
 }
 
-/* BOTONES NUMERADOS DEL ACORDE (AUMENTADOS 20% DE TAMAÑO) */
-.sidebar-btn-badge {
-    position: relative;
-    display: inline-flex;
+.sidebar-buttons-grid::-webkit-scrollbar,
+.sidebar-columns-grid::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-buttons-grid::-webkit-scrollbar-track,
+.sidebar-columns-grid::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-buttons-grid::-webkit-scrollbar-thumb,
+.sidebar-columns-grid::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.sidebar-row-col {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 3px 2px;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.sidebar-row-col-header {
+    display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 2px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 1px 0 2.5px 0;
+    border-bottom: 1px solid #cbd5e1;
+    user-select: none;
+    line-height: 1.1;
+    background: #ffffff;
+    border-radius: 4px 4px 0 0;
+}
+
+.pull-block .sidebar-row-col-header {
+    color: #1e40af;
+    border-bottom-color: #bfdbfe;
+}
+
+.push-block .sidebar-row-col-header {
+    color: #991b1b;
+    border-bottom-color: #fecaca;
+}
+
+.sidebar-row-col-header .row-header-main {
+    font-weight: 800;
+    font-size: 0.68rem;
+}
+
+.sidebar-row-col-header .row-header-sub {
+    font-size: 0.55rem;
+    opacity: 0.8;
+    font-weight: 700;
+}
+
+.sidebar-row-col-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: stretch;
+    min-height: 26px;
+}
+
+.sidebar-row-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 26px;
+    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 700;
+    user-select: none;
+}
+
+/* BOTONES NUMERADOS DEL ACORDE (DISPOSICIÓN COMPACTA EN COLUMNA CON BOTÓN Y NOTA LEGIBLES) */
+.sidebar-btn-badge {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5px;
     border-radius: 6px;
-    padding: 3.5px 7px;
-    font-size: 0.74rem;
+    padding: 3px 2px;
+    font-size: 0.70rem;
     cursor: pointer;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
     box-sizing: border-box;
-    /* Botón neutro: fondo claro elegante */
     background: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
-    flex: 1 1 calc(50% - 4px);
-    min-width: 65px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+    width: 100%;
+    min-width: 0;
+    line-height: 1.15;
+}
+
+.sidebar-btn-badge .badge-btn-top {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+}
+
+.sidebar-btn-badge .badge-btn-num {
+    font-weight: 800;
+    font-size: 0.74rem;
+    letter-spacing: -0.2px;
+}
+
+.sidebar-btn-badge .badge-btn-note {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+    text-align: center;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .sidebar-btn-badge:hover {
-    background: #f1f5f9 !important;
+    background: #f8fafc !important;
     border-color: #94a3b8 !important;
     transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08) !important;
 }
 
 /* SOLO COLOREAR LA FUENTE */
@@ -1173,20 +1329,16 @@
     color: #1d4ed8 !important;
 }
 
-.sidebar-btn-badge.pull-badge strong {
+.sidebar-btn-badge.pull-badge .badge-btn-num {
     color: #1e40af !important;
-    font-weight: 800;
-    font-size: 0.76rem;
 }
 
-.sidebar-btn-badge.pull-badge small {
+.sidebar-btn-badge.pull-badge .badge-btn-note {
     color: #2563eb !important;
-    font-size: 0.65rem;
-    opacity: 0.9;
 }
 
-.sidebar-btn-badge.pull-badge:hover strong,
-.sidebar-btn-badge.pull-badge:hover small {
+.sidebar-btn-badge.pull-badge:hover .badge-btn-num,
+.sidebar-btn-badge.pull-badge:hover .badge-btn-note {
     color: #1e3a8a !important;
 }
 
@@ -1195,20 +1347,16 @@
     color: #b91c1c !important;
 }
 
-.sidebar-btn-badge.push-badge strong {
+.sidebar-btn-badge.push-badge .badge-btn-num {
     color: #991b1b !important;
-    font-weight: 800;
-    font-size: 0.76rem;
 }
 
-.sidebar-btn-badge.push-badge small {
+.sidebar-btn-badge.push-badge .badge-btn-note {
     color: #dc2626 !important;
-    font-size: 0.65rem;
-    opacity: 0.9;
 }
 
-.sidebar-btn-badge.push-badge:hover strong,
-.sidebar-btn-badge.push-badge:hover small {
+.sidebar-btn-badge.push-badge:hover .badge-btn-num,
+.sidebar-btn-badge.push-badge:hover .badge-btn-note {
     color: #7f1d1d !important;
 }
 
@@ -1221,8 +1369,8 @@
     box-shadow: none !important;
 }
 
-.sidebar-btn-badge.is-deactivated strong,
-.sidebar-btn-badge.is-deactivated small {
+.sidebar-btn-badge.is-deactivated .badge-btn-num,
+.sidebar-btn-badge.is-deactivated .badge-btn-note {
     color: #94a3b8 !important;
     text-decoration: line-through;
     text-shadow: none !important;
@@ -1307,7 +1455,8 @@
     color: #ffffff;
 }
 
-.sidebar-buttons-grid.is-collapsed {
+.sidebar-buttons-grid.is-collapsed,
+.sidebar-columns-grid.is-collapsed {
     display: none !important;
 }
 

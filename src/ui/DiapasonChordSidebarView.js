@@ -6,7 +6,7 @@
  */
 
 import { getAccordionButtonsForChord } from '../theory/Scales.js';
-import { getNoteNamesList } from '../theory/MusicTheory.js';
+import { getNoteNamesList, getPitchClass } from '../theory/MusicTheory.js';
 import { NOTATION_MODES } from '../core/Constants.js';
 import { audioPlayerController } from '../audio/AudioPlayerController.js';
 import { audioEngine } from '../audio/AudioEngine.js';
@@ -156,7 +156,9 @@ export class DiapasonChordSidebarView {
             this._lastNotation,
             this._lastPrimOffset,
             this._lastSecOffset,
-            this._lastOnButtonAction
+            this._lastOnButtonAction,
+            this._lastIsPrimaryMirrored,
+            this._lastIsSecondaryMirrored
         );
         if (onButtonAction) {
             onButtonAction({
@@ -177,6 +179,8 @@ export class DiapasonChordSidebarView {
      * @param {number} [primOffset=0]
      * @param {number} [secOffset=0]
      * @param {Function} [onButtonAction=null]
+     * @param {boolean} [isPrimaryMirrored=null]
+     * @param {boolean} [isSecondaryMirrored=null]
      */
     renderActiveChord(
         chord,
@@ -185,7 +189,9 @@ export class DiapasonChordSidebarView {
         notation = 'latina',
         primOffset = 0,
         secOffset = 0,
-        onButtonAction = null
+        onButtonAction = null,
+        isPrimaryMirrored = null,
+        isSecondaryMirrored = null
     ) {
         this._currentChord = chord;
         this._lastPrimaryData = primaryAccordionData;
@@ -194,6 +200,12 @@ export class DiapasonChordSidebarView {
         this._lastPrimOffset = primOffset;
         this._lastSecOffset = secOffset;
         this._lastOnButtonAction = onButtonAction;
+        if (typeof isPrimaryMirrored === 'boolean') {
+            this._lastIsPrimaryMirrored = isPrimaryMirrored;
+        }
+        if (typeof isSecondaryMirrored === 'boolean') {
+            this._lastIsSecondaryMirrored = isSecondaryMirrored;
+        }
 
         const chordSig = chord ? `${chord.chordSymbol || chord.chordName}_${chord.root}` : null;
         if (chordSig && chordSig !== this._lastChordSignature) {
@@ -208,8 +220,8 @@ export class DiapasonChordSidebarView {
         const primChordNameEl = document.getElementById('primaryDiapasonChordName');
         const primBadgeEl = document.getElementById('primaryDiapasonChordBadge');
         if (primChordNameEl && primBadgeEl) {
-            if (chord && chord.chordName) {
-                primChordNameEl.textContent = chord.chordName;
+            if (chord) {
+                primChordNameEl.textContent = this._getFormattedChordName(chord, notation, primOffset);
                 primBadgeEl.style.display = 'inline-flex';
             } else {
                 primBadgeEl.style.display = 'none';
@@ -219,8 +231,8 @@ export class DiapasonChordSidebarView {
         const secChordNameEl = document.getElementById('secondaryDiapasonChordName');
         const secBadgeEl = document.getElementById('secondaryDiapasonChordBadge');
         if (secChordNameEl && secBadgeEl) {
-            if (chord && chord.chordName) {
-                secChordNameEl.textContent = chord.chordName;
+            if (chord) {
+                secChordNameEl.textContent = this._getFormattedChordName(chord, notation, secOffset);
                 secBadgeEl.style.display = 'inline-flex';
             } else {
                 secBadgeEl.style.display = 'none';
@@ -236,7 +248,8 @@ export class DiapasonChordSidebarView {
                 notation,
                 primOffset,
                 'primary',
-                onButtonAction
+                onButtonAction,
+                this._lastIsPrimaryMirrored
             );
         }
 
@@ -249,9 +262,33 @@ export class DiapasonChordSidebarView {
                 notation,
                 secOffset,
                 'secondary',
-                onButtonAction
+                onButtonAction,
+                this._lastIsSecondaryMirrored
             );
         }
+    }
+
+    /**
+     * Devuelve el nombre del acorde formateado según la notación (Latina o Alemana).
+     * @private
+     */
+    _getFormattedChordName(chord, notation = 'latina', offset = 0) {
+        if (!chord) return '';
+        if (chord.root !== undefined) {
+            const rootPitchClass = getPitchClass(chord.root);
+            const latinNotes = getNoteNamesList(NOTATION_MODES.LATINA, offset);
+            const englishNotes = getNoteNamesList(NOTATION_MODES.ALEMANA, offset);
+            const isMinor = chord.quality === 'minor' ||
+                (chord.chordName && chord.chordName.toLowerCase().includes('menor')) ||
+                (chord.chordSymbol && chord.chordSymbol.includes('m'));
+
+            if (notation === NOTATION_MODES.ALEMANA) {
+                return `${englishNotes[rootPitchClass]}${isMinor ? 'm' : ''}`;
+            } else {
+                return `${latinNotes[rootPitchClass]} ${isMinor ? 'Menor' : 'Mayor'}`;
+            }
+        }
+        return chord.chordName || '';
     }
 
     /**
@@ -266,7 +303,8 @@ export class DiapasonChordSidebarView {
         notation,
         tuningOffset,
         targetKey,
-        onButtonAction
+        onButtonAction,
+        isMirrored = null
     ) {
         if (!sidebarEl) return;
         const activeBox = sidebarEl.querySelector('.sidebar-active-chord-box');
@@ -317,31 +355,81 @@ export class DiapasonChordSidebarView {
         else if (this._octaveFilter === 5) octaveDisplayLabel = 'Aguda (5)';
         else if (typeof this._octaveFilter === 'number') octaveDisplayLabel = `Octava ${this._octaveFilter}`;
 
-        const formatButtons = (btnList, dirClass, dirKey) => {
-            if (!btnList || btnList.length === 0) {
-                return '<span class="sidebar-empty-msg">No disponible</span>';
-            }
-            return btnList.map(b => {
-                const btnKey = `${dirKey}_${b.id}`;
-                const isDeactivated = this._deactivatedButtons.has(btnKey);
-                const statusTitle = isDeactivated
-                    ? `[DESACTIVADO] ${b.label}: ${b.noteName} - Clic para activar en este acorde`
-                    : `[ACTIVO] ${b.label}: ${b.noteName} - Clic para desactivar en este acorde`;
+        // Determinar orden de hileras según configuración de Afuera vs Adentro del diapasón correspondiente
+        const diapasonEl = targetKey === 'primary'
+            ? document.getElementById('diapason')
+            : document.getElementById('secondaryDiapason');
+
+        const effectiveMirrored = typeof isMirrored === 'boolean'
+            ? isMirrored
+            : (diapasonEl ? diapasonEl.classList.contains('diapason--mirrored') : false);
+
+        // Si está en espejo (Af->Ad): Hilera 1 (Afuera) a la izq, H2 en el centro, H3 (Adentro) a la der
+        // Si está normal (Ad<-Af): Hilera 3 (Adentro) a la izq, H2 en el centro, H1 (Afuera) a la der
+        const displayOrder = effectiveMirrored ? ['row1', 'row2', 'row3'] : ['row3', 'row2', 'row1'];
+
+        const ROW_SHORT_LABELS = {
+            row1: 'H1',
+            row2: 'H2',
+            row3: 'H3'
+        };
+
+        const ROW_SUB_LABELS = {
+            row1: 'Af',
+            row2: 'Med',
+            row3: 'Ad'
+        };
+
+        const ROW_TITLES = {
+            row1: 'Hilera 1 (Afuera)',
+            row2: 'Hilera 2 (Medio)',
+            row3: 'Hilera 3 (Adentro)'
+        };
+
+        // Renderizado en 3 Columnas por hilera con etiquetas B1, B2, B3...
+        const render3RowColumns = (btnList, dirClass, dirKey) => {
+            return displayOrder.map(rowKey => {
+                const rowBtns = (btnList || []).filter(b => b.rowKey === rowKey);
+                rowBtns.sort((a, b) => (a.btnIndex || 0) - (b.btnIndex || 0));
+
+                const buttonsHtml = rowBtns.length > 0
+                    ? rowBtns.map(b => {
+                        const btnKey = `${dirKey}_${b.id}`;
+                        const isDeactivated = this._deactivatedButtons.has(btnKey);
+                        const statusTitle = isDeactivated
+                            ? `[DESACTIVADO] ${ROW_SHORT_LABELS[b.rowKey]}·B${b.btnIndex}: ${b.noteName} - Clic para activar en este acorde`
+                            : `[ACTIVO] ${ROW_SHORT_LABELS[b.rowKey]}·B${b.btnIndex}: ${b.noteName} - Clic para desactivar en este acorde`;
+
+                        return `
+                            <button type="button" 
+                                class="sidebar-btn-badge ${dirClass} ${isDeactivated ? 'is-deactivated' : 'is-active'}" 
+                                data-key="${btnKey}"
+                                data-id="${b.id}" 
+                                data-dir="${b.direction}" 
+                                data-midi="${b.midi}" 
+                                title="${statusTitle}">
+                                <span class="badge-btn-top">
+                                    <span class="badge-status-dot ${isDeactivated ? 'dot-inactive' : 'dot-active'}">
+                                        <i class="fas ${isDeactivated ? 'fa-ban' : 'fa-check'}"></i>
+                                    </span>
+                                    <strong class="badge-btn-num">B${b.btnIndex}</strong>
+                                </span>
+                                <span class="badge-btn-note">${b.noteName}</span>
+                            </button>
+                        `;
+                    }).join('')
+                    : '<span class="sidebar-row-empty" title="Sin botones en esta hilera">-</span>';
 
                 return `
-                    <button type="button" 
-                        class="sidebar-btn-badge ${dirClass} ${isDeactivated ? 'is-deactivated' : 'is-active'}" 
-                        data-key="${btnKey}"
-                        data-id="${b.id}" 
-                        data-dir="${b.direction}" 
-                        data-midi="${b.midi}" 
-                        title="${statusTitle}">
-                        <span class="badge-status-dot ${isDeactivated ? 'dot-inactive' : 'dot-active'}">
-                            <i class="fas ${isDeactivated ? 'fa-ban' : 'fa-check'}"></i>
-                        </span>
-                        <strong>${b.label}</strong>
-                        <small>${b.noteName}</small>
-                    </button>
+                    <div class="sidebar-row-col" data-row="${rowKey}">
+                        <div class="sidebar-row-col-header" title="${ROW_TITLES[rowKey] || rowKey}">
+                            <span class="row-header-main">${ROW_SHORT_LABELS[rowKey]}</span>
+                            <span class="row-header-sub">(${ROW_SUB_LABELS[rowKey]})</span>
+                        </div>
+                        <div class="sidebar-row-col-body">
+                            ${buttonsHtml}
+                        </div>
+                    </div>
                 `;
             }).join('');
         };
@@ -405,8 +493,8 @@ export class DiapasonChordSidebarView {
                             <i class="fas fa-exclamation-triangle"></i> Falta: <strong>${missingPullNames.join(', ')}</strong>
                         </div>
                     ` : ''}
-                    <div class="sidebar-buttons-grid pull-grid ${isPullCollapsed ? 'is-collapsed' : ''}">
-                        ${formatButtons(buttons.pullButtons, 'pull-badge', 'pull')}
+                    <div class="sidebar-columns-grid pull-grid ${isPullCollapsed ? 'is-collapsed' : ''}">
+                        ${render3RowColumns(buttons.pullButtons, 'pull-badge', 'pull')}
                     </div>
                 </div>
 
@@ -434,8 +522,8 @@ export class DiapasonChordSidebarView {
                             <i class="fas fa-exclamation-triangle"></i> Falta: <strong>${missingPushNames.join(', ')}</strong>
                         </div>
                     ` : ''}
-                    <div class="sidebar-buttons-grid push-grid ${isPushCollapsed ? 'is-collapsed' : ''}">
-                        ${formatButtons(buttons.pushButtons, 'push-badge', 'push')}
+                    <div class="sidebar-columns-grid push-grid ${isPushCollapsed ? 'is-collapsed' : ''}">
+                        ${render3RowColumns(buttons.pushButtons, 'push-badge', 'push')}
                     </div>
                 </div>
             </div>

@@ -45,7 +45,6 @@ export class AppController {
         this._executionView = views.executionView;
         this._audioTrackView = views.audioTrackView;
         this._diapasonChordSidebarView = views.diapasonChordSidebarView;
-        this._sheetMusicModalView = views.sheetMusicModalView || null;
 
         this._audioChordAnalyzer = new AudioChordAnalyzer();
 
@@ -121,14 +120,6 @@ export class AppController {
         this._applyPrimaryVolume(this._diapasonVolume, this._isDiapasonMuted, false);
         this._applySecondaryVolume(this._secondaryDiapasonVolume, this._isSecondaryDiapasonMuted, false);
         this._updateVolumeSyncUI();
-
-        if (this._sheetMusicModalView) {
-            this._sheetMusicModalView.setReplicateCallbacks({
-                onReplicateMelodyNote: (note, target) => this.replicateMelodyNote(note, target),
-                findAccordionButton: (midi, target) => this.findAccordionButtonForMidi(midi, target),
-                getAccordionTunings: () => this.getAccordionTuningsInfo()
-            });
-        }
     }
 
     /**
@@ -272,10 +263,6 @@ export class AppController {
             if (this._diapasonChordSidebarView) {
                 this._updateSidebarChordsView(chord);
                 this._diapasonChordSidebarView.setActiveTimelineIndex(index);
-            }
-            if (this._sheetMusicModalView && chord) {
-                const barNum = chord.barNumber || (typeof index === 'number' ? index + 1 : 1);
-                this._sheetMusicModalView.syncPlaybackBar(barNum, chord.chordSymbol);
             }
             if (syncWithDiapason && this._audioTrackView && this._audioTrackView.isSyncEnabled()) {
                 if (chord) {
@@ -476,6 +463,7 @@ export class AppController {
                 this._renderSecondaryDiapason();
                 this._updateDetectorUI();
                 this._syncSecondaryDiapason();
+                this._updateSidebarChordsView();
             });
         });
 
@@ -527,6 +515,7 @@ export class AppController {
                 this._updateMirrorButtonUI();
                 this._renderDiapason();
                 this._restoreActiveHighlights();
+                this._updateSidebarChordsView();
             });
         }
 
@@ -731,15 +720,8 @@ export class AppController {
             this._audioTrackView.bindEvents({
                 onFileSelected: async (file) => {
                     const fname = (file.name || '').toLowerCase();
-                    if (fname.endsWith('.pdf')) {
-                        alert('Formato no admitido:\nLos archivos PDF no son compatibles.\n\n- Para partituras interactivas: Abre la ventana "Partitura" e importa en formato MusicXML (.xml, .musicxml, .mxl).\n- Para canciones de acompañamiento: Carga un archivo de audio (MP3, WAV, OGG).');
-                        return;
-                    }
-                    if (fname.endsWith('.xml') || fname.endsWith('.musicxml') || fname.endsWith('.mxl')) {
-                        if (this._sheetMusicModalView) {
-                            this._sheetMusicModalView.open();
-                            await this._sheetMusicModalView.loadMusicXmlFile(file);
-                        }
+                    if (!file.type.startsWith('audio/') && !fname.endsWith('.mp3') && !fname.endsWith('.wav') && !fname.endsWith('.ogg')) {
+                        alert('Formato no admitido:\nPor favor carga un archivo de audio compatible (MP3, WAV, OGG).');
                         return;
                     }
 
@@ -1084,6 +1066,7 @@ export class AppController {
                 this._updateSecondaryMirrorButtonUI();
                 this._renderSecondaryDiapason();
                 this._syncSecondaryDiapason();
+                this._updateSidebarChordsView();
             });
         }
 
@@ -1173,15 +1156,22 @@ export class AppController {
     _updateSidebarChordsView(chord = null) {
         if (!this._diapasonChordSidebarView) return;
 
-        let targetChord = chord;
+        if (chord) {
+            this._currentTrackChord = chord;
+        }
+
+        let targetChord = chord || this._currentTrackChord;
         if (!targetChord) {
             const rootPitchClass = getPitchClass(this._activeScaleRoot);
             const arrLat = getNoteNamesList(NOTATION_MODES.LATINA, this._currentOffset);
             const arrAle = getNoteNamesList(NOTATION_MODES.ALEMANA, this._currentOffset);
             const isMinor = this._selectedScaleType === 'minor' || this._selectedScaleType === 'harmonic_minor';
             const intervals = isMinor ? [0, 3, 7] : [0, 4, 7];
+            const isAlemana = this._currentNotation === NOTATION_MODES.ALEMANA;
             targetChord = {
-                chordName: `${arrLat[rootPitchClass]} ${isMinor ? 'Menor' : 'Mayor'}`.trim(),
+                chordName: isAlemana
+                    ? `${arrAle[rootPitchClass]}${isMinor ? 'm' : ''}`.trim()
+                    : `${arrLat[rootPitchClass]} ${isMinor ? 'Menor' : 'Mayor'}`.trim(),
                 chordSymbol: `${arrAle[rootPitchClass]}${isMinor ? 'm' : ''}`.trim(),
                 root: rootPitchClass,
                 noteMods: intervals.map(i => (rootPitchClass + i) % 12),
@@ -1275,7 +1265,9 @@ export class AppController {
                         audioEngine.play(midis);
                     }
                 }
-            }
+            },
+            this._isDiapasonMirrored,
+            this._isSecondaryDiapasonMirrored
         );
     }
 
@@ -1966,201 +1958,5 @@ export class AppController {
         }
 
         this._detectorView.setArpeggioPlaying(false);
-    }
-
-    /**
-     * Aplica los acordes de la partitura (ej. Como Zaqueo) al reproductor y diapasón.
-     * @param {Array<Object>} timelineChords
-     * @param {number} [bpm=70]
-     * @param {Object} [scoreInfo=null]
-     */
-    applySheetMusicChords(timelineChords, bpm = 70, scoreInfo = null) {
-        if (!timelineChords || timelineChords.length === 0) return;
-
-        const duration = timelineChords[timelineChords.length - 1].endTime;
-
-        if (this._audioTrackView) {
-            // No cargar archivos ni alterar el reproductor de audio: solo aplicar los acordes a la cuadrícula 4/4
-            this._audioTrackView.applyChordsToGrid(timelineChords, duration, bpm);
-        }
-
-        audioPlayerController.setChordsTimeline(timelineChords);
-
-        if (this._diapasonChordSidebarView) {
-            this._diapasonChordSidebarView.renderChordsList(
-                timelineChords,
-                0,
-                (selectedChord) => {
-                    audioPlayerController.seek(selectedChord.startTime);
-                }
-            );
-            this._updateSidebarChordsView(timelineChords[0]);
-        }
-
-        if (timelineChords[0]) {
-            eventBus.emit('player:chord_active', {
-                chord: timelineChords[0],
-                index: 0,
-                syncWithDiapason: true
-            });
-        }
-    }
-
-    /**
-     * Toca y visualiza en el diapasón un acorde seleccionado desde la tira de la partitura.
-     * @param {Object} chordItem
-     */
-    playSheetMusicChord(chordItem) {
-        if (!chordItem) return;
-        const parsed = parseChordNotation(chordItem.chord);
-        if (parsed) {
-            if (audioEngine && parsed.playbackMidis) {
-                audioEngine.play(parsed.playbackMidis, "4n");
-            }
-            if (this._audioTrackView && this._audioTrackView.isSyncEnabled()) {
-                this._diapasonView.highlightChord(
-                    this._accordionData,
-                    parsed.noteMods,
-                    false,
-                    'both',
-                    null
-                );
-                this._syncSecondaryDiapason({
-                    notes: parsed.noteMods,
-                    isExactMidi: false,
-                    bellowsMode: 'both',
-                    excludedButtons: null
-                });
-            }
-            if (this._diapasonChordSidebarView) {
-                this._updateSidebarChordsView(parsed);
-            }
-        }
-    }
-
-    /**
-     * Resuelve el botón físico del acordeón seleccionado (1 o 2) que produce una nota MIDI.
-     * @param {number} midi
-     * @param {string} [targetAccordion='primary'] 'primary' | 'secondary'
-     * @returns {Object|null} { id, rowKey, btnIndex, btnLabel, direction, bellowsText }
-     */
-    findAccordionButtonForMidi(midi, targetAccordion = 'primary') {
-        const isPrimary = targetAccordion === 'primary';
-        const accData = isPrimary ? this._accordionData : this._secondaryAccordionData;
-        if (!accData || !midi) return null;
-
-        // Preferencia ergonómica de hileras: row2 (Medio), row1 (Afuera), row3 (Adentro)
-        const rowKeys = ['row2', 'row1', 'row3'];
-        const ROW_SHORT = { row1: 'H1', row2: 'H2', row3: 'H3' };
-
-        for (const rk of rowKeys) {
-            if (!accData[rk]) continue;
-            for (const b of accData[rk]) {
-                if (b.push === midi) {
-                    return {
-                        id: b.id,
-                        rowKey: rk,
-                        btnIndex: b.btnIndex,
-                        rowLabel: ROW_SHORT[rk] || rk,
-                        btnLabel: `${ROW_SHORT[rk] || rk}-B${b.btnIndex}`,
-                        direction: 'push',
-                        bellowsText: 'Cierra'
-                    };
-                }
-                if (b.pull === midi) {
-                    return {
-                        id: b.id,
-                        rowKey: rk,
-                        btnIndex: b.btnIndex,
-                        rowLabel: ROW_SHORT[rk] || rk,
-                        btnLabel: `${ROW_SHORT[rk] || rk}-B${b.btnIndex}`,
-                        direction: 'pull',
-                        bellowsText: 'Abre'
-                    };
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Retorna los nombres de afinación de ambos acordeones para mostrar en la interfaz.
-     * @returns {{ primaryName: string, secondaryName: string }}
-     */
-    getAccordionTuningsInfo() {
-        const primSelect = document.getElementById('tuningSelect');
-        const primText = primSelect && primSelect.options[primSelect.selectedIndex] ? primSelect.options[primSelect.selectedIndex].text : 'Cinco Letras (Bb - Eb - Ab)';
-        const secSelect = document.getElementById('secondaryTuningSelect');
-        const secText = secSelect && secSelect.options[secSelect.selectedIndex] ? secSelect.options[secSelect.selectedIndex].text : 'Cinco Letras (Bb - Eb - Ab)';
-        return {
-            primaryName: primText,
-            secondaryName: secText
-        };
-    }
-
-    /**
-     * Toca e ilumina una nota melódica en el acordeón seleccionado (1, 2 o Ambos).
-     * @param {Object|null} note
-     * @param {string} [targetAccordion='primary'] 'primary' | 'secondary' | 'both'
-     * @returns {Object|null}
-     */
-    replicateMelodyNote(note, targetAccordion = 'primary') {
-        if (!note || note.is_rest || !note.midi) {
-            if (this._diapasonView) this._diapasonView.clearHighlights();
-            if (this._secondaryDiapasonView) this._secondaryDiapasonView.clearHighlights();
-            return null;
-        }
-
-        if (targetAccordion === 'both') {
-            const match1 = this.findAccordionButtonForMidi(note.midi, 'primary');
-            const match2 = this.findAccordionButtonForMidi(note.midi, 'secondary');
-
-            if (this._diapasonView) {
-                if (match1) this._diapasonView.highlightSingleButton(match1.id, match1.direction);
-                else this._diapasonView.clearHighlights();
-            }
-            if (this._secondaryDiapasonView) {
-                if (match2) this._secondaryDiapasonView.highlightSingleButton(match2.id, match2.direction);
-                else this._secondaryDiapasonView.clearHighlights();
-            }
-
-            const vol1 = this._isDiapasonMuted ? 0 : this._diapasonVolume / 100;
-            const vol2 = this._isSecondaryDiapasonMuted ? 0 : this._secondaryDiapasonVolume / 100;
-            const effectiveVol = Math.max(vol1, vol2);
-
-            if (effectiveVol > 0 && note.midi) {
-                const dur = note.duration_beats >= 2 ? "2n" : (note.duration_beats >= 1 ? "4n" : "8n");
-                audioEngine.play(note.midi, dur, effectiveVol);
-            }
-
-            return { primary: match1, secondary: match2 };
-        }
-
-        const isPrimary = targetAccordion === 'primary';
-        const targetView = isPrimary ? this._diapasonView : this._secondaryDiapasonView;
-        const otherView = isPrimary ? this._secondaryDiapasonView : this._diapasonView;
-        if (!targetView) return null;
-
-        if (otherView) {
-            otherView.clearHighlights();
-        }
-
-        const match = this.findAccordionButtonForMidi(note.midi, targetAccordion);
-        const vol = isPrimary
-            ? (this._isDiapasonMuted ? 0 : this._diapasonVolume / 100)
-            : (this._isSecondaryDiapasonMuted ? 0 : this._secondaryDiapasonVolume / 100);
-
-        if (match) {
-            targetView.highlightSingleButton(match.id, match.direction);
-        } else {
-            targetView.clearHighlights();
-        }
-
-        if (vol > 0 && note.midi) {
-            const dur = note.duration_beats >= 2 ? "2n" : (note.duration_beats >= 1 ? "4n" : "8n");
-            audioEngine.play(note.midi, dur, vol);
-        }
-
-        return match;
     }
 }

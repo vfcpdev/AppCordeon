@@ -15,9 +15,6 @@
     <!-- Librería Tone.js para Síntesis Polifónica Web Audio -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 
-    <!-- Librería OpenSheetMusicDisplay (OSMD) para Renderizado Interactivo de Partituras MusicXML -->
-    <script src="./libs/opensheetmusicdisplay.min.js"></script>
-
     <!-- Iconos FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -54,11 +51,6 @@
                     <i class="fas fa-music audio-dropzone__note-icon"></i>
                     <input type="file" id="audioFileInput" accept="audio/*" style="display: none;">
                 </div>
-
-                <!-- Botón de Partitura (MusicXML / OSMD) -->
-                <button type="button" class="btn-topbar-sheet" id="btnOpenSheetMusic" title="Ver partitura interactiva (MusicXML) y guía de acordes">
-                    <i class="fas fa-book-open"></i> <span>Partitura</span>
-                </button>
 
                 <!-- Toggle Notación (Latina / Alemana) -->
                 <div class="toggle-segmented notation-toggle-compact" id="notationToggle">
@@ -334,9 +326,6 @@
                                                 <span class="track-key-badge" id="audioEngineBadge" style="background: rgba(234, 88, 12, 0.08); color: #ea580c; border: 1px solid #fed7aa; font-weight: 800;" title="Motor de detección armónica">
                                                     <i class="fas fa-microchip"></i> <span id="lblAnalysisEngine">Motor: -</span>
                                                 </span>
-                                                <button type="button" class="btn-action btn-xs" id="btnTrackSheetMusic" title="Abrir partitura MusicXML interactiva de esta canción" style="padding: 2px 8px; font-size: 0.70rem; background: rgba(99, 102, 241, 0.12); color: #6366f1; border-color: #c7d2fe;">
-                                                    <i class="fas fa-book-open"></i> Partitura
-                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -738,92 +727,6 @@
                     </div>
                 </section>
 
-                <!-- SECCIÓN 2: ESCALA DIATÓNICA & TONOS RELACIONADOS -->
-                <section class="control-panel scale-panel" id="scaleSection">
-                    <header class="scale-panel__header">
-                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <span class="scale-panel__title" id="lblScaleTitle">Escala Diatónica</span>
-                            <label class="fix-chord-toggle" title="Dejar el acorde del grado sonando sostenido" style="font-size: 0.68rem;">
-                                <input type="checkbox" id="chkFixGradeChord">
-                                <span>Fijar Acorde</span>
-                            </label>
-                        </div>
-
-                        <div class="toggle-segmented" id="scaleViewToggle" style="margin-left: auto;">
-                            <button type="button" class="segment-btn active" data-mode="melodic" title="Modo Melódico (Nota a nota)">
-                                <i class="fas fa-music"></i> Melódico
-                            </button>
-                            <button type="button" class="segment-btn" data-mode="harmonic" title="Modo Armónico (Acorde del grado)">
-                                <i class="fas fa-layer-group"></i> Armónico
-                            </button>
-                        </div>
-                    </header>
-
-                    <!-- Selectores de Tónica, Tipo de Escala y Modo de Octava (Progresiva vs Misma Octava) -->
-                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                        <select id="scaleRootSelect" class="form-select" style="flex: 1 1 35%; font-size: 0.78rem;" title="Selecciona la tónica que deseas estudiar sobre esta afinación de acordeón">
-                            <!-- Llenado dinámicamente con las 12 notas cromáticas -->
-                        </select>
-                        <select id="scaleTypeSelect" class="form-select" style="flex: 1 1 30%; font-size: 0.78rem;" title="Modalidad de la escala">
-                            <option value="major" selected>Mayor</option>
-                            <option value="minor">Menor Natural</option>
-                            <option value="harmonic_minor">Menor Armónica</option>
-                        </select>
-                        <div class="toggle-segmented" id="scaleOctaveToggle" style="margin-left: auto;" title="Ejecución de la Escala: Progresiva (Sube a la octava superior) o Misma Octava (Se mantiene en la misma octava base)">
-                            <button type="button" class="segment-btn active" data-octave="progressive" title="Asciende a la 8va superior en Grado VIII">
-                                <i class="fas fa-arrow-trend-up"></i> Progresiva
-                            </button>
-                            <button type="button" class="segment-btn" data-octave="same_octave" title="Todas las notas y acordes se ejecutan dentro de la misma octava base">
-                                <i class="fas fa-equals"></i> Misma Octava
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="scale-panel__chips-strip" id="scaleGrid">
-                        <!-- Chips de notas y grados (I a VIII) generados por JS -->
-                    </div>
-
-                    <!-- Barra de Transporte Unificada -->
-                    <div class="scale-transport-bar">
-                        <div class="transport-controls">
-                            <button class="transport-btn" id="btnPrevNote" title="Grado Anterior">
-                                <i class="fas fa-backward-step"></i>
-                            </button>
-                            <button class="transport-btn play-btn" id="btnPlayScale" title="Reproducir Escala">
-                                <i class="fas fa-play"></i>
-                            </button>
-                            <button class="transport-btn" id="btnNextNote" title="Grado Siguiente">
-                                <i class="fas fa-forward-step"></i>
-                            </button>
-                            <button class="transport-btn" id="btnResetScale" title="Reiniciar a Grado I">
-                                <i class="fas fa-redo"></i>
-                            </button>
-                        </div>
-
-                        <!-- Modo Bucle (Loop) -->
-                        <div class="loop-control-inline">
-                            <button class="loop-btn-toggle" id="btnToggleLoop" title="Activar/Desactivar Loop">
-                                <i class="fas fa-sync-alt"></i> Loop: OFF
-                            </button>
-                            <div class="loop-range-inline">
-                                <span>In:</span>
-                                <input type="number" id="loopStart" class="loop-input" min="1" max="8" value="1" title="Inicio (Grado I-VIII)">
-                                <span>Fin:</span>
-                                <input type="number" id="loopEnd" class="loop-input" min="1" max="8" value="8" title="Fin (Grado I-VIII)">
-                            </div>
-                        </div>
-
-                        <!-- Velocidad (Tempo) -->
-                        <div class="speed-inline">
-                            <div class="speed-inline-label">
-                                <span><i class="fas fa-tachometer-alt"></i></span>
-                                <span id="speedValueLabel">350ms</span>
-                            </div>
-                            <input type="range" id="speedSlider" min="120" max="800" value="350" dir="rtl" title="Velocidad de reproducción (ms)">
-                        </div>
-                    </div>
-
-M                </section>
 
             </div>
 
@@ -911,209 +814,7 @@ M                </section>
 
     </div>
 
-    <!-- =========================================================================
-         VENTANA MODAL FLOTANTE ARRASTRABLE: VISOR DE PARTITURA Y ACORDES
-         ========================================================================= -->
-    <div class="floating-sheet-modal hidden" id="floatingSheetModal" aria-label="Visor flotante de partitura">
-        <!-- Encabezado arrastrable -->
-        <div class="sheet-modal-header" id="sheetModalHeader">
-            <div class="sheet-modal-title-wrap">
-                <i class="fas fa-book-open sheet-modal-icon"></i>
-                <div class="sheet-modal-titles">
-                    <span class="sheet-modal-main-title" id="sheetModalMainTitle">Como Zaqueo - Haz un milagro en mí</span>
-                    <span class="sheet-modal-sub-title" id="sheetModalSubTitle">Sol Mayor · 70 BPM · 4/4</span>
-                </div>
-            </div>
-            <div class="sheet-modal-win-controls">
-                <button type="button" class="sheet-win-btn btn-min" id="btnSheetMinimize" title="Minimizar">
-                    <i class="fas fa-minus"></i>
-                </button>
-                <button type="button" class="sheet-win-btn btn-max" id="btnSheetMaximize" title="Maximizar">
-                    <i class="fas fa-expand"></i>
-                </button>
-                <button type="button" class="sheet-win-btn btn-close" id="btnSheetClose" title="Cerrar">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
 
-        <!-- Barra de herramientas: compases, cursor, zoom, importar MusicXML y aplicar acordes -->
-        <div class="sheet-modal-toolbar">
-            <div class="sheet-toolbar-group" title="Navegación de Compases">
-                <button type="button" class="sheet-nav-btn" id="btnSheetFirstMeasure" title="Primer compás (Inicio)">
-                    <i class="fas fa-backward-step"></i>
-                </button>
-                <button type="button" class="sheet-nav-btn" id="btnSheetPrevMeasure" title="Compás anterior (←)">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <div class="sheet-measure-indicator">
-                    <span class="sheet-lbl-compact">Compás:</span>
-                    <input type="number" id="sheetMeasureInput" class="sheet-measure-input" value="1" min="1" max="74" title="Ir a compás">
-                    <span>/ <strong id="sheetMeasureTotal">74</strong></span>
-                </div>
-                <button type="button" class="sheet-nav-btn" id="btnSheetNextMeasure" title="Compás siguiente (→)">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-                <button type="button" class="sheet-nav-btn active" id="btnSheetToggleCursor" title="Mostrar / Ocultar cursor de seguimiento">
-                    <i class="fas fa-i-cursor"></i> Cursor
-                </button>
-            </div>
-
-            <div class="sheet-toolbar-group" title="Zoom de Partitura">
-                <button type="button" class="sheet-zoom-btn" id="btnSheetZoomOut" title="Reducir zoom (-)">
-                    <i class="fas fa-search-minus"></i>
-                </button>
-                <span class="sheet-zoom-label" id="sheetZoomLabel">100%</span>
-                <button type="button" class="sheet-zoom-btn" id="btnSheetZoomIn" title="Aumentar zoom (+)">
-                    <i class="fas fa-search-plus"></i>
-                </button>
-                <button type="button" class="sheet-zoom-btn" id="btnSheetZoomFit" title="Ajustar al ancho de la ventana">
-                    <i class="fas fa-arrows-left-right-to-line"></i>
-                </button>
-            </div>
-
-            <div class="sheet-toolbar-group" title="Replicar melodía en Acordeón">
-                <span class="sheet-lbl-compact"><i class="fas fa-bullseye"></i> Replicar en:</span>
-                <button type="button" class="sheet-target-btn active" id="btnSheetTargetPrimary" title="Replicar notas y secuencia en Acordeón 1">
-                    <i class="fas fa-star"></i> Acordeón 1
-                </button>
-                <button type="button" class="sheet-target-btn" id="btnSheetTargetSecondary" title="Replicar notas y secuencia en Acordeón 2">
-                    <i class="fas fa-columns"></i> Acordeón 2
-                </button>
-                <button type="button" class="sheet-target-btn" id="btnSheetTargetBoth" title="Replicar notas y secuencia en ambos acordeones simultáneamente">
-                    <i class="fas fa-layer-group"></i> Ambos
-                </button>
-            </div>
-
-            <div class="sheet-toolbar-group">
-                <button type="button" class="btn-sheet-action btn-sheet-action--secondary" id="btnSheetPresetComoZaqueo" title="Partitura MusicXML 'Como Zaqueo' (Sol Mayor)">
-                    <i class="fas fa-music"></i> Zaqueo
-                </button>
-                <button type="button" class="btn-sheet-action btn-sheet-action--secondary" id="btnSheetUploadXml" title="Importar partitura en formato MusicXML (.xml, .musicxml, .mxl)">
-                    <i class="fas fa-file-import"></i> Cargar MusicXML
-                </button>
-                <input type="file" id="sheetXmlFileInput" accept=".xml,.musicxml,.mxl" style="display: none;">
-                <button type="button" class="btn-sheet-action" id="btnSheetApplyChords" title="Sincronizar y cargar acordes a la cuadrícula 4/4 y diapasón">
-                    <i class="fas fa-bolt"></i> Sincronizar Cuadrícula
-                </button>
-            </div>
-        </div>
-
-        <!-- PANEL COMBINADO: GUÍA DE ACORDES Y SECUENCIA MELÓDICA NOTA POR NOTA -->
-        <div class="sheet-combined-guide-container" id="sheetCombinedGuideContainer">
-            <!-- SECCIÓN 1: ACORDES DE LA PARTITURA -->
-            <div class="sheet-guide-section sheet-guide-section--chords">
-                <div class="sheet-chords-guide-header">
-                    <span><i class="fas fa-layer-group"></i> Acordes de la Partitura (Compás por Compás)</span>
-                    <span style="font-size: 0.58rem; color: #a5b4fc; text-transform: none;">Clic para escuchar acorde y saltar</span>
-                </div>
-                <div class="sheet-chords-scroll-strip" id="sheetChordsScrollStrip">
-                    <!-- Fichas de acordes generadas dinámicamente -->
-                </div>
-            </div>
-
-            <!-- SECCIÓN 2: MELODÍA NOTA POR NOTA Y REPLICADOR INTERACTIVO -->
-            <div class="sheet-guide-section sheet-guide-section--melody">
-                <div class="sheet-melody-guide-header">
-                    <div class="sheet-melody-header-left">
-                        <span><i class="fas fa-music"></i> Melodía Nota por Nota</span>
-                        <span class="sheet-melody-count-badge" id="sheetMelodyCount">0 notas</span>
-                        <span class="sheet-melody-engine-tag" id="sheetMelodyEngineTag" title="Motor de extracción melódica"><i class="fas fa-bolt"></i> Rust WASM</span>
-                    </div>
-
-                    <div class="sheet-melody-player-controls">
-                        <button type="button" class="sheet-player-btn" id="btnSheetMelodyPrev" title="Nota anterior (Shift+←)">
-                            <i class="fas fa-step-backward"></i>
-                        </button>
-                        <button type="button" class="sheet-player-btn sheet-player-btn--play" id="btnSheetMelodyPlay" title="Reproducir y replicar melodía en acordeón seleccionado">
-                            <i class="fas fa-play"></i> <span id="lblSheetMelodyPlay">Replicar</span>
-                        </button>
-                        <button type="button" class="sheet-player-btn" id="btnSheetMelodyStop" title="Detener reproducción">
-                            <i class="fas fa-stop"></i>
-                        </button>
-                        <button type="button" class="sheet-player-btn" id="btnSheetMelodyNext" title="Nota siguiente (Shift+→)">
-                            <i class="fas fa-step-forward"></i>
-                        </button>
-
-                        <div class="sheet-tempo-wrap" title="Velocidad de reproducción melódica">
-                            <span>Tempo:</span>
-                            <input type="number" id="sheetMelodyBpm" class="sheet-measure-input sheet-tempo-input" value="70" min="40" max="220" step="5">
-                            <span>BPM</span>
-                        </div>
-
-                        <div class="sheet-melody-progress" id="sheetMelodyProgress" title="Progreso de notas">
-                            0 / 0
-                        </div>
-                    </div>
-                </div>
-                <div class="sheet-melody-scroll-strip" id="sheetMelodyScrollStrip">
-                    <!-- Fichas de notas melódicas generadas dinámicamente -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Viewport con el pentagrama vectorial SVG renderizado por OpenSheetMusicDisplay -->
-        <div class="sheet-modal-viewport" id="sheetModalViewport">
-            <div class="sheet-osmd-paper" id="sheetOsmdPaper">
-                <div class="sheet-osmd-container" id="osmdScoreContainer"></div>
-            </div>
-            <div class="sheet-loading-overlay" id="sheetLoadingOverlay" style="display: none;">
-                <i class="fas fa-circle-notch fa-spin fa-2x"></i>
-                <span id="sheetLoadingText">Renderizando partitura MusicXML...</span>
-            </div>
-        </div>
-
-        <!-- MODAL DIÁLOGO DE SELECCIÓN DE ACORDEÓN TRAS SUBIR PARTITURA -->
-        <div class="sheet-target-modal-overlay hidden" id="sheetTargetModalOverlay">
-            <div class="sheet-target-dialog">
-                <div class="sheet-target-dialog__header">
-                    <div class="sheet-target-dialog__icon-wrap">
-                        <i class="fas fa-music"></i>
-                    </div>
-                    <div class="sheet-target-dialog__titles">
-                        <h3 class="sheet-target-dialog__title">Ejecución de la Melodía</h3>
-                        <p class="sheet-target-dialog__subtitle" id="sheetTargetDialogScoreName">Partitura Cargada</p>
-                    </div>
-                    <button type="button" class="sheet-target-dialog__btn-close" id="btnSheetTargetModalClose" title="Cerrar modal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="sheet-target-dialog__body">
-                    <p class="sheet-target-dialog__intro">
-                        ¿En qué acordeón deseas visualizar, iluminar y ejecutar las notas de la melodía?
-                    </p>
-                    <div class="sheet-target-options-grid">
-                        <button type="button" class="sheet-target-option-card active" data-target="primary" id="cardTargetPrimary">
-                            <div class="sheet-target-option-badge"><i class="fas fa-star"></i> Acordeón 1</div>
-                            <div class="sheet-target-option-title" id="sheetTargetCardPrimaryTuning">Acordeón 1 (Principal)</div>
-                            <div class="sheet-target-option-desc">Ejecuta en el diapasón principal izquierdo. Muestra digitación nativa del acordeonero.</div>
-                        </button>
-                        <button type="button" class="sheet-target-option-card" data-target="secondary" id="cardTargetSecondary">
-                            <div class="sheet-target-option-badge"><i class="fas fa-columns"></i> Acordeón 2</div>
-                            <div class="sheet-target-option-title" id="sheetTargetCardSecondaryTuning">Acordeón 2 (Secundario)</div>
-                            <div class="sheet-target-option-desc">Ejecuta en el segundo diapasón comparativo. Ideal para estudiar transportes y equivalencias.</div>
-                        </button>
-                        <button type="button" class="sheet-target-option-card" data-target="both" id="cardTargetBoth">
-                            <div class="sheet-target-option-badge"><i class="fas fa-layer-group"></i> Ambos Acordeones</div>
-                            <div class="sheet-target-option-title">Sincronización Dual (1 y 2)</div>
-                            <div class="sheet-target-option-desc">Ilumina y ejecuta la melodía en ambos diapasones a la vez para comparar posiciones en vivo.</div>
-                        </button>
-                    </div>
-                </div>
-                <div class="sheet-target-dialog__footer">
-                    <button type="button" class="btn-sheet-action btn-sheet-action--confirm" id="btnSheetTargetModalConfirm">
-                        <i class="fas fa-check"></i> Confirmar y Aplicar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pastilla flotante cuando la ventana está minimizada -->
-    <div class="sheet-minimized-dock-pill hidden" id="sheetMinimizedDockPill" title="Restaurar partitura">
-        <i class="fas fa-book-open"></i>
-        <span id="sheetDockPillText">Partitura (Pág. 1)</span>
-    </div>
 
     <!-- Script de Inicialización Modular ESM -->
     <script type="module" src="./src/app.js"></script>

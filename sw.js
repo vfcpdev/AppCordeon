@@ -2,19 +2,16 @@
  * Service Worker para Acordeón Diatónico Pro (PWA)
  * Estrategia Network-First con fallback a caché para soporte offline confiable
  */
-const CACHE_NAME = 'acordeon-pro-v113';
+const CACHE_NAME = 'acordeon-pro-v115';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './manifest.json',
-    './libs/opensheetmusicdisplay.min.js',
-    './assets/scores/como_zaqueo.musicxml',
     './css/variables.css',
     './css/reset.css',
     './css/layout.css',
     './css/diapason.css',
     './css/controls.css',
-    './css/sheet_music.css',
     './css/main.css',
     './src/app.js',
     './src/core/Constants.js',
@@ -24,13 +21,11 @@ const ASSETS_TO_CACHE = [
     './src/audio/WebAudioSynth.js',
     './src/audio/AudioEngine.js',
     './src/audio/WasmChordBridge.js',
-    './src/audio/WasmMelodyBridge.js',
     './src/audio/AudioChordAnalyzer.js',
     './src/audio/AudioPlayerController.js',
     './src/audio/MetronomeEngine.js',
     './src/models/AccordionData.js',
     './src/models/Tunings.js',
-    './src/models/SheetMusicData.js',
     './src/theory/MusicTheory.js',
     './src/theory/Scales.js',
     './src/theory/ChordTemplates.js',
@@ -44,7 +39,6 @@ const ASSETS_TO_CACHE = [
     './src/ui/ExecutionView.js',
     './src/ui/AudioTrackView.js',
     './src/ui/DiapasonChordSidebarView.js',
-    './src/ui/SheetMusicModalView.js',
     './src/controllers/AppController.js'
 ];
 

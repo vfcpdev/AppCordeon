@@ -3405,7 +3405,7 @@ export class AudioTrackView {
     }
 
     /**
-     * Aplica un arreglo de acordes directamente a la cuadrícula 4/4 (usado por partituras MusicXML).
+     * Aplica un arreglo de acordes directamente a la cuadrícula 4/4.
      * @param {Array<Object>} chords
      * @param {number} duration
      * @param {number} bpm

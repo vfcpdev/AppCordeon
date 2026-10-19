@@ -172,7 +172,15 @@ export class DiapasonView {
         if (btn) {
             btn.classList.add(directionClass, 'single-focus');
             const targetNoteEl = directionClass === 'push' ? btn.querySelector('.btn-note-push') : btn.querySelector('.btn-note-pull');
-            if (targetNoteEl) targetNoteEl.classList.add('note-matched');
+            const otherNoteEl = directionClass === 'push' ? btn.querySelector('.btn-note-pull') : btn.querySelector('.btn-note-push');
+            if (targetNoteEl) {
+                targetNoteEl.classList.add('note-matched');
+                targetNoteEl.classList.remove('note-dimmed');
+            }
+            if (otherNoteEl) {
+                otherNoteEl.classList.add('note-dimmed');
+                otherNoteEl.classList.remove('note-matched');
+            }
             this.showActionBadge(btn, directionClass, 1200);
         }
     }
@@ -294,9 +302,23 @@ export class DiapasonView {
     triggerGlowOnElement(btnEl, direction = null) {
         if (!btnEl) return;
         btnEl.classList.add("glow-active");
+        let targetNote = null;
+        let otherNote = null;
         if (direction) {
+            btnEl.classList.add(direction);
+            targetNote = direction === 'push' ? btnEl.querySelector('.btn-note-push') : btnEl.querySelector('.btn-note-pull');
+            otherNote = direction === 'push' ? btnEl.querySelector('.btn-note-pull') : btnEl.querySelector('.btn-note-push');
+            if (targetNote) targetNote.classList.add('note-matched');
+            if (otherNote) otherNote.classList.add('note-dimmed');
             this.showActionBadge(btnEl, direction, 700);
         }
-        setTimeout(() => btnEl.classList.remove("glow-active"), 250);
+        setTimeout(() => {
+            btnEl.classList.remove("glow-active");
+            if (direction && !btnEl.classList.contains('single-focus') && !btnEl.classList.contains('chord-glow')) {
+                btnEl.classList.remove(direction);
+                if (targetNote) targetNote.classList.remove('note-matched');
+                if (otherNote) otherNote.classList.remove('note-dimmed');
+            }
+        }, 250);
     }
 }
