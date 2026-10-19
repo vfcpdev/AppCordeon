@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Hojas de Estilos Modulares (BEM + Custom Properties) -->
-    <link rel="stylesheet" href="./css/main.css?v=15">
+    <link rel="stylesheet" href="./css/main.css?v=17">
 </head>
 
 <body>
@@ -118,10 +118,6 @@
                                                 <i class="fas fa-arrows-rotate"></i> <span id="lblMirrorStatus">Af-&gt;Ad</span>
                                             </button>
                                         </div>
-                                        <div class="diapason-active-chord-badge" id="primaryDiapasonChordBadge" title="Acorde activo en Diapasón 1">
-                                            <i class="fas fa-music"></i>
-                                            <strong class="sidebar-chord-name" id="primaryDiapasonChordName">Mi♭ Mayor</strong>
-                                        </div>
                                     </div>
                                 </div>
                                 <div class="diapason-stage-body-row">
@@ -139,6 +135,10 @@
                                         </label>
                                     </div>
                                     <div class="diapason" id="diapason">
+                                        <div class="diapason-active-chord-badge" id="primaryDiapasonChordBadge" title="Acorde activo en Diapasón 1" style="display: inline-flex;">
+                                            <i class="fas fa-music"></i>
+                                            <strong class="sidebar-chord-name" id="primaryDiapasonChordName">Mi♭ Mayor</strong>
+                                        </div>
                                         <!-- Hileras de botones 10-11-10 generadas dinámicamente -->
                                     </div>
                                 </div>
@@ -554,10 +554,6 @@
                                                 </button>
                                             </div>
                                         </div>
-                                        <div class="diapason-active-chord-badge" id="secondaryDiapasonChordBadge" title="Acorde activo en Diapasón 2">
-                                            <i class="fas fa-music"></i>
-                                            <strong class="sidebar-chord-name" id="secondaryDiapasonChordName">Mi♭ Mayor</strong>
-                                        </div>
                                         <div class="toggle-segmented" id="secondaryEquivalenceToggle" style="padding: 2px;">
                                             <button type="button" class="segment-btn active" data-mode="pitch" style="padding: 2px 5px; font-size: 0.62rem;" title="Mismo Tono Real (Tonalidad y notas exactas)">Mismo Tono</button>
                                             <button type="button" class="segment-btn" data-mode="relative" style="padding: 2px 5px; font-size: 0.62rem;" title="Misma Posición / Hilera (Transportado)">Misma Hilera</button>
@@ -579,6 +575,10 @@
                                         </label>
                                     </div>
                                     <div class="diapason diapason--secondary" id="secondaryDiapason">
+                                        <div class="diapason-active-chord-badge" id="secondaryDiapasonChordBadge" title="Acorde activo en Diapasón 2" style="display: inline-flex;">
+                                            <i class="fas fa-music"></i>
+                                            <strong class="sidebar-chord-name" id="secondaryDiapasonChordName">Mi♭ Mayor</strong>
+                                        </div>
                                         <!-- Hileras de botones del segundo acordeón generadas dinámicamente -->
                                     </div>
                                 </div>

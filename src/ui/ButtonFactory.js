@@ -31,10 +31,12 @@ export class ButtonFactory {
 
         const lblPush = midiToName(buttonData.push, notation, true, tuningOffset);
         const lblPull = midiToName(buttonData.pull, notation, true, tuningOffset);
+        const orderBadgeHtml = `<span class="btn-order-number" aria-hidden="true">${buttonData.btnIndex}</span>`;
 
         if (bellowsMode === BELLOWS_MODES.BOTH) {
             btn.innerHTML = `
-                <span style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0px;line-height:1;">
+                ${orderBadgeHtml}
+                <span class="btn-notes-wrap" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0px;line-height:1;">
                     <span class="btn-note-push">${lblPush}</span>
                     <span class="btn-separator">─</span>
                     <span class="btn-note-pull">${lblPull}</span>
@@ -42,11 +44,17 @@ export class ButtonFactory {
             `;
             btn.title = `Botón ${buttonData.btnIndex} (${buttonData.rowKey}) | Cerrar: ${lblPush} | Abrir: ${lblPull}`;
         } else if (bellowsMode === BELLOWS_MODES.PUSH) {
-            btn.innerHTML = `<span class="btn-note-single">${lblPush}</span>`;
+            btn.innerHTML = `
+                ${orderBadgeHtml}
+                <span class="btn-notes-wrap"><span class="btn-note-single">${lblPush}</span></span>
+            `;
             btn.title = `Botón ${buttonData.btnIndex} (${buttonData.rowKey}) | Cerrar: ${lblPush}`;
         } else {
             // BELLOWS_MODES.PULL
-            btn.innerHTML = `<span class="btn-note-single">${lblPull}</span>`;
+            btn.innerHTML = `
+                ${orderBadgeHtml}
+                <span class="btn-notes-wrap"><span class="btn-note-single">${lblPull}</span></span>
+            `;
             btn.title = `Botón ${buttonData.btnIndex} (${buttonData.rowKey}) | Abrir: ${lblPull}`;
         }
 

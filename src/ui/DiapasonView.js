@@ -63,6 +63,8 @@ export class DiapasonView {
      * @param {Object} handlers Callbacks { onRowHeaderClick, onButtonClick, onButtonRightClick }
      */
     render(accordionData, activeRowKey, bellowsMode, notation, tuningOffset, handlers = {}) {
+        const existingBadge = this._container.querySelector('.diapason-active-chord-badge') ||
+                              document.getElementById(this._idPrefix ? 'secondaryDiapasonChordBadge' : 'primaryDiapasonChordBadge');
         this._container.innerHTML = "";
         this._container.classList.toggle('diapason--mirrored', this._isMirrored);
 
@@ -108,6 +110,10 @@ export class DiapasonView {
 
             this._container.appendChild(col);
         });
+
+        if (existingBadge) {
+            this._container.appendChild(existingBadge);
+        }
     }
 
     /**
