@@ -1252,16 +1252,17 @@
 
 .measure-grid-num {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 800;
-    color: #64748b;
+    font-size: 0.80rem;
+    font-weight: 900;
+    color: #000000;
     min-width: 20px;
     text-align: right;
     user-select: none;
 }
 
 .measure-grid-row.active-measure .measure-grid-num {
-    color: #4338ca;
+    color: #000000;
+    font-weight: 900;
     text-shadow: none;
 }
 
@@ -2939,7 +2940,8 @@ body.grid-undocked-open {
 .diapason-chord-grid-panel.is-undocked .measure-grid-num {
     font-size: 0.85rem;
     min-width: 24px;
-    color: #94a3b8;
+    color: #000000;
+    font-weight: 900;
 }
 
 .track-playback-controls.is-undocked .measure-beat-slot,
