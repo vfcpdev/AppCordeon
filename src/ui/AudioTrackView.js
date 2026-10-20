@@ -13,6 +13,8 @@ import { NOTATION_MODES, ROW_BASE_TONICS } from '../core/Constants.js';
 import { eventBus } from '../core/EventBus.js';
 import { tuningRegistry } from '../models/Tunings.js';
 import { audioEngine } from '../audio/AudioEngine.js';
+import { MeasureGridComponent } from './MeasureGridComponent.js';
+import { ChordSequenceEditor } from './ChordSequenceEditor.js';
 
 export class AudioTrackView {
     /**

@@ -73,12 +73,14 @@ export const SCALE_DEFINITIONS = Object.freeze({
 
 /**
  * Genera la estructura completa de notas y acordes para los 8 grados de una escala.
+ * Permite conmutar pedagógicamente entre Tríadas puras (I, ii, iii, IV, V, vi, vii°) y Cuatríadas/Séptimas (Imaj7, ii7, V7...).
  * @param {number} rootMidi Tónica base en formato MIDI (ej: 60 = Do, 67 = Sol)
  * @param {string} [scaleType='major'] 'major', 'minor', o 'harmonic_minor'
- * @param {string} [octaveMode='progressive'] 'progressive' (sube octava en grado VIII) o 'same_octave' (misma octava)
+ * @param {string} [octaveMode='progressive'] 'progressive' o 'same_octave'
+ * @param {string} [harmonicMode='triad'] 'triad' (tríadas puras) o 'seventh' (cuatríadas con 7ma)
  * @returns {ScaleStepInfo[]}
  */
-export function generateScale(rootMidi, scaleType = 'major', octaveMode = 'progressive') {
+export function generateScale(rootMidi, scaleType = 'major', octaveMode = 'progressive', harmonicMode = 'triad') {
     const scaleDef = SCALE_DEFINITIONS[scaleType] || SCALE_DEFINITIONS.major;
     const isSameOctave = octaveMode === 'same_octave';
 
@@ -88,7 +90,71 @@ export function generateScale(rootMidi, scaleType = 'major', octaveMode = 'progr
         const pitchClass = getPitchClass(midi);
         const degreeData = scaleDef.degrees[stepIndex];
 
-        const chordAbsoluteMidis = degreeData.intervals.map(i => {
+        // Definición de intervalos según tríada vs séptima
+        let degreeIntervals = [...degreeData.intervals];
+        let numeral = degreeData.num;
+        let quality = degreeData.quality;
+
+        if (harmonicMode === 'triad') {
+            // En modo tríadas puras, el grado V se expresa como tríada mayor [0, 4, 7]
+            if (stepIndex === 4 && degreeIntervals.length > 3) {
+                degreeIntervals = [0, 4, 7];
+                quality = 'M';
+            }
+        } else if (harmonicMode === 'seventh') {
+            // En modo séptimas/cuatríadas, agregar séptima diatónica según el modo
+            if (scaleType === 'major') {
+                const seventhTable = {
+                    0: { intervals: [0, 4, 7, 11], num: "Imaj7", quality: "maj7" },
+                    1: { intervals: [0, 3, 7, 10], num: "ii7", quality: "m7" },
+                    2: { intervals: [0, 3, 7, 10], num: "iii7", quality: "m7" },
+                    3: { intervals: [0, 4, 7, 11], num: "IVmaj7", quality: "maj7" },
+                    4: { intervals: [0, 4, 7, 10], num: "V7", quality: "7" },
+                    5: { intervals: [0, 3, 7, 10], num: "vi7", quality: "m7" },
+                    6: { intervals: [0, 3, 6, 10], num: "viiø7", quality: "m7b5" },
+                    7: { intervals: [0, 4, 7, 11], num: "VIIImaj7", quality: "maj7" }
+                };
+                if (seventhTable[stepIndex]) {
+                    degreeIntervals = seventhTable[stepIndex].intervals;
+                    numeral = seventhTable[stepIndex].num;
+                    quality = seventhTable[stepIndex].quality;
+                }
+            } else if (scaleType === 'minor') {
+                const seventhTable = {
+                    0: { intervals: [0, 3, 7, 10], num: "i7", quality: "m7" },
+                    1: { intervals: [0, 3, 6, 10], num: "iiø7", quality: "m7b5" },
+                    2: { intervals: [0, 4, 7, 11], num: "IIImaj7", quality: "maj7" },
+                    3: { intervals: [0, 3, 7, 10], num: "iv7", quality: "m7" },
+                    4: { intervals: [0, 3, 7, 10], num: "v7", quality: "m7" },
+                    5: { intervals: [0, 4, 7, 11], num: "VImaj7", quality: "maj7" },
+                    6: { intervals: [0, 4, 7, 10], num: "VII7", quality: "7" },
+                    7: { intervals: [0, 3, 7, 10], num: "viii7", quality: "m7" }
+                };
+                if (seventhTable[stepIndex]) {
+                    degreeIntervals = seventhTable[stepIndex].intervals;
+                    numeral = seventhTable[stepIndex].num;
+                    quality = seventhTable[stepIndex].quality;
+                }
+            } else if (scaleType === 'harmonic_minor') {
+                const seventhTable = {
+                    0: { intervals: [0, 3, 7, 11], num: "i(maj7)", quality: "mmaj7" },
+                    1: { intervals: [0, 3, 6, 10], num: "iiø7", quality: "m7b5" },
+                    2: { intervals: [0, 4, 8, 11], num: "III+maj7", quality: "augmaj7" },
+                    3: { intervals: [0, 3, 7, 10], num: "iv7", quality: "m7" },
+                    4: { intervals: [0, 4, 7, 10], num: "V7", quality: "7" },
+                    5: { intervals: [0, 4, 7, 11], num: "VImaj7", quality: "maj7" },
+                    6: { intervals: [0, 3, 6, 9], num: "vii°7", quality: "dim7" },
+                    7: { intervals: [0, 3, 7, 11], num: "viii(maj7)", quality: "mmaj7" }
+                };
+                if (seventhTable[stepIndex]) {
+                    degreeIntervals = seventhTable[stepIndex].intervals;
+                    numeral = seventhTable[stepIndex].num;
+                    quality = seventhTable[stepIndex].quality;
+                }
+            }
+        }
+
+        const chordAbsoluteMidis = degreeIntervals.map(i => {
             if (isSameOctave) {
                 return rootMidi + ((interval + i) % 12);
             }
@@ -100,10 +166,10 @@ export function generateScale(rootMidi, scaleType = 'major', octaveMode = 'progr
             stepIndex,
             midi,
             pitchClass,
-            degreeNumeral: degreeData.num,
+            degreeNumeral: numeral,
             degreeName: degreeData.name,
-            quality: degreeData.quality,
-            chordIntervals: [...degreeData.intervals],
+            quality,
+            chordIntervals: degreeIntervals,
             chordPitchClasses,
             chordAbsoluteMidis,
             isMainTriad: [0, 2, 4, 7].includes(stepIndex)

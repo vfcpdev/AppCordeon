@@ -24,6 +24,7 @@ import {
     DEFAULT_CONFIG
 } from '../core/Constants.js';
 import { DiapasonStageController } from './DiapasonStageController.js';
+import { TheoryInteractionController } from './TheoryInteractionController.js';
 
 export class AppController {
     /**
@@ -64,16 +65,15 @@ export class AppController {
         // Modo de Ejecución de Octava de la Escala ('progressive' | 'same_octave')
         this._scaleOctaveMode = 'progressive';
 
+        // Modo Armónico de Grados ('triad' | 'seventh') según rigor pedagógico
+        this._scaleHarmonicMode = 'triad';
+
         // Estado del Segundo Diapasón (Acordeón Comparativo / Equivalente)
         this._secondaryOffset = 0; // Por defecto Cinco Letras (Bb - Eb - Ab)
         this._secondaryEquivalenceMode = 'pitch'; // 'pitch' (Mismo Tono) | 'relative' (Misma Hilera)
         this._secondaryBellowsMode = BELLOWS_MODES.BOTH;
         this._secondaryAccordionData = getTransposedAccordion(this._secondaryOffset);
 
-        // Estado de Acorde Libre y Detector
-        this._isChordPinned = false;
-        this._pinnedChordData = null;
-        this._detectorSelectedButtons = [];
         // Controlador del Escenario Físico (Volumen, Sincronización, Visibilidad y Modo Espejo)
         this._stageController = new DiapasonStageController({
             diapasonView: this._diapasonView,
@@ -97,22 +97,86 @@ export class AppController {
                 }
             }
         });
+
+        // Controlador de Interacciones Teóricas (Acordes Libres y Detector)
+        this._theoryController = new TheoryInteractionController({
+            chordView: this._chordView,
+            detectorView: this._detectorView,
+            executionView: this._executionView,
+            diapasonView: this._diapasonView,
+            appContext: {
+                getBellowsMode: () => this._bellowsMachine.mode,
+                getAccordionData: () => this._accordionData,
+                syncSecondaryDiapason: (opts) => this._syncSecondaryDiapason(opts),
+                getCurrentNotation: () => this._currentNotation,
+                getCurrentOffset: () => this._currentOffset,
+                calculateExecutionForms: (pitchClass, exactMidi, mode) => this.calculateExecutionForms(pitchClass, exactMidi, mode),
+                getSpeed: () => this._scaleBarView.getSpeed(),
+                onChordUnpinned: () => {
+                    this._renderDiapason();
+                    this._syncSecondaryDiapason();
+                    if (this._scaleSteps.length > 0) {
+                        this.setStep(this._currentStepIndex, false);
+                    }
+                }
+            }
+        });
+    }
+
+    get _isChordPinned() {
+        return this._theoryController ? this._theoryController.isChordPinned : false;
+    }
+
+    set _isChordPinned(val) {
+        if (this._theoryController) this._theoryController._isChordPinned = val;
+    }
+
+    get _pinnedChordData() {
+        return this._theoryController ? this._theoryController.pinnedChordData : null;
+    }
+
+    set _pinnedChordData(val) {
+        if (this._theoryController) this._theoryController._pinnedChordData = val;
+    }
+
+    get _detectorSelectedButtons() {
+        return this._theoryController ? this._theoryController.detectorSelectedButtons : [];
+    }
+
+    set _detectorSelectedButtons(val) {
+        if (this._theoryController) this._theoryController.detectorSelectedButtons = val;
     }
 
     get _isDiapasonMirrored() {
         return this._stageController ? this._stageController.isDiapasonMirrored : false;
     }
 
+    set _isDiapasonMirrored(val) {
+        if (this._stageController) this._stageController._isDiapasonMirrored = val;
+    }
+
     get _isSecondaryDiapasonMirrored() {
         return this._stageController ? this._stageController.isSecondaryDiapasonMirrored : false;
+    }
+
+    set _isSecondaryDiapasonMirrored(val) {
+        if (this._stageController) this._stageController._isSecondaryDiapasonMirrored = val;
     }
 
     get _isPrimaryDiapasonVisible() {
         return this._stageController ? this._stageController.isPrimaryVisible : true;
     }
 
+    set _isPrimaryDiapasonVisible(val) {
+        if (this._stageController) this._stageController._isPrimaryDiapasonVisible = val;
+    }
+
     get _isSecondaryDiapasonVisible() {
         return this._stageController ? this._stageController.isSecondaryVisible : true;
+    }
+
+    set _isSecondaryDiapasonVisible(val) {
+        if (this._stageController) this._stageController._isSecondaryDiapasonVisible = val;
     }
 
     /**
@@ -698,7 +762,8 @@ export class AppController {
         this._scaleSteps = generateScale(
             this._activeScaleRoot,
             this._selectedScaleType,
-            this._scaleOctaveMode || 'progressive'
+            this._scaleOctaveMode || 'progressive',
+            this._scaleHarmonicMode || 'triad'
         );
     }
 
@@ -1471,40 +1536,12 @@ export class AppController {
     }
 
     /**
-     * Resalta y reproduce un acorde libre en el acordeón.
+     * Resalta y reproduce un acorde libre en el acordeón delegando en TheoryInteractionController.
      * @private
      */
     _showFreeChordOnAccordion(chordData, shouldPlay = false) {
-        const bellowsMode = this._chordView ? this._chordView.bellowsMode : this._bellowsMachine.mode;
-        this._diapasonView.highlightChord(
-            this._accordionData,
-            chordData.targetNotes,
-            chordData.isExactMidi,
-            bellowsMode
-        );
-        this._syncSecondaryDiapason({
-            notes: chordData.targetNotes,
-            isExactMidi: chordData.isExactMidi,
-            bellowsMode
-        });
-        this._chordView.showClearButton();
-
-        if (shouldPlay) {
-            let midisToPlay = chordData.playbackMidis;
-            if (bellowsMode === BELLOWS_MODES.PUSH || bellowsMode === BELLOWS_MODES.PULL) {
-                const feasibility = FeasibilityAnalysisStrategy.check(chordData, this._accordionData, bellowsMode);
-                if (feasibility) {
-                    const availableMidis = [];
-                    feasibility.noteDetails.forEach((detail, idx) => {
-                        const canPlay = bellowsMode === BELLOWS_MODES.PUSH ? detail.canPush : detail.canPull;
-                        if (canPlay) {
-                            availableMidis.push(chordData.playbackMidis[idx]);
-                        }
-                    });
-                    if (availableMidis.length > 0) midisToPlay = availableMidis;
-                }
-            }
-            audioEngine.play(midisToPlay);
+        if (this._theoryController) {
+            this._theoryController.showFreeChordOnAccordion(chordData, shouldPlay);
         }
     }
 
@@ -1514,47 +1551,8 @@ export class AppController {
      * @param {boolean} [shouldPlay=true]
      */
     selectChordNote(idx, shouldPlay = true) {
-        const chord = this._chordView.getSelectedChordData();
-        if (idx < 0 || idx >= chord.intervals.length) return;
-
-        this._chordView.setActiveStep(idx);
-
-        const target = chord.isExactMidi ? chord.playbackMidis[idx] : chord.noteMods[idx];
-        const noteName = chord.isExactMidi
-            ? midiToName(chord.playbackMidis[idx], this._currentNotation, false, this._currentOffset)
-            : midiToName(chord.playbackMidis[idx], this._currentNotation, true, this._currentOffset);
-        const roleName = chord.roles[idx] || '';
-
-        const bellowsMode = this._chordView ? this._chordView.bellowsMode : this._bellowsMachine.mode;
-        this._executionView.setNoteLabel(`${noteName} (${roleName})`);
-
-        const forms = this.calculateExecutionForms(target, chord.isExactMidi, bellowsMode);
-        this._executionView.renderForms(forms, (selectedForm) => {
-            this._diapasonView.highlightSingleButton(selectedForm.btnId, selectedForm.directionClass);
-            this._syncSecondaryDiapason({
-                notes: [target],
-                isExactMidi: chord.isExactMidi,
-                bellowsMode
-            });
-            audioEngine.play(selectedForm.midi);
-        });
-
-        if (forms.length > 0) {
-            this._diapasonView.highlightSingleButton(forms[0].btnId, forms[0].directionClass);
-            this._syncSecondaryDiapason({
-                notes: [target],
-                isExactMidi: chord.isExactMidi,
-                bellowsMode
-            });
-            if (shouldPlay) {
-                audioEngine.play(forms[0].midi);
-            }
-        } else {
-            this._diapasonView.clearHighlights();
-            if (this._secondaryDiapasonView) this._secondaryDiapasonView.clearHighlights();
-            if (shouldPlay) {
-                audioEngine.play(chord.playbackMidis[idx]);
-            }
+        if (this._theoryController) {
+            this._theoryController.selectChordNote(idx, shouldPlay);
         }
     }
 
@@ -1562,23 +1560,9 @@ export class AppController {
      * Reproduce arpegio del acorde libre paso a paso.
      */
     async playChordArpeggio() {
-        if (this._chordView.isArpeggioPlaying) {
-            this._chordView.setArpeggioPlaying(false);
-            return;
+        if (this._theoryController) {
+            await this._theoryController.playChordArpeggio();
         }
-
-        this._chordView.setArpeggioPlaying(true);
-        const chord = this._chordView.getSelectedChordData();
-        this._showFreeChordOnAccordion(chord, false);
-
-        for (let i = 0; i < chord.intervals.length; i++) {
-            if (!this._chordView.isArpeggioPlaying) break;
-            this.selectChordNote(i, true);
-            const speed = this._scaleBarView.getSpeed();
-            await new Promise(r => setTimeout(r, speed));
-        }
-
-        this._chordView.setArpeggioPlaying(false);
     }
 
     /**
@@ -1586,18 +1570,18 @@ export class AppController {
      * @private
      */
     _holdChordAudio(chordData) {
-        audioEngine.hold(chordData.playbackMidis);
+        if (this._theoryController) {
+            this._theoryController.holdChordAudio(chordData);
+        }
     }
 
     /**
      * Desfija el acorde libre y restablece la escala.
      */
     unpinChord() {
-        this._isChordPinned = false;
-        this._pinnedChordData = null;
-        this._chordView.unpin();
-        audioEngine.stopAll();
-        this.setStep(this._currentStepIndex, false);
+        if (this._theoryController) {
+            this._theoryController.unpinChord();
+        }
     }
 
     // =========================================================================
@@ -1609,59 +1593,18 @@ export class AppController {
      * @private
      */
     _toggleDetectorButton(btnId, rowKey, btnIndex, direction, midi) {
-        const existingIdx = this._detectorSelectedButtons.findIndex(b => b.btnId === btnId && b.direction === direction);
-        if (existingIdx >= 0) {
-            this._detectorSelectedButtons.splice(existingIdx, 1);
-        } else {
-            this._detectorSelectedButtons.push({
-                btnId,
-                rowKey,
-                btnIndex,
-                direction,
-                midi,
-                noteMod: getPitchClass(midi)
-            });
-            audioEngine.play(midi);
-            const btnEl = document.getElementById(btnId);
-            if (btnEl) this._diapasonView.triggerGlowOnElement(btnEl);
+        if (this._theoryController) {
+            this._theoryController.handleDetectorButtonClick(btnId, direction, midi);
         }
-
-        this._updateDetectorUI();
     }
 
     /**
-     * Actualiza la tira del detector y calcula el análisis armónico con HarmonicAnalysisStrategy.
+     * Actualiza la tira del detector y calcula el análisis armónico delegando en TheoryInteractionController.
      * @private
      */
     _updateDetectorUI() {
-        this._detectorView.renderSelectedButtons(
-            this._detectorSelectedButtons,
-            this._currentNotation,
-            this._currentOffset,
-            {
-                onRemove: (idx) => {
-                    this._detectorSelectedButtons.splice(idx, 1);
-                    this._updateDetectorUI();
-                },
-                onPlayNote: (b) => {
-                    audioEngine.play(b.midi);
-                    const btnEl = document.getElementById(b.btnId);
-                    if (btnEl) this._diapasonView.triggerGlowOnElement(btnEl);
-                }
-            }
-        );
-
-        const analysis = HarmonicAnalysisStrategy.analyze(
-            this._detectorSelectedButtons,
-            this._currentNotation,
-            this._currentOffset
-        );
-
-        this._detectorView.renderAnalysisResult(analysis, this._currentNotation);
-
-        if (this._detectorView.isModeActive) {
-            this._diapasonView.highlightDetectorButtons(this._detectorSelectedButtons);
-            this._syncSecondaryDiapason();
+        if (this._theoryController) {
+            this._theoryController.updateDetectorUI();
         }
     }
 
@@ -1669,35 +1612,17 @@ export class AppController {
      * Toca todas las notas del acorde detectado juntas.
      */
     playDetectorChord() {
-        if (this._detectorSelectedButtons.length === 0) return;
-        const midis = this._detectorSelectedButtons.map(b => b.midi);
-        audioEngine.play(midis);
+        if (this._theoryController) {
+            this._theoryController.playDetectorChord();
+        }
     }
 
     /**
      * Reproduce arpegio de las notas seleccionadas en el detector.
      */
     async playDetectorArpeggio() {
-        if (this._detectorSelectedButtons.length === 0) return;
-
-        if (this._detectorView.isArpeggioPlaying) {
-            this._detectorView.setArpeggioPlaying(false);
-            return;
+        if (this._theoryController) {
+            await this._theoryController.playDetectorArpeggio();
         }
-
-        this._detectorView.setArpeggioPlaying(true);
-
-        for (let i = 0; i < this._detectorSelectedButtons.length; i++) {
-            if (!this._detectorView.isArpeggioPlaying) break;
-            const b = this._detectorSelectedButtons[i];
-            audioEngine.play(b.midi);
-            const btnEl = document.getElementById(b.btnId);
-            if (btnEl) this._diapasonView.triggerGlowOnElement(btnEl);
-
-            const speed = this._scaleBarView.getSpeed();
-            await new Promise(r => setTimeout(r, speed));
-        }
-
-        this._detectorView.setArpeggioPlaying(false);
     }
 }
