@@ -209,28 +209,73 @@
                                         </div>
                                     </div>
 
-                                    <div class="diapason-vertical-volume-control" id="primaryDiapasonVolumeBar" title="Volumen del acordeón (Diapasón 1)">
-                                        <button type="button" class="btn-volume-sync active" id="btnSyncVolumePrimary" title="Sincronizar volumen con Acordeón 2 (Clic para independizar)">
-                                            <i class="fas fa-link" id="iconSyncVolumePrimary"></i>
-                                        </button>
-                                        <span class="diapason-volume-label" id="lblDiapasonVolume">80%</span>
-                                        <div class="diapason-volume-slider-vertical-wrap">
-                                            <input type="range" id="diapasonVolumeSlider" class="diapason-volume-slider-vertical" min="0" max="100" value="80" orient="vertical" title="Ajustar volumen (0% a 100%)">
-                                        </div>
-                                        <button type="button" class="btn-diapason-volume-mute" id="btnDiapasonVolumeMute" title="Silenciar / Activar sonido del acordeón">
-                                            <i class="fas fa-volume-high" id="iconDiapasonVolume"></i>
-                                        </button>
-                                        <label class="diapason-mute-checkbox-label" title="Marcar para silenciar">
-                                            <input type="checkbox" id="chkDiapasonMute" class="diapason-mute-checkbox">
-                                            <span class="diapason-mute-text">Mudo</span>
-                                        </label>
-                                    </div>
+                                    
                                     <div class="diapason" id="diapason">
                                         <div class="diapason-active-chord-badge" id="primaryDiapasonChordBadge" title="Acorde activo en Diapasón 1" style="display: inline-flex;">
                                             <i class="fas fa-music"></i>
                                             <strong class="sidebar-chord-name" id="primaryDiapasonChordName">Mi♭ Mayor</strong>
                                         </div>
                                         <!-- Hileras de botones 10-11-10 generadas dinámicamente -->
+                                    </div>
+
+                                    <!-- Bloque lateral derecho adyacente al Diapasón: Sliders (Volumen arriba, Tiempo de reproducción debajo) y Controles de Reproducción Verticales -->
+                                    <div class="diapason-side-controls-column" id="primaryDiapasonSideControls">
+                                        <!-- Columna de Sliders: Volumen arriba y Slider de tiempo de reproducción vertical debajo -->
+                                        <div class="diapason-vertical-sliders-stack">
+                                            <!-- Control de Volumen Vertical (Diapasón 1) -->
+                                            <div class="diapason-vertical-volume-control" id="primaryDiapasonVolumeBar" title="Volumen del acordeón (Diapasón 1)">
+                                                <button type="button" class="btn-volume-sync active" id="btnSyncVolumePrimary" title="Sincronizar volumen con Acordeón 2 (Clic para independizar)">
+                                                    <i class="fas fa-link" id="iconSyncVolumePrimary"></i>
+                                                </button>
+                                                <span class="diapason-volume-label" id="lblDiapasonVolume">80%</span>
+                                                <div class="diapason-volume-slider-vertical-wrap">
+                                                    <input type="range" id="diapasonVolumeSlider" class="diapason-volume-slider-vertical" min="0" max="100" value="80" orient="vertical" title="Ajustar volumen (0 a 100)">
+                                                </div>
+                                                <button type="button" class="btn-diapason-volume-mute" id="btnDiapasonVolumeMute" title="Silenciar / Activar sonido del acordeón">
+                                                    <i class="fas fa-volume-high" id="iconDiapasonVolume"></i>
+                                                </button>
+                                                <label class="diapason-mute-checkbox-label" title="Marcar para silenciar">
+                                                    <input type="checkbox" id="chkDiapasonMute" class="diapason-mute-checkbox">
+                                                    <span class="diapason-mute-text">Mudo</span>
+                                                </label>
+                                            </div>
+
+                                            <!-- Slider de Tiempo de Reproducción Vertical (debajo del Control de Volumen) -->
+                                            <div class="diapason-vertical-seeker-control" id="playerScrubberRow" title="Progreso y tiempo de reproducción">
+                                                <span class="scrubber-time" id="audioTimeCurrent">0:00</span>
+                                                <div class="diapason-seeker-slider-vertical-wrap">
+                                                    <input type="range" id="audioSeeker" class="player-seeker-range-vertical" min="0" max="1" step="0.001" value="0" orient="vertical" title="Arrastra para avanzar o retroceder en la canción">
+                                                    <div class="audio-progress-bar-fill" id="audioProgressBar" style="display: none;"></div>
+                                                    <span id="audioTimeDisplay" style="display: none;">00:00 / 00:00</span>
+                                                </div>
+                                                <span class="scrubber-time" id="audioTimeRemaining">-0:00</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Controles de Reproducción Verticales adyacentes al Volumen del Diapasón -->
+                                        <div class="track-playback-controls diapason-vertical-playback-panel" id="trackPlaybackControls">
+                                            <div class="player-transport-buttons player-transport-buttons--vertical">
+                                                <button type="button" class="btn-action btn-transport" id="btnPrevMeasure" title="Retroceder 1 compás (Atrás)">
+                                                    <i class="fas fa-backward-step"></i>
+                                                </button>
+                                                <button type="button" class="btn-action btn-action--primary btn-play" id="btnPlayPauseAudio" title="Reproducir / Pausar">
+                                                    <i class="fas fa-play"></i>
+                                                </button>
+                                                <button type="button" class="btn-action btn-transport" id="btnNextMeasure" title="Avanzar 1 compás (Adelante)">
+                                                    <i class="fas fa-forward-step"></i>
+                                                </button>
+                                                <button type="button" class="btn-action btn-transport" id="btnStopAudio" title="Detener">
+                                                    <i class="fas fa-stop"></i>
+                                                </button>
+                                            </div>
+
+                                            <!-- Sincronizar diapasón vertical -->
+                                            <label class="diapason-sync-toggle-vertical" title="Al reproducir, muestra automáticamente en el diapasón los botones del acorde">
+                                                <input type="checkbox" id="chkSyncDiapason" checked>
+                                                <span class="diapason-sync-icon"><i class="fas fa-arrows-rotate"></i></span>
+                                                <span class="diapason-sync-text">Sinc</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -426,99 +471,10 @@
                                         </div>
                                     </div>
 
-                                    <!-- Controles de Reproducción y Sincronización en Tiempo Real -->
-                                    <div class="track-playback-controls" id="trackPlaybackControls" style="display: flex;">
-
-                                        <!-- Barra de Tiempo y Scrubbing con Cuadro de Progreso -->
-                                        <div class="player-scrubber-row" id="playerScrubberRow">
-                                            <span class="scrubber-time" id="audioTimeCurrent">0:00</span>
-                                            <div class="scrubber-slider-container">
-                                                <input type="range" id="audioSeeker" class="player-seeker-range" min="0" max="1" step="0.001" value="0" title="Arrastra para avanzar o retroceder en la canción">
-                                                <div class="audio-progress-bar-fill" id="audioProgressBar" style="display: none;"></div>
-                                                <span id="audioTimeDisplay" style="display: none;">00:00 / 00:00</span>
-                                            </div>
-                                            <span class="scrubber-time" id="audioTimeRemaining">-0:00</span>
-                                        </div>
-
-                                        <!-- Barra de Controles de Reproducción, Transporte y Metrónomo -->
-                                        <div class="player-transport-toolbar">
-                                            <!-- Botones de Transporte (Atrás, Play, Adelante, Stop) -->
-                                            <div class="player-transport-buttons">
-                                                <button type="button" class="btn-action btn-transport" id="btnPrevMeasure" title="Retroceder 1 compás (Atrás)">
-                                                    <i class="fas fa-backward-step"></i>
-                                                </button>
-                                                <button type="button" class="btn-action btn-action--primary btn-play" id="btnPlayPauseAudio" title="Reproducir / Pausar">
-                                                    <i class="fas fa-play"></i>
-                                                </button>
-                                                <button type="button" class="btn-action btn-transport" id="btnNextMeasure" title="Avanzar 1 compás (Adelante)">
-                                                    <i class="fas fa-forward-step"></i>
-                                                </button>
-                                                <button type="button" class="btn-action btn-transport" id="btnStopAudio" title="Detener">
-                                                    <i class="fas fa-stop"></i>
-                                                </button>
-                                            </div>
-
-                                            <!-- Metrónomo -->
-                                            <button type="button" class="btn-action btn-metronome-toggle" id="btnToggleMetronome" title="Activar / Desactivar metrónomo sincronizado con el audio">
-                                                <i class="fas fa-drum"></i> <span id="metronomeToggleLabel">Metrónomo: <strong>OFF</strong></span>
-                                            </button>
-
-                                            <!-- Volumen del Metrónomo -->
-                                            <div class="player-chord-volume-group" title="Volumen del sonido del metrónomo (0% = Silencio)">
-                                                <button type="button" class="btn-chord-volume-mute" id="btnToggleMetronomeMute" title="Silenciar / Activar sonido del metrónomo">
-                                                    <i class="fas fa-volume-high" id="iconMetronomeVolume"></i>
-                                                </button>
-                                                <span class="player-chord-vol-label">Metrónomo:</span>
-                                                <input type="range" id="playerMetronomeVolumeSlider" class="player-chord-vol-slider" min="0" max="100" value="70" title="Ajustar volumen del metrónomo (0% a 100%)">
-                                                <span class="player-chord-vol-val" id="playerMetronomeVolumeDisplay">70%</span>
-                                            </div>
-
-                                            <!-- BPM con Ajuste Rápido y Edición Directa -->
-                                            <div class="player-bpm-group" title="Tempo de la pista (BPM). Escribe el número directamente o ajusta con - / +">
-                                                <button type="button" class="btn-action btn-stepper" id="btnBpmMinus" title="Reducir 1 BPM">-</button>
-                                                <div style="display: inline-flex; align-items: center; gap: 3px;">
-                                                    <input type="number" id="playerBpmInput" class="player-bpm-input" min="30" max="280" value="120" title="Escribe aquí el BPM deseado">
-                                                    <span class="player-bpm-label">BPM</span>
-                                                </div>
-                                                <span class="player-bpm-val" id="playerBpmDisplay" style="display: none;">120 BPM</span>
-                                                <button type="button" class="btn-action btn-stepper" id="btnBpmPlus" title="Aumentar 1 BPM">+</button>
-                                            </div>
-
-                                            <!-- Selector de Velocidad -->
-                                            <div class="player-speed-group" title="Velocidad de reproducción del audio">
-                                                <i class="fas fa-gauge-high" style="font-size: 0.72rem; color: #64748b;"></i>
-                                                <select id="audioSpeedSelect" class="form-select player-speed-select">
-                                                    <option value="0.5">0.5x</option>
-                                                    <option value="0.75">0.75x</option>
-                                                    <option value="0.9">0.9x</option>
-                                                    <option value="1.0" selected>1.0x</option>
-                                                    <option value="1.1">1.1x</option>
-                                                    <option value="1.25">1.25x</option>
-                                                    <option value="1.5">1.5x</option>
-                                                </select>
-                                            </div>
-
-                                            <!-- Volumen del Sonido del Acorde en el Reproductor -->
-                                            <div class="player-chord-volume-group" title="Volumen del sonido del acorde en el reproductor (0% = Silencio)">
-                                                <button type="button" class="btn-chord-volume-mute" id="btnToggleChordMute" title="Silenciar / Activar sonido del acorde">
-                                                    <i class="fas fa-volume-high" id="iconChordVolume"></i>
-                                                </button>
-                                                <span class="player-chord-vol-label">Acorde:</span>
-                                                <input type="range" id="playerChordVolumeSlider" class="player-chord-vol-slider" min="0" max="100" value="80" title="Ajustar volumen del acorde (0% a 100%)">
-                                                <span class="player-chord-vol-val" id="playerChordVolumeDisplay">80%</span>
-                                            </div>
-
-                                            <!-- Sincronizar diapasón -->
-                                            <label class="fix-chord-toggle" title="Al reproducir, muestra automáticamente en el diapasón los botones del acorde">
-                                                <input type="checkbox" id="chkSyncDiapason" checked>
-                                                <span>Sincronizar Diapasón</span>
-                                            </label>
-                                        </div>
-
-                                        <!-- Elementos de compatibilidad ocultos para el editor de acordes y barras secundarias -->
-                                        <div id="chordProgressBarTrack" style="display: none;"></div>
-                                        <div id="chordTrackPlayhead" style="display: none;"></div>
-                                        <div id="audioChordsStrip" style="display: none;"></div>
+                                    <!-- Elementos de compatibilidad ocultos para el editor de acordes y barras secundarias -->
+                                    <div id="chordProgressBarTrack" style="display: none;"></div>
+                                    <div id="chordTrackPlayhead" style="display: none;"></div>
+                                    <div id="audioChordsStrip" style="display: none;"></div>
 
                                         <!-- Modal / Panel inline de edición de acorde -->
                                         <div class="chord-editor-modal hidden" id="chordEditorModal" role="region" aria-label="Editor inline de acorde" style="display: none;">
@@ -607,7 +563,6 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -747,13 +702,23 @@
                                         </div>
                                     </div>
 
+                                    
+                                    <div class="diapason diapason--secondary" id="secondaryDiapason">
+                                        <div class="diapason-active-chord-badge" id="secondaryDiapasonChordBadge" title="Acorde activo en Diapasón 2" style="display: inline-flex;">
+                                            <i class="fas fa-music"></i>
+                                            <strong class="sidebar-chord-name" id="secondaryDiapasonChordName">Mi♭ Mayor</strong>
+                                        </div>
+                                        <!-- Hileras de botones del segundo acordeón generadas dinámicamente -->
+                                    </div>
+
+                                    <!-- Control de Volumen Vertical adyacente a la derecha del Diapasón 2 -->
                                     <div class="diapason-vertical-volume-control" id="secondaryDiapasonVolumeBar" title="Volumen del acordeón (Diapasón 2)">
                                         <button type="button" class="btn-volume-sync active" id="btnSyncVolumeSecondary" title="Sincronizar volumen con Acordeón 1 (Clic para independizar)">
                                             <i class="fas fa-link" id="iconSyncVolumeSecondary"></i>
                                         </button>
                                         <span class="diapason-volume-label" id="lblSecondaryDiapasonVolume">80%</span>
                                         <div class="diapason-volume-slider-vertical-wrap">
-                                            <input type="range" id="secondaryDiapasonVolumeSlider" class="diapason-volume-slider-vertical" min="0" max="100" value="80" orient="vertical" title="Ajustar volumen (0% a 100%)">
+                                            <input type="range" id="secondaryDiapasonVolumeSlider" class="diapason-volume-slider-vertical" min="0" max="100" value="80" orient="vertical" title="Ajustar volumen (0 a 100)">
                                         </div>
                                         <button type="button" class="btn-diapason-volume-mute" id="btnSecondaryDiapasonVolumeMute" title="Silenciar / Activar sonido del acordeón">
                                             <i class="fas fa-volume-high" id="iconSecondaryDiapasonVolume"></i>
@@ -762,13 +727,6 @@
                                             <input type="checkbox" id="chkSecondaryDiapasonMute" class="diapason-mute-checkbox">
                                             <span class="diapason-mute-text">Mudo</span>
                                         </label>
-                                    </div>
-                                    <div class="diapason diapason--secondary" id="secondaryDiapason">
-                                        <div class="diapason-active-chord-badge" id="secondaryDiapasonChordBadge" title="Acorde activo en Diapasón 2" style="display: inline-flex;">
-                                            <i class="fas fa-music"></i>
-                                            <strong class="sidebar-chord-name" id="secondaryDiapasonChordName">Mi♭ Mayor</strong>
-                                        </div>
-                                        <!-- Hileras de botones del segundo acordeón generadas dinámicamente -->
                                     </div>
                                 </div>
                             </div>
