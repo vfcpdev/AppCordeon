@@ -1076,24 +1076,26 @@
 .mini-popover-input {
     width: 100%;
     height: 30px;
-    background: #1e2238;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
     border-radius: 6px;
-    color: #ffffff;
-    font-size: 0.86rem;
+    color: #0f172a !important;
+    font-size: 0.90rem;
     font-weight: 800;
     text-align: center;
     letter-spacing: 0.05em;
     padding: 2px 6px;
     box-sizing: border-box;
     outline: none;
+    caret-color: #4f46e5 !important;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .mini-popover-input:focus {
-    border-color: #38bdf8;
-    box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
-    background: #191d30;
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25) !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
 }
 
 .mini-popover-feedback {
@@ -1458,11 +1460,11 @@
 }
 
 .mini-popover-input {
-    background: #ffffff;
-    border: 1.5px solid #cbd5e1;
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
     border-radius: 6px;
-    color: #0f172a;
-    font-family: var(--font-mono);
+    color: #0f172a !important;
+    font-family: var(--font-mono), monospace;
     font-size: 0.95rem;
     font-weight: 800;
     padding: 3px 8px;
@@ -1471,15 +1473,28 @@
     flex: 1;
     text-align: center;
     text-transform: none;
-    box-shadow: none;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
     outline: none;
     box-sizing: border-box;
+    caret-color: #4f46e5 !important;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .mini-popover-input:focus {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25) !important;
+}
+
+.mini-popover-input::placeholder {
+    color: #94a3b8 !important;
+    font-weight: 500 !important;
+}
+
+.mini-popover-input::selection {
+    background: #c7d2fe !important;
+    color: #1e1b4b !important;
 }
 
 .mini-popover-actions {

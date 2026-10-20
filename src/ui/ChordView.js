@@ -4,7 +4,7 @@
  * @module ui/ChordView
  */
 
-import { getNoteNamesList, midiToName } from '../theory/MusicTheory.js';
+import { getNoteNamesList, midiToName, getSpellingForScale } from '../theory/MusicTheory.js';
 import { NOTATION_MODES } from '../core/Constants.js';
 import { FeasibilityAnalysisStrategy } from '../strategies/FeasibilityAnalysisStrategy.js';
 
@@ -291,6 +291,9 @@ export class ChordView {
             this._scaleNameLabel.innerText = `Escala del Acorde: ${rootName} ${scaleTitle}`;
         }
 
+        const scaleTypeForSpelling = isMinor ? 'minor' : (isDim ? 'minor' : 'major');
+        const spelledNotes = getSpellingForScale(chordData.root, scaleTypeForSpelling, notation, tuningOffset);
+
         this._currentChordScaleSteps = scaleIntervals.map((interval, i) => {
             const pitchClass = (chordData.root + interval) % 12;
             const quality = triadQualities[i];
@@ -298,16 +301,17 @@ export class ChordView {
             const chordPitchClasses = triadIntervals.map(ti => (pitchClass + ti) % 12);
             const baseMidi = 60 + pitchClass;
             const chordPlaybackMidis = triadIntervals.map(ti => baseMidi + ti);
+            const noteName = spelledNotes[i] || noteNames[pitchClass];
 
             return {
                 degreeIndex: i,
                 numeral: numerals[i],
                 pitchClass,
-                noteName: noteNames[pitchClass],
+                noteName,
                 quality,
                 chordPitchClasses,
                 chordPlaybackMidis,
-                chordName: `${noteNames[pitchClass]} ${quality === 'maj' ? 'Mayor' : quality === 'min' ? 'Menor' : 'Dism.'}`
+                chordName: `${noteName} ${quality === 'maj' ? 'Mayor' : quality === 'min' ? 'Menor' : 'Dism.'}`
             };
         });
 

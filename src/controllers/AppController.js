@@ -23,6 +23,7 @@ import {
     BELLOWS_MODES,
     DEFAULT_CONFIG
 } from '../core/Constants.js';
+import { DiapasonStageController } from './DiapasonStageController.js';
 
 export class AppController {
     /**
@@ -67,35 +68,51 @@ export class AppController {
         this._secondaryOffset = 0; // Por defecto Cinco Letras (Bb - Eb - Ab)
         this._secondaryEquivalenceMode = 'pitch'; // 'pitch' (Mismo Tono) | 'relative' (Misma Hilera)
         this._secondaryBellowsMode = BELLOWS_MODES.BOTH;
-        this._isPrimaryDiapasonVisible = typeof localStorage !== 'undefined'
-            ? localStorage.getItem('acordeon_primary_visible') !== 'false'
-            : true;
-        this._isSecondaryDiapasonVisible = typeof localStorage !== 'undefined'
-            ? localStorage.getItem('acordeon_secondary_visible') !== 'false'
-            : true;
         this._secondaryAccordionData = getTransposedAccordion(this._secondaryOffset);
 
         // Estado de Acorde Libre y Detector
         this._isChordPinned = false;
         this._pinnedChordData = null;
         this._detectorSelectedButtons = [];
-        this._isVolumeSynced = typeof localStorage !== 'undefined' ? localStorage.getItem('acordeon_volume_synced') !== 'false' : true;
-        this._diapasonVolume = 80;
-        this._isDiapasonMuted = false;
-        this._lastDiapasonVolume = 80;
-        this._secondaryDiapasonVolume = 80;
-        this._isSecondaryDiapasonMuted = false;
-        this._lastSecondaryDiapasonVolume = 80;
+        // Controlador del Escenario Físico (Volumen, Sincronización, Visibilidad y Modo Espejo)
+        this._stageController = new DiapasonStageController({
+            diapasonView: this._diapasonView,
+            secondaryDiapasonView: this._secondaryDiapasonView,
+            onStageChanged: (evt) => {
+                if (evt.type === 'primary_mirror') {
+                    this._renderDiapason();
+                    this._restoreActiveHighlights();
+                    this._updateSidebarChordsView();
+                    this._updateRowSelectorButtons();
+                } else if (evt.type === 'secondary_mirror') {
+                    this._renderSecondaryDiapason();
+                    this._syncSecondaryDiapason();
+                    this._updateSidebarChordsView();
+                } else if (evt.type === 'primary_visibility' || evt.type === 'secondary_visibility') {
+                    if (evt.visible && evt.type === 'secondary_visibility') {
+                        this._renderSecondaryDiapason();
+                        this._syncSecondaryDiapason();
+                    }
+                    this._updateSidebarChordsView();
+                }
+            }
+        });
+    }
 
-        // Modo Espejo (Intercambiar Hileras 1 y 3)
-        this._isDiapasonMirrored = typeof localStorage !== 'undefined' && localStorage.getItem('acordeon_is_mirrored') === 'true';
-        this._isSecondaryDiapasonMirrored = typeof localStorage !== 'undefined' && localStorage.getItem('acordeon_secondary_is_mirrored') === 'true';
-        if (this._diapasonView) {
-            this._diapasonView.setMirrored(this._isDiapasonMirrored);
-        }
-        if (this._secondaryDiapasonView) {
-            this._secondaryDiapasonView.setMirrored(this._isSecondaryDiapasonMirrored);
-        }
+    get _isDiapasonMirrored() {
+        return this._stageController ? this._stageController.isDiapasonMirrored : false;
+    }
+
+    get _isSecondaryDiapasonMirrored() {
+        return this._stageController ? this._stageController.isSecondaryDiapasonMirrored : false;
+    }
+
+    get _isPrimaryDiapasonVisible() {
+        return this._stageController ? this._stageController.isPrimaryVisible : true;
+    }
+
+    get _isSecondaryDiapasonVisible() {
+        return this._stageController ? this._stageController.isSecondaryVisible : true;
     }
 
     /**
@@ -110,85 +127,37 @@ export class AppController {
 
         // Inicializar vistas con datos
         this._chordView.populateRoots(this._currentNotation, this._currentOffset);
-        this._updateMirrorButtonUI();
-        this._updateSecondaryMirrorButtonUI();
+        this._stageController.init();
         this._updateRowSelectorButtons();
         this._updatePrimaryTuningLabel();
         this._renderAll();
         this._renderSecondaryDiapason();
         this._syncSecondaryDiapason();
-        this._applyPrimaryVolume(this._diapasonVolume, this._isDiapasonMuted, false);
-        this._applySecondaryVolume(this._secondaryDiapasonVolume, this._isSecondaryDiapasonMuted, false);
-        this._updateVolumeSyncUI();
     }
 
     /**
-     * Aplica el volumen del Diapasón 1 y actualiza su interfaz.
+     * Aplica el volumen del Diapasón 1 delegando en el controlador de escenario.
      * @param {number} vol Porcentaje (0 a 100)
      * @param {boolean} isMuted
      * @param {boolean} [syncOther=true]
      * @private
      */
-    _applyPrimaryVolume(vol, isMuted, syncOther = true) {
-        this._diapasonVolume = vol;
-        this._isDiapasonMuted = isMuted;
-
-        const effectiveVol = isMuted ? 0 : vol;
-        const slider = document.getElementById('diapasonVolumeSlider');
-        const lbl = document.getElementById('lblDiapasonVolume');
-        const icon = document.getElementById('iconDiapasonVolume');
-        const btnMute = document.getElementById('btnDiapasonVolumeMute');
-        const chk = document.getElementById('chkDiapasonMute');
-
-        if (slider) slider.value = effectiveVol;
-        if (lbl) lbl.textContent = isMuted ? 'Mudo' : `${effectiveVol}%`;
-        if (chk) chk.checked = isMuted;
-
-        const iconClass = (isMuted || effectiveVol === 0)
-            ? 'fas fa-volume-xmark'
-            : (effectiveVol < 45 ? 'fas fa-volume-low' : 'fas fa-volume-high');
-        if (icon) icon.className = iconClass;
-        if (btnMute) btnMute.classList.toggle('is-muted', isMuted || effectiveVol === 0);
-
-        this._updateMasterAudioVolume();
-
-        if (this._isVolumeSynced && syncOther) {
-            this._applySecondaryVolume(vol, isMuted, false);
+     _applyPrimaryVolume(vol, isMuted, syncOther = true) {
+        if (this._stageController) {
+            this._stageController.applyPrimaryVolume(vol, isMuted, syncOther);
         }
     }
 
     /**
-     * Aplica el volumen del Diapasón 2 y actualiza su interfaz.
+     * Aplica el volumen del Diapasón 2 delegando en el controlador de escenario.
      * @param {number} vol Porcentaje (0 a 100)
      * @param {boolean} isMuted
      * @param {boolean} [syncOther=true]
      * @private
      */
     _applySecondaryVolume(vol, isMuted, syncOther = true) {
-        this._secondaryDiapasonVolume = vol;
-        this._isSecondaryDiapasonMuted = isMuted;
-
-        const effectiveVol = isMuted ? 0 : vol;
-        const slider = document.getElementById('secondaryDiapasonVolumeSlider');
-        const lbl = document.getElementById('lblSecondaryDiapasonVolume');
-        const icon = document.getElementById('iconSecondaryDiapasonVolume');
-        const btnMute = document.getElementById('btnSecondaryDiapasonVolumeMute');
-        const chk = document.getElementById('chkSecondaryDiapasonMute');
-
-        if (slider) slider.value = effectiveVol;
-        if (lbl) lbl.textContent = isMuted ? 'Mudo' : `${effectiveVol}%`;
-        if (chk) chk.checked = isMuted;
-
-        const iconClass = (isMuted || effectiveVol === 0)
-            ? 'fas fa-volume-xmark'
-            : (effectiveVol < 45 ? 'fas fa-volume-low' : 'fas fa-volume-high');
-        if (icon) icon.className = iconClass;
-        if (btnMute) btnMute.classList.toggle('is-muted', isMuted || effectiveVol === 0);
-
-        this._updateMasterAudioVolume();
-
-        if (this._isVolumeSynced && syncOther) {
-            this._applyPrimaryVolume(vol, isMuted, false);
+        if (this._stageController) {
+            this._stageController.applySecondaryVolume(vol, isMuted, syncOther);
         }
     }
 
@@ -197,11 +166,9 @@ export class AppController {
      * @private
      */
     _updateMasterAudioVolume() {
-        const eff1 = this._isDiapasonMuted ? 0 : this._diapasonVolume;
-        const eff2 = this._isSecondaryDiapasonMuted ? 0 : this._secondaryDiapasonVolume;
-        const maxEff = Math.max(eff1, eff2);
-        const db = maxEff === 0 ? -80 : (20 * Math.log10(maxEff / 100));
-        audioEngine.setVolume(db);
+        if (this._stageController) {
+            this._stageController.updateMasterAudioVolume();
+        }
     }
 
     /**
@@ -209,22 +176,9 @@ export class AppController {
      * @private
      */
     _updateVolumeSyncUI() {
-        const btn1 = document.getElementById('btnSyncVolumePrimary');
-        const btn2 = document.getElementById('btnSyncVolumeSecondary');
-        const icon1 = document.getElementById('iconSyncVolumePrimary');
-        const icon2 = document.getElementById('iconSyncVolumeSecondary');
-
-        [btn1, btn2].forEach(btn => {
-            if (!btn) return;
-            btn.classList.toggle('active', this._isVolumeSynced);
-            btn.title = this._isVolumeSynced
-                ? 'Volumen sincronizado (A1 y A2 vinculados). Clic para independizar controles de volumen.'
-                : 'Volumen independiente (A1 y A2 separados). Clic para sincronizar controles de volumen.';
-        });
-
-        const iconClass = this._isVolumeSynced ? 'fas fa-link' : 'fas fa-link-slash';
-        if (icon1) icon1.className = iconClass;
-        if (icon2) icon2.className = iconClass;
+        if (this._stageController) {
+            this._stageController.updateVolumeSyncUI();
+        }
     }
 
     /**
@@ -359,98 +313,7 @@ export class AppController {
             });
         }
 
-        // Sliders de volumen independiente/sincronizado
-        const slider1 = document.getElementById('diapasonVolumeSlider');
-        if (slider1) {
-            slider1.addEventListener('input', (e) => {
-                const val = parseInt(e.target.value, 10);
-                if (val > 0) this._lastDiapasonVolume = val;
-                this._applyPrimaryVolume(val, val === 0, true);
-            });
-        }
-        const slider2 = document.getElementById('secondaryDiapasonVolumeSlider');
-        if (slider2) {
-            slider2.addEventListener('input', (e) => {
-                const val = parseInt(e.target.value, 10);
-                if (val > 0) this._lastSecondaryDiapasonVolume = val;
-                this._applySecondaryVolume(val, val === 0, true);
-            });
-        }
 
-        // Botones de Mudo
-        const btnMute1 = document.getElementById('btnDiapasonVolumeMute');
-        if (btnMute1) {
-            btnMute1.addEventListener('click', () => {
-                const willMute = !this._isDiapasonMuted;
-                if (willMute) {
-                    this._lastDiapasonVolume = this._diapasonVolume > 0 ? this._diapasonVolume : 80;
-                    this._applyPrimaryVolume(0, true, true);
-                } else {
-                    const restored = this._lastDiapasonVolume > 0 ? this._lastDiapasonVolume : 80;
-                    this._applyPrimaryVolume(restored, false, true);
-                }
-            });
-        }
-        const btnMute2 = document.getElementById('btnSecondaryDiapasonVolumeMute');
-        if (btnMute2) {
-            btnMute2.addEventListener('click', () => {
-                const willMute = !this._isSecondaryDiapasonMuted;
-                if (willMute) {
-                    this._lastSecondaryDiapasonVolume = this._secondaryDiapasonVolume > 0 ? this._secondaryDiapasonVolume : 80;
-                    this._applySecondaryVolume(0, true, true);
-                } else {
-                    const restored = this._lastSecondaryDiapasonVolume > 0 ? this._lastSecondaryDiapasonVolume : 80;
-                    this._applySecondaryVolume(restored, false, true);
-                }
-            });
-        }
-
-        // Checkboxes de Mudo
-        const chk1 = document.getElementById('chkDiapasonMute');
-        if (chk1) {
-            chk1.addEventListener('change', (e) => {
-                const willMute = e.target.checked;
-                if (willMute) {
-                    this._lastDiapasonVolume = this._diapasonVolume > 0 ? this._diapasonVolume : 80;
-                    this._applyPrimaryVolume(0, true, true);
-                } else {
-                    const restored = this._lastDiapasonVolume > 0 ? this._lastDiapasonVolume : 80;
-                    this._applyPrimaryVolume(restored, false, true);
-                }
-            });
-        }
-        const chk2 = document.getElementById('chkSecondaryDiapasonMute');
-        if (chk2) {
-            chk2.addEventListener('change', (e) => {
-                const willMute = e.target.checked;
-                if (willMute) {
-                    this._lastSecondaryDiapasonVolume = this._secondaryDiapasonVolume > 0 ? this._secondaryDiapasonVolume : 80;
-                    this._applySecondaryVolume(0, true, true);
-                } else {
-                    const restored = this._lastSecondaryDiapasonVolume > 0 ? this._lastSecondaryDiapasonVolume : 80;
-                    this._applySecondaryVolume(restored, false, true);
-                }
-            });
-        }
-
-        // Botones de vinculación / sincronización de volumen entre acordeones
-        const toggleVolumeSync = () => {
-            this._isVolumeSynced = !this._isVolumeSynced;
-            try {
-                localStorage.setItem('acordeon_volume_synced', this._isVolumeSynced.toString());
-            } catch (e) {
-                console.warn('[AppController] No se pudo guardar sync de volumen:', e);
-            }
-            this._updateVolumeSyncUI();
-            if (this._isVolumeSynced) {
-                this._applySecondaryVolume(this._diapasonVolume, this._isDiapasonMuted, false);
-            }
-        };
-
-        const btnSync1 = document.getElementById('btnSyncVolumePrimary');
-        if (btnSync1) btnSync1.addEventListener('click', toggleVolumeSync);
-        const btnSync2 = document.getElementById('btnSyncVolumeSecondary');
-        if (btnSync2) btnSync2.addEventListener('click', toggleVolumeSync);
 
         // Segmentado de Notación (Latina / Alemana)
         document.querySelectorAll('#notationToggle .segment-btn, .toggle-segmented__btn[data-val]').forEach(btn => {
@@ -501,23 +364,7 @@ export class AppController {
             });
         }
 
-        // Modo Espejo del Diapasón 1 (Intercambiar Hileras 1 y 3)
-        const btnToggleMirror = document.getElementById('btnToggleMirror');
-        if (btnToggleMirror) {
-            btnToggleMirror.addEventListener('click', () => {
-                this._isDiapasonMirrored = !this._isDiapasonMirrored;
-                try {
-                    localStorage.setItem('acordeon_is_mirrored', this._isDiapasonMirrored.toString());
-                } catch (e) {
-                    console.warn('[AppController] No se pudo persistir modo espejo:', e);
-                }
-                this._diapasonView.setMirrored(this._isDiapasonMirrored);
-                this._updateMirrorButtonUI();
-                this._renderDiapason();
-                this._restoreActiveHighlights();
-                this._updateSidebarChordsView();
-            });
-        }
+
 
         // Configuración y Selección de Escala Independiente (ej: Sol en C-F-Bb)
         this._scaleBarView.bindScaleConfigEvents({
@@ -942,22 +789,12 @@ export class AppController {
     }
 
     /**
-     * Actualiza el estado visual y texto del botón de Modo Espejo.
+     * Actualiza el estado visual y texto del botón de Modo Espejo delegando en DiapasonStageController.
      * @private
      */
     _updateMirrorButtonUI() {
-        const btnToggleMirror = document.getElementById('btnToggleMirror');
-        const lblMirrorStatus = document.getElementById('lblMirrorStatus');
-        if (!btnToggleMirror) return;
-
-        if (this._isDiapasonMirrored) {
-            btnToggleMirror.classList.add('active');
-            if (lblMirrorStatus) lblMirrorStatus.textContent = 'Af->Ad';
-            btnToggleMirror.title = 'Orientación de hileras: Afuera (1) a la izquierda, Adentro (3) a la derecha (Af->Ad). Clic para alternar a Ad<-Af.';
-        } else {
-            btnToggleMirror.classList.remove('active');
-            if (lblMirrorStatus) lblMirrorStatus.textContent = 'Ad<-Af';
-            btnToggleMirror.title = 'Orientación de hileras: Adentro (3) a la izquierda, Afuera (1) a la derecha (Ad<-Af). Clic para alternar a Af->Ad.';
+        if (this._stageController) {
+            this._stageController.updateMirrorButtonsUI();
         }
     }
 
@@ -966,18 +803,8 @@ export class AppController {
      * @private
      */
     _updateSecondaryMirrorButtonUI() {
-        const btnToggleMirrorSecondary = document.getElementById('btnToggleMirrorSecondary');
-        const lblSecondaryMirrorStatus = document.getElementById('lblSecondaryMirrorStatus');
-        if (!btnToggleMirrorSecondary) return;
-
-        if (this._isSecondaryDiapasonMirrored) {
-            btnToggleMirrorSecondary.classList.add('active');
-            if (lblSecondaryMirrorStatus) lblSecondaryMirrorStatus.textContent = 'Af->Ad';
-            btnToggleMirrorSecondary.title = 'Orientación de hileras (2do Acordeón): Afuera (1) a la izquierda, Adentro (3) a la derecha (Af->Ad). Clic para alternar a Ad<-Af.';
-        } else {
-            btnToggleMirrorSecondary.classList.remove('active');
-            if (lblSecondaryMirrorStatus) lblSecondaryMirrorStatus.textContent = 'Ad<-Af';
-            btnToggleMirrorSecondary.title = 'Orientación de hileras (2do Acordeón): Adentro (3) a la izquierda, Afuera (1) a la derecha (Ad<-Af). Clic para alternar a Af->Ad.';
+        if (this._stageController) {
+            this._stageController.updateMirrorButtonsUI();
         }
     }
 
@@ -1050,26 +877,6 @@ export class AppController {
             });
         }
 
-        // Modo Espejo del 2do Diapasón (Intercambiar Hileras 1 y 3 para Acordeón 2)
-        const btnToggleMirrorSecondary = document.getElementById('btnToggleMirrorSecondary');
-        if (btnToggleMirrorSecondary) {
-            btnToggleMirrorSecondary.addEventListener('click', () => {
-                this._isSecondaryDiapasonMirrored = !this._isSecondaryDiapasonMirrored;
-                try {
-                    localStorage.setItem('acordeon_secondary_is_mirrored', this._isSecondaryDiapasonMirrored.toString());
-                } catch (e) {
-                    console.warn('[AppController] No se pudo persistir modo espejo secundario:', e);
-                }
-                if (this._secondaryDiapasonView) {
-                    this._secondaryDiapasonView.setMirrored(this._isSecondaryDiapasonMirrored);
-                }
-                this._updateSecondaryMirrorButtonUI();
-                this._renderSecondaryDiapason();
-                this._syncSecondaryDiapason();
-                this._updateSidebarChordsView();
-            });
-        }
-
         // Botones de Fuelle para el Segundo Diapasón
         document.querySelectorAll('#secondaryBellowsButtonGroup .bellows-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -1080,72 +887,6 @@ export class AppController {
                 this._syncSecondaryDiapason();
             });
         });
-
-        // Botón de alternancia de visibilidad del 1er diapasón (A1)
-        const btnTogglePrimary = document.getElementById('btnTogglePrimaryDiapason');
-        const primaryCol = document.getElementById('primaryDiapasonCol');
-
-        const updatePrimaryToggleBtnState = () => {
-            if (!btnTogglePrimary || !primaryCol) return;
-            if (this._isPrimaryDiapasonVisible) {
-                btnTogglePrimary.classList.add('active');
-                primaryCol.classList.remove('hidden');
-                primaryCol.style.display = '';
-            } else {
-                btnTogglePrimary.classList.remove('active');
-                primaryCol.classList.add('hidden');
-                primaryCol.style.display = 'none';
-            }
-        };
-
-        if (btnTogglePrimary && primaryCol) {
-            updatePrimaryToggleBtnState();
-            btnTogglePrimary.addEventListener('click', () => {
-                this._isPrimaryDiapasonVisible = !this._isPrimaryDiapasonVisible;
-                try {
-                    localStorage.setItem('acordeon_primary_visible', this._isPrimaryDiapasonVisible.toString());
-                } catch (e) {
-                    console.warn('[AppController] No se pudo persistir visibilidad 1er diapasón:', e);
-                }
-                updatePrimaryToggleBtnState();
-                this._updateSidebarChordsView();
-            });
-        }
-
-        // Botón de alternancia de visibilidad del 2do diapasón (A2)
-        const btnToggle = document.getElementById('btnToggleSecondaryDiapason');
-        const secondaryCol = document.getElementById('secondaryDiapasonCol');
-
-        const updateToggleBtnState = () => {
-            if (!btnToggle || !secondaryCol) return;
-            if (this._isSecondaryDiapasonVisible) {
-                btnToggle.classList.add('active');
-                secondaryCol.classList.remove('hidden');
-                secondaryCol.style.display = '';
-            } else {
-                btnToggle.classList.remove('active');
-                secondaryCol.classList.add('hidden');
-                secondaryCol.style.display = 'none';
-            }
-        };
-
-        if (btnToggle && secondaryCol) {
-            updateToggleBtnState();
-            btnToggle.addEventListener('click', () => {
-                this._isSecondaryDiapasonVisible = !this._isSecondaryDiapasonVisible;
-                try {
-                    localStorage.setItem('acordeon_secondary_visible', this._isSecondaryDiapasonVisible.toString());
-                } catch (e) {
-                    console.warn('[AppController] No se pudo persistir visibilidad 2do diapasón:', e);
-                }
-                updateToggleBtnState();
-                if (this._isSecondaryDiapasonVisible) {
-                    this._renderSecondaryDiapason();
-                    this._syncSecondaryDiapason();
-                }
-                this._updateSidebarChordsView();
-            });
-        }
     }
 
     /**

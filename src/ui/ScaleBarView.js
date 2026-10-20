@@ -5,7 +5,7 @@
  * @module ui/ScaleBarView
  */
 
-import { midiToName, getNoteNamesList } from '../theory/MusicTheory.js';
+import { midiToName, getNoteNamesList, getSpellingForScale, getPitchClass } from '../theory/MusicTheory.js';
 import { NOTATION_MODES } from '../core/Constants.js';
 import { SCALE_DEFINITIONS } from '../theory/Scales.js';
 
@@ -98,7 +98,9 @@ export class ScaleBarView {
     render(scaleSteps, activeStepIndex, scaleType = 'major', notation = NOTATION_MODES.LATINA, tuningOffset = 0, onStepSelect) {
         if (!scaleSteps || scaleSteps.length === 0) return;
 
-        const rootName = midiToName(scaleSteps[0].midi, notation, true, tuningOffset);
+        const rootPitchClass = getPitchClass(scaleSteps[0].midi);
+        const spelledNotes = getSpellingForScale(rootPitchClass, scaleType, notation, tuningOffset);
+        const rootName = spelledNotes[0] || midiToName(scaleSteps[0].midi, notation, true, tuningOffset);
         const typeName = SCALE_DEFINITIONS[scaleType] ? SCALE_DEFINITIONS[scaleType].name : 'Mayor';
 
         if (this._titleEl) {
@@ -114,7 +116,8 @@ export class ScaleBarView {
             chip.id = `scale-chip-${idx}`;
             chip.title = `Grado ${step.degreeNumeral}: ${step.degreeName} (${step.quality})`;
 
-            const noteName = midiToName(step.midi, notation, true, tuningOffset);
+            // Usar deletreo enarmónico exacto si está disponible (ej: Fa# en vez de Solb en G mayor)
+            const noteName = (idx === 7 ? spelledNotes[0] : spelledNotes[idx]) || midiToName(step.midi, notation, true, tuningOffset);
             chip.innerHTML = `
                 <strong>${noteName}</strong>
                 <span class="chip-degree">${step.degreeNumeral}</span>

@@ -475,3 +475,109 @@ export function formatChordInputString(text) {
         return autoFormatChordToken(match);
     });
 }
+
+/**
+ * Tabla de armaduras y deletreo exacto por ciclo de quintas (Diatonic Enharmonic Spelling).
+ * Garantiza que cada nota en la escala tenga una letra consecutiva única sin duplicaciones (SRP & Rigor Pedagógico).
+ */
+const SCALE_SPELLINGS_ALEMANA = {
+    // Escalas Mayores
+    'C_major': ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
+    'G_major': ['G', 'A', 'B', 'C', 'D', 'E', 'F#'],
+    'D_major': ['D', 'E', 'F#', 'G', 'A', 'B', 'C#'],
+    'A_major': ['A', 'B', 'C#', 'D', 'E', 'F#', 'G#'],
+    'E_major': ['E', 'F#', 'G#', 'A', 'B', 'C#', 'D#'],
+    'B_major': ['B', 'C#', 'D#', 'E', 'F#', 'G#', 'A#'],
+    'Gb_major': ['Gb', 'Ab', 'Bb', 'Cb', 'Db', 'Eb', 'F'],
+    'F#_major': ['F#', 'G#', 'A#', 'B', 'C#', 'D#', 'E#'],
+    'Db_major': ['Db', 'Eb', 'F', 'Gb', 'Ab', 'Bb', 'C'],
+    'Ab_major': ['Ab', 'Bb', 'C', 'Db', 'Eb', 'F', 'G'],
+    'Eb_major': ['Eb', 'F', 'G', 'Ab', 'Bb', 'C', 'D'],
+    'Bb_major': ['Bb', 'C', 'D', 'Eb', 'F', 'G', 'A'],
+    'F_major': ['F', 'G', 'A', 'Bb', 'C', 'D', 'E'],
+
+    // Escalas Menores Naturales
+    'A_minor': ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
+    'E_minor': ['E', 'F#', 'G', 'A', 'B', 'C', 'D'],
+    'B_minor': ['B', 'C#', 'D', 'E', 'F#', 'G', 'A'],
+    'F#_minor': ['F#', 'G#', 'A', 'B', 'C#', 'D', 'E'],
+    'C#_minor': ['C#', 'D#', 'E', 'F#', 'G#', 'A', 'B'],
+    'G#_minor': ['G#', 'A#', 'B', 'C#', 'D#', 'E', 'F#'],
+    'Eb_minor': ['Eb', 'F', 'Gb', 'Ab', 'Bb', 'Cb', 'Db'],
+    'D#_minor': ['D#', 'E#', 'F#', 'G#', 'A#', 'B', 'C#'],
+    'Bb_minor': ['Bb', 'C', 'Db', 'Eb', 'F', 'Gb', 'Ab'],
+    'F_minor': ['F', 'G', 'Ab', 'Bb', 'C', 'Db', 'Eb'],
+    'C_minor': ['C', 'D', 'Eb', 'F', 'G', 'Ab', 'Bb'],
+    'G_minor': ['G', 'A', 'Bb', 'C', 'D', 'Eb', 'F'],
+    'D_minor': ['D', 'E', 'F', 'G', 'A', 'Bb', 'C'],
+
+    // Escalas Menores Armónicas (Sensible alterada con becuadro o sostenido según corresponda)
+    'A_harmonic_minor': ['A', 'B', 'C', 'D', 'E', 'F', 'G#'],
+    'E_harmonic_minor': ['E', 'F#', 'G', 'A', 'B', 'C', 'D#'],
+    'B_harmonic_minor': ['B', 'C#', 'D', 'E', 'F#', 'G', 'A#'],
+    'F#_harmonic_minor': ['F#', 'G#', 'A', 'B', 'C#', 'D', 'E#'],
+    'C#_harmonic_minor': ['C#', 'D#', 'E', 'F#', 'G#', 'A', 'B#'],
+    'G#_harmonic_minor': ['G#', 'A#', 'B', 'C#', 'D#', 'E', 'Fx'],
+    'Eb_harmonic_minor': ['Eb', 'F', 'Gb', 'Ab', 'Bb', 'Cb', 'D'],
+    'Bb_harmonic_minor': ['Bb', 'C', 'Db', 'Eb', 'F', 'Gb', 'A'],
+    'F_harmonic_minor': ['F', 'G', 'Ab', 'Bb', 'C', 'Db', 'E'],
+    'C_harmonic_minor': ['C', 'D', 'Eb', 'F', 'G', 'Ab', 'B'],
+    'G_harmonic_minor': ['G', 'A', 'Bb', 'C', 'D', 'Eb', 'F#'],
+    'D_harmonic_minor': ['D', 'E', 'F', 'G', 'A', 'Bb', 'C#']
+};
+
+/**
+ * Mapeo de nota anglosajona a latina respetando accidentes enarmónicos.
+ */
+function convertAngloNameToLatin(angloName) {
+    const map = {
+        'C': 'Do', 'D': 'Re', 'E': 'Mi', 'F': 'Fa', 'G': 'Sol', 'A': 'La', 'B': 'Si'
+    };
+    const letter = angloName[0].toUpperCase();
+    const acc = angloName.slice(1);
+    const base = map[letter] || letter;
+    const latinAcc = acc.replace(/b/g, '♭').replace(/#/g, '♯');
+    return `${base}${latinAcc}`;
+}
+
+/**
+ * Retorna la lista exacta de nombres de notas para una escala dada según su armadura teórica real.
+ * @param {number} rootPitchClass Clase de tono de la tónica (0-11)
+ * @param {string} [scaleType='major'] 'major' | 'minor' | 'harmonic_minor'
+ * @param {string} [notation=NOTATION_MODES.LATINA] 'latina' | 'alemana'
+ * @param {number} [tuningOffset=0] Afinación de referencia para desempate de enarmónicos (ej: Cinco Letras prefiere Eb a D#)
+ * @returns {string[]} Lista de 7 o 8 notas de la escala con deletreo pedagógico correcto
+ */
+export function getSpellingForScale(rootPitchClass, scaleType = 'major', notation = NOTATION_MODES.LATINA, tuningOffset = 0) {
+    const useFlat = tuningRegistry.usesFlats(tuningOffset);
+    const rootNameCandidates = useFlat
+        ? [NOTES_ALEMANA_FLAT[rootPitchClass], NOTES_ALEMANA_SHARP[rootPitchClass]]
+        : [NOTES_ALEMANA_SHARP[rootPitchClass], NOTES_ALEMANA_FLAT[rootPitchClass]];
+
+    let selectedKey = null;
+    for (const cand of rootNameCandidates) {
+        const key = `${cand}_${scaleType}`;
+        if (SCALE_SPELLINGS_ALEMANA[key]) {
+            selectedKey = key;
+            break;
+        }
+    }
+
+    let angloSpelling = null;
+    if (selectedKey) {
+        angloSpelling = SCALE_SPELLINGS_ALEMANA[selectedKey];
+    } else {
+        // Fallback algorítmico si la escala no estuviese en la tabla
+        const intervals = scaleType === 'harmonic_minor'
+            ? [0, 2, 3, 5, 7, 8, 11]
+            : (scaleType === 'minor' ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]);
+        const arr = useFlat ? NOTES_ALEMANA_FLAT : NOTES_ALEMANA_SHARP;
+        angloSpelling = intervals.map(i => arr[(rootPitchClass + i) % 12]);
+    }
+
+    if (notation === NOTATION_MODES.ALEMANA) {
+        return [...angloSpelling];
+    }
+
+    return angloSpelling.map(convertAngloNameToLatin);
+}
