@@ -136,9 +136,27 @@ document.addEventListener('DOMContentLoaded', () => {
         lblCollapseStatus: document.getElementById('lblBassCollapseStatus'),
         bellowsToggleGroup: document.getElementById('bassBellowsToggle'),
         btnPlayRhythm: document.getElementById('btnPlayBassRhythm'),
-        btnToggleExternal: document.getElementById('btnToggleBassView')
+        btnToggleMirror: document.getElementById('btnToggleBassMirror'),
+        btnToggleExternal: document.getElementById('btnToggleBassView'),
+        targetDiapason: document.getElementById('diapason')
     }, {
-        audioEngine
+        audioEngine,
+        accordionIndex: 1
+    });
+
+    const secondaryLeftHandBassView = new LeftHandBassView({
+        container: document.getElementById('secondaryLeftHandBassPanel'),
+        gridContainer: document.getElementById('secondaryLeftHandBassGrid'),
+        btnToggleCollapse: document.getElementById('btnSecondaryToggleBassCollapse'),
+        lblCollapseStatus: document.getElementById('lblSecondaryBassCollapseStatus'),
+        bellowsToggleGroup: document.getElementById('secondaryBassBellowsToggle'),
+        btnPlayRhythm: document.getElementById('btnSecondaryPlayBassRhythm'),
+        btnToggleMirror: document.getElementById('btnSecondaryToggleBassMirror'),
+        btnToggleExternal: document.getElementById('btnToggleBassViewSecondary'),
+        targetDiapason: document.getElementById('secondaryDiapason')
+    }, {
+        audioEngine,
+        accordionIndex: 2
     });
 
     // 2. Creación del Controlador Principal
@@ -151,7 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
         executionView,
         audioTrackView,
         diapasonChordSidebarView,
-        leftHandBassView
+        leftHandBassView,
+        secondaryLeftHandBassView
     });
 
     // 3. Inicialización

@@ -2063,80 +2063,128 @@
 }
 
 /* ==========================================================================
-   SIMULADOR DE 12 BAJOS VALLENATOS (MANO IZQUIERDA - FASE 3)
+   SIMULADOR DE 12 BAJOS VALLENATOS (MANO IZQUIERDA - INTEGRADO A LA IZQUIERDA)
    ========================================================================== */
 .left-hand-bass-panel {
-    background: #0f172a;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 10px;
-    margin-top: 14px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+    position: relative;
+    z-index: 5;
+    width: fit-content;
     overflow: hidden;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    user-select: none;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
 }
 
-.left-hand-bass-panel.collapsed .left-hand-bass-body {
-    display: none;
+.left-hand-bass-panel.collapsed {
+    display: none !important;
 }
 
 .left-hand-bass-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 14px;
-    background: #1e293b;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    flex-wrap: wrap;
+    padding: 6px 10px;
+    background: #e2e8f0;
+    border-bottom: 1px solid #cbd5e1;
+    user-select: none;
     gap: 8px;
 }
 
 .left-hand-bass-title-wrap {
     display: flex;
-    flex-direction: column;
-    gap: 1px;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
 }
 
 .left-hand-bass-title {
     font-size: 0.82rem;
     font-weight: 800;
-    color: #38bdf8;
+    color: #0f172a;
     display: flex;
     align-items: center;
     gap: 6px;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
 }
 
-.left-hand-bass-subtitle {
-    font-size: 0.65rem;
-    color: #94a3b8;
-    font-weight: 600;
+.left-hand-bass-title i {
+    color: #0284c7;
 }
 
 .left-hand-bass-controls {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex-wrap: wrap;
+}
+
+.btn-bass-rhythm {
+    min-width: 28px;
+    width: 28px;
+    height: 28px;
+    padding: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    border-radius: 6px;
+}
+
+.btn-bass-mirror {
+    min-width: 28px;
+    width: 28px;
+    height: 28px;
+    padding: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    color: #475569;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    transition: all 0.15s ease;
+}
+
+.btn-bass-mirror:hover {
+    color: #0284c7;
+    border-color: #0284c7;
+}
+
+.btn-bass-mirror.active {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0369a1;
+    box-shadow: 0 0 8px rgba(2, 132, 199, 0.4);
 }
 
 .left-hand-bass-body {
-    padding: 24px 28px;
-    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    padding: 14px 14px 16px 14px;
+    background: #f1f5f9;
     display: flex;
     justify-content: center;
+    align-items: center;
+    flex: 1;
 }
 
 /* Tablero de Bajos Vertical estilo Diapasón */
 .left-hand-bass-grid {
     display: flex;
     flex-direction: row;
-    gap: 16px;
+    gap: 14px;
     background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
-    padding: 34px 28px 38px 28px;
-    border-radius: 24px;
-    box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.35), 0 12px 30px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.15);
+    padding: 24px 20px 28px 20px;
+    border-radius: 20px;
+    box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.35), 0 10px 24px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.15);
     position: relative;
     user-select: none;
+    width: fit-content;
 }
 
 /* Columnas Verticales de Bajos */
@@ -2148,48 +2196,32 @@
     z-index: 1;
 }
 
-.bass-col--fund {
-    margin-top: 0px;
-    z-index: 2;
-}
-
-.bass-col--chord {
-    margin-top: 0px; /* Alineación cuadrícula exacta 6 filas x 2 columnas sin desfasar */
-    z-index: 2;
-}
-
 .bass-header {
     background: #1e2238;
     color: #ffffff;
-    font-size: 0.74rem;
+    font-size: 0.76rem;
     font-weight: 800;
     padding: 6px 8px;
     border-radius: 8px;
     text-align: center;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     border: 1px solid rgba(255, 255, 255, 0.14);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
-    min-width: 62px;
-    height: 48px;
+    min-width: 58px;
+    height: 32px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-}
-
-.bass-header .row-header-title {
-    font-size: 0.70rem;
-    font-weight: 800;
-    letter-spacing: 0.2px;
-    color: #f1f5f9;
 }
 
 .bass-header .row-header-root {
     font-size: 0.76rem;
-    font-weight: 900;
+    font-weight: 800;
     color: #38bdf8;
+    letter-spacing: 0.3px;
+    text-transform: capitalize;
 }
 
 /* Botón de Bajo idéntico al .btn-accordion */
@@ -2219,12 +2251,16 @@
     transform: translateY(-1px);
 }
 
-.btn-bass-accordion.is-pressed,
-.btn-bass-accordion:active {
-    transform: scale(0.92) translateY(1px);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), inset 0 2px 5px rgba(0, 0, 0, 0.4);
-    filter: brightness(0.95);
-    background: radial-gradient(circle at 14px 14px, #fef08a, #ca8a04 70%, #854d0e 100%);
+/* Efecto Glow al presionar / reproducir nota en Bajos (Igual al diapasón principal) */
+.btn-bass-accordion:active,
+.btn-bass-accordion.glow-active,
+.btn-bass-accordion.is-pressed {
+    transform: scale(1.16) translateY(2px) !important;
+    background: var(--highlight) !important;
+    color: #000000 !important;
+    box-shadow: 0 0 26px 8px var(--glow-color), 0 0 48px rgba(250, 204, 21, 0.85), inset 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+    filter: brightness(1.25);
+    z-index: 10;
 }
 
 .btn-bass-fund {

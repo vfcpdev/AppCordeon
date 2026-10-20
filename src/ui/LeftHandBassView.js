@@ -16,30 +16,40 @@ export class LeftHandBassView {
     /**
      * @param {Object} elements
      * @param {HTMLElement} elements.container Contenedor del panel de bajos
+     * @param {HTMLElement} [elements.headerElement] Barra de cabecera arrastrable
      * @param {HTMLElement} [elements.gridContainer] Contenedor para los 12 botones
-     * @param {HTMLElement} [elements.btnToggleCollapse] Botón para colapsar/expandir el panel
+     * @param {HTMLElement} [elements.btnToggleCollapse] Botón para colapsar/cerrar el panel
      * @param {HTMLElement} [elements.lblCollapseStatus] Etiqueta de estado
      * @param {HTMLElement} [elements.bellowsToggleGroup] Botones de selección de fuelle
      * @param {HTMLElement} [elements.btnPlayRhythm] Botón para demo rítmica de Paseo Vallenato
      * @param {HTMLElement} [elements.btnToggleExternal] Botón externo en la barra de controles (junto al fuelle)
+     * @param {HTMLElement} [elements.targetDiapason] Elemento del diapasón para anclar la posición inicial a su derecha
+     * @param {Object} [options]
+     * @param {number} [options.accordionIndex=1] Número del acordeón (1 o 2)
      * @param {Object} [services]
      * @param {Object} [services.audioEngine]
      */
-    constructor(elements, services = {}) {
+    constructor(elements, options = {}, services = {}) {
         this._container = elements.container;
+        this._headerElement = elements.headerElement || this._container?.querySelector('.left-hand-bass-header');
         this._gridContainer = elements.gridContainer;
         this._btnToggleCollapse = elements.btnToggleCollapse;
         this._lblCollapseStatus = elements.lblCollapseStatus;
         this._bellowsToggleGroup = elements.bellowsToggleGroup;
         this._btnPlayRhythm = elements.btnPlayRhythm;
+        this._btnToggleMirror = elements.btnToggleMirror;
         this._btnToggleExternal = elements.btnToggleExternal;
+        this._targetDiapason = elements.targetDiapason || (options.accordionIndex === 2 ? document.getElementById('secondaryDiapason') : document.getElementById('diapason'));
 
+        this._accordionIndex = options.accordionIndex || 1;
         this._audio = services.audioEngine || audioEngine;
 
         this._currentOffset = 0;
         this._currentNotation = NOTATION_MODES.LATINA;
         this._currentBellowsMode = BELLOWS_MODES.BOTH;
-        this._isCollapsed = true; // Colapsado por defecto para mantener la vista limpia
+        this._isMirrored = false; // Intercambiar columnas Interior / Exterior
+        this._isCollapsed = true; // Colapsado/oculto por defecto
+        this._hasBeenPositioned = false;
         this._activeButtonId = null;
         this._rhythmInterval = null;
         this._isRhythmPlaying = false;
@@ -80,10 +90,37 @@ export class LeftHandBassView {
                 this.toggleRhythmPattern();
             });
         }
+
+        if (this._btnToggleMirror) {
+            this._btnToggleMirror.addEventListener('click', () => {
+                this.toggleMirrored();
+            });
+        }
     }
 
     /**
-     * Alterna la visibilidad colapsable del panel de bajos.
+     * Establece el estado de inversión de columnas (modo espejo en bajos).
+     * @param {boolean} value
+     */
+    setMirrored(value) {
+        this._isMirrored = Boolean(value);
+        if (this._btnToggleMirror) {
+            this._btnToggleMirror.classList.toggle('active', this._isMirrored);
+        }
+        this.render();
+    }
+
+    /**
+     * Alterna la orientación / inversión de las columnas de bajos.
+     * @returns {boolean}
+     */
+    toggleMirrored() {
+        this.setMirrored(!this._isMirrored);
+        return this._isMirrored;
+    }
+
+    /**
+     * Alterna la visibilidad colapsable del panel de bajos incrustado.
      * @param {boolean} [forceState]
      */
     toggleCollapse(forceState) {
@@ -96,11 +133,11 @@ export class LeftHandBassView {
         }
         const icon = this._btnToggleCollapse?.querySelector('i');
         if (icon) {
-            icon.className = this._isCollapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+            icon.className = this._isCollapsed ? 'fas fa-chevron-down' : 'fas fa-times';
         }
         if (this._btnToggleExternal) {
             this._btnToggleExternal.classList.toggle('active', !this._isCollapsed);
-            const extLabel = document.getElementById('lblBassToggleStatus');
+            const extLabel = this._btnToggleExternal.querySelector('span');
             if (extLabel) {
                 extLabel.textContent = this._isCollapsed ? 'Bajos' : 'Bajos (Activo)';
             }
@@ -144,49 +181,35 @@ export class LeftHandBassView {
         const fundButtons = bassesData.filter(b => b.type === 'fundamental');
         const chordButtons = bassesData.filter(b => b.type === 'chord');
 
-        // Mapear los 12 botones en 6 filas x 2 columnas:
-        // Columna 1 (Exterior):
-        //   Fila 1: Acorde 1 (Par 1)
-        //   Fila 2: Bajo 1 (Par 1)
-        //   Fila 3: Acorde 3 (Par 3)
-        //   Fila 4: Bajo 3 (Par 3)
-        //   Fila 5: Acorde 5 (Par 5)
-        //   Fila 6: Bajo 5 (Par 5)
-        // Columna 2 (Interior):
-        //   Fila 1: Acorde 2 (Par 2)
-        //   Fila 2: Bajo 2 (Par 2)
-        //   Fila 3: Acorde 4 (Par 4)
-        //   Fila 4: Bajo 4 (Par 4)
-        //   Fila 5: Acorde 6 (Par 6)
-        //   Fila 6: Bajo 6 (Par 6)
+        // Columna Interior (izquierda): toma los botones pares (chordButtons[1], fundButtons[1], etc.)
         const col1Buttons = [
-            { ...chordButtons[0], rowIndex: 1, colName: 'col1' },
-            { ...fundButtons[0], rowIndex: 2, colName: 'col1' },
-            { ...chordButtons[2], rowIndex: 3, colName: 'col1' },
-            { ...fundButtons[2], rowIndex: 4, colName: 'col1' },
-            { ...chordButtons[4], rowIndex: 5, colName: 'col1' },
-            { ...fundButtons[4], rowIndex: 6, colName: 'col1' }
+            { ...chordButtons[1], rowIndex: 1, colName: 'col1' },
+            { ...fundButtons[1], rowIndex: 2, colName: 'col1' },
+            { ...chordButtons[3], rowIndex: 3, colName: 'col1' },
+            { ...fundButtons[3], rowIndex: 4, colName: 'col1' },
+            { ...chordButtons[5], rowIndex: 5, colName: 'col1' },
+            { ...fundButtons[5], rowIndex: 6, colName: 'col1' }
         ];
 
+        // Columna Exterior (derecha): toma los botones impares (chordButtons[0], fundButtons[0], etc.)
         const col2Buttons = [
-            { ...chordButtons[1], rowIndex: 1, colName: 'col2' },
-            { ...fundButtons[1], rowIndex: 2, colName: 'col2' },
-            { ...chordButtons[3], rowIndex: 3, colName: 'col2' },
-            { ...fundButtons[3], rowIndex: 4, colName: 'col2' },
-            { ...chordButtons[5], rowIndex: 5, colName: 'col2' },
-            { ...fundButtons[5], rowIndex: 6, colName: 'col2' }
+            { ...chordButtons[0], rowIndex: 1, colName: 'col2' },
+            { ...fundButtons[0], rowIndex: 2, colName: 'col2' },
+            { ...chordButtons[2], rowIndex: 3, colName: 'col2' },
+            { ...fundButtons[2], rowIndex: 4, colName: 'col2' },
+            { ...chordButtons[4], rowIndex: 5, colName: 'col2' },
+            { ...fundButtons[4], rowIndex: 6, colName: 'col2' }
         ];
 
         const fragment = document.createDocumentFragment();
 
-        // 1. Columna de la izquierda (visual)
+        // 1. Columna de la izquierda (visual: Interior)
         const col1El = document.createElement('div');
         col1El.className = 'row-col bass-col bass-col--col1';
 
         const header1 = document.createElement('div');
         header1.className = 'row-header bass-header';
         header1.innerHTML = `
-            <span class="row-header-title">Columna 2</span>
             <span class="row-header-root">Interior</span>
         `;
         header1.title = 'Columna Interior: Filas Impares = Acorde, Filas Pares = Bajo';
@@ -197,14 +220,13 @@ export class LeftHandBassView {
             col1El.appendChild(btnEl);
         });
 
-        // 2. Columna de la derecha (visual)
+        // 2. Columna de la derecha (visual: Exterior)
         const col2El = document.createElement('div');
         col2El.className = 'row-col bass-col bass-col--col2';
 
         const header2 = document.createElement('div');
         header2.className = 'row-header bass-header';
         header2.innerHTML = `
-            <span class="row-header-title">Columna 1</span>
             <span class="row-header-root">Exterior</span>
         `;
         header2.title = 'Columna Exterior: Filas Impares = Acorde, Filas Pares = Bajo';
@@ -216,9 +238,15 @@ export class LeftHandBassView {
         });
 
         // Disposición física según la mano izquierda:
-        // Columna Interior a la izquierda, Columna Exterior a la derecha
-        fragment.appendChild(col2El);
-        fragment.appendChild(col1El);
+        // Normal: Izquierda = col2El (Exterior), Derecha = col1El (Interior)
+        // Espejo (Invertido): Izquierda = col1El (Interior), Derecha = col2El (Exterior)
+        if (this._isMirrored) {
+            fragment.appendChild(col1El);
+            fragment.appendChild(col2El);
+        } else {
+            fragment.appendChild(col2El);
+            fragment.appendChild(col1El);
+        }
 
         this._gridContainer.appendChild(fragment);
     }
@@ -233,7 +261,7 @@ export class LeftHandBassView {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = `btn-accordion btn-bass-accordion ${btnData.type === 'fundamental' ? 'btn-bass-fund' : 'btn-bass-chord'}`;
-        btn.id = `btn_left_${btnData.id}`;
+        btn.id = `btn_left_acc${this._accordionIndex}_${btnData.id}`;
 
         const isPush = this._currentBellowsMode === BELLOWS_MODES.PUSH;
         const isPull = this._currentBellowsMode === BELLOWS_MODES.PULL;
@@ -245,8 +273,6 @@ export class LeftHandBassView {
             pushLabel = midiToName(btnData.push, this._currentNotation, true, this._currentOffset);
             pullLabel = midiToName(btnData.pull, this._currentNotation, true, this._currentOffset);
         } else {
-            // Para acorde compuesto (Filas 1, 3, 5):
-            // Obtener el nombre de la fundamental del acorde según la afinación y notación activa
             const rootPush = Array.isArray(btnData.push) ? btnData.push[0] : btnData.push;
             const rootPull = Array.isArray(btnData.pull) ? btnData.pull[0] : btnData.pull;
             const rootPushName = midiToName(rootPush, this._currentNotation, true, this._currentOffset);
@@ -301,7 +327,6 @@ export class LeftHandBassView {
         // Clic izquierdo (o mousedown)
         btn.addEventListener('mousedown', (e) => {
             if (e.button === 0) {
-                // Si está en modo BOTH, clic normal toca Cerrar (Push)
                 const dir = this._currentBellowsMode === BELLOWS_MODES.BOTH ? 'push' : undefined;
                 handlePress(e, dir);
             }
@@ -315,7 +340,6 @@ export class LeftHandBassView {
         });
 
         btn.addEventListener('click', (e) => {
-            // Asegurar que si el navegador no disparó mousedown o es touch simulado, suene
             if (!btn.classList.contains('is-pressed')) {
                 const dir = this._currentBellowsMode === BELLOWS_MODES.BOTH ? 'push' : undefined;
                 this.playBassButton(btnData, dir);
@@ -379,12 +403,13 @@ export class LeftHandBassView {
         if (this._isRhythmPlaying) return;
         this._isRhythmPlaying = true;
         if (this._btnPlayRhythm) {
-            this._btnPlayRhythm.classList.add('btn-action--danger');
-            this._btnPlayRhythm.innerHTML = `<i class="fas fa-stop"></i> Detener Ritmo`;
+            this._btnPlayRhythm.classList.remove('btn-action--danger');
+            this._btnPlayRhythm.classList.add('btn-action--success');
+            this._btnPlayRhythm.innerHTML = `<i class="fas fa-drum"></i>`;
+            this._btnPlayRhythm.title = 'Ritmo Activo (clic para detener)';
         }
 
         const bassesData = getTransposedBasses(this._currentOffset);
-        // Usar Par 1 (Bb / Tónica principal de hilera 1)
         const bassBtn = bassesData[0];
         const chordBtn = bassesData[1];
 
@@ -393,8 +418,8 @@ export class LeftHandBassView {
 
         this._rhythmInterval = setInterval(() => {
             const step = beat % 4;
-            const bassEl = document.getElementById(`btn_left_${bassBtn.id}`);
-            const chordEl = document.getElementById(`btn_left_${chordBtn.id}`);
+            const bassEl = document.getElementById(`btn_left_acc${this._accordionIndex}_${bassBtn.id}`);
+            const chordEl = document.getElementById(`btn_left_acc${this._accordionIndex}_${chordBtn.id}`);
 
             if (step === 0) {
                 // Pulso 1: Golpe del Bajo Fundamental
@@ -425,8 +450,10 @@ export class LeftHandBassView {
         }
         this._isRhythmPlaying = false;
         if (this._btnPlayRhythm) {
-            this._btnPlayRhythm.classList.remove('btn-action--danger');
-            this._btnPlayRhythm.innerHTML = `<i class="fas fa-drum"></i> Demo Ritmo Vallenato`;
+            this._btnPlayRhythm.classList.remove('btn-action--success');
+            this._btnPlayRhythm.classList.add('btn-action--danger');
+            this._btnPlayRhythm.innerHTML = `<i class="fas fa-drum"></i>`;
+            this._btnPlayRhythm.title = 'Ritmo Inactivo (clic para iniciar)';
         }
     }
 }

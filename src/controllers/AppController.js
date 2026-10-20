@@ -48,6 +48,7 @@ export class AppController {
         this._audioTrackView = views.audioTrackView;
         this._diapasonChordSidebarView = views.diapasonChordSidebarView;
         this._leftHandBassView = views.leftHandBassView || null;
+        this._secondaryLeftHandBassView = views.secondaryLeftHandBassView || null;
 
         this._audioChordAnalyzer = new AudioChordAnalyzer();
 
@@ -201,6 +202,9 @@ export class AppController {
 
         if (this._leftHandBassView) {
             this._leftHandBassView.updateTuning(this._currentOffset, this._currentNotation);
+        }
+        if (this._secondaryLeftHandBassView) {
+            this._secondaryLeftHandBassView.updateTuning(this._secondaryOffset ?? 0, this._currentNotation);
         }
     }
 
@@ -401,6 +405,9 @@ export class AppController {
                 this._updateSidebarChordsView();
                 if (this._leftHandBassView) {
                     this._leftHandBassView.updateTuning(this._currentOffset, this._currentNotation);
+                }
+                if (this._secondaryLeftHandBassView) {
+                    this._secondaryLeftHandBassView.updateTuning(this._secondaryOffset ?? 0, this._currentNotation);
                 }
             });
         });
@@ -955,6 +962,9 @@ export class AppController {
                 this._secondaryAccordionData = getTransposedAccordion(this._secondaryOffset);
                 this._renderSecondaryDiapason();
                 this._syncSecondaryDiapason();
+                if (this._secondaryLeftHandBassView) {
+                    this._secondaryLeftHandBassView.updateTuning(this._secondaryOffset, this._currentNotation);
+                }
             });
         }
 
