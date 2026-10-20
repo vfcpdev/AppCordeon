@@ -16,10 +16,16 @@ export class DiapasonChordSidebarView {
      * @param {Object} elements
      * @param {HTMLElement} elements.primarySidebar Contenedor lateral del diapasón 1
      * @param {HTMLElement} elements.secondarySidebar Contenedor lateral del diapasón 2
+     * @param {Object} [services] Servicios inyectados para inversión de dependencias (DIP)
+     * @param {Object} [services.audioEngine]
+     * @param {Object} [services.audioPlayerController]
      */
-    constructor(elements) {
+    constructor(elements, services = {}) {
         this._primSidebar = elements.primarySidebar;
         this._secSidebar = elements.secondarySidebar;
+        this._audioEngine = services.audioEngine || audioEngine;
+        this._audioPlayer = services.audioPlayerController || audioPlayerController;
+
         this._currentChord = null;
         this._currentTimeline = null;
         this._activeTimelineIndex = -1;
@@ -538,12 +544,12 @@ export class DiapasonChordSidebarView {
                 this._applyVoicingFilter(buttons, chord);
                 this._reRenderAndSync(targetKey, chord, onButtonAction);
 
-                if (audioEngine) {
+                if (this._audioEngine) {
                     const activeDir = chord.bellowsAction === 'push' ? 'push' : 'pull';
                     const activeBtns = (activeDir === 'push' ? buttons.pushButtons : buttons.pullButtons)
                         .filter(b => !this._deactivatedButtons.has(`${activeDir}_${b.id}`));
                     if (activeBtns.length > 0) {
-                        audioEngine.play(activeBtns.map(b => b.midi), "4n");
+                        this._audioEngine.play(activeBtns.map(b => b.midi), "4n");
                     }
                 }
             });
@@ -559,12 +565,12 @@ export class DiapasonChordSidebarView {
             this._applyVoicingFilter(buttons, chord);
             this._reRenderAndSync(targetKey, chord, onButtonAction);
 
-            if (audioEngine) {
+            if (this._audioEngine) {
                 const activeDir = chord.bellowsAction === 'push' ? 'push' : 'pull';
                 const activeBtns = (activeDir === 'push' ? buttons.pushButtons : buttons.pullButtons)
                     .filter(b => !this._deactivatedButtons.has(`${activeDir}_${b.id}`));
                 if (activeBtns.length > 0) {
-                    audioEngine.play(activeBtns.map(b => b.midi), "4n");
+                    this._audioEngine.play(activeBtns.map(b => b.midi), "4n");
                 }
             }
         };
@@ -954,14 +960,14 @@ export class DiapasonChordSidebarView {
 
         if (curStartBtn) {
             curStartBtn.addEventListener('click', () => {
-                const cur = audioPlayerController.currentTime || 0;
+                const cur = this._audioPlayer.currentTime || 0;
                 inpStart.value = cur.toFixed(2);
             });
         }
 
         if (curEndBtn) {
             curEndBtn.addEventListener('click', () => {
-                const cur = audioPlayerController.currentTime || 0;
+                const cur = this._audioPlayer.currentTime || 0;
                 inpEnd.value = cur.toFixed(2);
             });
         }

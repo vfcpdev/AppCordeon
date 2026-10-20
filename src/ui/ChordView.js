@@ -36,15 +36,25 @@ export class ChordView {
         this._currentExecutionMode = 'harmonic'; // 'harmonic' | 'melodic'
 
         // Escala Generada del Acorde
+        this._scaleHarmonicButtons = elements.scaleHarmonicButtons || null;
         this._scaleNameLabel = elements.scaleNameLabel;
         this._scaleGrid = elements.scaleGrid;
         this._btnSyncScale = elements.btnSyncScale;
         this._currentChordScaleSteps = [];
         this._activeScaleDegree = -1;
+        this._scaleHarmonicMode = 'triad'; // 'triad' | 'seventh'
 
         this._currentStepIndex = -1;
         this._isArpeggioPlaying = false;
         this._onScaleDegreeClick = null;
+    }
+
+    get scaleHarmonicMode() {
+        return this._scaleHarmonicMode;
+    }
+
+    set scaleHarmonicMode(mode) {
+        this._scaleHarmonicMode = mode;
     }
 
     /**
@@ -293,25 +303,44 @@ export class ChordView {
 
         const scaleTypeForSpelling = isMinor ? 'minor' : (isDim ? 'minor' : 'major');
         const spelledNotes = getSpellingForScale(chordData.root, scaleTypeForSpelling, notation, tuningOffset);
+        const isSeventhMode = this._scaleHarmonicMode === 'seventh';
+
+        // Mapeo riguroso de cuatríadas / séptimas según teoría musical diatónica
+        const seventhQualitiesMajor = ['maj7', 'm7', 'm7', 'maj7', '7', 'm7', 'm7b5'];
+        const seventhNumeralsMajor = ['Imaj7', 'ii7', 'iii7', 'IVmaj7', 'V7', 'vi7', 'viiø7'];
+        const seventhIntervalsMap = {
+            'maj7': [0, 4, 7, 11],
+            'm7': [0, 3, 7, 10],
+            '7': [0, 4, 7, 10],
+            'm7b5': [0, 3, 6, 10]
+        };
 
         this._currentChordScaleSteps = scaleIntervals.map((interval, i) => {
             const pitchClass = (chordData.root + interval) % 12;
-            const quality = triadQualities[i];
-            const triadIntervals = quality === 'min' ? [0, 3, 7] : quality === 'dim' ? [0, 3, 6] : [0, 4, 7];
-            const chordPitchClasses = triadIntervals.map(ti => (pitchClass + ti) % 12);
+            let quality = triadQualities[i];
+            let numeral = numerals[i];
+            let chordIntervals = quality === 'min' ? [0, 3, 7] : quality === 'dim' ? [0, 3, 6] : [0, 4, 7];
+
+            if (isSeventhMode && !isMinor && !isDim) {
+                quality = seventhQualitiesMajor[i];
+                numeral = seventhNumeralsMajor[i];
+                chordIntervals = seventhIntervalsMap[quality] || [0, 4, 7];
+            }
+
+            const chordPitchClasses = chordIntervals.map(ti => (pitchClass + ti) % 12);
             const baseMidi = 60 + pitchClass;
-            const chordPlaybackMidis = triadIntervals.map(ti => baseMidi + ti);
+            const chordPlaybackMidis = chordIntervals.map(ti => baseMidi + ti);
             const noteName = spelledNotes[i] || noteNames[pitchClass];
 
             return {
                 degreeIndex: i,
-                numeral: numerals[i],
+                numeral,
                 pitchClass,
                 noteName,
                 quality,
                 chordPitchClasses,
                 chordPlaybackMidis,
-                chordName: `${noteName} ${quality === 'maj' ? 'Mayor' : quality === 'min' ? 'Menor' : 'Dism.'}`
+                chordName: `${noteName} ${quality === 'maj' ? 'Mayor' : quality === 'min' ? 'Menor' : quality === 'dim' ? 'Dism.' : quality}`
             };
         });
 
@@ -457,6 +486,20 @@ export class ChordView {
                 btn.addEventListener('click', () => {
                     this.setExecutionMode(btn.dataset.mode);
                     if (handlers.onExecutionModeChange) handlers.onExecutionModeChange(btn.dataset.mode);
+                });
+            });
+        }
+
+        if (this._scaleHarmonicButtons) {
+            this._scaleHarmonicButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    this._scaleHarmonicButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    this._scaleHarmonicMode = btn.dataset.harmonicMode || 'triad';
+                    notifyChange();
+                    if (handlers.onHarmonicModeChange) {
+                        handlers.onHarmonicModeChange(this._scaleHarmonicMode);
+                    }
                 });
             });
         }

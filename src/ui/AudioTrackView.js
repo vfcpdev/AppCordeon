@@ -15,6 +15,8 @@ import { tuningRegistry } from '../models/Tunings.js';
 import { audioEngine } from '../audio/AudioEngine.js';
 import { MeasureGridComponent } from './MeasureGridComponent.js';
 import { ChordSequenceEditor } from './ChordSequenceEditor.js';
+import { commandManager } from '../core/CommandManager.js';
+import { SetChordTimelineCommand } from '../core/SetChordTimelineCommand.js';
 
 export class AudioTrackView {
     /**
@@ -227,6 +229,35 @@ export class AudioTrackView {
         this._initChordQuickToolbar();
         this._initTransportAndMetronome();
         this._initMiniChordPopover();
+
+        // Subcomponentes especializados (Fase 1 - Desacoplamiento SRP)
+        this._measureGridComponent = new MeasureGridComponent({
+            primaryContainer: this._measureGridContainer,
+            secondaryContainer: this._secondaryMeasureGridContainer,
+            onSlotSelected: (globalBeatIndex, m, b, beatStart, beatSec, slot) => {
+                this._toggleSlotInSequence(globalBeatIndex, m, b, beatStart, beatSec, slot);
+            },
+            onDeleteRequested: () => {
+                this._deleteMiniChord();
+            },
+            formatTime: (s) => this._formatTime(s)
+        });
+
+        this._chordSequenceEditor = new ChordSequenceEditor({
+            popover: this._miniPopover,
+            title: this._miniPopoverTitle,
+            input: this._miniPopoverInput,
+            feedback: this._miniPopoverFeedback,
+            gridWrapper: this._chordMeasureGridWrapper,
+            btnDelete: this._btnMiniDelete,
+            btnCancel: this._btnMiniCancel,
+            btnSave: this._btnMiniSave,
+            btnNext: this._btnMiniNext,
+            btnClose: this._btnMiniClose,
+            onSave: (advanceToNext) => this._saveMiniChord(advanceToNext),
+            onDelete: () => this._deleteMiniChord(),
+            onClose: () => this._closeMiniChordPopover()
+        });
 
         if (this._btnEditActiveChord) {
             this._btnEditActiveChord.addEventListener('click', (e) => {
@@ -2389,8 +2420,30 @@ export class AudioTrackView {
         // Aplicar cantidad de filas inicial
         this.setGridRows(this._gridRows || '3');
 
-        // Atajo de teclado: Escape para volver a modo acoplado o cerrar modales
+        // Atajos de teclado: Escape y Command Pattern (Ctrl+Z / Ctrl+Y) para deshacer/rehacer edición
         window.addEventListener('keydown', (e) => {
+            const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+
+            // Deshacer: Ctrl+Z (sin Shift)
+            if (isCtrlOrMeta && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+                const isWritingInInput = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target !== this._miniPopoverInput;
+                if (!isWritingInInput) {
+                    e.preventDefault();
+                    commandManager.undo();
+                }
+                return;
+            }
+
+            // Rehacer: Ctrl+Y o Ctrl+Shift+Z
+            if (isCtrlOrMeta && ((e.key === 'y' || e.key === 'Y') || (e.shiftKey && (e.key === 'z' || e.key === 'Z')))) {
+                const isWritingInInput = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target !== this._miniPopoverInput;
+                if (!isWritingInInput) {
+                    e.preventDefault();
+                    commandManager.redo();
+                }
+                return;
+            }
+
             if (e.key === 'Escape') {
                 if (this._gridRowsConfigModal && this._gridRowsConfigModal.style.display !== 'none') {
                     this.closeGridRowsModal();
@@ -2797,10 +2850,31 @@ export class AudioTrackView {
             timeline = filtered;
         });
 
-        this._currentAnalysisData.chords = timeline.sort((a, b) => a.startTime - b.startTime);
+        const previousChords = JSON.parse(JSON.stringify(this._currentAnalysisData.chords || []));
+        const newChords = timeline.sort((a, b) => a.startTime - b.startTime);
+
+        const cmd = new SetChordTimelineCommand({
+            previousChords,
+            nextChords: newChords,
+            description: 'Borrar acordes en selección',
+            applyFn: (chords) => {
+                this._applyChordsTimelineUpdate(chords);
+            }
+        });
+        commandManager.execute(cmd);
+        this._closeMiniChordPopover();
+    }
+
+    /**
+     * Aplica de forma unificada una actualización en la línea de tiempo de acordes (Command Pattern).
+     * @private
+     * @param {Array} newTimeline
+     */
+    _applyChordsTimelineUpdate(newTimeline) {
+        if (!this._currentAnalysisData) return;
+        this._currentAnalysisData.chords = newTimeline.sort((a, b) => a.startTime - b.startTime);
         audioPlayerController.setChordsTimeline(this._currentAnalysisData.chords);
 
-        // Si el cursor de reproducción está en algún cuadro eliminado, actualizar diapasón
         const curTime = audioPlayerController.currentTime || 0;
         const curActive = this._currentAnalysisData.chords.find(c => curTime >= c.startTime && curTime < c.endTime);
         if (curActive) {
@@ -2819,8 +2893,6 @@ export class AudioTrackView {
         if (this._handlers && this._handlers.onChordTimelineUpdated) {
             this._handlers.onChordTimelineUpdated(this._currentAnalysisData.chords);
         }
-
-        this._closeMiniChordPopover();
     }
 
     /**
@@ -2949,6 +3021,8 @@ export class AudioTrackView {
             this._currentAnalysisData.chords = filtered.sort((a, b) => a.startTime - b.startTime);
         });
 
+        const previousChords = JSON.parse(JSON.stringify(this._currentAnalysisData.chords || []));
+
         // Unificar acordes contiguos con el mismo símbolo
         const consolidated = [];
         for (const c of this._currentAnalysisData.chords) {
@@ -2961,9 +3035,16 @@ export class AudioTrackView {
             }
             consolidated.push({ ...c });
         }
-        this._currentAnalysisData.chords = consolidated;
 
-        audioPlayerController.setChordsTimeline(this._currentAnalysisData.chords);
+        const cmd = new SetChordTimelineCommand({
+            previousChords,
+            nextChords: consolidated,
+            description: `Asignar acordes: ${tokens.join(', ')}`,
+            applyFn: (chords) => {
+                this._applyChordsTimelineUpdate(chords);
+            }
+        });
+        commandManager.execute(cmd);
 
         // Preescucha con audioEngine
         if (audioEngine && lastParsedMidis && lastParsedMidis.length > 0) {

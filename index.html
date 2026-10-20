@@ -104,6 +104,12 @@
                                                 </button>
                                             </div>
                                         </div>
+                                        <!-- Selector / Toggle de Bajos (Mano Izquierda) -->
+                                        <div class="toggle-segmented bass-toggle-segmented" id="bassVisibilityToggleGroup" title="Visualizar u Ocultar Bajonera (12 Bajos Mano Izquierda)">
+                                            <button type="button" class="segment-btn" id="btnToggleBassView" title="Mostrar u ocultar los 12 bajos de la mano izquierda">
+                                                <i class="fas fa-drum"></i> <span id="lblBassToggleStatus">Bajos</span>
+                                            </button>
+                                        </div>
                                         <!-- Selector de Orientación / Inversión de Hileras: Af->Ad o Ad<-Af -->
                                         <div class="toggle-segmented mirror-toggle-segmented" id="mirrorToggleGroup" title="Orientación de las Hileras del Diapasón">
                                             <button type="button" class="segment-btn active" id="btnToggleMirror" data-mirror="false" title="Invertir ubicación de Hileras: Afuera (1) vs Adentro (3)">
@@ -607,6 +613,44 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- PANEL DE 12 BAJOS VALLENATOS (MANO IZQUIERDA - FASE 3) -->
+                        <div class="left-hand-bass-panel collapsed" id="leftHandBassPanel">
+                            <div class="left-hand-bass-header">
+                                <div class="left-hand-bass-title-wrap">
+                                    <span class="left-hand-bass-title">
+                                        <i class="fas fa-drum"></i> Bajonera Vallenata (12 Bajos · Mano Izquierda)
+                                    </span>
+                                    <span class="left-hand-bass-subtitle">
+                                        Pares: Bajo Fundamental + Acorde de Acompañamiento
+                                    </span>
+                                </div>
+                                <div class="left-hand-bass-controls">
+                                    <div class="toggle-segmented" id="bassBellowsToggle" title="Fuelle en Bajos (Abrir / Cerrar)">
+                                        <button type="button" class="segment-btn active" data-mode="both" title="Ambos (Abrir y Cerrar)">
+                                            <i class="fas fa-arrows-left-right"></i> Ambos
+                                        </button>
+                                        <button type="button" class="segment-btn" data-mode="push" title="Cerrar (Push - Rojo)">
+                                            <i class="fas fa-arrow-right"></i> Cierra
+                                        </button>
+                                        <button type="button" class="segment-btn" data-mode="pull" title="Abrir (Pull - Azul)">
+                                            <i class="fas fa-arrow-left"></i> Abre
+                                        </button>
+                                    </div>
+                                    <button type="button" class="btn-action btn-action--success" id="btnPlayBassRhythm" title="Demostración rítmica Paseo Vallenato (Bajo-Acorde-Acorde)">
+                                        <i class="fas fa-drum"></i> Demo Ritmo Vallenato
+                                    </button>
+                                    <button type="button" class="btn-action btn-xs" id="btnToggleBassCollapse" title="Colapsar o expandir la botonera de 12 bajos">
+                                        <i class="fas fa-chevron-down"></i> <span id="lblBassCollapseStatus">Expandir</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="left-hand-bass-body">
+                                <div class="left-hand-bass-grid" id="leftHandBassGrid">
+                                    <!-- 6 pares de botones (Bajo + Acorde) generados dinámicamente -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
@@ -717,9 +761,15 @@
                             <span style="font-size: 0.68rem; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.4px;">
                                 <i class="fas fa-route"></i> <span id="lblFreeChordScaleName">Escala del Acorde: Do Mayor</span>
                             </span>
-                            <button type="button" class="btn-action" id="btnSyncFreeChordToScale" style="font-size: 0.65rem; padding: 2px 6px; height: 22px; color: #059669; border-color: #a7f3d0;" title="Cargar y estudiar esta escala en la Sección de Escalas">
-                                <i class="fas fa-arrow-up-right-from-square"></i> Cargar en Escalas
-                            </button>
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <div class="toggle-segmented" id="scaleHarmonicModeToggle" title="Complejidad de Grados: Tríadas puras o Cuatríadas con 7ma" style="height: 22px;">
+                                    <button type="button" class="segment-btn active" data-harmonic-mode="triad" style="font-size: 0.62rem; padding: 1px 6px;" title="Modo Tríadas (I, ii, iii, IV, V, vi, vii°)">Tríadas</button>
+                                    <button type="button" class="segment-btn" data-harmonic-mode="seventh" style="font-size: 0.62rem; padding: 1px 6px;" title="Modo Cuatríadas / 7mas (Imaj7, ii7, V7...)">7mas</button>
+                                </div>
+                                <button type="button" class="btn-action" id="btnSyncFreeChordToScale" style="font-size: 0.65rem; padding: 2px 6px; height: 22px; color: #059669; border-color: #a7f3d0;" title="Cargar y estudiar esta escala en la Sección de Escalas">
+                                    <i class="fas fa-arrow-up-right-from-square"></i> Cargar en Escalas
+                                </button>
+                            </div>
                         </div>
                         <div class="scale-panel__chips-strip free-chord-scale-strip" id="freeChordScaleGrid" style="gap: 4px; min-height: 38px;">
                             <!-- Chips interactivos de la escala del acorde generados por JS -->

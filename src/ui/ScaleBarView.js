@@ -9,6 +9,8 @@ import { midiToName, getNoteNamesList, getSpellingForScale, getPitchClass } from
 import { NOTATION_MODES } from '../core/Constants.js';
 import { SCALE_DEFINITIONS } from '../theory/Scales.js';
 
+import { ScaleTransportControls } from './ScaleTransportControls.js';
+
 export class ScaleBarView {
     /**
      * @param {Object} elements Referencias a elementos del DOM
@@ -20,20 +22,21 @@ export class ScaleBarView {
         this._scaleTypeSelect = elements.scaleTypeSelect;
         this._relatedChordsStrip = elements.relatedChordsStrip;
         this._fixChordCheckbox = elements.fixChordCheckbox;
-
-        this._btnPrev = elements.btnPrev;
-        this._btnNext = elements.btnNext;
-        this._btnPlay = elements.btnPlay;
-        this._btnReset = elements.btnReset;
-        this._btnLoop = elements.btnLoop;
-        this._loopStartInput = elements.loopStartInput;
-        this._loopEndInput = elements.loopEndInput;
-        this._speedSlider = elements.speedSlider;
-        this._speedLabel = elements.speedLabel;
         this._octaveButtons = elements.octaveButtons;
 
-        this._isPlaying = false;
-        this._isLooping = false;
+        // Subcomponente de Transporte Segregado (ISP)
+        this._transportControls = new ScaleTransportControls({
+            btnPrev: elements.btnPrev,
+            btnNext: elements.btnNext,
+            btnPlay: elements.btnPlay,
+            btnReset: elements.btnReset,
+            btnLoop: elements.btnLoop,
+            loopStartInput: elements.loopStartInput,
+            loopEndInput: elements.loopEndInput,
+            speedSlider: elements.speedSlider,
+            speedLabel: elements.speedLabel
+        });
+
         this._activeRelatedChordId = null;
 
         // Alternancia de Colapso / Expansión de Acordes Relacionados
@@ -239,29 +242,17 @@ export class ScaleBarView {
      * Configura los listeners de los controles de transporte.
      * @param {Object} handlers
      */
+    get _isLooping() {
+        return this._transportControls ? this._transportControls.isLooping : false;
+    }
+
+    /**
+     * Configura los listeners de los controles de transporte delegando en ScaleTransportControls.
+     * @param {Object} handlers
+     */
     bindTransportEvents(handlers) {
-        if (this._btnPrev) this._btnPrev.addEventListener('click', handlers.onPrev);
-        if (this._btnNext) this._btnNext.addEventListener('click', handlers.onNext);
-        if (this._btnReset) this._btnReset.addEventListener('click', handlers.onReset);
-        if (this._btnPlay) this._btnPlay.addEventListener('click', handlers.onPlay);
-
-        if (this._btnLoop) {
-            this._btnLoop.addEventListener('click', () => {
-                this._isLooping = !this._isLooping;
-                this._btnLoop.classList.toggle('active', this._isLooping);
-                this._btnLoop.innerHTML = this._isLooping
-                    ? '<i class="fas fa-sync-alt"></i> Loop: ON'
-                    : '<i class="fas fa-sync-alt"></i> Loop: OFF';
-                if (handlers.onLoopToggle) handlers.onLoopToggle(this._isLooping);
-            });
-        }
-
-        if (this._speedSlider) {
-            this._speedSlider.addEventListener('input', (e) => {
-                const val = e.target.value;
-                if (this._speedLabel) this._speedLabel.innerText = `${val} ms`;
-                if (handlers.onSpeedChange) handlers.onSpeedChange(parseInt(val));
-            });
+        if (this._transportControls) {
+            this._transportControls.bindTransportEvents(handlers);
         }
     }
 
@@ -270,13 +261,9 @@ export class ScaleBarView {
      * @param {boolean} isPlaying
      */
     setPlayingState(isPlaying) {
-        this._isPlaying = isPlaying;
-        if (!this._btnPlay) return;
-
-        this._btnPlay.classList.toggle('playing', isPlaying);
-        this._btnPlay.innerHTML = isPlaying
-            ? '<i class="fas fa-stop"></i>'
-            : '<i class="fas fa-play"></i>';
+        if (this._transportControls) {
+            this._transportControls.setPlayingState(isPlaying);
+        }
     }
 
     /**
@@ -284,9 +271,7 @@ export class ScaleBarView {
      * @returns {{ start: number, end: number }}
      */
     getLoopRange() {
-        const start = this._loopStartInput ? Math.max(0, parseInt(this._loopStartInput.value) - 1) : 0;
-        const end = this._loopEndInput ? Math.min(8, parseInt(this._loopEndInput.value)) : 8;
-        return { start, end };
+        return this._transportControls ? this._transportControls.getLoopRange() : { start: 0, end: 8 };
     }
 
     /**
@@ -294,6 +279,6 @@ export class ScaleBarView {
      * @returns {number}
      */
     getSpeed() {
-        return this._speedSlider ? parseInt(this._speedSlider.value) : 350;
+        return this._transportControls ? this._transportControls.getSpeed() : 500;
     }
 }

@@ -74,14 +74,23 @@ export class DiapasonView {
             const col = document.createElement("div");
             col.className = `row-col row-col--${rowKey} ${rowKey}`;
 
-            // Cabecera interactiva de la hilera
+            // Cabecera interactiva de la hilera con pedagogía de fuelle (Fase 2)
             const rowTonicMidi = ROW_BASE_TONICS[rowKey] + tuningOffset;
             const rootName = midiToName(rowTonicMidi, notation, true, tuningOffset);
+            const domName = midiToName(rowTonicMidi + 7, notation, true, tuningOffset);
+            const subName = midiToName(rowTonicMidi + 5, notation, true, tuningOffset);
 
             const header = document.createElement("div");
             header.className = `row-header ${rowKey === activeRowKey ? 'active-header' : ''}`;
-            header.innerText = `${ROW_HEADER_LABELS[rowKey]}\n(${rootName})`;
-            header.title = `Seleccionar escala de ${ROW_NAMES[rowKey]} (${rootName})`;
+            header.innerHTML = `
+                <span class="row-header-title">${ROW_HEADER_LABELS[rowKey]}</span>
+                <span class="row-header-root">(${rootName})</span>
+                <span class="row-header-bisonoric-hint" title="Cerrar: Tríada de ${rootName} (I) | Abrir: ${domName}7 (V) y ${subName} (IV)">
+                    <span class="hint-push"><i class="fas fa-arrow-right"></i> ${rootName}</span>
+                    <span class="hint-pull"><i class="fas fa-arrow-left"></i> ${domName}</span>
+                </span>
+            `;
+            header.title = `${ROW_NAMES[rowKey]} (${rootName})\n• CERRANDO (Push/Rojo): Tríada de Tónica (I) de ${rootName}\n• ABRIENDO (Pull/Azul): Notas de Dominante ${domName}7 (V7) y Subdominante ${subName} (IV)\nHaz clic para seleccionar su escala`;
 
             if (handlers.onRowHeaderClick) {
                 header.addEventListener('click', () => {

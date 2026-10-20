@@ -47,6 +47,7 @@ export class AppController {
         this._executionView = views.executionView;
         this._audioTrackView = views.audioTrackView;
         this._diapasonChordSidebarView = views.diapasonChordSidebarView;
+        this._leftHandBassView = views.leftHandBassView || null;
 
         this._audioChordAnalyzer = new AudioChordAnalyzer();
 
@@ -197,6 +198,10 @@ export class AppController {
         this._renderAll();
         this._renderSecondaryDiapason();
         this._syncSecondaryDiapason();
+
+        if (this._leftHandBassView) {
+            this._leftHandBassView.updateTuning(this._currentOffset, this._currentNotation);
+        }
     }
 
     /**
@@ -374,6 +379,9 @@ export class AppController {
                 this._renderAll();
                 this._updateDetectorUI();
                 this._syncSecondaryDiapason();
+                if (this._leftHandBassView) {
+                    this._leftHandBassView.updateTuning(this._currentOffset, this._currentNotation);
+                }
             });
         }
 
@@ -391,6 +399,9 @@ export class AppController {
                 this._updateDetectorUI();
                 this._syncSecondaryDiapason();
                 this._updateSidebarChordsView();
+                if (this._leftHandBassView) {
+                    this._leftHandBassView.updateTuning(this._currentOffset, this._currentNotation);
+                }
             });
         });
 
@@ -504,6 +515,11 @@ export class AppController {
                 if (mode === 'harmonic') {
                     this._showFreeChordOnAccordion(chord, false);
                 }
+            },
+            onHarmonicModeChange: (harmonicMode) => {
+                this._scaleHarmonicMode = harmonicMode;
+                const chord = this._chordView.getSelectedChordData();
+                this._chordView.updateDisplay(chord, this._accordionData, this._chordView.bellowsMode, this._currentNotation, this._currentOffset);
             },
             onSyncToScale: ({ root, scaleType }) => {
                 this._selectedScaleRoot = root;

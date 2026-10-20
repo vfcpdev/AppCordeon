@@ -11,6 +11,7 @@ import { DetectorView } from './ui/DetectorView.js';
 import { ExecutionView } from './ui/ExecutionView.js';
 import { AudioTrackView } from './ui/AudioTrackView.js';
 import { DiapasonChordSidebarView } from './ui/DiapasonChordSidebarView.js';
+import { LeftHandBassView } from './ui/LeftHandBassView.js';
 import { AppController } from './controllers/AppController.js';
 import { audioEngine } from './audio/AudioEngine.js';
 
@@ -22,6 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const diapasonChordSidebarView = new DiapasonChordSidebarView({
         primarySidebar: document.getElementById('primaryDiapasonChordSidebar'),
         secondarySidebar: document.getElementById('secondaryDiapasonChordSidebar')
+    }, {
+        audioEngine
     });
 
     const scaleBarView = new ScaleBarView({
@@ -60,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnClear: document.getElementById('btnClearChord'),
         chkFixChord: document.getElementById('chkFixFreeChord'),
         modeButtons: document.querySelectorAll('#freeChordModeToggle .segment-btn'),
+        scaleHarmonicButtons: document.querySelectorAll('#scaleHarmonicModeToggle .segment-btn'),
         scaleNameLabel: document.getElementById('lblFreeChordScaleName'),
         scaleGrid: document.getElementById('freeChordScaleGrid'),
         btnSyncScale: document.getElementById('btnSyncFreeChordToScale')
@@ -125,6 +129,18 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSyncTuningToDiapason: document.getElementById('btnSyncTuningToDiapason')
     });
 
+    const leftHandBassView = new LeftHandBassView({
+        container: document.getElementById('leftHandBassPanel'),
+        gridContainer: document.getElementById('leftHandBassGrid'),
+        btnToggleCollapse: document.getElementById('btnToggleBassCollapse'),
+        lblCollapseStatus: document.getElementById('lblBassCollapseStatus'),
+        bellowsToggleGroup: document.getElementById('bassBellowsToggle'),
+        btnPlayRhythm: document.getElementById('btnPlayBassRhythm'),
+        btnToggleExternal: document.getElementById('btnToggleBassView')
+    }, {
+        audioEngine
+    });
+
     // 2. Creación del Controlador Principal
     const appController = new AppController({
         diapasonView,
@@ -134,7 +150,8 @@ document.addEventListener('DOMContentLoaded', () => {
         detectorView,
         executionView,
         audioTrackView,
-        diapasonChordSidebarView
+        diapasonChordSidebarView,
+        leftHandBassView
     });
 
     // 3. Inicialización

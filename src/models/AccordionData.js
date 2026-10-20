@@ -68,6 +68,39 @@ export const BASE_CINCO_LETRAS_TREBLE = Object.freeze({
  */
 
 /**
+ * Mapa físico base de los 12 botones de bajos (Mano Izquierda)
+ * en afinación Cinco Letras (Bb - Eb - Ab) para acordeón Hohner Corona III / Rey Vallenato.
+ * Organizado en 2 columnas verticales apiladas de 6 botones cada una:
+ *  - Columna 1 (Exterior): Bajos Fundamentales (1 al 6)
+ *  - Columna 2 (Interior): Acordes de Acompañamiento (1 al 6)
+ */
+export const BASE_CINCO_LETRAS_BASS = Object.freeze([
+    // Par 1 (Columna 2 / Hilera 1: Cerrar = Bb Maj, Abrir = F Maj)
+    { id: 'bass_1', type: 'fundamental', colKey: 'fund', btnIndex: 1, label: 'Bajo 1 (Bb/F)', push: 46, pull: 41, namePush: 'Bb', namePull: 'F' },
+    { id: 'chord_1', type: 'chord', colKey: 'chord', btnIndex: 1, label: 'Acorde 1 (Bb/F)', push: [58, 62, 65], pull: [53, 57, 60], namePush: 'Bb Maj', namePull: 'F Maj' },
+
+    // Par 2 (Columna 1 / Bajos 1 y 2: Cerrar = Sol Mayor / G Maj, Abrir = Do menor / C min)
+    { id: 'bass_2', type: 'fundamental', colKey: 'fund', btnIndex: 2, label: 'Bajo 2 (G/C)', push: 43, pull: 48, namePush: 'G', namePull: 'C' },
+    { id: 'chord_2', type: 'chord', colKey: 'chord', btnIndex: 2, label: 'Acorde 2 (G/Cm)', push: [55, 59, 62], pull: [60, 63, 67], namePush: 'G Maj', namePull: 'C min' },
+
+    // Par 3 (Columna 2 / Hilera 2: Cerrar = Eb Maj, Abrir = Bb Maj)
+    { id: 'bass_3', type: 'fundamental', colKey: 'fund', btnIndex: 3, label: 'Bajo 3 (Eb/Bb)', push: 51, pull: 46, namePush: 'Eb', namePull: 'Bb' },
+    { id: 'chord_3', type: 'chord', colKey: 'chord', btnIndex: 3, label: 'Acorde 3 (Eb/Bb)', push: [63, 67, 70], pull: [58, 62, 65], namePush: 'Eb Maj', namePull: 'Bb Maj' },
+
+    // Par 4 (Columna 1 / Bajos 3 y 4: Cerrar = Do Mayor / C Maj, Abrir = Fa menor / F min)
+    { id: 'bass_4', type: 'fundamental', colKey: 'fund', btnIndex: 4, label: 'Bajo 4 (C/F)', push: 48, pull: 41, namePush: 'C', namePull: 'F' },
+    { id: 'chord_4', type: 'chord', colKey: 'chord', btnIndex: 4, label: 'Acorde 4 (C/Fm)', push: [60, 64, 67], pull: [53, 56, 60], namePush: 'C Maj', namePull: 'F min' },
+
+    // Par 5 (Columna 2 / Hilera 3: Cerrar = Ab Maj, Abrir = Eb Maj)
+    { id: 'bass_5', type: 'fundamental', colKey: 'fund', btnIndex: 5, label: 'Bajo 5 (Ab/Eb)', push: 44, pull: 51, namePush: 'Ab', namePull: 'Eb' },
+    { id: 'chord_5', type: 'chord', colKey: 'chord', btnIndex: 5, label: 'Acorde 5 (Ab/Eb)', push: [56, 60, 63], pull: [63, 67, 70], namePush: 'Ab Maj', namePull: 'Eb Maj' },
+
+    // Par 6 (Columna 1 / Bajos 5 y 6: Cerrar y Abrir = Re bemol / Db Maj)
+    { id: 'bass_6', type: 'fundamental', colKey: 'fund', btnIndex: 6, label: 'Bajo 6 (Db/Db)', push: 49, pull: 49, namePush: 'Db', namePull: 'Db' },
+    { id: 'chord_6', type: 'chord', colKey: 'chord', btnIndex: 6, label: 'Acorde 6 (Db/Db)', push: [61, 65, 68], pull: [61, 65, 68], namePush: 'Db Maj', namePull: 'Db Maj' }
+]);
+
+/**
  * Genera el mapa transpuesto de los 31 botones aplicando un desplazamiento de semitonos (offset).
  * Método puro e inmutable.
  * @param {number} offset Desplazamiento en semitonos (ej: 0 para Cinco Letras, -3 para Rey Vallenato).
@@ -88,4 +121,27 @@ export function getTransposedAccordion(offset = 0) {
     });
 
     return Object.freeze(data);
+}
+
+/**
+ * Genera el mapa transpuesto de los 12 botones de bajos aplicando el desplazamiento.
+ * @param {number} offset
+ * @returns {Array}
+ */
+export function getTransposedBasses(offset = 0) {
+    return BASE_CINCO_LETRAS_BASS.map(btn => {
+        if (btn.type === 'fundamental') {
+            return Object.freeze({
+                ...btn,
+                push: btn.push + offset,
+                pull: btn.pull + offset
+            });
+        } else {
+            return Object.freeze({
+                ...btn,
+                push: btn.push.map(m => m + offset),
+                pull: btn.pull.map(m => m + offset)
+            });
+        }
+    });
 }
