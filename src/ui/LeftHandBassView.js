@@ -28,6 +28,9 @@ export class LeftHandBassView {
      * @param {HTMLElement} [elements.btnClearPattern] Botón para quitar/vaciar patrón cargado
      * @param {HTMLInputElement} [elements.fileMusicXML] Input file para cargar archivo MusicXML
      * @param {HTMLElement} [elements.lblPatternName] Etiqueta con el nombre del patrón activo
+     * @param {HTMLElement} [elements.beatDot] Indicador visual de beat (punto rojo con glow)
+     * @param {HTMLElement} [elements.btnToggleMetronome] Botón toggle del metrónomo de bajos (solo ícono)
+     * @param {HTMLElement} [elements.lblMetronomeBpm] Etiqueta de BPM del metrónomo (solo valor, editable al clic)
      * @param {HTMLElement} [elements.btnToggleMirror] Botón para alternar modo espejo
      * @param {HTMLElement} [elements.btnToggleExternal] Botón externo en la barra de controles (junto al fuelle)
      * @param {HTMLElement} [elements.targetDiapason] Elemento del diapasón para anclar la posición inicial a su derecha
@@ -49,6 +52,9 @@ export class LeftHandBassView {
         this._btnClearPattern = elements.btnClearPattern;
         this._fileMusicXML = elements.fileMusicXML;
         this._lblPatternName = elements.lblPatternName;
+        this._beatDot = elements.beatDot;
+        this._btnToggleMetronome = elements.btnToggleMetronome;
+        this._lblMetronomeBpm = elements.lblMetronomeBpm;
         this._btnToggleMirror = elements.btnToggleMirror;
         this._btnToggleExternal = elements.btnToggleExternal;
         this._targetDiapason = elements.targetDiapason || (options.accordionIndex === 2 ? document.getElementById('secondaryDiapason') : document.getElementById('diapason'));
@@ -65,8 +71,12 @@ export class LeftHandBassView {
         this._activeButtonId = null;
         this._rhythmInterval = null;
         this._isRhythmPlaying = false;
-        this._currentPattern = null; // Patrón cargado (MusicXML) o null (Paseo nativo)
+        this._currentPattern = null; // Patrón cargado (MusicXML) o null (vacío)
         this._currentPatternStep = 0;
+
+        // Metrónomo para bajos
+        this._isMetronomeActive = false;
+        this._bpm = 120;
 
         // Selección manual de botones para ejecución del patrón rítmico (Par activo por defecto: Par 1 / Hilera 1)
         this._selectedBassId = 'bass_1';
@@ -133,6 +143,18 @@ export class LeftHandBassView {
                 if (file) {
                     this.loadMusicXMLFile(file);
                 }
+            });
+        }
+
+        if (this._btnToggleMetronome) {
+            this._btnToggleMetronome.addEventListener('click', () => {
+                this.toggleMetronome();
+            });
+        }
+
+        if (this._lblMetronomeBpm) {
+            this._lblMetronomeBpm.addEventListener('click', () => {
+                this.promptSetBpm();
             });
         }
 
@@ -459,6 +481,73 @@ export class LeftHandBassView {
      * Patrón Paseo: BAJO (tiempo 1) - ACORDE (tiempo 2) - ACORDE (tiempo 3)
      */
     /**
+     * Alterna la activación del metrónomo sonoro en la sección de bajos.
+     * @param {boolean} [forceState]
+     * @returns {boolean}
+     */
+     toggleMetronome(forceState) {
+        this._isMetronomeActive = forceState !== undefined ? forceState : !this._isMetronomeActive;
+        if (this._btnToggleMetronome) {
+            this._btnToggleMetronome.classList.toggle('active', this._isMetronomeActive);
+            this._btnToggleMetronome.title = this._isMetronomeActive
+                ? 'Metrónomo de bajos: ACTIVO (Clic para desactivar)'
+                : 'Metrónomo de bajos: INACTIVO (Clic para activar)';
+        }
+        return this._isMetronomeActive;
+    }
+
+    /**
+     * Establece el tempo en BPM para el metrónomo y el patrón rítmico.
+     * @param {number} bpm
+     */
+    setBpm(bpm) {
+        const val = Math.max(30, Math.min(280, Math.round(bpm)));
+        this._bpm = val;
+        if (this._lblMetronomeBpm) {
+            this._lblMetronomeBpm.textContent = val;
+        }
+        if (this._currentPattern) {
+            this._currentPattern.tempo = val;
+            if (this._lblPatternName) {
+                this._lblPatternName.title = `Patrón: ${this._currentPattern.title} (${val} BPM, ${this._currentPattern.timeSignature.beats}/${this._currentPattern.timeSignature.beatType})`;
+            }
+        }
+    }
+
+    /**
+     * Solicita al usuario un nuevo valor de BPM de manera interactiva.
+     */
+    promptSetBpm() {
+        const current = this._bpm || (this._currentPattern?.tempo || 120);
+        const input = window.prompt('Ajustar BPM del metrónomo / patrón rítmico (30 - 280):', current);
+        if (input !== null) {
+            const parsed = parseInt(input, 10);
+            if (!isNaN(parsed) && parsed >= 30 && parsed <= 280) {
+                this.setBpm(parsed);
+                // Si está reproduciendo, reiniciar para aplicar el nuevo tempo al instante
+                if (this._isRhythmPlaying) {
+                    this.stopRhythmPattern();
+                    this.startRhythmPattern();
+                }
+            }
+        }
+    }
+
+    /**
+     * Hace destellar el punto rojo con glow que indica el beat.
+     * @param {number} [durationMs=120]
+     */
+    flashBeatDot(durationMs = 120) {
+        if (!this._beatDot) return;
+        this._beatDot.classList.add('glow-active');
+        setTimeout(() => {
+            if (this._beatDot) {
+                this._beatDot.classList.remove('glow-active');
+            }
+        }, durationMs);
+    }
+
+    /**
      * Carga un archivo MusicXML y actualiza el patrón rítmico del acordeón.
      * @param {File} file
      */
@@ -468,6 +557,10 @@ export class LeftHandBassView {
             const pattern = MusicXMLPatternParser.parse(text);
             this._currentPattern = pattern;
             this._currentPatternStep = 0;
+
+            if (pattern.tempo) {
+                this.setBpm(pattern.tempo);
+            }
 
             if (this._lblPatternName) {
                 this._lblPatternName.textContent = pattern.title || file.name.replace(/\.[^/.]+$/, "");
@@ -508,6 +601,10 @@ export class LeftHandBassView {
 
         if (this._fileMusicXML) {
             this._fileMusicXML.value = '';
+        }
+
+        if (this._beatDot) {
+            this._beatDot.classList.remove('glow-active');
         }
     }
 
@@ -565,7 +662,7 @@ export class LeftHandBassView {
             return 'push'; // Por defecto cerrar en modo BOTH
         };
 
-        const tempo = this._currentPattern.tempo || 120;
+        const tempo = this._currentPattern.tempo || this._bpm || 120;
         const msPerBeat = (60 / tempo) * 1000;
 
         const playNextMusicXMLStep = () => {
@@ -573,6 +670,15 @@ export class LeftHandBassView {
 
             const note = this._currentPattern.notes[this._currentPatternStep];
             const noteDurationMs = note.durationBeats * msPerBeat;
+
+            // Destello visual de Beat con Glow Rojo en cada evento
+            this.flashBeatDot(Math.min(140, Math.max(60, noteDurationMs * 0.4)));
+
+            // Reproducir clic de metrónomo si está activado
+            if (this._isMetronomeActive) {
+                // Sonido de clic con oscilador sintetizado
+                this._playMetronomeClick(this._currentPatternStep === 0 ? 1 : 2);
+            }
 
             if (!note.isRest) {
                 const direction = getActiveDirection(note.bellows);
@@ -600,6 +706,41 @@ export class LeftHandBassView {
     }
 
     /**
+     * Emite un clic sintético para el metrónomo de los bajos.
+     * @private
+     * @param {number} beat
+     */
+    _playMetronomeClick(beat = 1) {
+        try {
+            const audioCtx = this._audio?.getContext?.() || (window.AudioContext ? new (window.AudioContext || window.webkitAudioContext)() : null);
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            const isAccent = (beat === 1);
+            osc.type = isAccent ? 'sine' : 'triangle';
+            osc.frequency.setValueAtTime(isAccent ? 1200 : 850, now);
+            osc.frequency.exponentialRampToValueAtTime(isAccent ? 400 : 260, now + 0.04);
+
+            gain.gain.setValueAtTime(isAccent ? 0.6 : 0.4, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.05);
+        } catch (e) {
+            // Ignorar errores menores
+        }
+    }
+
+    /**
      * Detiene el patrón rítmico vallenato / MusicXML.
      */
     stopRhythmPattern() {
@@ -609,6 +750,9 @@ export class LeftHandBassView {
             this._rhythmInterval = null;
         }
         this._isRhythmPlaying = false;
+        if (this._beatDot) {
+            this._beatDot.classList.remove('glow-active');
+        }
         if (this._btnPlayRhythm) {
             this._btnPlayRhythm.classList.remove('active');
             this._btnPlayRhythm.title = 'Reproducir ritmo MusicXML / Paseo';

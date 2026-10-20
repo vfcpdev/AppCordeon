@@ -141,6 +141,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btnClearPattern: document.getElementById('btnClearBassPattern'),
         fileMusicXML: document.getElementById('fileBassMusicXML'),
         lblPatternName: document.getElementById('lblBassPatternName1'),
+        beatDot: document.getElementById('bassBeatDot1'),
+        btnToggleMetronome: document.getElementById('btnToggleBassMetronome1'),
+        lblMetronomeBpm: document.getElementById('lblBassMetronomeBpm1'),
         btnToggleMirror: document.getElementById('btnToggleBassMirror'),
         btnToggleExternal: document.getElementById('btnToggleBassView'),
         targetDiapason: document.getElementById('diapason')
@@ -161,6 +164,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btnClearPattern: document.getElementById('btnSecondaryClearBassPattern'),
         fileMusicXML: document.getElementById('fileSecondaryBassMusicXML'),
         lblPatternName: document.getElementById('lblBassPatternName2'),
+        beatDot: document.getElementById('bassBeatDot2'),
+        btnToggleMetronome: document.getElementById('btnToggleBassMetronome2'),
+        lblMetronomeBpm: document.getElementById('lblBassMetronomeBpm2'),
         btnToggleMirror: document.getElementById('btnSecondaryToggleBassMirror'),
         btnToggleExternal: document.getElementById('btnToggleBassViewSecondary'),
         targetDiapason: document.getElementById('secondaryDiapason')

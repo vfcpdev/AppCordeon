@@ -81,9 +81,9 @@ export class MusicXMLPatternParser {
             } else {
                 const pitchNode = noteNode.querySelector("pitch");
                 if (pitchNode) {
-                    const stepEl = pitchNode.querySelector("step");
-                    const alterEl = pitchNode.querySelector("alter");
-                    const octaveEl = pitchNode.querySelector("octave");
+                    const step = stepEl ? stepEl.textContent.trim().toUpperCase() : 'C';
+                    const alter = alterEl ? parseInt(alterEl.textContent, 10) : 0;
+                    const octave = octaveEl ? parseInt(octaveEl.textContent, 10) : 4;
 
                     // Detectar si la nota o compás tiene indicación explícita de fuelle (Push/Pull)
                     let bellows = null;
