@@ -12,6 +12,7 @@ import { midiToName } from '../theory/MusicTheory.js';
 import { NOTATION_MODES, BELLOWS_MODES } from '../core/Constants.js';
 import { audioEngine } from '../audio/AudioEngine.js';
 import { MusicXMLPatternParser } from '../audio/MusicXMLPatternParser.js';
+import { MidiFileWriter } from '../audio/MidiFileWriter.js';
 
 export class LeftHandBassView {
     /**
@@ -27,6 +28,7 @@ export class LeftHandBassView {
      * @param {HTMLElement} [elements.btnResetRhythm] Botón para reiniciar patrón rítmico
      * @param {HTMLElement} [elements.btnClearPattern] Botón para quitar/vaciar patrón cargado
      * @param {HTMLInputElement} [elements.fileMusicXML] Input file para cargar archivo MusicXML
+     * @param {HTMLElement} [elements.btnExportMidi] Botón para exportar y descargar el patrón a MIDI (.mid)
      * @param {HTMLElement} [elements.lblPatternName] Etiqueta con el nombre del patrón activo
      * @param {HTMLElement} [elements.beatDot] Indicador visual de beat (punto rojo con glow)
      * @param {HTMLElement} [elements.btnToggleMetronome] Botón toggle del metrónomo de bajos (solo ícono)
@@ -51,6 +53,7 @@ export class LeftHandBassView {
         this._btnResetRhythm = elements.btnResetRhythm;
         this._btnClearPattern = elements.btnClearPattern;
         this._fileMusicXML = elements.fileMusicXML;
+        this._btnExportMidi = elements.btnExportMidi;
         this._lblPatternName = elements.lblPatternName;
         this._beatDot = elements.beatDot;
         this._btnToggleMetronome = elements.btnToggleMetronome;
@@ -143,6 +146,12 @@ export class LeftHandBassView {
                 if (file) {
                     this.loadMusicXMLFile(file);
                 }
+            });
+        }
+
+        if (this._btnExportMidi) {
+            this._btnExportMidi.addEventListener('click', () => {
+                this.exportMidiFile();
             });
         }
 
@@ -579,6 +588,45 @@ export class LeftHandBassView {
         } catch (err) {
             console.error('[LeftHandBassView] Error al cargar MusicXML:', err);
             alert(`No se pudo cargar el archivo MusicXML: ${err.message}`);
+        }
+    }
+
+    /**
+     * Genera un archivo estándar MIDI (.mid) a partir del patrón MusicXML cargado
+     * y lo descarga directamente en el navegador del usuario para guardarlo y reproducirlo.
+     */
+    exportMidiFile() {
+        if (!this._currentPattern || !this._currentPattern.notes || this._currentPattern.notes.length === 0) {
+            alert('No hay ningún patrón cargado. Primero carga un archivo MusicXML (.xml) para generar el archivo MIDI.');
+            return;
+        }
+
+        try {
+            const bassesData = getTransposedBasses(this._currentOffset);
+            const bassBtn = bassesData.find(b => b.id === this._selectedBassId) || bassesData.find(b => b.type === 'fundamental') || bassesData[0];
+            const chordBtn = bassesData.find(b => b.id === this._selectedChordId) || bassesData.find(b => b.type === 'chord') || bassesData[1];
+
+            // Obtener notas MIDI reales según el modo actual de fuelle
+            const direction = this._currentBellowsMode === BELLOWS_MODES.PULL ? 'pull' : 'push';
+            const fundamentalMidis = direction === 'pull' ? bassBtn.pull : bassBtn.push;
+            const chordMidis = direction === 'pull' ? chordBtn.pull : chordBtn.push;
+
+            // Generar los bytes del archivo MIDI usando MidiFileWriter
+            const midiBytes = MidiFileWriter.createMidiFile(this._currentPattern, {
+                fundamentalMidis,
+                chordMidis
+            });
+
+            // Nombre de archivo seguro
+            const cleanTitle = (this._currentPattern.title || 'patron_bajos_acordeon')
+                .toLowerCase()
+                .replace(/[^a-z0-9_-]/g, '_');
+            const fileName = `${cleanTitle}.mid`;
+
+            MidiFileWriter.downloadMidi(midiBytes, fileName);
+        } catch (err) {
+            console.error('[LeftHandBassView] Error al generar archivo MIDI:', err);
+            alert(`Error al generar archivo MIDI: ${err.message}`);
         }
     }
 
