@@ -974,7 +974,7 @@
 .diapason-stage-body-row {
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
     gap: 8px;
     position: relative;
@@ -1158,6 +1158,426 @@
     font-size: 0.50rem;
     font-weight: 800;
     color: #475569;
+}
+
+/* =========================================================================
+   CONTROLES LATERALES VERTICALES ADYACENTES AL DIAPASÓN
+   (Columna de Sliders: Volumen arriba y Tiempo de reproducción debajo;
+    Controles de transporte de reproducción verticales adyacentes)
+   ========================================================================= */
+.diapason-side-controls-column {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    flex-shrink: 0;
+    align-self: stretch;
+    padding-top: 6px;
+    padding-bottom: 0;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    box-sizing: border-box;
+    z-index: 5;
+}
+
+/* Fila Superior: Control de Volumen y Botones de Transporte apilados a su derecha */
+.diapason-top-controls-row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.diapason-top-controls-row .diapason-vertical-volume-control {
+    margin-top: 0 !important;
+}
+
+/* Control Vertical del Slider de Tiempo de Reproducción (debajo del Control de Volumen y coincidiendo en el borde inferior con el diapasón) */
+.diapason-vertical-seeker-control {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 8px 4px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+    box-sizing: border-box;
+    user-select: none;
+    width: 38px;
+    flex: 1 1 0;
+    min-height: 120px;
+    align-self: flex-start;
+    margin-bottom: 0;
+}
+
+/* Fila Inferior: Slider de Tiempo y Cuadrícula de Compases Adyacentes */
+.diapason-bottom-controls-row {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 6px;
+    flex: 1 1 0;
+    align-self: stretch;
+    min-height: 0;
+    box-sizing: border-box;
+}
+
+.diapason-bottom-controls-row .diapason-vertical-seeker-control {
+    width: 38px;
+    flex: 0 0 38px;
+    align-self: stretch;
+    height: 100%;
+}
+
+.diapason-bottom-controls-row .diapason-chord-grid-panel {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    width: 260px;
+    min-width: 230px;
+    max-width: 300px;
+    flex: 0 0 auto;
+    align-self: stretch;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+    padding: 6px;
+    gap: 6px;
+}
+
+.diapason-bottom-controls-row .diapason-chord-grid-panel .chord-measure-grid-wrapper {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 6px 4px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+}
+
+.diapason-bottom-controls-row .diapason-chord-grid-panel .chord-measure-grid {
+    flex: 1 1 0;
+    max-height: none !important;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 2px;
+}
+
+/* Barra de acciones apilada verticalmente a la derecha de la cuadrícula */
+.chord-measure-grid-header--vertical {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    width: 28px !important;
+}
+
+.chord-grid-header-actions--vertical {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 4px !important;
+    width: 100% !important;
+}
+
+.chord-grid-header-actions--vertical .btn-action {
+    width: 26px !important;
+    height: 24px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.68rem !important;
+    border-radius: 5px !important;
+}
+
+/* Filas de compases verticales: cuadros apilados con tiempo a la derecha */
+.measure-grid-row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    transition: all 0.15s ease;
+}
+
+.measure-grid-row.active-measure {
+    background: #eef2ff !important;
+    border-color: #818cf8 !important;
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.15) !important;
+}
+
+.measure-grid-num {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 900;
+    color: #6366f1;
+    min-width: 16px;
+    text-align: center;
+    padding-top: 6px;
+    user-select: none;
+}
+
+.measure-grid-beats {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+}
+
+.measure-beat-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.measure-beat-slot {
+    flex: 0 0 50% !important;
+    width: 50% !important;
+    max-width: 50% !important;
+    min-width: 0;
+    height: 28px !important;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.12s ease;
+    padding: 0 4px;
+    box-sizing: border-box !important;
+}
+
+.measure-beat-slot.active-beat {
+    background: #4f46e5 !important;
+    border-color: #4338ca !important;
+    box-shadow: 0 0 8px rgba(79, 70, 229, 0.45) !important;
+    transform: scale(1.02);
+}
+
+.measure-beat-slot.active-beat .slot-chord-text {
+    color: #ffffff !important;
+    font-weight: 900 !important;
+}
+
+.measure-beat-slot.active-beat .slot-empty-dot {
+    background: #ffffff !important;
+}
+
+/* Tiempo a la derecha del cuadro del compás */
+.measure-beat-time {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #475569;
+    min-width: 32px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+    line-height: 1;
+}
+
+.measure-beat-item:has(.active-beat) .measure-beat-time {
+    color: #4f46e5 !important;
+    font-weight: 900 !important;
+}
+
+.diapason-vertical-seeker-control .scrubber-time {
+    font-size: 0.56rem;
+    font-weight: 800;
+    color: #4338ca;
+    text-align: center;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    min-width: 0;
+}
+
+.diapason-seeker-slider-vertical-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 0;
+    height: 100%;
+    width: 100%;
+}
+
+.player-seeker-range-vertical {
+    -webkit-appearance: slider-vertical;
+    appearance: slider-vertical;
+    writing-mode: vertical-lr;
+    direction: ltr;
+    width: 6px;
+    height: 100%;
+    cursor: pointer;
+    accent-color: #4f46e5;
+    background: transparent;
+}
+
+/* Panel vertical de controles de transporte de reproducción (adyacente al volumen) */
+.track-playback-controls.diapason-vertical-playback-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    padding: 6px 4px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08) !important;
+    box-sizing: border-box !important;
+    user-select: none !important;
+    width: 38px !important;
+    flex-shrink: 0 !important;
+    align-self: flex-start !important;
+    margin-top: 0 !important;
+}
+
+.player-transport-buttons--vertical {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 5px !important;
+    width: 100% !important;
+}
+
+.diapason-vertical-playback-panel .btn-transport {
+    width: 28px !important;
+    height: 26px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.72rem !important;
+    border-radius: 6px !important;
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+.diapason-vertical-playback-panel .btn-transport:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+    border-color: #94a3b8 !important;
+    transform: translateY(-1px) !important;
+}
+
+.diapason-vertical-playback-panel .btn-play {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.76rem !important;
+    border-radius: 6px !important;
+    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+    border: 1px solid #4338ca !important;
+    color: #ffffff !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.25) !important;
+    transition: all 0.15s ease !important;
+}
+
+.diapason-vertical-playback-panel .btn-play:hover {
+    background: linear-gradient(135deg, #4f46e5, #4338ca) !important;
+    box-shadow: 0 3px 6px rgba(79, 70, 229, 0.35) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Botón de Sincronización del Diapasón (Solo Icono: Verde = Sincronizado, Rojo = No Sincronizado) */
+.diapason-vertical-playback-panel .btn-sync-diapason {
+    position: relative !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    margin: 0 !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.btn-sync-diapason input[type="checkbox"] {
+    display: none !important;
+}
+
+.btn-sync-diapason i {
+    font-size: 0.72rem !important;
+    transition: color 0.2s ease, transform 0.25s ease !important;
+}
+
+/* Estado SINCRONIZADO (VERDE) */
+.btn-sync-diapason:has(input:checked),
+.btn-sync-diapason.is-sync-active {
+    background: #ecfdf5 !important;
+    border-color: #22c55e !important;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.35) !important;
+}
+
+.btn-sync-diapason:has(input:checked) i,
+.btn-sync-diapason.is-sync-active i {
+    color: #16a34a !important;
+}
+
+.btn-sync-diapason:has(input:checked):hover,
+.btn-sync-diapason.is-sync-active:hover {
+    background: #d1fae5 !important;
+    border-color: #16a34a !important;
+}
+
+.btn-sync-diapason:has(input:checked):hover i,
+.btn-sync-diapason.is-sync-active:hover i {
+    color: #15803d !important;
+    transform: rotate(30deg);
+}
+
+/* Estado NO SINCRONIZADO (ROJO) */
+.btn-sync-diapason:has(input:not(:checked)),
+.btn-sync-diapason.is-sync-inactive {
+    background: #fef2f2 !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.35) !important;
+}
+
+.btn-sync-diapason:has(input:not(:checked)) i,
+.btn-sync-diapason.is-sync-inactive i {
+    color: #dc2626 !important;
+}
+
+.btn-sync-diapason:has(input:not(:checked)):hover,
+.btn-sync-diapason.is-sync-inactive:hover {
+    background: #fee2e2 !important;
+    border-color: #dc2626 !important;
+}
+
+.btn-sync-diapason:has(input:not(:checked)):hover i,
+.btn-sync-diapason.is-sync-inactive:hover i {
+    color: #b91c1c !important;
+    transform: rotate(-30deg);
 }
 
 .sidebar-chord-name {
@@ -2499,3 +2919,262 @@
 
 
 
+
+/* Control de Volumen Integrado en la Barra Superior del Diapasón */
+.diapason-header-volume-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 2px 7px;
+    height: 28px;
+    box-sizing: border-box;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.diapason-header-volume-control .btn-action {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    border-radius: 4px;
+    background: transparent;
+    border: none;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.diapason-header-volume-control .btn-action:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.diapason-header-volume-control .btn-volume-sync.active {
+    color: #4f46e5;
+}
+
+.diapason-header-volume-control .btn-diapason-volume-mute.is-muted {
+    color: #ef4444;
+}
+
+.diapason-header-volume-slider-wrap {
+    display: flex;
+    align-items: center;
+    width: 55px;
+}
+
+.diapason-header-volume-slider {
+    width: 100%;
+    height: 4px;
+    accent-color: #4f46e5;
+    cursor: pointer;
+    background: #e2e8f0;
+    border-radius: 2px;
+}
+
+.diapason-header-volume-control .diapason-volume-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #475569;
+    min-width: 26px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+}
+
+/* Columna lateral derecha de controles adyacente al diapasón */
+.diapason-side-controls-column {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+    align-self: stretch !important;
+    padding-top: 6px !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    box-sizing: border-box !important;
+    z-index: 5 !important;
+}
+
+/* Columna de Transporte y Seeker (ancho 38px apilados verticalmente) */
+.diapason-side-playback-seeker-col {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 38px !important;
+    flex: 0 0 38px !important;
+    align-self: stretch !important;
+    box-sizing: border-box !important;
+}
+
+.diapason-side-playback-seeker-col .track-playback-controls {
+    flex-shrink: 0 !important;
+    width: 38px !important;
+}
+
+.diapason-side-playback-seeker-col .diapason-vertical-seeker-control {
+    flex: 1 1 0 !important;
+    width: 38px !important;
+    align-self: stretch !important;
+    margin-bottom: 0 !important;
+    min-height: 120px !important;
+}
+
+/* Columna lateral derecha de controles adyacente al diapasón */
+.diapason-side-controls-column {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+    align-self: stretch !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    box-sizing: border-box !important;
+    z-index: 5 !important;
+}
+
+/* Columna de Transporte y Seeker (ancho 38px apilados verticalmente) */
+.diapason-side-playback-seeker-col {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 38px !important;
+    flex: 0 0 38px !important;
+    align-self: stretch !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.diapason-side-playback-seeker-col .track-playback-controls {
+    flex-shrink: 0 !important;
+    width: 38px !important;
+}
+
+.diapason-side-playback-seeker-col .diapason-vertical-seeker-control {
+    flex: 1 1 0 !important;
+    width: 38px !important;
+    align-self: stretch !important;
+    margin-bottom: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+}
+
+.diapason-side-controls-column .diapason-chord-grid-panel {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    width: 260px !important;
+    min-width: 230px !important;
+    max-width: 300px !important;
+    flex: 0 0 auto !important;
+    align-self: stretch !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08) !important;
+    padding: 6px !important;
+    gap: 6px !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    box-sizing: border-box !important;
+}
+
+.diapason-side-controls-column .diapason-chord-grid-panel .chord-measure-grid-wrapper {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding: 6px 4px !important;
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+}
+
+.diapason-side-controls-column .diapason-chord-grid-panel .chord-measure-grid {
+    flex: 1 1 0 !important;
+    height: 100% !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding-right: 4px !important;
+    box-sizing: border-box !important;
+}
+
+/* Mini Popover de Acordes Sobre la Cuadrícula */
+.diapason-chord-grid-panel .grid-chord-mini-popover {
+    position: relative !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    margin-bottom: 6px !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12) !important;
+    z-index: 50 !important;
+    box-sizing: border-box !important;
+}
+
+.diapason-chord-grid-panel .grid-chord-mini-popover::before {
+    display: none !important;
+}
+
+.diapason-chord-grid-panel .mini-popover-single-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 4px !important;
+    width: 100% !important;
+}
+
+.diapason-chord-grid-panel .mini-popover-title {
+    font-size: 0.65rem !important;
+    padding: 3px 6px !important;
+    flex-shrink: 0 !important;
+}
+
+.diapason-chord-grid-panel .mini-popover-input {
+    min-width: 70px !important;
+    height: 26px !important;
+    font-size: 0.85rem !important;
+    padding: 2px 6px !important;
+}
+
+.diapason-chord-grid-panel .mini-popover-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 3px !important;
+    width: 100% !important;
+    margin-top: 2px !important;
+}
+
+.diapason-chord-grid-panel .btn-mini-action {
+    width: 26px !important;
+    height: 24px !important;
+    font-size: 0.75rem !important;
+}

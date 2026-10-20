@@ -403,8 +403,8 @@ export class DiapasonChordSidebarView {
                         const btnKey = `${dirKey}_${b.id}`;
                         const isDeactivated = this._deactivatedButtons.has(btnKey);
                         const statusTitle = isDeactivated
-                            ? `[DESACTIVADO] ${ROW_SHORT_LABELS[b.rowKey]}·B${b.btnIndex}: ${b.noteName} - Clic para activar en este acorde`
-                            : `[ACTIVO] ${ROW_SHORT_LABELS[b.rowKey]}·B${b.btnIndex}: ${b.noteName} - Clic para desactivar en este acorde`;
+                            ? `[DESACTIVADO] ${ROW_SHORT_LABELS[b.rowKey]}·${b.btnIndex}: ${b.noteName} - Clic para activar en este acorde`
+                            : `[ACTIVO] ${ROW_SHORT_LABELS[b.rowKey]}·${b.btnIndex}: ${b.noteName} - Clic para desactivar en este acorde`;
 
                         return `
                             <button type="button" 
@@ -418,7 +418,7 @@ export class DiapasonChordSidebarView {
                                     <span class="badge-status-dot ${isDeactivated ? 'dot-inactive' : 'dot-active'}">
                                         <i class="fas ${isDeactivated ? 'fa-ban' : 'fa-check'}"></i>
                                     </span>
-                                    <strong class="badge-btn-num">B${b.btnIndex}</strong>
+                                    <strong class="badge-btn-num">${b.btnIndex}</strong>
                                 </span>
                                 <span class="badge-btn-note">${b.noteName}</span>
                             </button>

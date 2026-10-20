@@ -322,6 +322,7 @@ export class AudioTrackView {
         if (this._timelineSeeker) {
             this._timelineSeeker.addEventListener('input', (e) => {
                 const percent = parseFloat(e.target.value);
+                this._syncGridScrollWithProgress(percent);
                 handlers.onSeek(percent);
             });
         }
@@ -353,11 +354,24 @@ export class AudioTrackView {
         }
 
         if (this._chkSyncDiapason) {
+            const updateSyncButtonUI = () => {
+                const isSync = this._chkSyncDiapason.checked;
+                const label = this._chkSyncDiapason.closest('.btn-sync-diapason') || document.getElementById('lblSyncDiapason');
+                if (label) {
+                    label.classList.toggle('is-sync-active', isSync);
+                    label.classList.toggle('is-sync-inactive', !isSync);
+                    label.title = isSync
+                        ? 'Sincronizado: muestra acordes automáticamente en el diapasón al reproducir (Clic para pausar sincronización)'
+                        : 'No sincronizado: acordes independientes del diapasón (Clic para activar sincronización)';
+                }
+            };
             this._chkSyncDiapason.addEventListener('change', (e) => {
+                updateSyncButtonUI();
                 if (handlers.onSyncToggle) {
                     handlers.onSyncToggle(e.target.checked);
                 }
             });
+            updateSyncButtonUI();
         }
 
         // Eventos de ajuste de tono
@@ -1793,6 +1807,11 @@ export class AudioTrackView {
             this._timelineSeeker.value = progress;
         }
 
+        // Sincronizar desplazamiento de la cuadrícula de compases con el progreso del slider
+        if (typeof progress === 'number' && !isNaN(progress) && isFinite(progress)) {
+            this._syncGridScrollWithProgress(progress);
+        }
+
         // Resaltar pulso y compás en la cuadrícula de compases
         const bpm = this.getBPM() || 120;
         const beatSec = 60 / bpm;
@@ -1974,7 +1993,18 @@ export class AudioTrackView {
                     }
                 });
 
-                beats.appendChild(slot);
+                const beatItem = document.createElement('div');
+                beatItem.className = 'measure-beat-item';
+                beatItem.appendChild(slot);
+
+                // Tiempo coincidente con el slider de reproducción a la derecha del cuadro del compás
+                const timeBadge = document.createElement('span');
+                timeBadge.className = 'measure-beat-time';
+                timeBadge.textContent = this._formatTime(beatStart);
+                timeBadge.title = `Tiempo: ${this._formatTime(beatStart)}`;
+                beatItem.appendChild(timeBadge);
+
+                beats.appendChild(beatItem);
             }
 
             row.appendChild(beats);
@@ -2042,7 +2072,16 @@ export class AudioTrackView {
                         this._toggleSlotInSequence(globalBeatIndex, m, b, beatStart, beatSec, primSlot || secSlot);
                     });
 
-                    secBeats.appendChild(secSlot);
+                    const secBeatItem = document.createElement('div');
+                    secBeatItem.className = 'measure-beat-item';
+                    secBeatItem.appendChild(secSlot);
+
+                    const secTimeBadge = document.createElement('span');
+                    secTimeBadge.className = 'measure-beat-time';
+                    secTimeBadge.textContent = this._formatTime(beatStart);
+                    secBeatItem.appendChild(secTimeBadge);
+
+                    secBeats.appendChild(secBeatItem);
                 }
 
                 secRow.appendChild(secBeats);
@@ -2578,7 +2617,9 @@ export class AudioTrackView {
         this._gridRows = String(rows);
         if (!this._measureGridContainer) return;
 
-        if (this._gridRows === 'all') {
+        const isInDiapasonPanel = this._measureGridContainer.closest('.diapason-side-controls-column') !== null;
+
+        if (this._gridRows === 'all' || isInDiapasonPanel) {
             this._measureGridContainer.style.maxHeight = 'none';
             if (this._secondaryMeasureGridContainer) {
                 this._secondaryMeasureGridContainer.style.maxHeight = 'none';
@@ -2682,32 +2723,25 @@ export class AudioTrackView {
 
         this._updateSequenceFeedback();
 
-        // Mostrar popover
+        // Mostrar popover sobre la cuadrícula de acordes
         this._miniPopover.style.display = 'flex';
         this._miniPopover.classList.remove('hidden');
 
-        // Posicionar popover debajo de la cuadrícula con el mismo ancho que la sección de la cuadrícula
+        // Posicionar popover sobre la cuadrícula (como primer elemento en el contenedor de compases)
         const targetSlot = anchorSlot || last.slot || document.getElementById(`beat-slot-${last.barIndex}-${last.beatIndex}`);
         const wrapper = targetSlot?.closest('.chord-measure-grid-wrapper') || this._chordMeasureGridWrapper;
-        if (wrapper && this._miniPopover.parentElement !== wrapper) {
-            wrapper.appendChild(this._miniPopover);
-        }
-        const wrapperRect = wrapper ? wrapper.getBoundingClientRect() : this._chordMeasureGridWrapper.getBoundingClientRect();
-
-        let arrowX = wrapperRect.width / 2;
-        if (targetSlot) {
-            const slotRect = targetSlot.getBoundingClientRect();
-            const slotCenterX = slotRect.left - wrapperRect.left + (slotRect.width / 2);
-            arrowX = Math.max(16, Math.min(wrapperRect.width - 16, slotCenterX));
+        if (wrapper && (this._miniPopover.parentElement !== wrapper || this._miniPopover !== wrapper.firstElementChild)) {
+            wrapper.insertBefore(this._miniPopover, wrapper.firstElementChild);
         }
 
-        const top = wrapperRect.height + 6;
-
+        this._miniPopover.style.position = 'relative';
+        this._miniPopover.style.top = '0px';
         this._miniPopover.style.left = '0px';
         this._miniPopover.style.width = '100%';
         this._miniPopover.style.boxSizing = 'border-box';
-        this._miniPopover.style.top = `${Math.round(top)}px`;
-        this._miniPopover.style.setProperty('--popover-arrow-x', `${Math.round(arrowX)}px`);
+        this._miniPopover.style.marginBottom = '6px';
+        this._miniPopover.style.flexShrink = '0';
+        this._miniPopover.style.zIndex = '50';
 
         if (this._miniPopoverInput) {
             setTimeout(() => {
@@ -3922,6 +3956,28 @@ export class AudioTrackView {
         const mins = Math.floor(safeSeconds / 60);
         const secs = Math.floor(safeSeconds % 60);
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    /**
+     * Sincroniza la posición de desplazamiento de la cuadrícula de compases con el progreso del slider.
+     * @param {number} percent - Valor entre 0 y 1 correspondiente al slider
+     * @private
+     */
+    _syncGridScrollWithProgress(percent) {
+        if (typeof percent !== 'number' || isNaN(percent) || !isFinite(percent)) return;
+        const clamped = Math.max(0, Math.min(1, percent));
+        if (this._measureGridContainer) {
+            const maxScroll = this._measureGridContainer.scrollHeight - this._measureGridContainer.clientHeight;
+            if (maxScroll > 0) {
+                this._measureGridContainer.scrollTop = clamped * maxScroll;
+            }
+        }
+        if (this._secondaryMeasureGridContainer) {
+            const maxScrollSec = this._secondaryMeasureGridContainer.scrollHeight - this._secondaryMeasureGridContainer.clientHeight;
+            if (maxScrollSec > 0) {
+                this._secondaryMeasureGridContainer.scrollTop = clamped * maxScrollSec;
+            }
+        }
     }
 }
 

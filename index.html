@@ -107,7 +107,7 @@
                                         <!-- Selector / Toggle de Bajos (Mano Izquierda) -->
                                         <div class="toggle-segmented bass-toggle-segmented" id="bassVisibilityToggleGroup" title="Visualizar u Ocultar Bajonera (12 Bajos Mano Izquierda)">
                                             <button type="button" class="segment-btn" id="btnToggleBassView" title="Mostrar u ocultar los 12 bajos de la mano izquierda">
-                                                <i class="fas fa-drum"></i> <span id="lblBassToggleStatus">Bajos</span>
+                                                <span id="lblBassToggleStatus">Bajos</span>
                                             </button>
                                         </div>
                                         <!-- Selector de Orientación / Inversión de Hileras: Af->Ad o Ad<-Af -->
@@ -115,6 +115,23 @@
                                             <button type="button" class="segment-btn active" id="btnToggleMirror" data-mirror="false" title="Invertir ubicación de Hileras: Afuera (1) vs Adentro (3)">
                                                 <i class="fas fa-arrows-rotate"></i> <span id="lblMirrorStatus">Af-&gt;Ad</span>
                                             </button>
+                                        </div>
+                                                                            <!-- Control de Volumen del Diapasón 1 en la Barra Superior -->
+                                        <div class="diapason-header-volume-control" id="primaryDiapasonVolumeBar" title="Volumen del acordeón (Diapasón 1)">
+                                            <button type="button" class="btn-action btn-xs btn-volume-sync active" id="btnSyncVolumePrimary" title="Sincronizar volumen con Acordeón 2 (Clic para independizar)">
+                                                <i class="fas fa-link" id="iconSyncVolumePrimary"></i>
+                                            </button>
+                                            <button type="button" class="btn-action btn-xs btn-diapason-volume-mute" id="btnDiapasonVolumeMute" title="Silenciar / Activar sonido del acordeón">
+                                                <i class="fas fa-volume-high" id="iconDiapasonVolume"></i>
+                                            </button>
+                                            <div class="diapason-header-volume-slider-wrap">
+                                                <input type="range" id="diapasonVolumeSlider" class="diapason-header-volume-slider" min="0" max="100" value="80" title="Ajustar volumen (0 a 100)">
+                                            </div>
+                                            <span class="diapason-volume-label" id="lblDiapasonVolume">80%</span>
+                                            <label class="diapason-mute-checkbox-label" title="Marcar para silenciar" style="display: none;">
+                                                <input type="checkbox" id="chkDiapasonMute" class="diapason-mute-checkbox">
+                                                <span class="diapason-mute-text">Mudo</span>
+                                            </label>
                                         </div>
                                     </div>
                                 </div>
@@ -211,36 +228,36 @@
 
                                     
                                     <div class="diapason" id="diapason">
-                                        <div class="diapason-active-chord-badge" id="primaryDiapasonChordBadge" title="Acorde activo en Diapasón 1" style="display: inline-flex;">
-                                            <i class="fas fa-music"></i>
-                                            <strong class="sidebar-chord-name" id="primaryDiapasonChordName">Mi♭ Mayor</strong>
-                                        </div>
                                         <!-- Hileras de botones 10-11-10 generadas dinámicamente -->
                                     </div>
 
-                                    <!-- Bloque lateral derecho adyacente al Diapasón: Sliders (Volumen arriba, Tiempo de reproducción debajo) y Controles de Reproducción Verticales -->
+                                    <!-- Bloque lateral derecho adyacente al Diapasón: Columna de Transporte y Seeker + Cuadrícula de Compases -->
                                     <div class="diapason-side-controls-column" id="primaryDiapasonSideControls">
-                                        <!-- Columna de Sliders: Volumen arriba y Slider de tiempo de reproducción vertical debajo -->
-                                        <div class="diapason-vertical-sliders-stack">
-                                            <!-- Control de Volumen Vertical (Diapasón 1) -->
-                                            <div class="diapason-vertical-volume-control" id="primaryDiapasonVolumeBar" title="Volumen del acordeón (Diapasón 1)">
-                                                <button type="button" class="btn-volume-sync active" id="btnSyncVolumePrimary" title="Sincronizar volumen con Acordeón 2 (Clic para independizar)">
-                                                    <i class="fas fa-link" id="iconSyncVolumePrimary"></i>
-                                                </button>
-                                                <span class="diapason-volume-label" id="lblDiapasonVolume">80%</span>
-                                                <div class="diapason-volume-slider-vertical-wrap">
-                                                    <input type="range" id="diapasonVolumeSlider" class="diapason-volume-slider-vertical" min="0" max="100" value="80" orient="vertical" title="Ajustar volumen (0 a 100)">
+                                        <!-- Columna Izquierda: Botones de Transporte y Slider Seeker de Tiempo de Reproducción -->
+                                        <div class="diapason-side-playback-seeker-col" id="diapasonSidePlaybackSeekerCol">
+                                            <!-- Controles de Reproducción Verticales -->
+                                            <div class="track-playback-controls diapason-vertical-playback-panel" id="trackPlaybackControls">
+                                                <div class="player-transport-buttons player-transport-buttons--vertical">
+                                                    <button type="button" class="btn-action btn-transport" id="btnPrevMeasure" title="Retroceder 1 compás (Atrás)">
+                                                        <i class="fas fa-backward-step"></i>
+                                                    </button>
+                                                    <button type="button" class="btn-action btn-action--primary btn-play" id="btnPlayPauseAudio" title="Reproducir / Pausar">
+                                                        <i class="fas fa-play"></i>
+                                                    </button>
+                                                    <button type="button" class="btn-action btn-transport" id="btnNextMeasure" title="Avanzar 1 compás (Adelante)">
+                                                        <i class="fas fa-forward-step"></i>
+                                                    </button>
+                                                    <button type="button" class="btn-action btn-transport" id="btnStopAudio" title="Detener">
+                                                        <i class="fas fa-stop"></i>
+                                                    </button>
+                                                    <label class="btn-action btn-transport btn-sync-diapason is-sync-active" id="lblSyncDiapason" title="Sincronización activa (Clic para pausar sincronización)">
+                                                        <input type="checkbox" id="chkSyncDiapason" checked>
+                                                        <i class="fas fa-arrows-rotate" id="iconSyncDiapason"></i>
+                                                    </label>
                                                 </div>
-                                                <button type="button" class="btn-diapason-volume-mute" id="btnDiapasonVolumeMute" title="Silenciar / Activar sonido del acordeón">
-                                                    <i class="fas fa-volume-high" id="iconDiapasonVolume"></i>
-                                                </button>
-                                                <label class="diapason-mute-checkbox-label" title="Marcar para silenciar">
-                                                    <input type="checkbox" id="chkDiapasonMute" class="diapason-mute-checkbox">
-                                                    <span class="diapason-mute-text">Mudo</span>
-                                                </label>
                                             </div>
 
-                                            <!-- Slider de Tiempo de Reproducción Vertical (debajo del Control de Volumen) -->
+                                            <!-- Slider de Tiempo de Reproducción Vertical -->
                                             <div class="diapason-vertical-seeker-control" id="playerScrubberRow" title="Progreso y tiempo de reproducción">
                                                 <span class="scrubber-time" id="audioTimeCurrent">0:00</span>
                                                 <div class="diapason-seeker-slider-vertical-wrap">
@@ -252,91 +269,9 @@
                                             </div>
                                         </div>
 
-                                        <!-- Controles de Reproducción Verticales adyacentes al Volumen del Diapasón -->
-                                        <div class="track-playback-controls diapason-vertical-playback-panel" id="trackPlaybackControls">
-                                            <div class="player-transport-buttons player-transport-buttons--vertical">
-                                                <button type="button" class="btn-action btn-transport" id="btnPrevMeasure" title="Retroceder 1 compás (Atrás)">
-                                                    <i class="fas fa-backward-step"></i>
-                                                </button>
-                                                <button type="button" class="btn-action btn-action--primary btn-play" id="btnPlayPauseAudio" title="Reproducir / Pausar">
-                                                    <i class="fas fa-play"></i>
-                                                </button>
-                                                <button type="button" class="btn-action btn-transport" id="btnNextMeasure" title="Avanzar 1 compás (Adelante)">
-                                                    <i class="fas fa-forward-step"></i>
-                                                </button>
-                                                <button type="button" class="btn-action btn-transport" id="btnStopAudio" title="Detener">
-                                                    <i class="fas fa-stop"></i>
-                                                </button>
-                                            </div>
-
-                                            <!-- Sincronizar diapasón vertical -->
-                                            <label class="diapason-sync-toggle-vertical" title="Al reproducir, muestra automáticamente en el diapasón los botones del acorde">
-                                                <input type="checkbox" id="chkSyncDiapason" checked>
-                                                <span class="diapason-sync-icon"><i class="fas fa-arrows-rotate"></i></span>
-                                                <span class="diapason-sync-text">Sinc</span>
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="diapason-side-stack" id="primaryDiapasonSideStack">
-                                <aside class="diapason-audio-chords-sidebar" id="primaryDiapasonChordSidebar" aria-label="Acordes de la canción en Acordeón 1">
-                                    <div class="sidebar-header">
-                                        <span class="sidebar-title"><i class="fas fa-compact-disc"></i> Acordes Canción</span>
-                                    </div>
-                                    <div class="sidebar-active-chord-box" id="primSidebarChordBox">
-                                        <div class="sidebar-placeholder">
-                                            <i class="fas fa-headphones"></i>
-                                            <span>Carga una canción para ver los acordes y digitaciones</span>
-                                        </div>
-                                    </div>
-                                </aside>
-                                <div class="diapason-chord-grid-panel" id="primaryChordGridPanel">
-                                    <!-- CUADRÍCULA DE ACORDES (COMPASES DE 4 TIEMPOS) ESTILO MOISES / CHORDIFY -->
-                                    <div class="chord-measure-grid-header">
-                                        <div class="chord-grid-header-actions" style="display: flex; gap: 3px; align-items: center; flex-shrink: 0;">
-                                            <button type="button" class="btn-action btn-xs" id="btnSelectAllGridSlots" title="Seleccionar todas las cuadrículas (Ctrl+A)">
-                                                <i class="fas fa-check-double"></i>
-                                            </button>
-                                            <button type="button" class="btn-action btn-xs btn-action--danger" id="btnDeleteSelectedSlots" title="Borrar acordes de las cuadrículas seleccionadas (Supr)" style="display: none;">
-                                                <i class="fas fa-eraser"></i>
-                                            </button>
-                                            <button type="button" class="btn-action btn-xs" id="btnExportChordsCsv" title="Guardar / Exportar acordes a archivo CSV">
-                                                <i class="fas fa-file-arrow-down"></i>
-                                            </button>
-                                            <button type="button" class="btn-action btn-xs" id="btnImportChordsCsv" title="Cargar / Importar acordes desde archivo CSV">
-                                                <i class="fas fa-file-arrow-up"></i>
-                                            </button>
-                                            <input type="file" id="inputImportChordsCsv" accept=".csv,.txt" style="display: none;">
-                                            <button type="button" class="btn-action btn-xs" id="btnManualProgressionInput" title="Digitar progresión de acordes manualmente (ej: G | Em | C | D)">
-                                                <i class="fas fa-keyboard"></i>
-                                            </button>
-                                            <button type="button" class="btn-action btn-xs" id="btnAddMeasureRow" title="Agregar un compás vacío al final">
-                                                <i class="fas fa-plus"></i>
-                                            </button>
-                                            <button type="button" class="btn-action btn-xs btn-action--danger" id="btnClearAllGridChords" title="Borrar todos los acordes de la cuadrícula">
-                                                <i class="fas fa-trash-can"></i>
-                                            </button>
-                                            <button type="button" class="btn-action btn-xs" id="btnConfigGridRows" title="Configurar cantidad de filas visibles en la cuadrícula">
-                                                <i class="fas fa-gear"></i>
-                                            </button>
-                                            <div class="grid-cols-pill-group" id="gridColsPillGroup" style="display: none; align-items: center; gap: 2px; margin-left: 4px;">
-                                                <button type="button" class="btn-action btn-xs btn-col-select" data-cols="auto" title="Automático">Auto</button>
-                                                <button type="button" class="btn-action btn-xs btn-col-select" data-cols="2" title="2 Compases por fila">2x</button>
-                                                <button type="button" class="btn-action btn-xs btn-col-select active" data-cols="4" title="4 Compases por fila">4x</button>
-                                            </div>
-                                            <button type="button" class="btn-action btn-xs btn-action--primary" id="btnUndockChordGrid" title="Desacoplar a ventana completa para ver más compases (F / Doble clic)">
-                                                <i class="fas fa-up-right-and-down-left-from-center" id="iconUndockChordGrid"></i>
-                                                <span id="lblUndockChordGrid" style="display: none;">Desacoplar</span>
-                                            </button>
-                                        </div>
-
-                                    </div>
-                                    <div class="chord-measure-grid-wrapper" id="chordMeasureGridWrapper">
-                                        <div class="chord-measure-grid" id="audioMeasureGridContainer">
-                                            <!-- Filas de compases con 4 tiempos (Beats 1..4) generadas dinámicamente -->
-                                        </div>
-
+                                        <div class="diapason-chord-grid-panel" id="primaryChordGridPanel">
+                                                <!-- CUADRÍCULA DE ACORDES VERTICAL CON TIEMPO -->
+                                                <div class="chord-measure-grid-wrapper" id="chordMeasureGridWrapper">
                                         <!-- Mini-Barra Popover Horizontal para edición rápida de acorde en cuadrícula -->
                                         <div class="grid-chord-mini-popover hidden" id="gridChordMiniPopover" style="display: none;">
                                             <div class="mini-popover-single-row">
@@ -358,6 +293,10 @@
                                                 </div>
                                             </div>
                                             <div class="mini-popover-feedback" id="miniPopoverFeedback"></div>
+                                        </div>
+
+                                        <div class="chord-measure-grid" id="audioMeasureGridContainer">
+                                            <!-- Filas de compases con 4 tiempos (Beats 1..4) generadas dinámicamente -->
                                         </div>
 
                                         <!-- Modal emergente para digitar progresión completa manualmente -->
@@ -431,7 +370,65 @@
                                             </div>
                                         </div>
                                     </div>
+
+                                                <!-- Barra de la cuadrícula apilada de forma vertical a la derecha -->
+                                                <div class="chord-measure-grid-header chord-measure-grid-header--vertical">
+                                                    <div class="chord-grid-header-actions chord-grid-header-actions--vertical" style="display: flex; gap: 3px; align-items: center; flex-shrink: 0;">
+                                                        <button type="button" class="btn-action btn-xs active" id="btnToggleSequenceMode" title="Selección en secuencia: ACTIVADA (Clic para alternar a selección individual)">
+                                                            <i class="fas fa-list-ol" id="iconToggleSequenceMode"></i>
+                                                        </button>
+                                                        <button type="button" class="btn-action btn-xs" id="btnSelectAllGridSlots" title="Seleccionar todas las cuadrículas (Ctrl+A)">
+                                                            <i class="fas fa-check-double"></i>
+                                                        </button>
+                                                        <button type="button" class="btn-action btn-xs btn-action--danger" id="btnDeleteSelectedSlots" title="Borrar acordes de las cuadrículas seleccionadas (Supr)" style="display: none;">
+                                                            <i class="fas fa-eraser"></i>
+                                                        </button>
+                                                        <button type="button" class="btn-action btn-xs" id="btnExportChordsCsv" title="Guardar / Exportar acordes a archivo CSV">
+                                                            <i class="fas fa-file-arrow-down"></i>
+                                                        </button>
+                                                        <button type="button" class="btn-action btn-xs" id="btnImportChordsCsv" title="Cargar / Importar acordes desde archivo CSV">
+                                                            <i class="fas fa-file-arrow-up"></i>
+                                                        </button>
+                                                        <input type="file" id="inputImportChordsCsv" accept=".csv,.txt" style="display: none;">
+                                                        <button type="button" class="btn-action btn-xs" id="btnManualProgressionInput" title="Digitar progresión de acordes manualmente (ej: G | Em | C | D)">
+                                                            <i class="fas fa-keyboard"></i>
+                                                        </button>
+                                                        <button type="button" class="btn-action btn-xs" id="btnAddMeasureRow" title="Agregar un compás vacío al final">
+                                                            <i class="fas fa-plus"></i>
+                                                        </button>
+                                                        <button type="button" class="btn-action btn-xs btn-action--danger" id="btnClearAllGridChords" title="Borrar todos los acordes de la cuadrícula">
+                                                            <i class="fas fa-trash-can"></i>
+                                                        </button>
+                                                        <button type="button" class="btn-action btn-xs" id="btnConfigGridRows" title="Configurar cantidad de filas visibles en la cuadrícula">
+                                                            <i class="fas fa-gear"></i>
+                                                        </button>
+                                                        <div class="grid-cols-pill-group" id="gridColsPillGroup" style="display: none; align-items: center; gap: 2px; margin-left: 4px;">
+                                                            <button type="button" class="btn-action btn-xs btn-col-select" data-cols="auto" title="Automático">Auto</button>
+                                                            <button type="button" class="btn-action btn-xs btn-col-select" data-cols="2" title="2 Compases por fila">2x</button>
+                                                            <button type="button" class="btn-action btn-xs btn-col-select active" data-cols="4" title="4 Compases por fila">4x</button>
+                                                        </div>
+                                                        <button type="button" class="btn-action btn-xs btn-action--primary" id="btnUndockChordGrid" title="Desacoplar a ventana completa para ver más compases (F / Doble clic)">
+                                                            <i class="fas fa-up-right-and-down-left-from-center" id="iconUndockChordGrid"></i>
+                                                            <span id="lblUndockChordGrid" style="display: none;">Desacoplar</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
+                            <div class="diapason-side-stack" id="primaryDiapasonSideStack">
+                                <aside class="diapason-audio-chords-sidebar" id="primaryDiapasonChordSidebar" aria-label="Acordes de la canción en Acordeón 1">
+                                    <div class="sidebar-header">
+                                        <span class="sidebar-title"><i class="fas fa-compact-disc"></i> Acordes Canción</span>
+                                    </div>
+                                    <div class="sidebar-active-chord-box" id="primSidebarChordBox">
+                                        <div class="sidebar-placeholder">
+                                            <i class="fas fa-headphones"></i>
+                                            <span>Carga una canción para ver los acordes y digitaciones</span>
+                                        </div>
+                                    </div>
+                                </aside>
 
                                 <!-- CONTROLES LIMPIOS DEL REPRODUCTOR & ANALIZADOR MP3 (SIN CONTENEDOR EXTERIOR) -->
                                 <div class="audio-analysis-clean" id="audioAnalysisSection">
@@ -600,7 +597,7 @@
                                         <!-- Selector / Toggle de Bajos para Acordeón 2 -->
                                         <div class="toggle-segmented bass-toggle-segmented" id="secondaryBassVisibilityToggleGroup" title="Visualizar u Ocultar Bajos de Acordeón 2">
                                             <button type="button" class="segment-btn" id="btnToggleBassViewSecondary" title="Mostrar u ocultar los bajos de Acordeón 2">
-                                                <i class="fas fa-drum"></i> <span id="lblSecondaryBassToggleStatus">Bajos</span>
+                                                <span id="lblSecondaryBassToggleStatus">Bajos</span>
                                             </button>
                                         </div>
                                         <!-- Selector de Orientación / Inversión de Hileras para Acordeón 2: Af->Ad o Ad<-Af -->
@@ -608,6 +605,23 @@
                                             <button type="button" class="segment-btn active" id="btnToggleMirrorSecondary" data-mirror="false" title="Invertir ubicación de Hileras: Afuera (1) vs Adentro (3)">
                                                 <i class="fas fa-arrows-rotate"></i> <span id="lblSecondaryMirrorStatus">Af-&gt;Ad</span>
                                             </button>
+                                        </div>
+                                                                            <!-- Control de Volumen del Diapasón 2 en la Barra Superior -->
+                                        <div class="diapason-header-volume-control" id="secondaryDiapasonVolumeBar" title="Volumen del acordeón (Diapasón 2)">
+                                            <button type="button" class="btn-action btn-xs btn-volume-sync active" id="btnSyncVolumeSecondary" title="Sincronizar volumen con Acordeón 1 (Clic para independizar)">
+                                                <i class="fas fa-link" id="iconSyncVolumeSecondary"></i>
+                                            </button>
+                                            <button type="button" class="btn-action btn-xs btn-diapason-volume-mute" id="btnSecondaryDiapasonVolumeMute" title="Silenciar / Activar sonido del acordeón">
+                                                <i class="fas fa-volume-high" id="iconSecondaryDiapasonVolume"></i>
+                                            </button>
+                                            <div class="diapason-header-volume-slider-wrap">
+                                                <input type="range" id="secondaryDiapasonVolumeSlider" class="diapason-header-volume-slider" min="0" max="100" value="80" title="Ajustar volumen (0 a 100)">
+                                            </div>
+                                            <span class="diapason-volume-label" id="lblSecondaryDiapasonVolume">80%</span>
+                                            <label class="diapason-mute-checkbox-label" title="Marcar para silenciar" style="display: none;">
+                                                <input type="checkbox" id="chkSecondaryDiapasonMute" class="diapason-mute-checkbox">
+                                                <span class="diapason-mute-text">Mudo</span>
+                                            </label>
                                         </div>
                                     </div>
                                 </div>
@@ -704,29 +718,9 @@
 
                                     
                                     <div class="diapason diapason--secondary" id="secondaryDiapason">
-                                        <div class="diapason-active-chord-badge" id="secondaryDiapasonChordBadge" title="Acorde activo en Diapasón 2" style="display: inline-flex;">
-                                            <i class="fas fa-music"></i>
-                                            <strong class="sidebar-chord-name" id="secondaryDiapasonChordName">Mi♭ Mayor</strong>
-                                        </div>
                                         <!-- Hileras de botones del segundo acordeón generadas dinámicamente -->
                                     </div>
 
-                                    <!-- Control de Volumen Vertical adyacente a la derecha del Diapasón 2 -->
-                                    <div class="diapason-vertical-volume-control" id="secondaryDiapasonVolumeBar" title="Volumen del acordeón (Diapasón 2)">
-                                        <button type="button" class="btn-volume-sync active" id="btnSyncVolumeSecondary" title="Sincronizar volumen con Acordeón 1 (Clic para independizar)">
-                                            <i class="fas fa-link" id="iconSyncVolumeSecondary"></i>
-                                        </button>
-                                        <span class="diapason-volume-label" id="lblSecondaryDiapasonVolume">80%</span>
-                                        <div class="diapason-volume-slider-vertical-wrap">
-                                            <input type="range" id="secondaryDiapasonVolumeSlider" class="diapason-volume-slider-vertical" min="0" max="100" value="80" orient="vertical" title="Ajustar volumen (0 a 100)">
-                                        </div>
-                                        <button type="button" class="btn-diapason-volume-mute" id="btnSecondaryDiapasonVolumeMute" title="Silenciar / Activar sonido del acordeón">
-                                            <i class="fas fa-volume-high" id="iconSecondaryDiapasonVolume"></i>
-                                        </button>
-                                        <label class="diapason-mute-checkbox-label" title="Marcar para silenciar">
-                                            <input type="checkbox" id="chkSecondaryDiapasonMute" class="diapason-mute-checkbox">
-                                            <span class="diapason-mute-text">Mudo</span>
-                                        </label>
                                     </div>
                                 </div>
                             </div>
