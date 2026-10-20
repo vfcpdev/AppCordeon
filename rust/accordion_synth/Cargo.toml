@@ -1,0 +1,39 @@
+[package]
+name = "accordion_synth"
+version = "0.1.0"
+edition = "2021"
+authors = ["DSP & Acoustic Synthesis Engineer"]
+description = "Motor de síntesis física y evaluación acústica objetiva de acordeón diatónico Hohner Corona III (Vallenato) en tiempo real y WASM"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "accordion_eval"
+path = "src/main.rs"
+
+[dependencies]
+# Salida de audio multiplataforma en tiempo real
+cpal = { version = "0.15", optional = true }
+
+# Exportación a archivo de audio PCM (.wav)
+hound = "3.5"
+
+# FFT para cálculo de Centroide Espectral y métricas objetivas de frecuencia
+rustfft = "6.2"
+
+# Interoperabilidad WebAssembly para navegador Web
+wasm-bindgen = "0.2"
+
+[features]
+default = ["realtime"]
+realtime = ["dep:cpal"]
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+overflow-checks = false
+debug = false
+strip = true

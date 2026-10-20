@@ -689,6 +689,11 @@ export class LeftHandBassView {
 
         if (this._isRhythmPlaying) return;
         this._isRhythmPlaying = true;
+
+        if (this._audio && typeof this._audio.init === 'function') {
+            this._audio.init().catch(err => console.warn('[LeftHandBassView] Init audio:', err));
+        }
+
         if (this._btnPlayRhythm) {
             this._btnPlayRhythm.classList.add('active');
             this._btnPlayRhythm.title = 'Reproduciendo patrón MusicXML (activo)';
@@ -722,10 +727,12 @@ export class LeftHandBassView {
             // Destello visual de Beat con Glow Rojo en cada evento
             this.flashBeatDot(Math.min(140, Math.max(60, noteDurationMs * 0.4)));
 
+            // Sonido de golpe de clave percusivo en cada tiempo/pulso del patrón rítmico
+            this._playClaveSound(this._currentPatternStep === 0 ? 1 : 2);
+
             // Reproducir clic de metrónomo si está activado
             if (this._isMetronomeActive) {
-                // Sonido de clic con oscilador sintetizado
-                this._playMetronomeClick(this._currentPatternStep === 0 ? 1 : 2);
+                this._playClaveSound(1);
             }
 
             if (!note.isRest) {
@@ -735,14 +742,10 @@ export class LeftHandBassView {
                 const targetBtn = isBassNote ? bassBtn : chordBtn;
                 const btnEl = document.getElementById(`btn_left_acc${this._accordionIndex}_${targetBtn.id}`);
 
-                if (this._audio) {
-                    const soundMidis = direction === 'pull' ? targetBtn.pull : targetBtn.push;
-                    this._audio.play(soundMidis, `${Math.max(0.1, note.durationBeats * 0.45)}s`, targetBtn.type === 'fundamental' ? 0.95 : 0.8);
-                }
-
+                // Animación visual de los botones de bajo en sincronía con el ritmo (sin generar zumbido sonoro)
                 if (btnEl) {
                     btnEl.classList.add('is-pressed');
-                    setTimeout(() => btnEl.classList.remove('is-pressed'), Math.min(220, noteDurationMs * 0.75));
+                    setTimeout(() => btnEl.classList.remove('is-pressed'), Math.min(200, Math.max(50, noteDurationMs * 0.7)));
                 }
             }
 
@@ -754,38 +757,65 @@ export class LeftHandBassView {
     }
 
     /**
-     * Emite un clic sintético para el metrónomo de los bajos.
+     * Sintetiza un golpe acústico de clave cubana / madera percusiva (Clave sound).
+     * Ataque seco e inmediato con decaimiento percusivo ultracorto, sin zumbidos ni resonancias sostenidas.
+     * @private
+     * @param {number} [accent=1] 1 para golpe acentuado/principal, 2 para secundario
+     */
+    _playClaveSound(accent = 1) {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+
+            if (!this._claveCtx) {
+                this._claveCtx = new AudioCtx();
+            }
+            if (this._claveCtx.state === 'suspended') {
+                this._claveCtx.resume();
+            }
+
+            const ctx = this._claveCtx;
+            const now = ctx.currentTime;
+
+            // Frecuencias limpias de impacto de madera sólida (claves)
+            const baseFreq = accent === 1 ? 2600 : 2350;
+
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const filter = ctx.createBiquadFilter();
+
+            // Filtro pasa banda suave
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(baseFreq, now);
+            filter.Q.setValueAtTime(4.0, now);
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(baseFreq, now);
+            osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.7, now + 0.025);
+
+            // Envolvente ultracorta percusiva (ataque cero, decaimiento seco en 28ms)
+            const peakGain = accent === 1 ? 0.75 : 0.55;
+            gain.gain.setValueAtTime(peakGain, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.032);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.035);
+        } catch (e) {
+            // Ignorar excepciones menores de contexto Web Audio
+        }
+    }
+
+    /**
+     * Emite un clic sintético para el metrónomo de los bajos (sonido de clave).
      * @private
      * @param {number} beat
      */
     _playMetronomeClick(beat = 1) {
-        try {
-            const audioCtx = this._audio?.getContext?.() || (window.AudioContext ? new (window.AudioContext || window.webkitAudioContext)() : null);
-            if (!audioCtx) return;
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-
-            const now = audioCtx.currentTime;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-
-            const isAccent = (beat === 1);
-            osc.type = isAccent ? 'sine' : 'triangle';
-            osc.frequency.setValueAtTime(isAccent ? 1200 : 850, now);
-            osc.frequency.exponentialRampToValueAtTime(isAccent ? 400 : 260, now + 0.04);
-
-            gain.gain.setValueAtTime(isAccent ? 0.6 : 0.4, now);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
-
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            osc.start(now);
-            osc.stop(now + 0.05);
-        } catch (e) {
-            // Ignorar errores menores
-        }
+        this._playClaveSound(beat);
     }
 
     /**
