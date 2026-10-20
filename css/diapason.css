@@ -3178,3 +3178,29 @@
     height: 24px !important;
     font-size: 0.75rem !important;
 }
+
+/* Botón de alternar selección en secuencia de compases */
+#btnToggleSequenceMode {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#btnToggleSequenceMode.active {
+    background: #4f46e5 !important;
+    color: #ffffff !important;
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 6px rgba(99, 102, 241, 0.45) !important;
+}
+
+#btnToggleSequenceMode:not(.active) {
+    background: #f1f5f9 !important;
+    color: #94a3b8 !important;
+    border-color: #cbd5e1 !important;
+    opacity: 0.85;
+}
+
+#btnToggleSequenceMode:not(.active):hover {
+    background: #e2e8f0 !important;
+    color: #334155 !important;
+    border-color: #94a3b8 !important;
+    opacity: 1;
+}

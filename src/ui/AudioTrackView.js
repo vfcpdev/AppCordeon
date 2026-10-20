@@ -106,7 +106,10 @@ export class AudioTrackView {
         this._isMetronomeMuted = false;
         this._lastMetronomeVolume = 0.70;
 
-        // Botones de gestión de cuadrícula: Seleccionar Todo, Borrar Selección, Borrar Todo, + Compás, etc.
+        // Botones de gestión de cuadrícula: Alternar Secuencia, Seleccionar Todo, Borrar Selección, Borrar Todo, + Compás, etc.
+        this._btnToggleSequenceMode = document.getElementById('btnToggleSequenceMode');
+        this._iconToggleSequenceMode = document.getElementById('iconToggleSequenceMode');
+        this._isSequenceSelectionActive = true;
         this._btnSelectAllGridSlots = document.getElementById('btnSelectAllGridSlots');
         this._btnDeleteSelectedSlots = document.getElementById('btnDeleteSelectedSlots');
         this._btnExportChordsCsv = document.getElementById('btnExportChordsCsv');
@@ -2104,16 +2107,20 @@ export class AudioTrackView {
             s.classList.remove('selected-seq-slot');
         });
 
+        const showBadges = this._isSequenceSelectionActive || this._selectedSequence.length > 1;
+
         this._selectedSequence.forEach((item, index) => {
             const slot = item.slot || document.getElementById(`beat-slot-${item.barIndex}-${item.beatIndex}`);
             if (slot) {
                 item.slot = slot;
                 slot.classList.add('selected-seq-slot');
-                const badge = document.createElement('span');
-                badge.className = 'slot-seq-badge';
-                badge.textContent = (index + 1);
-                badge.title = `Orden de selección: #${index + 1}`;
-                slot.appendChild(badge);
+                if (showBadges) {
+                    const badge = document.createElement('span');
+                    badge.className = 'slot-seq-badge';
+                    badge.textContent = (index + 1);
+                    badge.title = `Orden de selección: #${index + 1}`;
+                    slot.appendChild(badge);
+                }
             }
         });
 
@@ -2126,11 +2133,13 @@ export class AudioTrackView {
                 const secSlot = document.getElementById(`sec-beat-slot-${item.barIndex}-${item.beatIndex}`);
                 if (secSlot) {
                     secSlot.classList.add('selected-seq-slot');
-                    const badge = document.createElement('span');
-                    badge.className = 'slot-seq-badge';
-                    badge.textContent = (index + 1);
-                    badge.title = `Orden de selección: #${index + 1}`;
-                    secSlot.appendChild(badge);
+                    if (showBadges) {
+                        const badge = document.createElement('span');
+                        badge.className = 'slot-seq-badge';
+                        badge.textContent = (index + 1);
+                        badge.title = `Orden de selección: #${index + 1}`;
+                        secSlot.appendChild(badge);
+                    }
                 }
             });
         }
@@ -2157,20 +2166,39 @@ export class AudioTrackView {
      * @private
      */
     _toggleSlotInSequence(globalBeat, barIndex, beatIndex, beatStart, beatSec, slot) {
-        const existingIdx = this._selectedSequence.findIndex(item => item.globalBeat === globalBeat);
-        if (existingIdx >= 0) {
-            // Si ya estaba seleccionado, se deselecciona y se renumera el resto
-            this._selectedSequence.splice(existingIdx, 1);
-        } else {
-            // Se agrega al final de la secuencia con el número siguiente
-            this._selectedSequence.push({
+        if (!this._isSequenceSelectionActive) {
+            // Modo secuencia desactivado: selección única directa
+            const wasAlreadyOnlyThis = this._selectedSequence.length === 1 && this._selectedSequence[0].globalBeat === globalBeat;
+            if (wasAlreadyOnlyThis) {
+                this._selectedSequence = [];
+                this._closeMiniChordPopover();
+                return;
+            }
+            this._selectedSequence = [{
                 globalBeat,
                 barIndex,
                 beatIndex,
                 beatStart,
                 beatSec,
                 slot
-            });
+            }];
+        } else {
+            // Modo secuencia activado: acumulación secuencial (1, 2, 3...)
+            const existingIdx = this._selectedSequence.findIndex(item => item.globalBeat === globalBeat);
+            if (existingIdx >= 0) {
+                // Si ya estaba seleccionado, se deselecciona y se renumera el resto
+                this._selectedSequence.splice(existingIdx, 1);
+            } else {
+                // Se agrega al final de la secuencia con el número siguiente
+                this._selectedSequence.push({
+                    globalBeat,
+                    barIndex,
+                    beatIndex,
+                    beatStart,
+                    beatSec,
+                    slot
+                });
+            }
         }
 
         this._refreshSequenceBadges();
@@ -2251,7 +2279,17 @@ export class AudioTrackView {
                 const slotEl = document.getElementById(`beat-slot-${barIdx}-${beatIdx}`);
                 this._toggleSlotInSequence(g, barIdx, beatIdx, bStart, beatSec, slotEl);
             } else {
-                // Arrastre por varios cuadros -> agregar todos en el orden de arrastre
+                // Arrastre por varios cuadros
+                if (!this._isSequenceSelectionActive) {
+                    const g = maxBeat;
+                    const barIdx = Math.floor(g / 4);
+                    const beatIdx = g % 4;
+                    const bStart = (barIdx * barSec) + (beatIdx * beatSec);
+                    const slotEl = document.getElementById(`beat-slot-${barIdx}-${beatIdx}`);
+                    this._toggleSlotInSequence(g, barIdx, beatIdx, bStart, beatSec, slotEl);
+                    return;
+                }
+                // Modo secuencia activado -> agregar todos en el orden de arrastre
                 const step = this._dragStartBeat <= this._dragEndBeat ? 1 : -1;
                 for (let g = this._dragStartBeat; step > 0 ? g <= this._dragEndBeat : g >= this._dragEndBeat; g += step) {
                     if (!this._selectedSequence.some(item => item.globalBeat === g)) {
@@ -2336,6 +2374,9 @@ export class AudioTrackView {
         });
 
         // Botones de cabecera de la cuadrícula
+        if (this._btnToggleSequenceMode) {
+            this._btnToggleSequenceMode.addEventListener('click', () => this.toggleSequenceSelectionMode());
+        }
         if (this._btnSelectAllGridSlots) {
             this._btnSelectAllGridSlots.addEventListener('click', () => this.selectAllGridSlots());
         }
@@ -2644,6 +2685,33 @@ export class AudioTrackView {
         if (!this._measureGridContainer) return;
         this._measureGridContainer.classList.remove('cols-1', 'cols-2', 'cols-4', 'cols-auto');
         this._measureGridContainer.classList.add(`cols-${cols}`);
+    }
+
+    /**
+     * Activa o desactiva el modo de selección en secuencia de los cuadros de compás.
+     * @param {boolean} [forceState]
+     */
+    toggleSequenceSelectionMode(forceState) {
+        const nextState = forceState !== undefined ? forceState : !this._isSequenceSelectionActive;
+        this._isSequenceSelectionActive = nextState;
+
+        if (this._btnToggleSequenceMode) {
+            this._btnToggleSequenceMode.classList.toggle('active', this._isSequenceSelectionActive);
+            const titleText = this._isSequenceSelectionActive
+                ? 'Selección en secuencia: ACTIVADA (Clic para alternar a selección individual)'
+                : 'Selección en secuencia: DESACTIVADA (Clic para activar selección múltiple en secuencia)';
+            this._btnToggleSequenceMode.title = titleText;
+        }
+
+        // Si se desactiva y había múltiples celdas seleccionadas, conservar solo la última
+        if (!this._isSequenceSelectionActive && this._selectedSequence.length > 1) {
+            const last = this._selectedSequence[this._selectedSequence.length - 1];
+            this._selectedSequence = [last];
+            this._refreshSequenceBadges();
+            this._openMiniChordPopoverForSequence(last ? last.slot : null);
+        } else {
+            this._refreshSequenceBadges();
+        }
     }
 
     /**
