@@ -11,6 +11,7 @@ import { getTransposedBasses } from '../models/AccordionData.js';
 import { midiToName } from '../theory/MusicTheory.js';
 import { NOTATION_MODES, BELLOWS_MODES } from '../core/Constants.js';
 import { audioEngine } from '../audio/AudioEngine.js';
+import { MusicXMLPatternParser } from '../audio/MusicXMLPatternParser.js';
 
 export class LeftHandBassView {
     /**
@@ -21,7 +22,13 @@ export class LeftHandBassView {
      * @param {HTMLElement} [elements.btnToggleCollapse] Botón para colapsar/cerrar el panel
      * @param {HTMLElement} [elements.lblCollapseStatus] Etiqueta de estado
      * @param {HTMLElement} [elements.bellowsToggleGroup] Botones de selección de fuelle
-     * @param {HTMLElement} [elements.btnPlayRhythm] Botón para demo rítmica de Paseo Vallenato
+     * @param {HTMLElement} [elements.btnPlayRhythm] Botón para reproducir el patrón rítmico
+     * @param {HTMLElement} [elements.btnStopRhythm] Botón para pausar/detener el patrón rítmico
+     * @param {HTMLElement} [elements.btnResetRhythm] Botón para reiniciar patrón rítmico
+     * @param {HTMLElement} [elements.btnClearPattern] Botón para quitar/vaciar patrón cargado
+     * @param {HTMLInputElement} [elements.fileMusicXML] Input file para cargar archivo MusicXML
+     * @param {HTMLElement} [elements.lblPatternName] Etiqueta con el nombre del patrón activo
+     * @param {HTMLElement} [elements.btnToggleMirror] Botón para alternar modo espejo
      * @param {HTMLElement} [elements.btnToggleExternal] Botón externo en la barra de controles (junto al fuelle)
      * @param {HTMLElement} [elements.targetDiapason] Elemento del diapasón para anclar la posición inicial a su derecha
      * @param {Object} [options]
@@ -37,6 +44,11 @@ export class LeftHandBassView {
         this._lblCollapseStatus = elements.lblCollapseStatus;
         this._bellowsToggleGroup = elements.bellowsToggleGroup;
         this._btnPlayRhythm = elements.btnPlayRhythm;
+        this._btnStopRhythm = elements.btnStopRhythm;
+        this._btnResetRhythm = elements.btnResetRhythm;
+        this._btnClearPattern = elements.btnClearPattern;
+        this._fileMusicXML = elements.fileMusicXML;
+        this._lblPatternName = elements.lblPatternName;
         this._btnToggleMirror = elements.btnToggleMirror;
         this._btnToggleExternal = elements.btnToggleExternal;
         this._targetDiapason = elements.targetDiapason || (options.accordionIndex === 2 ? document.getElementById('secondaryDiapason') : document.getElementById('diapason'));
@@ -53,6 +65,12 @@ export class LeftHandBassView {
         this._activeButtonId = null;
         this._rhythmInterval = null;
         this._isRhythmPlaying = false;
+        this._currentPattern = null; // Patrón cargado (MusicXML) o null (Paseo nativo)
+        this._currentPatternStep = 0;
+
+        // Selección manual de botones para ejecución del patrón rítmico (Par activo por defecto: Par 1 / Hilera 1)
+        this._selectedBassId = 'bass_1';
+        this._selectedChordId = 'chord_1';
 
         this._initEvents();
     }
@@ -87,7 +105,34 @@ export class LeftHandBassView {
 
         if (this._btnPlayRhythm) {
             this._btnPlayRhythm.addEventListener('click', () => {
-                this.toggleRhythmPattern();
+                this.startRhythmPattern();
+            });
+        }
+
+        if (this._btnStopRhythm) {
+            this._btnStopRhythm.addEventListener('click', () => {
+                this.stopRhythmPattern();
+            });
+        }
+
+        if (this._btnResetRhythm) {
+            this._btnResetRhythm.addEventListener('click', () => {
+                this.resetRhythmPattern();
+            });
+        }
+
+        if (this._btnClearPattern) {
+            this._btnClearPattern.addEventListener('click', () => {
+                this.clearRhythmPattern();
+            });
+        }
+
+        if (this._fileMusicXML) {
+            this._fileMusicXML.addEventListener('change', (e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                    this.loadMusicXMLFile(file);
+                }
             });
         }
 
@@ -260,7 +305,10 @@ export class LeftHandBassView {
     _createBassButtonElement(btnData) {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `btn-accordion btn-bass-accordion ${btnData.type === 'fundamental' ? 'btn-bass-fund' : 'btn-bass-chord'}`;
+        const isSelected = (btnData.type === 'fundamental' && this._selectedBassId === btnData.id) ||
+                              (btnData.type === 'chord' && this._selectedChordId === btnData.id);
+
+        btn.className = `btn-accordion btn-bass-accordion ${btnData.type === 'fundamental' ? 'btn-bass-fund' : 'btn-bass-chord'} ${isSelected ? 'is-selected-for-rhythm' : ''}`;
         btn.id = `btn_left_acc${this._accordionIndex}_${btnData.id}`;
 
         const isPush = this._currentBellowsMode === BELLOWS_MODES.PUSH;
@@ -297,25 +345,46 @@ export class LeftHandBassView {
                     <span class="btn-note-pull">${pullLabel}</span>
                 </span>
             `;
-            btn.title = `${btnData.label} | Cerrar (Push): ${pushLabel} | Abrir (Pull): ${pullLabel}`;
+            btn.title = `${btnData.label} | Cerrar (Push): ${pushLabel} | Abrir (Pull): ${pullLabel} (Clic para seleccionar para patrón)`;
         } else if (isPush) {
             btn.classList.add('push');
             btn.innerHTML = `
                 ${orderBadgeHtml}
                 <span class="btn-notes-wrap"><span class="btn-note-single">${pushLabel}</span></span>
             `;
-            btn.title = `${btnData.label} | Cerrar (Push): ${pushLabel}`;
+            btn.title = `${btnData.label} | Cerrar (Push): ${pushLabel} (Clic para seleccionar para patrón)`;
         } else {
             btn.classList.add('pull');
             btn.innerHTML = `
                 ${orderBadgeHtml}
                 <span class="btn-notes-wrap"><span class="btn-note-single">${pullLabel}</span></span>
             `;
-            btn.title = `${btnData.label} | Abrir (Pull): ${pullLabel}`;
+            btn.title = `${btnData.label} | Abrir (Pull): ${pullLabel} (Clic para seleccionar para patrón)`;
         }
+
+        const selectForRhythm = () => {
+            if (btnData.type === 'fundamental') {
+                this._selectedBassId = btnData.id;
+            } else {
+                this._selectedChordId = btnData.id;
+            }
+            // Actualizar clase visual en todos los botones del panel
+            const allBassButtons = this._gridContainer?.querySelectorAll('.btn-bass-accordion');
+            allBassButtons?.forEach(b => {
+                const isBtnSelected = (btnData.type === 'fundamental' && b.id.endsWith(this._selectedBassId)) ||
+                                      (btnData.type === 'chord' && b.id.endsWith(this._selectedChordId));
+                if (isBtnSelected) {
+                    b.classList.add('is-selected-for-rhythm');
+                } else if ((btnData.type === 'fundamental' && b.classList.contains('btn-bass-fund')) ||
+                           (btnData.type === 'chord' && b.classList.contains('btn-bass-chord'))) {
+                    b.classList.remove('is-selected-for-rhythm');
+                }
+            });
+        };
 
         const handlePress = (e, forceDirection) => {
             if (e.cancelable) e.preventDefault();
+            selectForRhythm();
             this.playBassButton(btnData, forceDirection);
             btn.classList.add('is-pressed');
         };
@@ -340,6 +409,7 @@ export class LeftHandBassView {
         });
 
         btn.addEventListener('click', (e) => {
+            selectForRhythm();
             if (!btn.classList.contains('is-pressed')) {
                 const dir = this._currentBellowsMode === BELLOWS_MODES.BOTH ? 'push' : undefined;
                 this.playBassButton(btnData, dir);
@@ -388,6 +458,73 @@ export class LeftHandBassView {
      * Demostración pedagógica del compás vallenato clásico:
      * Patrón Paseo: BAJO (tiempo 1) - ACORDE (tiempo 2) - ACORDE (tiempo 3)
      */
+    /**
+     * Carga un archivo MusicXML y actualiza el patrón rítmico del acordeón.
+     * @param {File} file
+     */
+    async loadMusicXMLFile(file) {
+        try {
+            const text = await file.text();
+            const pattern = MusicXMLPatternParser.parse(text);
+            this._currentPattern = pattern;
+            this._currentPatternStep = 0;
+
+            if (this._lblPatternName) {
+                this._lblPatternName.textContent = pattern.title || file.name.replace(/\.[^/.]+$/, "");
+                this._lblPatternName.title = `Patrón: ${pattern.title} (${pattern.tempo} BPM, ${pattern.timeSignature.beats}/${pattern.timeSignature.beatType})`;
+            }
+
+            if (this._btnClearPattern) {
+                this._btnClearPattern.style.display = 'inline-flex';
+            }
+
+            // Si está reproduciendo, reiniciar con el nuevo patrón
+            if (this._isRhythmPlaying) {
+                this.stopRhythmPattern();
+                this.startRhythmPattern();
+            }
+        } catch (err) {
+            console.error('[LeftHandBassView] Error al cargar MusicXML:', err);
+            alert(`No se pudo cargar el archivo MusicXML: ${err.message}`);
+        }
+    }
+
+    /**
+     * Limpia o resetea el patrón rítmico cargado, dejándolo totalmente vacío.
+     */
+    clearRhythmPattern() {
+        this.stopRhythmPattern();
+        this._currentPattern = null;
+        this._currentPatternStep = 0;
+
+        if (this._lblPatternName) {
+            this._lblPatternName.textContent = 'Sin patrón cargado';
+            this._lblPatternName.title = 'No hay patrón rítmico cargado. Carga un archivo MusicXML.';
+        }
+
+        if (this._btnClearPattern) {
+            this._btnClearPattern.style.display = 'none';
+        }
+
+        if (this._fileMusicXML) {
+            this._fileMusicXML.value = '';
+        }
+    }
+
+    /**
+     * Reinicia el patrón rítmico al primer compás/pulso.
+     */
+    resetRhythmPattern() {
+        this._currentPatternStep = 0;
+        if (this._isRhythmPlaying) {
+            this.stopRhythmPattern();
+            this.startRhythmPattern();
+        }
+    }
+
+    /**
+     * Alterna la reproducción del patrón rítmico vallenato o MusicXML.
+     */
     toggleRhythmPattern() {
         if (this._isRhythmPlaying) {
             this.stopRhythmPattern();
@@ -397,63 +534,88 @@ export class LeftHandBassView {
     }
 
     /**
-     * Inicia el patrón rítmico vallenato sincronizado.
+     * Inicia el patrón rítmico (únicamente si hay un patrón MusicXML cargado).
      */
     startRhythmPattern() {
+        if (!this._currentPattern || !this._currentPattern.notes || this._currentPattern.notes.length === 0) {
+            alert('No hay ningún patrón rítmico cargado. Por favor, pulsa el botón de carga (ícono con flecha) y selecciona un archivo MusicXML (.xml, .musicxml).');
+            return;
+        }
+
         if (this._isRhythmPlaying) return;
         this._isRhythmPlaying = true;
         if (this._btnPlayRhythm) {
-            this._btnPlayRhythm.classList.remove('btn-action--danger');
-            this._btnPlayRhythm.classList.add('btn-action--success');
-            this._btnPlayRhythm.innerHTML = `<i class="fas fa-drum"></i>`;
-            this._btnPlayRhythm.title = 'Ritmo Activo (clic para detener)';
+            this._btnPlayRhythm.classList.add('active');
+            this._btnPlayRhythm.title = 'Reproduciendo patrón MusicXML (activo)';
+        }
+        if (this._btnStopRhythm) {
+            this._btnStopRhythm.classList.remove('active');
         }
 
         const bassesData = getTransposedBasses(this._currentOffset);
-        const bassBtn = bassesData[0];
-        const chordBtn = bassesData[1];
+        // Buscar el bajo y acorde seleccionados por el usuario (o caer en el primer par por defecto)
+        const bassBtn = bassesData.find(b => b.id === this._selectedBassId) || bassesData.find(b => b.type === 'fundamental') || bassesData[0];
+        const chordBtn = bassesData.find(b => b.id === this._selectedChordId) || bassesData.find(b => b.type === 'chord') || bassesData[1];
 
-        let beat = 0;
-        const beatIntervalMs = 280; // Aprox 105 BPM ritmo Paseo
+        // Determinar dirección del fuelle actual
+        const getActiveDirection = (noteBellows) => {
+            if (noteBellows) return noteBellows;
+            if (this._currentBellowsMode === BELLOWS_MODES.PULL) return 'pull';
+            if (this._currentBellowsMode === BELLOWS_MODES.PUSH) return 'push';
+            return 'push'; // Por defecto cerrar en modo BOTH
+        };
 
-        this._rhythmInterval = setInterval(() => {
-            const step = beat % 4;
-            const bassEl = document.getElementById(`btn_left_acc${this._accordionIndex}_${bassBtn.id}`);
-            const chordEl = document.getElementById(`btn_left_acc${this._accordionIndex}_${chordBtn.id}`);
+        const tempo = this._currentPattern.tempo || 120;
+        const msPerBeat = (60 / tempo) * 1000;
 
-            if (step === 0) {
-                // Pulso 1: Golpe del Bajo Fundamental
-                this.playBassButton(bassBtn);
-                if (bassEl) {
-                    bassEl.classList.add('is-pressed');
-                    setTimeout(() => bassEl.classList.remove('is-pressed'), 140);
+        const playNextMusicXMLStep = () => {
+            if (!this._isRhythmPlaying) return;
+
+            const note = this._currentPattern.notes[this._currentPatternStep];
+            const noteDurationMs = note.durationBeats * msPerBeat;
+
+            if (!note.isRest) {
+                const direction = getActiveDirection(note.bellows);
+                // Clasificar si la nota de la partitura corresponde a la ejecución del bajo fundamental o acorde
+                const isBassNote = note.octave <= 2 || note.step === 'C' || note.step === 'F' || note.step === 'G';
+                const targetBtn = isBassNote ? bassBtn : chordBtn;
+                const btnEl = document.getElementById(`btn_left_acc${this._accordionIndex}_${targetBtn.id}`);
+
+                if (this._audio) {
+                    const soundMidis = direction === 'pull' ? targetBtn.pull : targetBtn.push;
+                    this._audio.play(soundMidis, `${Math.max(0.1, note.durationBeats * 0.45)}s`, targetBtn.type === 'fundamental' ? 0.95 : 0.8);
                 }
-            } else if (step === 1 || step === 2) {
-                // Pulsos 2 y 3: Acompañamiento de Acorde (Paseo)
-                this.playBassButton(chordBtn);
-                if (chordEl) {
-                    chordEl.classList.add('is-pressed');
-                    setTimeout(() => chordEl.classList.remove('is-pressed'), 120);
+
+                if (btnEl) {
+                    btnEl.classList.add('is-pressed');
+                    setTimeout(() => btnEl.classList.remove('is-pressed'), Math.min(220, noteDurationMs * 0.75));
                 }
             }
-            beat++;
-        }, beatIntervalMs);
+
+            this._currentPatternStep = (this._currentPatternStep + 1) % this._currentPattern.notes.length;
+            this._rhythmInterval = setTimeout(playNextMusicXMLStep, noteDurationMs);
+        };
+
+        playNextMusicXMLStep();
     }
 
     /**
-     * Detiene el patrón rítmico vallenato.
+     * Detiene el patrón rítmico vallenato / MusicXML.
      */
     stopRhythmPattern() {
         if (this._rhythmInterval) {
+            clearTimeout(this._rhythmInterval);
             clearInterval(this._rhythmInterval);
             this._rhythmInterval = null;
         }
         this._isRhythmPlaying = false;
         if (this._btnPlayRhythm) {
-            this._btnPlayRhythm.classList.remove('btn-action--success');
-            this._btnPlayRhythm.classList.add('btn-action--danger');
-            this._btnPlayRhythm.innerHTML = `<i class="fas fa-drum"></i>`;
-            this._btnPlayRhythm.title = 'Ritmo Inactivo (clic para iniciar)';
+            this._btnPlayRhythm.classList.remove('active');
+            this._btnPlayRhythm.title = 'Reproducir ritmo MusicXML / Paseo';
+        }
+        if (this._btnStopRhythm) {
+            this._btnStopRhythm.classList.add('active');
+            setTimeout(() => this._btnStopRhythm?.classList.remove('active'), 350);
         }
     }
 }

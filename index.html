@@ -122,12 +122,31 @@
                                     <!-- PANEL DE BAJOS INTEGRADO A LA IZQUIERDA DEL DIAPASÓN 1 -->
                                     <div class="left-hand-bass-panel collapsed" id="leftHandBassPanel" data-accordion="1">
                                         <div class="left-hand-bass-header" id="leftHandBassHeader">
-                                            <div class="left-hand-bass-title-wrap">
-                                                <span class="left-hand-bass-title" id="lblBassPanelTitle1">
-                                                    <i class="fas fa-drum"></i> Bajos
-                                                </span>
+                                            <!-- Fila Superior: Título con texto libre y botón de cerrar -->
+                                            <div class="left-hand-bass-header-top">
+                                                <div class="left-hand-bass-title-wrap">
+                                                    <span class="left-hand-bass-title" id="lblBassPanelTitle1">
+                                                        <i class="fas fa-drum"></i> Bajos
+                                                    </span>
+                                                </div>
+                                                <button type="button" class="btn-action btn-xs" id="btnToggleBassCollapse" title="Ocultar bajos">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
                                             </div>
-                                            <div class="left-hand-bass-controls">
+
+                                            <!-- Fila Intermedia: Título del archivo / Patrón rítmico MusicXML -->
+                                            <div class="bass-rhythm-file-bar" id="bassRhythmFileBar1">
+                                                <div class="bass-rhythm-file-info" title="Patrón / Archivo MusicXML cargado">
+                                                    <i class="fas fa-file-audio"></i>
+                                                    <span class="bass-rhythm-filename" id="lblBassPatternName1">Sin patrón cargado</span>
+                                                </div>
+                                                <button type="button" class="btn-clear-pattern" id="btnClearBassPattern" title="Quitar patrón cargado y dejar vacío" style="display: none;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+
+                                            <!-- Fila Inferior: Controles de fuelle, reproducción de ritmo MusicXML, carga e inversión -->
+                                            <div class="left-hand-bass-toolbar">
                                                 <div class="header-bellows-group diapason-bellows-group" id="bassBellowsToggle" title="Fuelle en Bajos (Abrir / Cerrar)">
                                                     <button type="button" class="bellows-btn active" data-mode="both" title="Ambos (Abrir y Cerrar)">
                                                         <i class="fas fa-arrows-left-right"></i>
@@ -139,15 +158,34 @@
                                                         <i class="fas fa-arrow-right"></i>
                                                     </button>
                                                 </div>
-                                                <button type="button" class="btn-action btn-action--danger btn-xs btn-bass-rhythm" id="btnPlayBassRhythm" title="Ritmo Vallenato Inactivo (clic para iniciar)">
-                                                    <i class="fas fa-drum"></i>
-                                                </button>
-                                                <button type="button" class="btn-action btn-xs btn-bass-mirror" id="btnToggleBassMirror" title="Invertir orientación de columnas (Interior vs Exterior)">
-                                                    <i class="fas fa-arrows-rotate"></i>
-                                                </button>
-                                                <button type="button" class="btn-action btn-xs" id="btnToggleBassCollapse" title="Ocultar bajos">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
+
+                                                <div class="left-hand-bass-controls-group">
+                                                    <!-- Botón Play de Ritmo / MusicXML -->
+                                                    <button type="button" class="btn-action btn-action--success btn-xs btn-bass-action" id="btnPlayBassRhythm" title="Reproducir ritmo MusicXML / Paseo">
+                                                        <i class="fas fa-play"></i>
+                                                    </button>
+
+                                                    <!-- Botón Pause / Stop de Ritmo MusicXML -->
+                                                    <button type="button" class="btn-action btn-xs btn-bass-action" id="btnStopBassRhythm" title="Pausar / Detener reproducción">
+                                                        <i class="fas fa-pause"></i>
+                                                    </button>
+
+                                                    <!-- Botón Reiniciar compás de ritmo -->
+                                                    <button type="button" class="btn-action btn-xs btn-bass-action" id="btnResetBassRhythm" title="Reiniciar ritmo al inicio (Compás 1)">
+                                                        <i class="fas fa-backward-step"></i>
+                                                    </button>
+
+                                                    <!-- Cargar MusicXML -->
+                                                    <label class="btn-action btn-xs btn-bass-action" id="lblLoadMusicXML" title="Cargar archivo de ritmo MusicXML (.xml, .musicxml)">
+                                                        <i class="fas fa-file-import"></i>
+                                                        <input type="file" id="fileBassMusicXML" accept=".xml,.musicxml" style="display: none;">
+                                                    </label>
+
+                                                    <!-- Invertir Columnas Interior / Exterior -->
+                                                    <button type="button" class="btn-action btn-xs btn-bass-mirror" id="btnToggleBassMirror" title="Invertir orientación de columnas (Interior vs Exterior)">
+                                                        <i class="fas fa-arrows-rotate"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="left-hand-bass-body">
@@ -608,12 +646,31 @@
                                     <!-- PANEL DE BAJOS INTEGRADO A LA IZQUIERDA DEL DIAPASÓN 2 -->
                                     <div class="left-hand-bass-panel collapsed" id="secondaryLeftHandBassPanel" data-accordion="2">
                                         <div class="left-hand-bass-header" id="secondaryLeftHandBassHeader">
-                                            <div class="left-hand-bass-title-wrap">
-                                                <span class="left-hand-bass-title" id="lblBassPanelTitle2">
-                                                    <i class="fas fa-drum"></i> Bajos
-                                                </span>
+                                            <!-- Fila Superior: Título con texto libre y botón de cerrar -->
+                                            <div class="left-hand-bass-header-top">
+                                                <div class="left-hand-bass-title-wrap">
+                                                    <span class="left-hand-bass-title" id="lblBassPanelTitle2">
+                                                        <i class="fas fa-drum"></i> Bajos
+                                                    </span>
+                                                </div>
+                                                <button type="button" class="btn-action btn-xs" id="btnSecondaryToggleBassCollapse" title="Ocultar bajos">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
                                             </div>
-                                            <div class="left-hand-bass-controls">
+
+                                            <!-- Fila Intermedia: Título del archivo / Patrón rítmico MusicXML -->
+                                            <div class="bass-rhythm-file-bar" id="secondaryBassRhythmFileBar">
+                                                <div class="bass-rhythm-file-info" title="Patrón / Archivo MusicXML cargado en Acordeón 2">
+                                                    <i class="fas fa-file-audio"></i>
+                                                    <span class="bass-rhythm-filename" id="lblBassPatternName2">Sin patrón cargado</span>
+                                                </div>
+                                                <button type="button" class="btn-clear-pattern" id="btnSecondaryClearBassPattern" title="Quitar patrón cargado y dejar vacío" style="display: none;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+
+                                            <!-- Fila Inferior: Controles de fuelle, reproducción de ritmo, carga MusicXML e inversión -->
+                                            <div class="left-hand-bass-toolbar">
                                                 <div class="header-bellows-group diapason-bellows-group" id="secondaryBassBellowsToggle" title="Fuelle en Bajos Acordeón 2">
                                                     <button type="button" class="bellows-btn active" data-mode="both" title="Ambos (Abrir y Cerrar)">
                                                         <i class="fas fa-arrows-left-right"></i>
@@ -625,15 +682,34 @@
                                                         <i class="fas fa-arrow-right"></i>
                                                     </button>
                                                 </div>
-                                                <button type="button" class="btn-action btn-action--danger btn-xs btn-bass-rhythm" id="btnSecondaryPlayBassRhythm" title="Ritmo Vallenato Inactivo (clic para iniciar)">
-                                                    <i class="fas fa-drum"></i>
-                                                </button>
-                                                <button type="button" class="btn-action btn-xs btn-bass-mirror" id="btnSecondaryToggleBassMirror" title="Invertir orientación de columnas (Interior vs Exterior)">
-                                                    <i class="fas fa-arrows-rotate"></i>
-                                                </button>
-                                                <button type="button" class="btn-action btn-xs" id="btnSecondaryToggleBassCollapse" title="Ocultar bajos">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
+
+                                                <div class="left-hand-bass-controls-group">
+                                                    <!-- Botón Play de Ritmo / MusicXML -->
+                                                    <button type="button" class="btn-action btn-action--success btn-xs btn-bass-action" id="btnSecondaryPlayBassRhythm" title="Reproducir ritmo MusicXML / Paseo">
+                                                        <i class="fas fa-play"></i>
+                                                    </button>
+
+                                                    <!-- Botón Pause / Stop de Ritmo MusicXML -->
+                                                    <button type="button" class="btn-action btn-xs btn-bass-action" id="btnSecondaryStopBassRhythm" title="Pausar / Detener reproducción">
+                                                        <i class="fas fa-pause"></i>
+                                                    </button>
+
+                                                    <!-- Reiniciar compás de ritmo -->
+                                                    <button type="button" class="btn-action btn-xs btn-bass-action" id="btnSecondaryResetBassRhythm" title="Reiniciar ritmo al inicio (Compás 1)">
+                                                        <i class="fas fa-backward-step"></i>
+                                                    </button>
+
+                                                    <!-- Cargar MusicXML -->
+                                                    <label class="btn-action btn-xs btn-bass-action" id="lblSecondaryLoadMusicXML" title="Cargar archivo de ritmo MusicXML (.xml, .musicxml)">
+                                                        <i class="fas fa-file-import"></i>
+                                                        <input type="file" id="fileSecondaryBassMusicXML" accept=".xml,.musicxml" style="display: none;">
+                                                    </label>
+
+                                                    <!-- Invertir Columnas Interior / Exterior -->
+                                                    <button type="button" class="btn-action btn-xs btn-bass-mirror" id="btnSecondaryToggleBassMirror" title="Invertir orientación de columnas (Interior vs Exterior)">
+                                                        <i class="fas fa-arrows-rotate"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="left-hand-bass-body">

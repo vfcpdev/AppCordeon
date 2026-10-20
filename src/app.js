@@ -136,6 +136,11 @@ document.addEventListener('DOMContentLoaded', () => {
         lblCollapseStatus: document.getElementById('lblBassCollapseStatus'),
         bellowsToggleGroup: document.getElementById('bassBellowsToggle'),
         btnPlayRhythm: document.getElementById('btnPlayBassRhythm'),
+        btnStopRhythm: document.getElementById('btnStopBassRhythm'),
+        btnResetRhythm: document.getElementById('btnResetBassRhythm'),
+        btnClearPattern: document.getElementById('btnClearBassPattern'),
+        fileMusicXML: document.getElementById('fileBassMusicXML'),
+        lblPatternName: document.getElementById('lblBassPatternName1'),
         btnToggleMirror: document.getElementById('btnToggleBassMirror'),
         btnToggleExternal: document.getElementById('btnToggleBassView'),
         targetDiapason: document.getElementById('diapason')
@@ -151,6 +156,11 @@ document.addEventListener('DOMContentLoaded', () => {
         lblCollapseStatus: document.getElementById('lblSecondaryBassCollapseStatus'),
         bellowsToggleGroup: document.getElementById('secondaryBassBellowsToggle'),
         btnPlayRhythm: document.getElementById('btnSecondaryPlayBassRhythm'),
+        btnStopRhythm: document.getElementById('btnSecondaryStopBassRhythm'),
+        btnResetRhythm: document.getElementById('btnSecondaryResetBassRhythm'),
+        btnClearPattern: document.getElementById('btnSecondaryClearBassPattern'),
+        fileMusicXML: document.getElementById('fileSecondaryBassMusicXML'),
+        lblPatternName: document.getElementById('lblBassPatternName2'),
         btnToggleMirror: document.getElementById('btnSecondaryToggleBassMirror'),
         btnToggleExternal: document.getElementById('btnToggleBassViewSecondary'),
         targetDiapason: document.getElementById('secondaryDiapason')

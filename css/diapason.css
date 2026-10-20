@@ -2087,13 +2087,19 @@
 
 .left-hand-bass-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 10px;
+    flex-direction: column;
+    padding: 6px 8px 8px 8px;
     background: #e2e8f0;
     border-bottom: 1px solid #cbd5e1;
     user-select: none;
-    gap: 8px;
+    gap: 6px;
+}
+
+.left-hand-bass-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
 }
 
 .left-hand-bass-title-wrap {
@@ -2104,7 +2110,7 @@
 }
 
 .left-hand-bass-title {
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     font-weight: 800;
     color: #0f172a;
     display: flex;
@@ -2118,33 +2124,72 @@
     color: #0284c7;
 }
 
-.left-hand-bass-controls {
+.left-hand-bass-toolbar {
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: space-between;
+    gap: 4px;
+    width: 100%;
+    flex-wrap: wrap;
 }
 
-.btn-bass-rhythm {
-    min-width: 28px;
-    width: 28px;
-    height: 28px;
+.left-hand-bass-controls-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-bass-action {
+    min-width: 26px;
+    width: 26px;
+    height: 26px;
     padding: 0 !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    color: #475569;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-bass-action:hover {
+    color: #0284c7;
+    border-color: #0284c7;
+    background: #f8fafc;
+}
+
+.btn-bass-action.active {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0369a1;
+    box-shadow: 0 0 8px rgba(2, 132, 199, 0.4);
+}
+
+.btn-bass-rhythm {
+    min-width: 26px;
+    width: 26px;
+    height: 26px;
+    padding: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
     border-radius: 6px;
 }
 
 .btn-bass-mirror {
-    min-width: 28px;
-    width: 28px;
-    height: 28px;
+    min-width: 26px;
+    width: 26px;
+    height: 26px;
     padding: 0 !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     border-radius: 6px;
     color: #475569;
     background: #ffffff;
@@ -2162,6 +2207,76 @@
     color: #ffffff;
     border-color: #0369a1;
     box-shadow: 0 0 8px rgba(2, 132, 199, 0.4);
+}
+
+.bass-rhythm-file-bar {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 3px 6px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.bass-rhythm-file-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    width: 100%;
+}
+
+.bass-rhythm-file-info i {
+    font-size: 0.72rem;
+    color: #0284c7;
+    flex-shrink: 0;
+}
+
+.bass-rhythm-filename {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    line-height: 1.2;
+}
+
+.btn-clear-pattern {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 1px 4px;
+    font-size: 0.72rem;
+    line-height: 1;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-clear-pattern:hover {
+    color: #ef4444;
+    background: #fee2e2;
+}
+
+.bass-pattern-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #0369a1;
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
+    padding: 1px 6px;
+    border-radius: 4px;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
 }
 
 .left-hand-bass-body {
@@ -2269,6 +2384,27 @@
 
 .btn-bass-chord {
     border: 1.5px solid rgba(16, 185, 129, 0.6);
+}
+
+/* Indicador de selección de botones para ejecución del patrón rítmico */
+.btn-bass-accordion.is-selected-for-rhythm {
+    outline: 2.5px solid #0284c7;
+    outline-offset: 2px;
+    box-shadow: 0 0 14px rgba(2, 132, 199, 0.8), 2px 5px 8px rgba(0, 0, 0, 0.6) !important;
+}
+
+.btn-bass-accordion.is-selected-for-rhythm::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 7px;
+    height: 7px;
+    background: #0284c7;
+    border: 1px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 6px #0284c7;
+    z-index: 5;
 }
 
 
