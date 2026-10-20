@@ -2233,6 +2233,24 @@
     flex-shrink: 0;
 }
 
+.bass-beat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #64748b;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    flex-shrink: 0;
+    transition: all 0.08s ease-out;
+}
+
+/* Punto Rojo con Glow de alta intensidad en cada pulso de beat del patrón */
+.bass-beat-dot.glow-active {
+    background: #ef4444 !important;
+    border-color: #fca5a5 !important;
+    box-shadow: 0 0 10px 4px rgba(239, 68, 68, 0.95), 0 0 18px 8px rgba(220, 38, 38, 0.65) !important;
+    transform: scale(1.45);
+}
+
 .bass-rhythm-filename {
     font-size: 0.72rem;
     font-weight: 700;
@@ -2242,6 +2260,59 @@
     text-overflow: ellipsis;
     display: block;
     line-height: 1.2;
+}
+
+/* Control Compacto de Metrónomo para Bajos (Solo Ícono y Valor) */
+.bass-metronome-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 1px 5px;
+    height: 26px;
+    box-sizing: border-box;
+}
+
+.btn-bass-metronome-toggle {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease;
+}
+
+.btn-bass-metronome-toggle:hover {
+    color: #0284c7;
+}
+
+.btn-bass-metronome-toggle.active {
+    color: #0284c7;
+    filter: drop-shadow(0 0 3px rgba(2, 132, 199, 0.5));
+}
+
+.bass-metronome-value {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #0f172a;
+    cursor: pointer;
+    min-width: 22px;
+    text-align: center;
+    user-select: none;
+    padding: 0 2px;
+    border-radius: 3px;
+    transition: background 0.15s ease;
+}
+
+.bass-metronome-value:hover {
+    background: #e2e8f0;
+    color: #0284c7;
 }
 
 .btn-clear-pattern {

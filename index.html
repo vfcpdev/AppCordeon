@@ -134,9 +134,10 @@
                                                 </button>
                                             </div>
 
-                                            <!-- Fila Intermedia: Título del archivo / Patrón rítmico MusicXML -->
+                                            <!-- Fila Intermedia: Título del archivo / Patrón rítmico MusicXML con Indicador de Beat Rojo con Glow -->
                                             <div class="bass-rhythm-file-bar" id="bassRhythmFileBar1">
                                                 <div class="bass-rhythm-file-info" title="Patrón / Archivo MusicXML cargado">
+                                                    <span class="bass-beat-dot" id="bassBeatDot1" title="Pulso / Beat del patrón (Rojo con Glow)"></span>
                                                     <i class="fas fa-file-audio"></i>
                                                     <span class="bass-rhythm-filename" id="lblBassPatternName1">Sin patrón cargado</span>
                                                 </div>
@@ -145,7 +146,7 @@
                                                 </button>
                                             </div>
 
-                                            <!-- Fila Inferior: Controles de fuelle, reproducción de ritmo MusicXML, carga e inversión -->
+                                            <!-- Fila Inferior: Controles de fuelle, reproducción de ritmo MusicXML, metrónomo, carga e inversión -->
                                             <div class="left-hand-bass-toolbar">
                                                 <div class="header-bellows-group diapason-bellows-group" id="bassBellowsToggle" title="Fuelle en Bajos (Abrir / Cerrar)">
                                                     <button type="button" class="bellows-btn active" data-mode="both" title="Ambos (Abrir y Cerrar)">
@@ -161,7 +162,7 @@
 
                                                 <div class="left-hand-bass-controls-group">
                                                     <!-- Botón Play de Ritmo / MusicXML -->
-                                                    <button type="button" class="btn-action btn-action--success btn-xs btn-bass-action" id="btnPlayBassRhythm" title="Reproducir ritmo MusicXML / Paseo">
+                                                    <button type="button" class="btn-action btn-action--success btn-xs btn-bass-action" id="btnPlayBassRhythm" title="Reproducir ritmo MusicXML">
                                                         <i class="fas fa-play"></i>
                                                     </button>
 
@@ -174,6 +175,14 @@
                                                     <button type="button" class="btn-action btn-xs btn-bass-action" id="btnResetBassRhythm" title="Reiniciar ritmo al inicio (Compás 1)">
                                                         <i class="fas fa-backward-step"></i>
                                                     </button>
+
+                                                    <!-- Metrónomo para Bajos: Activar/Desactivar y ajustar BPM (Solo ícono y valor) -->
+                                                    <div class="bass-metronome-pill" id="bassMetronomePill1" title="Metrónomo de Bajos: Clic en ícono para activar/desactivar, clic en valor para ajustar tempo">
+                                                        <button type="button" class="btn-bass-metronome-toggle" id="btnToggleBassMetronome1" title="Activar / Desactivar sonido de metrónomo en bajos">
+                                                            <i class="fas fa-stopwatch"></i>
+                                                        </button>
+                                                        <span class="bass-metronome-value" id="lblBassMetronomeBpm1" title="BPM del patrón rítmico. Clic para cambiar">120</span>
+                                                    </div>
 
                                                     <!-- Cargar MusicXML -->
                                                     <label class="btn-action btn-xs btn-bass-action" id="lblLoadMusicXML" title="Cargar archivo de ritmo MusicXML (.xml, .musicxml)">
@@ -658,9 +667,10 @@
                                                 </button>
                                             </div>
 
-                                            <!-- Fila Intermedia: Título del archivo / Patrón rítmico MusicXML -->
+                                            <!-- Fila Intermedia: Título del archivo / Patrón rítmico MusicXML con Indicador de Beat Rojo con Glow -->
                                             <div class="bass-rhythm-file-bar" id="secondaryBassRhythmFileBar">
                                                 <div class="bass-rhythm-file-info" title="Patrón / Archivo MusicXML cargado en Acordeón 2">
+                                                    <span class="bass-beat-dot" id="bassBeatDot2" title="Pulso / Beat del patrón (Rojo con Glow)"></span>
                                                     <i class="fas fa-file-audio"></i>
                                                     <span class="bass-rhythm-filename" id="lblBassPatternName2">Sin patrón cargado</span>
                                                 </div>
@@ -669,7 +679,7 @@
                                                 </button>
                                             </div>
 
-                                            <!-- Fila Inferior: Controles de fuelle, reproducción de ritmo, carga MusicXML e inversión -->
+                                            <!-- Fila Inferior: Controles de fuelle, reproducción de ritmo, metrónomo, carga e inversión -->
                                             <div class="left-hand-bass-toolbar">
                                                 <div class="header-bellows-group diapason-bellows-group" id="secondaryBassBellowsToggle" title="Fuelle en Bajos Acordeón 2">
                                                     <button type="button" class="bellows-btn active" data-mode="both" title="Ambos (Abrir y Cerrar)">
@@ -685,7 +695,7 @@
 
                                                 <div class="left-hand-bass-controls-group">
                                                     <!-- Botón Play de Ritmo / MusicXML -->
-                                                    <button type="button" class="btn-action btn-action--success btn-xs btn-bass-action" id="btnSecondaryPlayBassRhythm" title="Reproducir ritmo MusicXML / Paseo">
+                                                    <button type="button" class="btn-action btn-action--success btn-xs btn-bass-action" id="btnSecondaryPlayBassRhythm" title="Reproducir ritmo MusicXML">
                                                         <i class="fas fa-play"></i>
                                                     </button>
 
@@ -698,6 +708,14 @@
                                                     <button type="button" class="btn-action btn-xs btn-bass-action" id="btnSecondaryResetBassRhythm" title="Reiniciar ritmo al inicio (Compás 1)">
                                                         <i class="fas fa-backward-step"></i>
                                                     </button>
+
+                                                    <!-- Metrónomo para Bajos: Activar/Desactivar y ajustar BPM (Solo ícono y valor) -->
+                                                    <div class="bass-metronome-pill" id="bassMetronomePill2" title="Metrónomo de Bajos: Clic en ícono para activar/desactivar, clic en valor para ajustar tempo">
+                                                        <button type="button" class="btn-bass-metronome-toggle" id="btnToggleBassMetronome2" title="Activar / Desactivar sonido de metrónomo en bajos">
+                                                            <i class="fas fa-stopwatch"></i>
+                                                        </button>
+                                                        <span class="bass-metronome-value" id="lblBassMetronomeBpm2" title="BPM del patrón rítmico. Clic para cambiar">120</span>
+                                                    </div>
 
                                                     <!-- Cargar MusicXML -->
                                                     <label class="btn-action btn-xs btn-bass-action" id="lblSecondaryLoadMusicXML" title="Cargar archivo de ritmo MusicXML (.xml, .musicxml)">
