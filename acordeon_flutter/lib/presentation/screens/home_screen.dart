@@ -9,6 +9,7 @@ import '../widgets/diapason_card_header.dart';
 import '../widgets/diapason_widget.dart';
 import '../widgets/free_chord_widget.dart';
 import '../widgets/measure_grid_widget.dart';
+import '../widgets/track_info_card_widget.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -33,6 +34,9 @@ class HomeScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Tarjeta de pista de audio y análisis armónico (si hay audio cargado)
+                    const TrackInfoCardWidget(),
+
                     // ================= FILA SUPERIOR: ESCENARIO DE DIAPASONES =================
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,

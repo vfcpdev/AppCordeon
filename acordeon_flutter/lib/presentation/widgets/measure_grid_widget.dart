@@ -120,13 +120,20 @@ class MeasureGridWidget extends ConsumerWidget {
                                     final beat = entry.value;
                                     final hasChord = beat.chord.isNotEmpty;
 
+                                    final isCurrentPlayhead = state.isPlayingAudio &&
+                                        state.selectedBarIndex == mIdx &&
+                                        state.selectedBeatIndex == beatIdx;
+
                                     return InkWell(
                                       onTap: () => _showEditChordDialog(context, notifier, mIdx, beatIdx, beat.chord),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: Colors.white,
+                                          color: isCurrentPlayhead ? const Color(0xFFFEF3C7) : Colors.white,
                                           border: Border(
+                                            left: isCurrentPlayhead
+                                                ? const BorderSide(color: Color(0xFFF59E0B), width: 2.5)
+                                                : BorderSide.none,
                                             bottom: beatIdx < measure.beats.length - 1
                                                 ? const BorderSide(color: Color(0xFFE2E8F0), width: 0.8)
                                                 : BorderSide.none,
@@ -140,7 +147,9 @@ class MeasureGridWidget extends ConsumerWidget {
                                               style: TextStyle(
                                                 fontSize: 9.5,
                                                 fontWeight: hasChord ? FontWeight.w900 : FontWeight.w500,
-                                                color: hasChord ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
+                                                color: hasChord
+                                                    ? (isCurrentPlayhead ? const Color(0xFFB45309) : const Color(0xFF0F172A))
+                                                    : const Color(0xFF94A3B8),
                                               ),
                                             ),
                                             Text(
@@ -218,9 +227,9 @@ class MeasureGridWidget extends ConsumerWidget {
         const SizedBox(height: 8),
 
         // Tiempo actual y Seeker Vertical
-        const Text(
-          '00:00',
-          style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+        Text(
+          _formatTime(state.currentAudioTime),
+          style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
         ),
         SizedBox(
           height: 140,
@@ -237,7 +246,7 @@ class MeasureGridWidget extends ConsumerWidget {
                 overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
               ),
               child: Slider(
-                value: state.currentAudioTime,
+                value: state.currentAudioTime.clamp(0.0, state.totalAudioDuration > 0 ? state.totalAudioDuration : 1.0),
                 min: 0.0,
                 max: state.totalAudioDuration > 0 ? state.totalAudioDuration : 1.0,
                 onChanged: (v) => notifier.seekAudio(v),
@@ -245,12 +254,19 @@ class MeasureGridWidget extends ConsumerWidget {
             ),
           ),
         ),
-        const Text(
-          '-03:00',
-          style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+        Text(
+          '-${_formatTime((state.totalAudioDuration - state.currentAudioTime).clamp(0.0, double.infinity))}',
+          style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
         ),
       ],
     );
+  }
+
+  String _formatTime(double sec) {
+    final s = sec.clamp(0.0, 99999.0).toInt();
+    final mins = (s ~/ 60).toString().padLeft(2, '0');
+    final secs = (s % 60).toString().padLeft(2, '0');
+    return '$mins:$secs';
   }
 
   Widget _buildVerticalActionToolbar(

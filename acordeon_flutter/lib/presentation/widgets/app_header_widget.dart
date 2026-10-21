@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../controllers/accordion_controller.dart';
+import 'audio_loader_dialog.dart';
 
 class AppHeaderWidget extends ConsumerWidget {
   const AppHeaderWidget({super.key});
@@ -87,18 +88,28 @@ class AppHeaderWidget extends ConsumerWidget {
             children: [
               // Dropzone de audio (ícono nube + nota)
               Tooltip(
-                message: 'Cargar pista de audio MP3/WAV para detección armónica con Rust',
+                message: 'Cargar pista de audio MP3/WAV o Demo Vallenato para detección armónica con Rust',
                 child: InkWell(
-                  onTap: state.isAnalyzingAudio ? null : () => notifier.pickAndAnalyzeAudio(context),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => const AudioLoaderDialog(),
+                    );
+                  },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: state.isAnalyzingAudio ? const Color(0xFFFEF3C7) : const Color(0xFFF8FAFC),
+                      color: state.isAnalyzingAudio
+                          ? const Color(0xFFFEF3C7)
+                          : (state.audioReport != null ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC)),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: state.isAnalyzingAudio ? const Color(0xFFF59E0B) : const Color(0xFFCBD5E1),
+                        color: state.isAnalyzingAudio
+                            ? const Color(0xFFF59E0B)
+                            : (state.audioReport != null ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1)),
                         style: BorderStyle.solid,
+                        width: state.audioReport != null ? 1.5 : 1.0,
                       ),
                     ),
                     child: Row(
@@ -113,16 +124,29 @@ class AppHeaderWidget extends ConsumerWidget {
                           const SizedBox(width: 6),
                           const Text(
                             'Analizando con Rust...',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
                           ),
+                        ] else if (state.audioReport != null) ...[
+                          const FaIcon(FontAwesomeIcons.music, size: 12, color: Color(0xFF2563EB)),
+                          const SizedBox(width: 6),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 130),
+                            child: Text(
+                              state.loadedAudioFileName ?? 'Pista Cargada',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF1E40AF)),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.check_circle, size: 13, color: Color(0xFF10B981)),
                         ] else ...[
                           const FaIcon(FontAwesomeIcons.cloudArrowUp, size: 13, color: Color(0xFF0284C7)),
                           const SizedBox(width: 5),
                           const FaIcon(FontAwesomeIcons.music, size: 11, color: Color(0xFF0F172A)),
                           const SizedBox(width: 6),
-                          Text(
-                            state.loadedAudioFileName ?? 'Cargar Audio',
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                          const Text(
+                            'Cargar Audio',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                           ),
                         ],
                       ],
