@@ -268,6 +268,67 @@ class BassPanelWidget extends ConsumerWidget {
     );
   }
 
+  Widget _buildBassButtonLabel(String pushName, String pullName, BellowsMode bellows, bool isPressed) {
+    if (bellows == BellowsMode.push) {
+      return Text(
+        pushName,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w900,
+          color: isPressed ? const Color(0xFF0F172A) : const Color(0xFF991B1B),
+          shadows: isPressed
+              ? const [Shadow(color: Colors.white, blurRadius: 1)]
+              : const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+        ),
+      );
+    }
+    if (bellows == BellowsMode.pull) {
+      return Text(
+        pullName,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w900,
+          color: isPressed ? const Color(0xFF0F172A) : const Color(0xFF1E40AF),
+          shadows: isPressed
+              ? const [Shadow(color: Colors.white, blurRadius: 1)]
+              : const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+        ),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          pushName,
+          style: TextStyle(
+            fontSize: 8.5,
+            fontWeight: FontWeight.w900,
+            color: isPressed ? const Color(0xFF7F1D1D) : const Color(0xFF991B1B),
+            height: 1.0,
+            shadows: const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+          ),
+        ),
+        Container(
+          width: 14,
+          height: 1,
+          color: isPressed ? Colors.black38 : const Color(0xFF64748B),
+          margin: const EdgeInsets.symmetric(vertical: 1.5),
+        ),
+        Text(
+          pullName,
+          style: TextStyle(
+            fontSize: 8.5,
+            fontWeight: FontWeight.w900,
+            color: isPressed ? const Color(0xFF1E3A8A) : const Color(0xFF1E40AF),
+            height: 1.0,
+            shadows: const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildVerticalToolbar(AccordionSimulatorState state, AccordionSimulatorNotifier notifier) {
     final isPrimary = accordionNumber == 1;
     final currentBellows = isPrimary ? state.bellows1 : state.bellows2;

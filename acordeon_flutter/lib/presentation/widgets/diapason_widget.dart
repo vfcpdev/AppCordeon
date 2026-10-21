@@ -26,35 +26,39 @@ class DiapasonWidget extends ConsumerWidget {
         rowKey: 'row1',
         title: 'Hilera 1\nAfuera',
         buttons: trebleData['row1'] ?? [],
-        topOffset: 24,
+        topOffset: 31.0,
       ),
       _RowDef(
         rowKey: 'row2',
         title: 'Hilera 2\nMedio',
         buttons: trebleData['row2'] ?? [],
-        topOffset: 0,
+        topOffset: 0.0,
       ),
       _RowDef(
         rowKey: 'row3',
         title: 'Hilera 3\nAdentro',
         buttons: trebleData['row3'] ?? [],
-        topOffset: 24,
+        topOffset: 31.0,
       ),
     ];
 
     final effectiveRows = isMirror ? rowList.reversed.toList() : rowList;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      padding: const EdgeInsets.fromLTRB(28, 34, 28, 38),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF334155), Color(0xFF1E293B)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+            blurRadius: 25,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -63,11 +67,10 @@ class DiapasonWidget extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: effectiveRows.map((rDef) {
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: _buildRow(
               context: context,
               ref: ref,
-              title: rDef.title,
               buttons: rDef.buttons,
               topOffset: rDef.topOffset,
             ),
@@ -80,7 +83,6 @@ class DiapasonWidget extends ConsumerWidget {
   Widget _buildRow({
     required BuildContext context,
     required WidgetRef ref,
-    required String title,
     required List<TrebleButtonModel> buttons,
     required double topOffset,
   }) {
@@ -93,36 +95,13 @@ class DiapasonWidget extends ConsumerWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Cabecera de la hilera
-        Container(
-          width: 58,
-          height: 34,
-          padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0F172A),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.white12),
-          ),
-          child: Center(
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF38BDF8),
-                height: 1.1,
-              ),
-            ),
-          ),
-        ),
-        SizedBox(height: topOffset + 8),
-        // Botones de la hilera
+        if (topOffset > 0) SizedBox(height: topOffset),
+        // Botones de la hilera con espaciado natural de 12px
         ...buttons.map((btn) {
           final isPressed = state.activeButtons.contains(btn.id);
           final midiToPlay = btn.push + currentTuning.offset;
           return Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
+            padding: const EdgeInsets.only(bottom: 12.0),
             child: DiapasonButtonWidget(
               btnIndex: btn.btnIndex,
               pushMidi: btn.push,
