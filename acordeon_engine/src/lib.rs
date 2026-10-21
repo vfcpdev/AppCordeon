@@ -1,3 +1,4 @@
+pub mod audio_analysis;
 pub mod chord_detector;
 pub mod synth;
 pub mod voice;
@@ -76,6 +77,24 @@ pub extern "C" fn acordeon_detect_chord_ffi(notes_ptr: *const u8, count: usize) 
         CString::new(res).unwrap().into_raw()
     } else {
         CString::new("{}").unwrap().into_raw()
+    }
+/// Analiza un archivo o buffer de audio Float32 y devuelve el reporte completo en JSON
+#[no_mangle]
+pub extern "C" fn acordeon_analyze_audio_ffi(
+    channel_data_ptr: *const f32,
+    length: usize,
+    sample_rate: f32,
+) -> *mut c_char {
+    if channel_data_ptr.is_null() || length < 4096 {
+        return CString::new("{}").unwrap().into_raw();
+    }
+    let slice = unsafe { std::slice::from_raw_parts(channel_data_ptr, length) };
+    match audio_analysis::analyze_audio(slice, sample_rate) {
+        Ok(json_str) => CString::new(json_str).unwrap().into_raw(),
+        Err(err) => {
+            let err_json = format!("{{\"error\":\"{}\"}}", err);
+            CString::new(err_json).unwrap().into_raw()
+        }
     }
 }
 
