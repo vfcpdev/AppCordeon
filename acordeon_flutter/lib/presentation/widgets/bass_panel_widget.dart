@@ -227,8 +227,10 @@ class BassPanelWidget extends ConsumerWidget {
           final pushName = btn.type == ButtonType.chord ? '$rawPush${isMinorPush ? "m" : ""}' : rawPush;
           final pullName = btn.type == ButtonType.chord ? '$rawPull${isMinorPull ? "m" : ""}' : rawPull;
 
-          final midiToPlay = pushMidi + currentTuning.offset;
           final currentBellows = isPrimary ? state.bellows1 : state.bellows2;
+          final midiToPlay = currentBellows == BellowsMode.pull
+              ? pullMidi + currentTuning.offset
+              : pushMidi + currentTuning.offset;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 6.0),
@@ -260,6 +262,42 @@ class BassPanelWidget extends ConsumerWidget {
                   onPointerUp: () => notifier.releaseButton(btn.id, midiToPlay),
                   child: _buildBassButtonLabel(pushName, pullName, currentBellows, isPressed),
                 ),
+
+                // Insignia flotante Abre / Cierra al presionar bajo
+                if (isPressed && (currentBellows == BellowsMode.push || currentBellows == BellowsMode.pull))
+                  Positioned(
+                    top: -11,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 140),
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: currentBellows == BellowsMode.push ? const Color(0xFFDC2626) : const Color(0xFF2563EB),
+                        borderRadius: BorderRadius.circular(9999),
+                        border: Border.all(
+                          color: currentBellows == BellowsMode.push ? const Color(0xFFFCA5A5) : const Color(0xFF93C5FD),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: currentBellows == BellowsMode.push
+                                ? const Color(0xFFDC2626).withValues(alpha: 0.80)
+                                : const Color(0xFF2563EB).withValues(alpha: 0.80),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        currentBellows == BellowsMode.push ? 'CIERRA' : 'ABRE',
+                        style: const TextStyle(
+                          fontSize: 6.5,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           );
@@ -272,26 +310,28 @@ class BassPanelWidget extends ConsumerWidget {
     if (bellows == BellowsMode.push) {
       return Text(
         pushName,
-        style: TextStyle(
-          fontSize: 10.5,
+        style: const TextStyle(
+          fontSize: 11.0,
           fontWeight: FontWeight.w900,
-          color: isPressed ? const Color(0xFF0F172A) : const Color(0xFF991B1B),
-          shadows: isPressed
-              ? const [Shadow(color: Colors.white, blurRadius: 1)]
-              : const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+          color: Colors.white,
+          shadows: [
+            Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 2.5),
+            Shadow(color: Colors.black87, blurRadius: 2),
+          ],
         ),
       );
     }
     if (bellows == BellowsMode.pull) {
       return Text(
         pullName,
-        style: TextStyle(
-          fontSize: 10.5,
+        style: const TextStyle(
+          fontSize: 11.0,
           fontWeight: FontWeight.w900,
-          color: isPressed ? const Color(0xFF0F172A) : const Color(0xFF1E40AF),
-          shadows: isPressed
-              ? const [Shadow(color: Colors.white, blurRadius: 1)]
-              : const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+          color: Colors.white,
+          shadows: [
+            Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 2.5),
+            Shadow(color: Colors.black87, blurRadius: 2),
+          ],
         ),
       );
     }

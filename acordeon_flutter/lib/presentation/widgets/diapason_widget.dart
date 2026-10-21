@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/enums.dart';
 import '../../domain/models/accordion_data.dart';
 import '../controllers/accordion_controller.dart';
 import 'diapason_button_widget.dart';
