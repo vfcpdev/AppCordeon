@@ -1,0 +1,17 @@
+[package]
+name = "acordeon_engine"
+version = "0.1.0"
+edition = "2021"
+description = "Motor de síntesis DSP y teoría armónica en Rust para Acordeón Diatónico Pro"
+
+[lib]
+crate-type = ["cdylib", "rlib", "staticlib"]
+
+[dependencies]
+# Dependencias para serialización y FFI
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+
+[features]
+default = []
+wasm = ["serde", "serde_json"]

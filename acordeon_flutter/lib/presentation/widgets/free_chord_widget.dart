@@ -1,0 +1,380 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../core/constants/enums.dart';
+import '../controllers/accordion_controller.dart';
+
+class FreeChordWidget extends ConsumerWidget {
+  const FreeChordWidget({super.key});
+
+  static const List<String> roots = [
+    'Do', 'Do#', 'Re', 'Mi♭', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'Si♭', 'Si'
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(accordionSimulatorProvider);
+    final notifier = ref.read(accordionSimulatorProvider.notifier);
+    final rootName = roots[state.freeChordRoot];
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFCBD5E1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Cabecera: Título, Notas del acorde y Factibilidad
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.spaceBetween,
+            children: [
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const FaIcon(FontAwesomeIcons.music, size: 13, color: Color(0xFF059669)),
+                  const SizedBox(width: 2),
+                  const Text(
+                    'Acorde Libre',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF059669),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: Text(
+                      'Notas: $rootName · ${_getThird(rootName, state.freeChordType)} · ${_getFifth(rootName, state.freeChordType)}',
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FaIcon(FontAwesomeIcons.arrowsLeftRight, size: 9, color: Color(0xFF059669)),
+                        SizedBox(width: 4),
+                        Text(
+                          'Cerrando / Abriendo',
+                          style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w800, color: Color(0xFF065F46)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              // Botones de acción: Armónico/Melódico, Play Acorde, Play Arpegio
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  ToggleButtons(
+                    isSelected: [
+                      state.freeChordMode == 'harmonic',
+                      state.freeChordMode == 'melodic',
+                    ],
+                    onPressed: (idx) {
+                      notifier.setFreeChordMode(idx == 0 ? 'harmonic' : 'melodic');
+                    },
+                    borderRadius: BorderRadius.circular(6),
+                    selectedColor: Colors.white,
+                    fillColor: const Color(0xFF059669),
+                    constraints: const BoxConstraints(minHeight: 22, minWidth: 54),
+                    children: const [
+                      Text('Armónico', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                      Text('Melódico', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  ElevatedButton.icon(
+                    icon: const FaIcon(FontAwesomeIcons.play, size: 9),
+                    label: const Text('Acorde', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0284C7),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      minimumSize: const Size(0, 22),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    ),
+                    onPressed: notifier.playFreeChord,
+                  ),
+                  ElevatedButton.icon(
+                    icon: const FaIcon(FontAwesomeIcons.music, size: 9),
+                    label: const Text('Arpegio', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF059669),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      minimumSize: const Size(0, 22),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    ),
+                    onPressed: notifier.arpeggioFreeChord,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Fuelle para Acorde Libre
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: const Color(0xFFCBD5E1)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    FaIcon(FontAwesomeIcons.wind, size: 10, color: Color(0xFF059669)),
+                    SizedBox(width: 5),
+                    Text('Fuelle:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                  ],
+                ),
+                ToggleButtons(
+                  isSelected: [
+                    state.freeChordBellows == BellowsMode.both,
+                    state.freeChordBellows == BellowsMode.pull,
+                    state.freeChordBellows == BellowsMode.push,
+                  ],
+                  onPressed: (idx) {
+                    if (idx == 0) notifier.setFreeChordBellows(BellowsMode.both);
+                    if (idx == 1) notifier.setFreeChordBellows(BellowsMode.pull);
+                    if (idx == 2) notifier.setFreeChordBellows(BellowsMode.push);
+                  },
+                  borderRadius: BorderRadius.circular(6),
+                  selectedColor: Colors.white,
+                  fillColor: const Color(0xFF059669),
+                  constraints: const BoxConstraints(minHeight: 22, minWidth: 32),
+                  children: const [
+                    FaIcon(FontAwesomeIcons.arrowsLeftRight, size: 9),
+                    FaIcon(FontAwesomeIcons.arrowLeft, size: 9),
+                    FaIcon(FontAwesomeIcons.arrowRight, size: 9),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Selectores: Tónica, Tipo, 4ta nota y Octava
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              // Selector Tónica
+              DropdownButton<int>(
+                value: state.freeChordRoot,
+                isDense: true,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                items: List.generate(roots.length, (idx) {
+                  return DropdownMenuItem(value: idx, child: Text(roots[idx]));
+                }),
+                onChanged: (v) {
+                  if (v != null) notifier.setFreeChordRoot(v);
+                },
+              ),
+
+              // Selector Tipo
+              DropdownButton<String>(
+                value: state.freeChordType,
+                isDense: true,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                items: const [
+                  DropdownMenuItem(value: 'maj', child: Text('Mayor')),
+                  DropdownMenuItem(value: 'min', child: Text('Menor')),
+                  DropdownMenuItem(value: 'dim', child: Text('Disminuido')),
+                  DropdownMenuItem(value: 'aug', child: Text('Aumentado')),
+                  DropdownMenuItem(value: 'sus4', child: Text('Suspendido 4')),
+                ],
+                onChanged: (v) {
+                  if (v != null) notifier.setFreeChordType(v);
+                },
+              ),
+
+              // Selector 4ta nota
+              DropdownButton<String>(
+                value: state.freeChordFourth,
+                isDense: true,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                items: const [
+                  DropdownMenuItem(value: 'none', child: Text('Sin 4ta (Tríada)')),
+                  DropdownMenuItem(value: 'octave', child: Text('+ Octava (+8va)')),
+                  DropdownMenuItem(value: 'dom7', child: Text('+ 7ma Dominante')),
+                  DropdownMenuItem(value: 'maj7', child: Text('+ 7ma Mayor (Maj7)')),
+                  DropdownMenuItem(value: 'maj6', child: Text('+ 6ta Mayor')),
+                  DropdownMenuItem(value: 'add9', child: Text('+ 9na (Add9)')),
+                ],
+                onChanged: (v) {
+                  if (v != null) notifier.setFreeChordFourth(v);
+                },
+              ),
+
+              // Toggle Octava
+              ToggleButtons(
+                isSelected: [
+                  state.freeChordOctave == 'all',
+                  state.freeChordOctave == '3',
+                  state.freeChordOctave == '4',
+                  state.freeChordOctave == '5',
+                ],
+                onPressed: (idx) {
+                  final vals = ['all', '3', '4', '5'];
+                  notifier.setFreeChordOctave(vals[idx]);
+                },
+                borderRadius: BorderRadius.circular(6),
+                selectedColor: Colors.white,
+                fillColor: const Color(0xFF0284C7),
+                constraints: const BoxConstraints(minHeight: 22, minWidth: 32),
+                children: const [
+                  Text('Todas', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                  Text('3', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                  Text('4', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                  Text('5', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Escala del Acorde Libre (Grados I, ii, iii, IV, V, vi, vii°)
+          Container(
+            padding: const EdgeInsets.only(top: 8),
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: Color(0xFFE2E8F0), style: BorderStyle.solid)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'Escala del Acorde: $rootName Mayor',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF059669),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    ToggleButtons(
+                      isSelected: [
+                        state.freeChordScaleHarmonicMode == 'triad',
+                        state.freeChordScaleHarmonicMode == 'seventh',
+                      ],
+                      onPressed: (idx) {
+                        notifier.setFreeChordScaleHarmonicMode(idx == 0 ? 'triad' : 'seventh');
+                      },
+                      borderRadius: BorderRadius.circular(4),
+                      selectedColor: Colors.white,
+                      fillColor: const Color(0xFF059669),
+                      constraints: const BoxConstraints(minHeight: 18, minWidth: 44),
+                      children: const [
+                        Text('Tríadas', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold)),
+                        Text('7mas', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+
+                // Chips de Grados Armónicos
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: [
+                    _buildDegreeChip('I', rootName, 'Mayor'),
+                    _buildDegreeChip('ii', _getRelative(rootName, 2), 'menor'),
+                    _buildDegreeChip('iii', _getRelative(rootName, 4), 'menor'),
+                    _buildDegreeChip('IV', _getRelative(rootName, 5), 'Mayor'),
+                    _buildDegreeChip('V', _getRelative(rootName, 7), 'Mayor (7)'),
+                    _buildDegreeChip('vi', _getRelative(rootName, 9), 'menor'),
+                    _buildDegreeChip('vii°', _getRelative(rootName, 11), 'disminuido'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDegreeChip(String roman, String note, String quality) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFFCBD5E1)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            roman,
+            style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
+          ),
+          Text(
+            note,
+            style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _getThird(String root, String type) {
+    final idx = roots.indexOf(root);
+    if (idx == -1) return '';
+    final semitones = (type == 'min' || type == 'dim') ? 3 : 4;
+    return roots[(idx + semitones) % 12];
+  }
+
+  static String _getFifth(String root, String type) {
+    final idx = roots.indexOf(root);
+    if (idx == -1) return '';
+    final semitones = type == 'dim' ? 6 : (type == 'aug' ? 8 : 7);
+    return roots[(idx + semitones) % 12];
+  }
+
+  static String _getRelative(String root, int semitones) {
+    final idx = roots.indexOf(root);
+    if (idx == -1) return '';
+    return roots[(idx + semitones) % 12];
+  }
+}

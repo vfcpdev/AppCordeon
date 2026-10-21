@@ -1,0 +1,192 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../core/constants/enums.dart';
+import '../controllers/accordion_controller.dart';
+
+class AppHeaderWidget extends ConsumerWidget {
+  const AppHeaderWidget({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(accordionSimulatorProvider);
+    final notifier = ref.read(accordionSimulatorProvider.notifier);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Wrap(
+        spacing: 16,
+        runSpacing: 10,
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          // Branding + Selectores A1 / A2
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const FaIcon(
+                FontAwesomeIcons.compactDisc,
+                size: 22,
+                color: Color(0xFF0284C7),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Acordeón Diatónico Pro',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0F172A),
+                  letterSpacing: -0.4,
+                ),
+              ),
+              const SizedBox(width: 14),
+
+              // Botones A1 y A2
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                ),
+                padding: const EdgeInsets.all(2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildToggleBtn(
+                      title: 'A1',
+                      icon: FontAwesomeIcons.star,
+                      isActive: state.showDiapason1,
+                      onTap: notifier.toggleDiapason1,
+                    ),
+                    const SizedBox(width: 4),
+                    _buildToggleBtn(
+                      title: 'A2',
+                      icon: FontAwesomeIcons.clone,
+                      isActive: state.showDiapason2,
+                      onTap: notifier.toggleDiapason2,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          // Acciones: Dropzone MP3 + Notación Latina/Alemana + Paleta de fondo
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Dropzone de audio (ícono nube + nota)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFCBD5E1), style: BorderStyle.solid),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FaIcon(FontAwesomeIcons.cloudArrowUp, size: 13, color: Color(0xFF0284C7)),
+                    SizedBox(width: 5),
+                    FaIcon(FontAwesomeIcons.music, size: 11, color: Color(0xFF0F172A)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Toggle Notación
+              ToggleButtons(
+                isSelected: [
+                  state.notation == NotationMode.latina,
+                  state.notation == NotationMode.alemana,
+                ],
+                onPressed: (idx) {
+                  notifier.setNotation(
+                    idx == 0 ? NotationMode.latina : NotationMode.alemana,
+                  );
+                },
+                borderRadius: BorderRadius.circular(8),
+                selectedColor: Colors.white,
+                fillColor: const Color(0xFF0284C7),
+                constraints: const BoxConstraints(minHeight: 28, minWidth: 60),
+                children: const [
+                  Text('Latina', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  Text('Alemana', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(width: 12),
+
+              // Selector de Color de Fondo
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const FaIcon(FontAwesomeIcons.palette, size: 12, color: Color(0xFF64748B)),
+                  const SizedBox(width: 5),
+                  const Text('Fondo:', style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 5),
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: state.backgroundColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF94A3B8)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleBtn({
+    required String title,
+    required FaIconData icon,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF0284C7) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FaIcon(
+              icon,
+              size: 10,
+              color: isActive ? Colors.white : const Color(0xFF64748B),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: isActive ? Colors.white : const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
