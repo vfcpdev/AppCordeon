@@ -86,20 +86,35 @@ class AppHeaderWidget extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Dropzone de audio (ícono nube + nota)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+              // Dropzone de audio (ícono nube + nota)
+              Tooltip(
+                message: 'Cargar pista de audio o acompañamiento MP3',
+                child: InkWell(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Carga de pistas de audio / MP3 lista para vincular.'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFCBD5E1), style: BorderStyle.solid),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FaIcon(FontAwesomeIcons.cloudArrowUp, size: 13, color: Color(0xFF0284C7)),
-                    SizedBox(width: 5),
-                    FaIcon(FontAwesomeIcons.music, size: 11, color: Color(0xFF0F172A)),
-                  ],
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFCBD5E1), style: BorderStyle.solid),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FaIcon(FontAwesomeIcons.cloudArrowUp, size: 13, color: Color(0xFF0284C7)),
+                        SizedBox(width: 5),
+                        FaIcon(FontAwesomeIcons.music, size: 11, color: Color(0xFF0F172A)),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -134,13 +149,32 @@ class AppHeaderWidget extends ConsumerWidget {
                   const SizedBox(width: 5),
                   const Text('Fondo:', style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
                   const SizedBox(width: 5),
-                  Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: state.backgroundColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF94A3B8)),
+                  PopupMenuButton<Color>(
+                    tooltip: 'Cambiar color de fondo',
+                    onSelected: (color) => notifier.setBackgroundColor(color),
+                    itemBuilder: (context) => [
+                      _buildColorMenuItem(const Color(0xFFF1F5F9), 'Gris Pizarra Claro'),
+                      _buildColorMenuItem(const Color(0xFFFFFFFF), 'Blanco Puro'),
+                      _buildColorMenuItem(const Color(0xFFF0F9FF), 'Azul Glaciar Suave'),
+                      _buildColorMenuItem(const Color(0xFFFEFCE8), 'Crema Ámbar'),
+                      _buildColorMenuItem(const Color(0xFFE2E8F0), 'Gris Plomo Zinc'),
+                      _buildColorMenuItem(const Color(0xFF0F172A), 'Modo Oscuro Profundo'),
+                    ],
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: state.backgroundColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF94A3B8), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -186,6 +220,27 @@ class AppHeaderWidget extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  PopupMenuItem<Color> _buildColorMenuItem(Color color, String label) {
+    return PopupMenuItem<Color>(
+      value: color,
+      child: Row(
+        children: [
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFF94A3B8)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }
