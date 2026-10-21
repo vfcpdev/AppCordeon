@@ -87,16 +87,40 @@ class _AccordionButton3DPainter extends CustomPainter {
 
     // 1. Sombras exteriores / Glows
     if (isPressed) {
-      // Glow dorado expansivo (CSS: 0 0 26px 8px #fde047, 0 0 48px rgba(250, 204, 21, 0.85))
-      final glowPaint1 = Paint()
-        ..color = const Color(0xFFFDE047).withValues(alpha: 0.90)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-      canvas.drawCircle(center, radius + 4, glowPaint1);
+      if (bellowsMode == BellowsMode.push) {
+        // Glow Rojo Vibrante al Cerrar (Push)
+        final glowPaint1 = Paint()
+          ..color = const Color(0xFFEF4444).withValues(alpha: 0.95)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+        canvas.drawCircle(center, radius + 6, glowPaint1);
 
-      final glowPaint2 = Paint()
-        ..color = const Color(0xFFFACC15).withValues(alpha: 0.75)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
-      canvas.drawCircle(center, radius + 7, glowPaint2);
+        final glowPaint2 = Paint()
+          ..color = const Color(0xFFDC2626).withValues(alpha: 0.85)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 28);
+        canvas.drawCircle(center, radius + 10, glowPaint2);
+      } else if (bellowsMode == BellowsMode.pull) {
+        // Glow Azul Vibrante al Abrir (Pull)
+        final glowPaint1 = Paint()
+          ..color = const Color(0xFF60A5FA).withValues(alpha: 0.95)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+        canvas.drawCircle(center, radius + 6, glowPaint1);
+
+        final glowPaint2 = Paint()
+          ..color = const Color(0xFF2563EB).withValues(alpha: 0.85)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 28);
+        canvas.drawCircle(center, radius + 10, glowPaint2);
+      } else {
+        // Glow dorado expansivo (CSS: 0 0 26px 8px #fde047, 0 0 48px rgba(250, 204, 21, 0.85))
+        final glowPaint1 = Paint()
+          ..color = const Color(0xFFFDE047).withValues(alpha: 0.90)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+        canvas.drawCircle(center, radius + 4, glowPaint1);
+
+        final glowPaint2 = Paint()
+          ..color = const Color(0xFFFACC15).withValues(alpha: 0.75)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
+        canvas.drawCircle(center, radius + 7, glowPaint2);
+      }
 
       // Sombra de contacto inferior comprimida
       final pressShadow = Paint()
@@ -121,6 +145,38 @@ class _AccordionButton3DPainter extends CustomPainter {
         ..color = const Color(0xFF0284C7).withValues(alpha: 0.85)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
       canvas.drawCircle(center, radius + 3, glowBlue);
+    } else if (bellowsMode == BellowsMode.push) {
+      // Glow Rojo característico al Cerrar el fuelle (CSS: --push-glow: rgba(220, 38, 38, 0.55))
+      final glowPush1 = Paint()
+        ..color = const Color(0xFFDC2626).withValues(alpha: 0.65)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+      canvas.drawCircle(center, radius + 3.5, glowPush1);
+
+      final glowPush2 = Paint()
+        ..color = const Color(0xFFEF4444).withValues(alpha: 0.35)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
+      canvas.drawCircle(center, radius + 6.0, glowPush2);
+
+      final dropShadowPaint = Paint()
+        ..color = Colors.black.withValues(alpha: 0.45)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+      canvas.drawCircle(center + const Offset(1.5, 3.5), radius, dropShadowPaint);
+    } else if (bellowsMode == BellowsMode.pull) {
+      // Glow Azul característico al Abrir el fuelle (CSS: --pull-glow: rgba(37, 99, 235, 0.55))
+      final glowPull1 = Paint()
+        ..color = const Color(0xFF2563EB).withValues(alpha: 0.65)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+      canvas.drawCircle(center, radius + 3.5, glowPull1);
+
+      final glowPull2 = Paint()
+        ..color = const Color(0xFF3B82F6).withValues(alpha: 0.35)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
+      canvas.drawCircle(center, radius + 6.0, glowPull2);
+
+      final dropShadowPaint = Paint()
+        ..color = Colors.black.withValues(alpha: 0.45)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+      canvas.drawCircle(center + const Offset(1.5, 3.5), radius, dropShadowPaint);
     } else {
       // Sombra 3D de profundidad y relieve hacia abajo a la derecha:
       // box-shadow: 2px 5px 8px rgba(0, 0, 0, 0.6)
@@ -140,19 +196,45 @@ class _AccordionButton3DPainter extends CustomPainter {
     final Paint bodyPaint = Paint();
 
     if (isPressed) {
-      // Estado presionado: Dorado brillante con profundidad
-      bodyPaint.shader = RadialGradient(
-        center: const Alignment(-0.2, -0.3),
-        radius: 0.85,
-        colors: const [
-          Color(0xFFFEF08A),
-          Color(0xFFEAB308),
-          Color(0xFFCA8A04),
-        ],
-        stops: const [0.0, 0.65, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
+      if (bellowsMode == BellowsMode.push) {
+        // Presionado Cerrando: Rojo fuego vivo con gradiente 3D
+        bodyPaint.shader = RadialGradient(
+          center: const Alignment(-0.35, -0.35),
+          radius: 0.85,
+          colors: const [
+            Color(0xFFFCA5A5), // Brillo central
+            Color(0xFFEF4444), // Rojo vivo
+            Color(0xFFB91C1C), // Sombra rim
+          ],
+          stops: const [0.0, 0.55, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: radius));
+      } else if (bellowsMode == BellowsMode.pull) {
+        // Presionado Abriendo: Azul eléctrico vivo con gradiente 3D
+        bodyPaint.shader = RadialGradient(
+          center: const Alignment(-0.35, -0.35),
+          radius: 0.85,
+          colors: const [
+            Color(0xFFBFDBFE), // Brillo central
+            Color(0xFF3B82F6), // Azul eléctrico
+            Color(0xFF1D4ED8), // Sombra rim
+          ],
+          stops: const [0.0, 0.55, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: radius));
+      } else {
+        // Estado presionado Ambos: Dorado brillante con profundidad
+        bodyPaint.shader = RadialGradient(
+          center: const Alignment(-0.2, -0.3),
+          radius: 0.85,
+          colors: const [
+            Color(0xFFFEF08A),
+            Color(0xFFEAB308),
+            Color(0xFFCA8A04),
+          ],
+          stops: const [0.0, 0.65, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: radius));
+      }
     } else if (bellowsMode == BellowsMode.push) {
-      // Cerrando (Push): Rojo 3D
+      // Cerrando (Push): Rojo 3D nítido
       bodyPaint.shader = RadialGradient(
         center: const Alignment(-0.44, -0.44),
         radius: 0.90,
@@ -161,10 +243,10 @@ class _AccordionButton3DPainter extends CustomPainter {
           Color(0xFFDC2626), // Rojo primario
           Color(0xFF991B1B), // Sombra rim roja
         ],
-        stops: const [0.0, 0.65, 1.0],
+        stops: const [0.0, 0.50, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     } else if (bellowsMode == BellowsMode.pull) {
-      // Abriendo (Pull): Azul 3D
+      // Abriendo (Pull): Azul 3D nítido
       bodyPaint.shader = RadialGradient(
         center: const Alignment(-0.44, -0.44),
         radius: 0.90,
@@ -173,7 +255,7 @@ class _AccordionButton3DPainter extends CustomPainter {
           Color(0xFF2563EB), // Azul primario
           Color(0xFF1E40AF), // Sombra rim azul
         ],
-        stops: const [0.0, 0.65, 1.0],
+        stops: const [0.0, 0.50, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     } else {
       // Modo Ambos: Perlado Nácar auténtico de acordeón Hohner / Corona
@@ -267,7 +349,16 @@ class _AccordionButton3DPainter extends CustomPainter {
       ..strokeWidth = isPressed ? 1.5 : 1.0;
 
     if (isPressed) {
-      borderPaint.color = const Color(0xFFFDE047);
+      if (bellowsMode == BellowsMode.push) {
+        borderPaint.color = const Color(0xFFFCA5A5);
+        borderPaint.strokeWidth = 2.0;
+      } else if (bellowsMode == BellowsMode.pull) {
+        borderPaint.color = const Color(0xFFBFDBFE);
+        borderPaint.strokeWidth = 2.0;
+      } else {
+        borderPaint.color = const Color(0xFFFDE047);
+        borderPaint.strokeWidth = 1.8;
+      }
     } else if (buttonType == ButtonType.fundamental) {
       // Bajos fundamentales: Borde sutil ámbar
       borderPaint.color = const Color(0xFFF59E0B).withValues(alpha: 0.70);
@@ -278,8 +369,10 @@ class _AccordionButton3DPainter extends CustomPainter {
       borderPaint.strokeWidth = 1.4;
     } else if (bellowsMode == BellowsMode.push) {
       borderPaint.color = const Color(0xFFF87171);
+      borderPaint.strokeWidth = 1.4;
     } else if (bellowsMode == BellowsMode.pull) {
       borderPaint.color = const Color(0xFF60A5FA);
+      borderPaint.strokeWidth = 1.4;
     } else {
       // Borde estándar del botón de acordeón: rgba(0, 0, 0, 0.28)
       borderPaint.color = const Color(0x47000000);

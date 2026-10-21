@@ -82,6 +82,43 @@ class DiapasonButtonWidget extends StatelessWidget {
             isChordGlow: isChordGlow,
             child: _buildNoteContent(pushName, pullName),
           ),
+
+          // Insignia flotante de fuelle al presionar (CSS .bellows-action-pill: Abre / Cierra)
+          if (isPressed && (bellowsMode == BellowsMode.push || bellowsMode == BellowsMode.pull))
+            Positioned(
+              top: -13,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
+                curve: Curves.easeOutBack,
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1.5),
+                decoration: BoxDecoration(
+                  color: bellowsMode == BellowsMode.push ? const Color(0xFFDC2626) : const Color(0xFF2563EB),
+                  borderRadius: BorderRadius.circular(9999),
+                  border: Border.all(
+                    color: bellowsMode == BellowsMode.push ? const Color(0xFFFCA5A5) : const Color(0xFF93C5FD),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: bellowsMode == BellowsMode.push
+                          ? const Color(0xFFDC2626).withValues(alpha: 0.85)
+                          : const Color(0xFF2563EB).withValues(alpha: 0.85),
+                      blurRadius: 10,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: Text(
+                  bellowsMode == BellowsMode.push ? 'CIERRA' : 'ABRE',
+                  style: const TextStyle(
+                    fontSize: 7.5,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -91,26 +128,28 @@ class DiapasonButtonWidget extends StatelessWidget {
     if (bellowsMode == BellowsMode.push) {
       return Text(
         pushName,
-        style: TextStyle(
-          fontSize: 12.5,
+        style: const TextStyle(
+          fontSize: 13.0,
           fontWeight: FontWeight.w900,
-          color: isPressed ? const Color(0xFF0F172A) : const Color(0xFF991B1B),
-          shadows: isPressed
-              ? const [Shadow(color: Colors.white, blurRadius: 1)]
-              : const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+          color: Colors.white,
+          shadows: [
+            Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 3),
+            Shadow(color: Colors.black87, blurRadius: 2),
+          ],
         ),
       );
     }
     if (bellowsMode == BellowsMode.pull) {
       return Text(
         pullName,
-        style: TextStyle(
-          fontSize: 12.5,
+        style: const TextStyle(
+          fontSize: 13.0,
           fontWeight: FontWeight.w900,
-          color: isPressed ? const Color(0xFF0F172A) : const Color(0xFF1E40AF),
-          shadows: isPressed
-              ? const [Shadow(color: Colors.white, blurRadius: 1)]
-              : const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+          color: Colors.white,
+          shadows: [
+            Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 3),
+            Shadow(color: Colors.black87, blurRadius: 2),
+          ],
         ),
       );
     }
