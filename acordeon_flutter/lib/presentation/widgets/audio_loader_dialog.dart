@@ -124,9 +124,9 @@ class AudioLoaderDialog extends ConsumerWidget {
               ] else ...[
                 // Opción 1: Seleccionar archivo del dispositivo
                 InkWell(
-                  onTap: () async {
+                  onTap: () {
+                    notifier.pickAndAnalyzeAudio(context);
                     Navigator.of(context).pop();
-                    await notifier.pickAndAnalyzeAudio(context);
                   },
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
