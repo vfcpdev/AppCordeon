@@ -14,7 +14,11 @@ class WebAudioFileLoader implements AudioFileLoader {
     final input = web.document.createElement('input') as web.HTMLInputElement;
     input.type = 'file';
     input.accept = 'audio/*,.mp3,.wav,.ogg,.m4a,.flac,.aac';
-    input.style.display = 'none';
+    input.style.position = 'fixed';
+    input.style.top = '-1000px';
+    input.style.left = '-1000px';
+    input.style.opacity = '0';
+    input.style.pointerEvents = 'none';
     web.document.body?.appendChild(input);
 
     input.onchange = ((web.Event event) {

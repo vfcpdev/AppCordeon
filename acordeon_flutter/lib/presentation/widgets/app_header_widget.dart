@@ -93,13 +93,10 @@ class AppHeaderWidget extends ConsumerWidget {
             children: [
               // Dropzone de audio (ícono nube + nota)
               Tooltip(
-                message: 'Cargar pista de audio MP3/WAV o Demo Vallenato para detección armónica con Rust',
+                message: 'Seleccionar y cargar archivo MP3 o WAV local de tu equipo',
                 child: InkWell(
                   onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => const AudioLoaderDialog(),
-                    );
+                    notifier.pickAndAnalyzeAudio(context);
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
@@ -128,7 +125,7 @@ class AppHeaderWidget extends ConsumerWidget {
                           ),
                           const SizedBox(width: 6),
                           const Text(
-                            'Analizando con Rust...',
+                            'Analizando...',
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
                           ),
                         ] else if (state.audioReport != null) ...[
@@ -154,6 +151,37 @@ class AppHeaderWidget extends ConsumerWidget {
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                           ),
                         ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+
+              // Botón Demo rápido (1 Clic)
+              Tooltip(
+                message: 'Cargar Pista Demo de Vallenato (1 Clic)',
+                child: InkWell(
+                  onTap: () {
+                    notifier.loadDemoAudioTrack(context);
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        FaIcon(FontAwesomeIcons.wandMagicSparkles, size: 11, color: Color(0xFF2563EB)),
+                        SizedBox(width: 4),
+                        Text(
+                          'Demo',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF)),
+                        ),
                       ],
                     ),
                   ),
