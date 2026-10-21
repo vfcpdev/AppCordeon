@@ -462,6 +462,20 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     state = state.copyWith(measures: cleared);
   }
 
+  void updateMeasureBeat(int barIndex, int beatIndex, String chord) {
+    if (barIndex < 0 || barIndex >= state.measures.length) return;
+    final row = state.measures[barIndex];
+    if (beatIndex < 0 || beatIndex >= row.beats.length) return;
+
+    final updatedBeats = List<MeasureBeat>.from(row.beats);
+    updatedBeats[beatIndex] = updatedBeats[beatIndex].copyWith(chord: chord);
+
+    final updatedMeasures = List<MeasureRow>.from(state.measures);
+    updatedMeasures[barIndex] = MeasureRow(barNumber: row.barNumber, beats: updatedBeats);
+
+    state = state.copyWith(measures: updatedMeasures);
+  }
+
   // Sección 5: Acorde Libre
   void setFreeChordRoot(int root) => state = state.copyWith(freeChordRoot: root);
   void setFreeChordType(String type) =>

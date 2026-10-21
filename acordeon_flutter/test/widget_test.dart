@@ -19,10 +19,9 @@ void main() {
 
     // Verify app title exists
     expect(find.text('Acordeón Diatónico Pro'), findsOneWidget);
-    // Verify treble rows exist (Afuera, Medio, Adentro)
-    expect(find.textContaining('Afuera'), findsWidgets);
-    expect(find.textContaining('Medio'), findsWidgets);
-    expect(find.textContaining('Adentro'), findsWidgets);
+    // Verify accordion badges exist
+    expect(find.textContaining('Acordeón 1'), findsWidgets);
+    expect(find.textContaining('Acordeón 2'), findsWidgets);
     // Verify bass headers exist
     expect(find.text('Exterior'), findsWidgets);
     expect(find.text('Interior'), findsWidgets);

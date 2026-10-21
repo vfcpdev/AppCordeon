@@ -115,19 +115,19 @@ class MeasureGridWidget extends ConsumerWidget {
                               Expanded(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
-                                  children: measure.slots.asMap().entries.map((entry) {
+                                  children: measure.beats.asMap().entries.map((entry) {
                                     final beatIdx = entry.key;
-                                    final slot = entry.value;
-                                    final hasChord = slot.chord != null && slot.chord!.isNotEmpty;
+                                    final beat = entry.value;
+                                    final hasChord = beat.chord.isNotEmpty;
 
                                     return InkWell(
-                                      onTap: () => _showEditChordDialog(context, notifier, mIdx, beatIdx, slot.chord ?? ''),
+                                      onTap: () => _showEditChordDialog(context, notifier, mIdx, beatIdx, beat.chord),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
                                           color: Colors.white,
                                           border: Border(
-                                            bottom: beatIdx < measure.slots.length - 1
+                                            bottom: beatIdx < measure.beats.length - 1
                                                 ? const BorderSide(color: Color(0xFFE2E8F0), width: 0.8)
                                                 : BorderSide.none,
                                           ),
@@ -136,7 +136,7 @@ class MeasureGridWidget extends ConsumerWidget {
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
-                                              hasChord ? slot.chord! : '-',
+                                              hasChord ? beat.chord : '-',
                                               style: TextStyle(
                                                 fontSize: 9.5,
                                                 fontWeight: hasChord ? FontWeight.w900 : FontWeight.w500,
@@ -144,7 +144,7 @@ class MeasureGridWidget extends ConsumerWidget {
                                               ),
                                             ),
                                             Text(
-                                              slot.timestamp,
+                                              beat.timeText,
                                               style: const TextStyle(
                                                 fontSize: 8.5,
                                                 fontWeight: FontWeight.w600,
@@ -321,7 +321,7 @@ class MeasureGridWidget extends ConsumerWidget {
   }
 
   Widget _buildTransportBtn({
-    required IconData icon,
+    required FaIconData icon,
     required VoidCallback onTap,
     required String tooltip,
     bool isPrimary = false,
@@ -361,7 +361,7 @@ class MeasureGridWidget extends ConsumerWidget {
   }
 
   Widget _buildActionBtn({
-    required IconData icon,
+    required FaIconData icon,
     required String tooltip,
     required VoidCallback onTap,
     bool isActive = false,
@@ -398,14 +398,14 @@ class MeasureGridWidget extends ConsumerWidget {
     BuildContext context,
     AccordionSimulatorNotifier notifier,
     int measureIndex,
-    int slotIndex,
+    int beatIndex,
     String currentChord,
   ) {
     final controller = TextEditingController(text: currentChord);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Editar Acorde (Compás ${measureIndex + 1}, Beat ${slotIndex + 1})'),
+        title: Text('Editar Acorde (Compás ${measureIndex + 1}, Beat ${beatIndex + 1})'),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
@@ -418,7 +418,7 @@ class MeasureGridWidget extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () {
-              notifier.updateMeasureSlot(measureIndex, slotIndex, '');
+              notifier.updateMeasureBeat(measureIndex, beatIndex, '');
               Navigator.pop(ctx);
             },
             child: const Text('Borrar', style: TextStyle(color: Colors.red)),
@@ -429,7 +429,7 @@ class MeasureGridWidget extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              notifier.updateMeasureSlot(measureIndex, slotIndex, controller.text.trim());
+              notifier.updateMeasureBeat(measureIndex, beatIndex, controller.text.trim());
               Navigator.pop(ctx);
             },
             child: const Text('Guardar'),
@@ -476,7 +476,7 @@ class MeasureGridWidget extends ConsumerWidget {
               for (int i = 0; i < parts.length; i++) {
                 final mIdx = i ~/ 4;
                 final bIdx = i % 4;
-                notifier.updateMeasureSlot(mIdx, bIdx, parts[i]);
+                notifier.updateMeasureBeat(mIdx, bIdx, parts[i]);
               }
               Navigator.pop(ctx);
             },

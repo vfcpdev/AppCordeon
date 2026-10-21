@@ -43,9 +43,8 @@ class AccordionButton3D extends StatelessWidget {
         width: size,
         height: size,
         transform: isPressed
-            ? (Matrix4.identity()
-              ..translate(0.0, 2.0)
-              ..scale(1.15, 1.15, 1.0))
+            ? (Matrix4.diagonal3Values(1.15, 1.15, 1.0)
+              ..setTranslationRaw(0.0, 2.0, 0.0))
             : Matrix4.identity(),
         child: CustomPaint(
           size: Size(size, size),
