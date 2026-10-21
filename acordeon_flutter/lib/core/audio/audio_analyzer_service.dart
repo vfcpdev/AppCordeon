@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 import '../../domain/models/audio_analysis_models.dart';
+import 'web_audio_decoder.dart';
 
 /// Servicio de Análisis Espectral y Detección Armónica de Audio
 /// Implementa la arquitectura DSP idéntica al crate de Rust `acordeon_engine`:
@@ -37,8 +38,17 @@ class AudioAnalyzerService {
   /// Analiza los bytes de un archivo de audio (WAV, MP3, etc.)
   Future<AudioAnalysisReport> analyzeAudio(Uint8List bytes, String fileName) async {
     // 1. Extraer muestras de audio normalizadas en mono Float32
-    final samples = _decodePcmOrSimulate(bytes);
-    const sampleRate = 44100.0;
+    Float32List samples;
+    double sampleRate = 44100.0;
+
+    final decoded = await createAudioDecoder().decode(bytes);
+    if (decoded != null && decoded.samples.isNotEmpty) {
+      samples = decoded.samples;
+      sampleRate = decoded.sampleRate;
+    } else {
+      samples = _decodePcmOrSimulate(bytes);
+    }
+
     final duration = samples.length / sampleRate;
 
     const windowSize = 4096;
