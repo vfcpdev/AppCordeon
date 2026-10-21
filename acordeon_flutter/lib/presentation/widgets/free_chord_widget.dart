@@ -318,13 +318,13 @@ class FreeChordWidget extends ConsumerWidget {
                   spacing: 4,
                   runSpacing: 4,
                   children: [
-                    _buildDegreeChip('I', rootName, 'Mayor'),
-                    _buildDegreeChip('ii', _getRelative(rootName, 2), 'menor'),
-                    _buildDegreeChip('iii', _getRelative(rootName, 4), 'menor'),
-                    _buildDegreeChip('IV', _getRelative(rootName, 5), 'Mayor'),
-                    _buildDegreeChip('V', _getRelative(rootName, 7), 'Mayor (7)'),
-                    _buildDegreeChip('vi', _getRelative(rootName, 9), 'menor'),
-                    _buildDegreeChip('vii°', _getRelative(rootName, 11), 'disminuido'),
+                    _buildDegreeChip('I', rootName, 'Mayor', () => notifier.selectFreeChordDegree(0, 'Mayor')),
+                    _buildDegreeChip('ii', _getRelative(rootName, 2), 'menor', () => notifier.selectFreeChordDegree(2, 'menor')),
+                    _buildDegreeChip('iii', _getRelative(rootName, 4), 'menor', () => notifier.selectFreeChordDegree(4, 'menor')),
+                    _buildDegreeChip('IV', _getRelative(rootName, 5), 'Mayor', () => notifier.selectFreeChordDegree(5, 'Mayor')),
+                    _buildDegreeChip('V', _getRelative(rootName, 7), 'Mayor', () => notifier.selectFreeChordDegree(7, 'Mayor')),
+                    _buildDegreeChip('vi', _getRelative(rootName, 9), 'menor', () => notifier.selectFreeChordDegree(9, 'menor')),
+                    _buildDegreeChip('vii°', _getRelative(rootName, 11), 'disminuido', () => notifier.selectFreeChordDegree(11, 'disminuido')),
                   ],
                 ),
               ],
@@ -335,25 +335,29 @@ class FreeChordWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildDegreeChip(String roman, String note, String quality) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFFCBD5E1)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            roman,
-            style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
-          ),
-          Text(
-            note,
-            style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-          ),
-        ],
+  Widget _buildDegreeChip(String roman, String note, String quality, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFFCBD5E1)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              roman,
+              style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
+            ),
+            Text(
+              note,
+              style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+            ),
+          ],
+        ),
       ),
     );
   }

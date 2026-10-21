@@ -493,6 +493,22 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   void setFreeChordScaleHarmonicMode(String mode) =>
       state = state.copyWith(freeChordScaleHarmonicMode: mode);
 
+  void selectFreeChordDegree(int semitones, String quality) {
+    final newRoot = (state.freeChordRoot + semitones) % 12;
+    String newType = 'maj';
+    if (quality.toLowerCase().contains('menor')) newType = 'min';
+    if (quality.toLowerCase().contains('disminuido')) newType = 'dim';
+    state = state.copyWith(
+      freeChordRoot: newRoot,
+      freeChordType: newType,
+    );
+    if (state.freeChordMode == 'harmonic') {
+      playFreeChord();
+    } else {
+      arpeggioFreeChord();
+    }
+  }
+
   void playFreeChord() {
     final notes = _calculateFreeChordNotes();
     for (final midi in notes) {
