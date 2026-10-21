@@ -100,7 +100,9 @@ class DiapasonWidget extends ConsumerWidget {
         ...buttons.map((btn) {
           final isPressed = state.activeButtons.contains(btn.id);
           final isDetector = state.detectorSelectedButtons.contains(btn.id);
-          final midiToPlay = btn.push + currentTuning.offset;
+          final midiToPlay = currentBellows == BellowsMode.pull
+              ? btn.pull + currentTuning.offset
+              : btn.push + currentTuning.offset;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12.0),
             child: DiapasonButtonWidget(
