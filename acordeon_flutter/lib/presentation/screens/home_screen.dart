@@ -4,6 +4,7 @@ import '../controllers/accordion_controller.dart';
 import '../widgets/app_header_widget.dart';
 import '../widgets/bass_panel_widget.dart';
 import '../widgets/chord_detector_widget.dart';
+import '../widgets/chord_sidebar_widget.dart';
 import '../widgets/diapason_card_header.dart';
 import '../widgets/diapason_widget.dart';
 import '../widgets/free_chord_widget.dart';
@@ -25,17 +26,17 @@ class HomeScreen extends ConsumerWidget {
             // Cabecera superior completa
             const AppHeaderWidget(),
 
-            // Cuerpo principal con scroll horizontal / vertical
+            // Cuerpo principal con scroll vertical y horizontal
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(12),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ================= COLUMNA 1: DIAPASONES & ESCENARIO =================
-                      Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ================= FILA SUPERIOR: ESCENARIO DE DIAPASONES =================
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // DIAPASÓN 1 (Principal)
@@ -57,7 +58,15 @@ class HomeScreen extends ConsumerWidget {
                               syncVolume: state.syncVolume,
                               onToggleSyncVolume: notifier.toggleSyncVolume,
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
+
+                            // Cuadrícula de compases y transporte vertical
+                            const MeasureGridWidget(),
+                            const SizedBox(width: 8),
+
+                            // Panel de Acordes Canción (Digitaciones en A1)
+                            const ChordSidebarWidget(accordionNumber: 1),
+                            const SizedBox(width: 14),
                           ],
 
                           // DIAPASÓN 2 (Comparativo / Equivalente)
@@ -77,31 +86,41 @@ class HomeScreen extends ConsumerWidget {
                               isMuted: state.isMuted2,
                               onToggleMute: notifier.toggleMute2,
                             ),
-                            const SizedBox(width: 10),
-                          ],
+                            const SizedBox(width: 8),
 
-                          // Cuadrícula de compases y transporte vertical
-                          const MeasureGridWidget(),
+                            // Panel de 2do Acordeón (Equiv.)
+                            const ChordSidebarWidget(accordionNumber: 2),
+                            const SizedBox(width: 14),
+                          ],
                         ],
                       ),
+                    ),
 
-                      const SizedBox(width: 14),
+                    const SizedBox(height: 14),
 
-                      // ================= COLUMNA 2: ACORDE LIBRE & ESCALAS =================
-                      const SizedBox(
-                        width: 360,
-                        child: FreeChordWidget(),
+                    // ================= FILA INFERIOR: TEORÍA ARMÓNICA =================
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          // Sección 5: Acorde Libre y Escalas
+                          SizedBox(
+                            width: 540,
+                            child: FreeChordWidget(),
+                          ),
+
+                          SizedBox(width: 14),
+
+                          // Sección 3: Detector Inteligente de Acordes
+                          SizedBox(
+                            width: 520,
+                            child: ChordDetectorWidget(),
+                          ),
+                        ],
                       ),
-
-                      const SizedBox(width: 14),
-
-                      // ================= COLUMNA 3: DETECTOR DE ACORDES =================
-                      const SizedBox(
-                        width: 350,
-                        child: ChordDetectorWidget(),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

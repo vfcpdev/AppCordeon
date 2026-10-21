@@ -59,10 +59,10 @@ class DiapasonCardHeader extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isPrimary ? const Color(0xFFE0F2FE) : const Color(0xFFF3E8FF),
+                  color: isPrimary ? const Color(0xFFE0F2FE) : const Color(0xFFD1FAE5),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: isPrimary ? const Color(0xFFBAE6FD) : const Color(0xFFE9D5FF),
+                    color: isPrimary ? const Color(0xFFBAE6FD) : const Color(0xFFA7F3D0),
                   ),
                 ),
                 child: Row(
@@ -71,7 +71,7 @@ class DiapasonCardHeader extends StatelessWidget {
                     FaIcon(
                       isPrimary ? FontAwesomeIcons.star : FontAwesomeIcons.clone,
                       size: 10,
-                      color: isPrimary ? const Color(0xFF0284C7) : const Color(0xFF7C3AED),
+                      color: isPrimary ? const Color(0xFF0284C7) : const Color(0xFF059669),
                     ),
                     const SizedBox(width: 5),
                     Text(
@@ -79,7 +79,7 @@ class DiapasonCardHeader extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
-                        color: isPrimary ? const Color(0xFF0369A1) : const Color(0xFF6D28D9),
+                        color: isPrimary ? const Color(0xFF0369A1) : const Color(0xFF065F46),
                       ),
                     ),
                   ],
