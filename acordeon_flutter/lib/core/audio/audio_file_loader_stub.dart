@@ -1,15 +1,8 @@
-import 'dart:typed_data';
+import 'audio_file_loader_interface.dart';
 
-class PickedAudioData {
-  final String name;
-  final Uint8List bytes;
+AudioFileLoader getAudioFileLoader() => AudioFileLoaderStub();
 
-  PickedAudioData({required this.name, required this.bytes});
+class AudioFileLoaderStub implements AudioFileLoader {
+  @override
+  Future<PickedAudioData?> pickAudioFile() async => null;
 }
-
-abstract class AudioFileLoader {
-  factory AudioFileLoader() => getAudioFileLoader();
-  Future<PickedAudioData?> pickAudioFile();
-}
-
-AudioFileLoader getAudioFileLoader() => throw UnsupportedError('Stub');

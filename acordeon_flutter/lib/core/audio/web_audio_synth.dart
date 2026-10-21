@@ -1,6 +1,7 @@
+import 'web_audio_synth_interface.dart';
 import 'web_audio_synth_stub.dart'
     if (dart.library.js_interop) 'web_audio_synth_web.dart';
 
-export 'web_audio_synth_stub.dart';
+export 'web_audio_synth_interface.dart';
 
 WebAudioSynth createWebAudioSynth() => getWebAudioSynth();

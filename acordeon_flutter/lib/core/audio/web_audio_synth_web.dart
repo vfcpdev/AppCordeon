@@ -1,6 +1,5 @@
-import 'dart:js_interop';
 import 'package:web/web.dart' as web;
-import 'web_audio_synth_stub.dart';
+import 'web_audio_synth_interface.dart';
 
 WebAudioSynth getWebAudioSynth() => WebAudioSynthImpl();
 
@@ -32,7 +31,7 @@ class WebAudioSynthImpl implements WebAudioSynth {
     try {
       final ctx = web.AudioContext();
       final master = ctx.createGain();
-      master.gain.value = _volume.toJS;
+      master.gain.value = _volume;
       master.connect(ctx.destination);
       _ctx = ctx;
       _masterGain = master;
@@ -45,7 +44,7 @@ class WebAudioSynthImpl implements WebAudioSynth {
     final master = _masterGain;
     final ctx = _ctx;
     if (master != null && ctx != null) {
-      master.gain.setValueAtTime(_volume.toJS, ctx.currentTime);
+      master.gain.setValueAtTime(_volume, ctx.currentTime);
     }
   }
 
@@ -60,7 +59,6 @@ class WebAudioSynthImpl implements WebAudioSynth {
       ctx.resume();
     }
 
-    // Si ya sonaba, silenciarlo primero
     if (_activeNotes.containsKey(midiNote)) {
       noteOff(midiNote);
     }
@@ -68,28 +66,28 @@ class WebAudioSynthImpl implements WebAudioSynth {
     try {
       final now = ctx.currentTime;
 
-      // Ganancia individual con envolvente de acordeón (ataque rápido)
+      // Ganancia individual con envolvente de acordeón
       final noteGain = ctx.createGain();
-      noteGain.gain.setValueAtTime(0.0001.toJS, now);
+      noteGain.gain.setValueAtTime(0.0001, now);
       final targetGain = (velocity * 0.45).clamp(0.01, 0.7);
-      noteGain.gain.linearRampToValueAtTime(targetGain.toJS, (now + 0.015).toJS);
+      noteGain.gain.linearRampToValueAtTime(targetGain, now + 0.015);
 
       // Oscilador 1 (Lengüeta principal: diente de sierra suave)
       final osc1 = ctx.createOscillator();
       osc1.type = 'sawtooth';
-      osc1.frequency.setValueAtTime(frequency.toJS, now);
+      osc1.frequency.setValueAtTime(frequency, now);
 
-      // Oscilador 2 (Lengüeta vibrato / musette: ligera desafinación típica vallenata +4 cents)
+      // Oscilador 2 (Lengüeta musette: ligero vibrato +4 cents)
       final osc2 = ctx.createOscillator();
       osc2.type = 'triangle';
-      final detunedFreq = frequency * 1.0025; // ~4.3 cents
-      osc2.frequency.setValueAtTime(detunedFreq.toJS, now);
+      final detunedFreq = frequency * 1.0025;
+      osc2.frequency.setValueAtTime(detunedFreq, now);
 
-      // Filtro pasa-bajas para calidez de fuelle acústico
+      // Filtro pasa-bajas para calidez acústica
       final filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
       final cutoff = (frequency * 4.5).clamp(800.0, 7500.0);
-      filter.frequency.setValueAtTime(cutoff.toJS, now);
+      filter.frequency.setValueAtTime(cutoff, now);
 
       // Conexiones de audio
       osc1.connect(noteGain);
@@ -116,13 +114,13 @@ class WebAudioSynthImpl implements WebAudioSynth {
 
     try {
       final now = ctx.currentTime;
-      final releaseTime = 0.06;
+      const releaseTime = 0.06;
       note.gainNode.gain.cancelScheduledValues(now);
       note.gainNode.gain.setValueAtTime(note.gainNode.gain.value, now);
-      note.gainNode.gain.linearRampToValueAtTime(0.0001.toJS, (now + releaseTime).toJS);
+      note.gainNode.gain.linearRampToValueAtTime(0.0001, now + releaseTime);
 
-      note.osc1.stop((now + releaseTime + 0.02).toJS);
-      note.osc2.stop((now + releaseTime + 0.02).toJS);
+      note.osc1.stop(now + releaseTime + 0.02);
+      note.osc2.stop(now + releaseTime + 0.02);
     } catch (_) {}
   }
 
