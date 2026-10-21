@@ -124,6 +124,11 @@ class AccordionSimulatorState {
   final List<String> detectorSelectedButtons;
   final DetectedChordModel? detectedChord;
 
+  // Carga y Análisis de Audio con DSP Rust
+  final AudioAnalysisReport? audioReport;
+  final bool isAnalyzingAudio;
+  final String? loadedAudioFileName;
+
   const AccordionSimulatorState({
     required this.backgroundColor,
     required this.notation,
@@ -164,6 +169,9 @@ class AccordionSimulatorState {
     required this.detectorDirection,
     required this.detectorSelectedButtons,
     this.detectedChord,
+    this.audioReport,
+    this.isAnalyzingAudio = false,
+    this.loadedAudioFileName,
   });
 
   AccordionSimulatorState copyWith({
@@ -206,6 +214,9 @@ class AccordionSimulatorState {
     String? detectorDirection,
     List<String>? detectorSelectedButtons,
     DetectedChordModel? detectedChord,
+    AudioAnalysisReport? audioReport,
+    bool? isAnalyzingAudio,
+    String? loadedAudioFileName,
   }) {
     return AccordionSimulatorState(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -249,6 +260,9 @@ class AccordionSimulatorState {
       detectorSelectedButtons:
           detectorSelectedButtons ?? this.detectorSelectedButtons,
       detectedChord: detectedChord ?? this.detectedChord,
+      audioReport: audioReport ?? this.audioReport,
+      isAnalyzingAudio: isAnalyzingAudio ?? this.isAnalyzingAudio,
+      loadedAudioFileName: loadedAudioFileName ?? this.loadedAudioFileName,
     );
   }
 
@@ -349,6 +363,85 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
   void setBackgroundColor(Color color) {
     state = state.copyWith(backgroundColor: color);
+  }
+
+  // Carga y Análisis de Audio con DSP Rust
+  Future<void> pickAndAnalyzeAudio(BuildContext context) async {
+    try {
+      final file = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac'],
+      );
+
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) return;
+
+      state = state.copyWith(
+        isAnalyzingAudio: true,
+        loadedAudioFileName: file.name,
+      );
+
+      final service = AudioAnalyzerService();
+      final report = await service.analyzeAudio(bytes, file.name);
+
+      state = state.copyWith(
+        isAnalyzingAudio: false,
+        audioReport: report,
+        totalAudioDuration: report.duration,
+      );
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AudioAnalysisDialog(
+            report: report,
+            fileName: file.name,
+          ),
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(isAnalyzingAudio: false);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al procesar audio: $e')),
+        );
+      }
+    }
+  }
+
+  void applyDetectedTuning(KeyDetectionResult keyResult) {
+    final match = TuningRegistry.defaultTunings.firstWhere(
+      (t) => t.offset == keyResult.recommendedOffset,
+      orElse: () => TuningRegistry.defaultTunings.first,
+    );
+    setTuning1(match);
+  }
+
+  void applyChordsToMeasures(List<DetectedChordSegment> chords) {
+    if (chords.isEmpty) return;
+
+    final updatedMeasures = <MeasureRow>[];
+    int chordIdx = 0;
+
+    for (int bar = 1; bar <= 8; bar++) {
+      final beats = <MeasureBeat>[];
+      for (int b = 1; b <= 4; b++) {
+        final ch = chords[chordIdx % chords.length].chordSymbol;
+        beats.add(MeasureBeat(
+          barIndex: bar,
+          beatIndex: b,
+          chord: ch,
+          timeText: '${((bar - 1) * 2.0 + (b - 1) * 0.5).toStringAsFixed(1)}s',
+        ));
+        if (b % 2 == 0) {
+          chordIdx++;
+        }
+      }
+      updatedMeasures.add(MeasureRow(barNumber: bar, beats: beats));
+    }
+
+    state = state.copyWith(measures: updatedMeasures);
   }
 
   // Controles Diapasón 1

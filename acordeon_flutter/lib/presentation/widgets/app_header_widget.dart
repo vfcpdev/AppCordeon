@@ -86,32 +86,45 @@ class AppHeaderWidget extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Dropzone de audio (ícono nube + nota)
-              // Dropzone de audio (ícono nube + nota)
               Tooltip(
-                message: 'Cargar pista de audio o acompañamiento MP3',
+                message: 'Cargar pista de audio MP3/WAV para detección armónica con Rust',
                 child: InkWell(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Carga de pistas de audio / MP3 lista para vincular.'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
+                  onTap: state.isAnalyzingAudio ? null : () => notifier.pickAndAnalyzeAudio(context),
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: state.isAnalyzingAudio ? const Color(0xFFFEF3C7) : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFCBD5E1), style: BorderStyle.solid),
+                      border: Border.all(
+                        color: state.isAnalyzingAudio ? const Color(0xFFF59E0B) : const Color(0xFFCBD5E1),
+                        style: BorderStyle.solid,
+                      ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        FaIcon(FontAwesomeIcons.cloudArrowUp, size: 13, color: Color(0xFF0284C7)),
-                        SizedBox(width: 5),
-                        FaIcon(FontAwesomeIcons.music, size: 11, color: Color(0xFF0F172A)),
+                        if (state.isAnalyzingAudio) ...[
+                          const SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFD97706)),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Analizando con Rust...',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                          ),
+                        ] else ...[
+                          const FaIcon(FontAwesomeIcons.cloudArrowUp, size: 13, color: Color(0xFF0284C7)),
+                          const SizedBox(width: 5),
+                          const FaIcon(FontAwesomeIcons.music, size: 11, color: Color(0xFF0F172A)),
+                          const SizedBox(width: 6),
+                          Text(
+                            state.loadedAudioFileName ?? 'Cargar Audio',
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                          ),
+                        ],
                       ],
                     ),
                   ),
