@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:js_interop';
 import 'dart:typed_data';
 import 'package:web/web.dart' as web;
-import 'audio_file_loader_stub.dart';
+import 'audio_file_loader_interface.dart';
 
 AudioFileLoader getAudioFileLoader() => WebAudioFileLoader();
 
