@@ -1,8 +1,13 @@
+import 'dart:async';
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../core/audio/audio_analyzer_service.dart';
 import '../../core/audio/audio_engine_bridge.dart';
+import '../../core/audio/audio_file_loader.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/audio_analysis_models.dart';
@@ -365,49 +370,186 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     state = state.copyWith(backgroundColor: color);
   }
 
+  Timer? _playbackTimer;
+
   // Carga y Análisis de Audio con DSP Rust
   Future<void> pickAndAnalyzeAudio(BuildContext context) async {
     try {
-      final file = await FilePicker.pickFile(
-        type: FileType.custom,
-        allowedExtensions: ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac'],
-      );
+      PickedAudioData? picked;
 
-      if (file == null) return;
-      final bytes = await file.readAsBytes();
-      if (bytes.isEmpty) return;
-
-      state = state.copyWith(
-        isAnalyzingAudio: true,
-        loadedAudioFileName: file.name,
-      );
-
-      final service = AudioAnalyzerService();
-      final report = await service.analyzeAudio(bytes, file.name);
-
-      state = state.copyWith(
-        isAnalyzingAudio: false,
-        audioReport: report,
-        totalAudioDuration: report.duration,
-      );
-
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AudioAnalysisDialog(
-            report: report,
-            fileName: file.name,
-          ),
-        );
+      if (kIsWeb) {
+        picked = await createAudioFileLoader().pickAudioFile();
       }
+
+      if (picked == null) {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac'],
+          withData: true,
+        );
+
+        if (result != null && result.files.isNotEmpty) {
+          final file = result.files.first;
+          final bytes = file.bytes;
+          if (bytes != null && bytes.isNotEmpty) {
+            picked = PickedAudioData(name: file.name, bytes: bytes);
+          }
+        }
+      }
+
+      if (picked == null) return;
+      if (!context.mounted) return;
+
+      await processAudioBytes(picked.bytes, picked.name, context);
     } catch (e) {
       state = state.copyWith(isAnalyzingAudio: false);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al procesar audio: $e')),
+          SnackBar(content: Text('Error al cargar audio: $e')),
         );
       }
     }
+  }
+
+  /// Carga y analiza una pista demo clásica de Vallenato ("La Gota Fría" en Do Mayor / Cinco Letras)
+  Future<void> loadDemoAudioTrack(BuildContext context) async {
+    try {
+      state = state.copyWith(
+        isAnalyzingAudio: true,
+        loadedAudioFileName: 'La Gota Fría - Demo Vallenato.wav',
+      );
+
+      final demoBytes = _generateDemoVallenatoAudio();
+      if (!context.mounted) return;
+      await processAudioBytes(demoBytes, 'La Gota Fría - Demo Vallenato.wav', context);
+    } catch (e) {
+      state = state.copyWith(isAnalyzingAudio: false);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al procesar demo: $e')),
+        );
+      }
+    }
+  }
+
+  /// Procesa bytes de audio con el servicio espectral y actualiza estado + acordeón
+  Future<void> processAudioBytes(Uint8List bytes, String fileName, BuildContext? context) async {
+    state = state.copyWith(
+      isAnalyzingAudio: true,
+      loadedAudioFileName: fileName,
+    );
+
+    final service = AudioAnalyzerService();
+    final report = await service.analyzeAudio(bytes, fileName);
+
+    state = state.copyWith(
+      isAnalyzingAudio: false,
+      audioReport: report,
+      totalAudioDuration: report.duration,
+      currentAudioTime: 0.0,
+    );
+
+    // Auto-aplicar afinación sugerida al Acordeón 1
+    applyDetectedTuning(report.keyResult);
+
+    // Auto-aplicar acordes detectados a la cuadrícula de compases
+    applyChordsToMeasures(report.chords);
+
+    if (context != null && context.mounted) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AudioAnalysisDialog(
+          report: report,
+          fileName: fileName,
+        ),
+      );
+    }
+  }
+
+  /// Genera audio WAV PCM sintetizado con progresión Paseo Vallenato (C - F - G - C a 128 BPM)
+  Uint8List _generateDemoVallenatoAudio() {
+    const sampleRate = 44100;
+    const durationSeconds = 4.0;
+    const numSamples = (sampleRate * durationSeconds);
+    final int byteLength = (numSamples * 2).toInt();
+
+    final buffer = ByteData(44 + byteLength);
+
+    // RIFF Header
+    buffer.setUint8(0, 0x52); // 'R'
+    buffer.setUint8(1, 0x49); // 'I'
+    buffer.setUint8(2, 0x46); // 'F'
+    buffer.setUint8(3, 0x46); // 'F'
+    buffer.setUint32(4, 36 + byteLength, Endian.little);
+    buffer.setUint8(8, 0x57);  // 'W'
+    buffer.setUint8(9, 0x41);  // 'A'
+    buffer.setUint8(10, 0x56); // 'V'
+    buffer.setUint8(11, 0x45); // 'E'
+
+    // 'fmt ' Subchunk
+    buffer.setUint8(12, 0x66); // 'f'
+    buffer.setUint8(13, 0x6D); // 'm'
+    buffer.setUint8(14, 0x74); // 't'
+    buffer.setUint8(15, 0x20); // ' '
+    buffer.setUint32(16, 16, Endian.little);
+    buffer.setUint16(20, 1, Endian.little); // PCM
+    buffer.setUint16(22, 1, Endian.little); // Mono
+    buffer.setUint32(24, sampleRate, Endian.little);
+    buffer.setUint32(28, sampleRate * 2, Endian.little);
+    buffer.setUint16(32, 2, Endian.little);
+    buffer.setUint16(34, 16, Endian.little); // 16 bits
+
+    // 'data' Subchunk
+    buffer.setUint8(36, 0x64); // 'd'
+    buffer.setUint8(37, 0x61); // 'a'
+    buffer.setUint8(38, 0x74); // 't'
+    buffer.setUint8(39, 0x61); // 'a'
+    buffer.setUint32(40, byteLength, Endian.little);
+
+    // Sintetizar muestras armónicas Vallenato (C, F, G, C) con pulso a 128 BPM
+    for (int i = 0; i < numSamples; i++) {
+      final t = i / sampleRate;
+      final chordPhase = (t % 4.0);
+
+      // Frecuencias fundamentales de cada acorde
+      double f1, f2, f3;
+      if (chordPhase < 1.0) {
+        // Do Mayor: C4 (261.6), E4 (329.6), G4 (392.0)
+        f1 = 261.63; f2 = 329.63; f3 = 392.00;
+      } else if (chordPhase < 2.0) {
+        // Fa Mayor: F4 (349.2), A4 (440.0), C5 (523.3)
+        f1 = 349.23; f2 = 440.00; f3 = 523.25;
+      } else if (chordPhase < 3.0) {
+        // Sol Mayor: G4 (392.0), B4 (493.9), D5 (587.3)
+        f1 = 392.00; f2 = 493.88; f3 = 587.33;
+      } else {
+        // Do Mayor resolutivo
+        f1 = 261.63; f2 = 329.63; f3 = 392.00;
+      }
+
+      // Envolvente de pulso rítmico a 128 BPM (período ~0.46875s)
+      final beatPhase = (t * (128.0 / 60.0)) % 1.0;
+      final beatEnv = math.exp(-beatPhase * 4.0);
+
+      // Onda acústica combinada
+      final s = (math.sin(2 * math.pi * f1 * t) * 0.4 +
+                 math.sin(2 * math.pi * f2 * t) * 0.3 +
+                 math.sin(2 * math.pi * f3 * t) * 0.3) * (0.6 + 0.4 * beatEnv);
+
+      final sampleInt16 = (s * 24000).clamp(-32767, 32767).toInt();
+      buffer.setInt16(44 + (i * 2), sampleInt16, Endian.little);
+    }
+
+    return buffer.buffer.asUint8List();
+  }
+
+  void clearAudioReport() {
+    stopAudio();
+    state = state.copyWith(
+      audioReport: null,
+      loadedAudioFileName: null,
+      isPlayingAudio: false,
+    );
   }
 
   void applyDetectedTuning(KeyDetectionResult keyResult) {
@@ -491,11 +633,46 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
   // Reproductor y Cuadrícula
   void togglePlayAudio() {
-    state = state.copyWith(isPlayingAudio: !state.isPlayingAudio);
+    final nextPlaying = !state.isPlayingAudio;
+    state = state.copyWith(isPlayingAudio: nextPlaying);
+    _playbackTimer?.cancel();
+
+    if (nextPlaying) {
+      final bpm = state.audioReport?.bpm ?? 120.0;
+      final intervalMs = ((60.0 / bpm / 2.0) * 1000).toInt().clamp(50, 1000);
+
+      _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
+        if (!state.isPlayingAudio) {
+          timer.cancel();
+          return;
+        }
+
+        final nextTime = state.currentAudioTime + (intervalMs / 1000.0);
+        final totalDur = state.totalAudioDuration > 0 ? state.totalAudioDuration : 16.0;
+        final wrappedTime = nextTime >= totalDur ? 0.0 : nextTime;
+
+        final beatDuration = 60.0 / bpm;
+        final totalBeats = (wrappedTime / beatDuration).floor();
+        final currentBar = (totalBeats ~/ 4) % (state.measures.isNotEmpty ? state.measures.length : 8);
+        final currentBeat = totalBeats % 4;
+
+        state = state.copyWith(
+          currentAudioTime: wrappedTime,
+          selectedBarIndex: currentBar,
+          selectedBeatIndex: currentBeat,
+        );
+      });
+    }
   }
 
   void stopAudio() {
-    state = state.copyWith(isPlayingAudio: false, currentAudioTime: 0.0);
+    _playbackTimer?.cancel();
+    state = state.copyWith(
+      isPlayingAudio: false,
+      currentAudioTime: 0.0,
+      selectedBarIndex: 0,
+      selectedBeatIndex: 0,
+    );
     _audioBridge.allNotesOff();
   }
 
