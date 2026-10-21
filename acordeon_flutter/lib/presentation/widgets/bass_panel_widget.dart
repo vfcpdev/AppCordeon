@@ -5,6 +5,7 @@ import '../../core/constants/enums.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/theory/music_theory.dart';
 import '../controllers/accordion_controller.dart';
+import 'accordion_button_3d.dart';
 
 class BassPanelWidget extends ConsumerWidget {
   final int accordionNumber;
@@ -209,107 +210,57 @@ class BassPanelWidget extends ConsumerWidget {
           final pushMidi = btn.pushNotes.isNotEmpty ? btn.pushNotes.first : 0;
           final pullMidi = btn.pullNotes.isNotEmpty ? btn.pullNotes.first : 0;
 
-          final pushName = MusicTheory.midiToName(
+          final isMinorPush = btn.namePush.toLowerCase().contains('min');
+          final isMinorPull = btn.namePull.toLowerCase().contains('min');
+          final rawPush = MusicTheory.midiToName(
             pushMidi,
             notation: state.notation,
             ignoreOctave: true,
             tuningOffset: currentTuning.offset,
           );
-          final pullName = MusicTheory.midiToName(
+          final rawPull = MusicTheory.midiToName(
             pullMidi,
             notation: state.notation,
             ignoreOctave: true,
             tuningOffset: currentTuning.offset,
           );
+          final pushName = btn.type == ButtonType.chord ? '$rawPush${isMinorPush ? "m" : ""}' : rawPush;
+          final pullName = btn.type == ButtonType.chord ? '$rawPull${isMinorPull ? "m" : ""}' : rawPull;
 
           final midiToPlay = pushMidi + currentTuning.offset;
+          final currentBellows = isPrimary ? state.bellows1 : state.bellows2;
 
           return Padding(
-            padding: const EdgeInsets.only(bottom: 5.0),
-            child: Listener(
-              onPointerDown: (_) => notifier.pressButton(btn.id, midiToPlay),
-              onPointerUp: (_) => notifier.releaseButton(btn.id, midiToPlay),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  Positioned(
-                    left: -14,
-                    child: Text(
-                      '$index',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white.withValues(alpha: 0.85),
-                      ),
+            padding: const EdgeInsets.only(bottom: 6.0),
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                Positioned(
+                  left: -16,
+                  child: Text(
+                    '$index',
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white.withValues(alpha: 0.95),
+                      shadows: const [
+                        Shadow(color: Colors.black, offset: Offset(0, 1), blurRadius: 3),
+                        Shadow(color: Colors.black87, blurRadius: 2),
+                      ],
                     ),
                   ),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 100),
-                    width: 44,
-                    height: 44,
-                    transform: isPressed
-                        ? Matrix4.diagonal3Values(1.12, 1.12, 1.0)
-                        : Matrix4.identity(),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isPressed ? const Color(0xFFFACC15) : const Color(0xFFF1F5F9),
-                      border: Border.all(
-                        color: btn.type == ButtonType.fundamental
-                            ? const Color(0xFFF59E0B)
-                            : const Color(0xFF10B981),
-                        width: 1.5,
-                      ),
-                      boxShadow: isPressed
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFFFACC15).withValues(alpha: 0.8),
-                                blurRadius: 14,
-                                spreadRadius: 3,
-                              ),
-                            ]
-                          : [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.5),
-                                blurRadius: 4,
-                                offset: const Offset(1, 3),
-                              ),
-                            ],
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            pushName,
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF991B1B),
-                              height: 1.0,
-                            ),
-                          ),
-                          Container(
-                            width: 12,
-                            height: 1,
-                            color: Colors.black26,
-                            margin: const EdgeInsets.symmetric(vertical: 1),
-                          ),
-                          Text(
-                            pullName,
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF1E40AF),
-                              height: 1.0,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                AccordionButton3D(
+                  size: 46.0,
+                  isPressed: isPressed,
+                  bellowsMode: currentBellows,
+                  buttonType: btn.type,
+                  onPointerDown: () => notifier.pressButton(btn.id, midiToPlay),
+                  onPointerUp: () => notifier.releaseButton(btn.id, midiToPlay),
+                  child: _buildBassButtonLabel(pushName, pullName, currentBellows, isPressed),
+                ),
+              ],
             ),
           );
         }),

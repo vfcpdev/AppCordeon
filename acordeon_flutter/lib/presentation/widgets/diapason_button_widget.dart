@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/theory/music_theory.dart';
+import 'accordion_button_3d.dart';
 
 class DiapasonButtonWidget extends StatelessWidget {
   final int btnIndex;
@@ -68,102 +69,12 @@ class DiapasonButtonWidget extends StatelessWidget {
             ),
           ),
 
-          // Botón con Efecto 3D Nácar/Perlado idéntico a CSS .btn-accordion
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 100),
-            curve: Curves.easeOutCubic,
-            width: size,
-            height: size,
-            transform: isPressed
-                ? (Matrix4.identity()
-                  ..translate(0.0, 2.0)
-                  ..scale(1.15, 1.15, 1.0))
-                : Matrix4.identity(),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isPressed
-                    ? const Color(0xFFFDE047)
-                    : const Color(0x47000000), // rgba(0, 0, 0, 0.28)
-                width: isPressed ? 1.5 : 1.0,
-              ),
-              gradient: isPressed
-                  ? const RadialGradient(
-                      center: Alignment(-0.2, -0.3),
-                      radius: 0.85,
-                      colors: [
-                        Color(0xFFFEF08A),
-                        Color(0xFFEAB308),
-                        Color(0xFFCA8A04),
-                      ],
-                    )
-                  : const RadialGradient(
-                      center: Alignment(-0.44, -0.44), // circle at 14px 14px en 50px
-                      radius: 0.85,
-                      colors: [
-                        Color(0xFFFFFFFF), // Brillo especular superior
-                        Color(0xFFD3CBBD), // Nácar medio
-                        Color(0xFF9E9587), // Reborde 3D inferior
-                      ],
-                      stops: [0.0, 0.70, 1.0],
-                    ),
-              boxShadow: isPressed
-                  ? [
-                      // Glow dorado expansivo idéntico al CSS :active
-                      BoxShadow(
-                        color: const Color(0xFFFDE047).withValues(alpha: 0.9),
-                        blurRadius: 26,
-                        spreadRadius: 6,
-                      ),
-                      BoxShadow(
-                        color: const Color(0xFFFACC15).withValues(alpha: 0.85),
-                        blurRadius: 48,
-                        spreadRadius: 2,
-                      ),
-                      const BoxShadow(
-                        color: Colors.black54,
-                        offset: Offset(0, 2),
-                        blurRadius: 4,
-                      ),
-                    ]
-                  : [
-                      // Sombra 3D de profundidad y relieve
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.60),
-                        offset: const Offset(2, 5),
-                        blurRadius: 8,
-                      ),
-                      // Bisel de luz superior
-                      BoxShadow(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        offset: const Offset(-1, -1),
-                        blurRadius: 2,
-                      ),
-                    ],
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Brillo especular sutil en la parte superior izquierda
-                Positioned(
-                  top: 4,
-                  left: 6,
-                  child: Container(
-                    width: 14,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: isPressed ? 0.0 : 0.45),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-
-                // Contenido de las notas
-                Center(
-                  child: _buildNoteContent(pushName, pullName),
-                ),
-              ],
-            ),
+          // Botón con Auténtico Efecto 3D Nácar/Perlado idéntico a CSS .btn-accordion
+          AccordionButton3D(
+            size: size,
+            isPressed: isPressed,
+            bellowsMode: bellowsMode,
+            child: _buildNoteContent(pushName, pullName),
           ),
         ],
       ),
