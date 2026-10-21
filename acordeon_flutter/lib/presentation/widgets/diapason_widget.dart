@@ -99,6 +99,7 @@ class DiapasonWidget extends ConsumerWidget {
         // Botones de la hilera con espaciado natural de 12px
         ...buttons.map((btn) {
           final isPressed = state.activeButtons.contains(btn.id);
+          final isDetector = state.detectorSelectedButtons.contains(btn.id);
           final midiToPlay = btn.push + currentTuning.offset;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12.0),
@@ -107,11 +108,22 @@ class DiapasonWidget extends ConsumerWidget {
               pushMidi: btn.push,
               pullMidi: btn.pull,
               isPressed: isPressed,
+              isDetectorSelected: isDetector,
               bellowsMode: currentBellows,
               notation: state.notation,
               tuningOffset: currentTuning.offset,
-              onPointerDown: () => notifier.pressButton(btn.id, midiToPlay),
-              onPointerUp: () => notifier.releaseButton(btn.id, midiToPlay),
+              onPointerDown: () {
+                if (state.detectorMode) {
+                  notifier.toggleDetectorButton(btn.id, midiToPlay);
+                } else {
+                  notifier.pressButton(btn.id, midiToPlay);
+                }
+              },
+              onPointerUp: () {
+                if (!state.detectorMode) {
+                  notifier.releaseButton(btn.id, midiToPlay);
+                }
+              },
             ),
           );
         }),

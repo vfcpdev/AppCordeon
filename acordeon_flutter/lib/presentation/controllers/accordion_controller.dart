@@ -590,6 +590,47 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     );
   }
 
+  void playDetectorChord() {
+    if (state.detectorSelectedButtons.isEmpty) return;
+    final notes = <int>[];
+    for (final btnId in state.detectorSelectedButtons) {
+      for (final row in state.trebleData1.values) {
+        for (final btn in row) {
+          if (btn.id == btnId) {
+            notes.add(btn.push + state.tuning1.offset);
+          }
+        }
+      }
+    }
+    for (final note in notes) {
+      _audioBridge.noteOn(note);
+    }
+    Future.delayed(const Duration(milliseconds: 900), () {
+      for (final note in notes) {
+        _audioBridge.noteOff(note);
+      }
+    });
+  }
+
+  void arpeggioDetectorChord() async {
+    if (state.detectorSelectedButtons.isEmpty) return;
+    final notes = <int>[];
+    for (final btnId in state.detectorSelectedButtons) {
+      for (final row in state.trebleData1.values) {
+        for (final btn in row) {
+          if (btn.id == btnId) {
+            notes.add(btn.push + state.tuning1.offset);
+          }
+        }
+      }
+    }
+    for (final note in notes) {
+      _audioBridge.noteOn(note);
+      await Future.delayed(const Duration(milliseconds: 220));
+      _audioBridge.noteOff(note);
+    }
+  }
+
   void _recalculateDetectedChord() {
     if (state.detectorSelectedButtons.length < 2) {
       state = state.copyWith(detectedChord: null);

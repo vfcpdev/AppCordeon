@@ -8,6 +8,8 @@ class DiapasonButtonWidget extends StatelessWidget {
   final int pushMidi;
   final int pullMidi;
   final bool isPressed;
+  final bool isDetectorSelected;
+  final bool isChordGlow;
   final BellowsMode bellowsMode;
   final NotationMode notation;
   final int tuningOffset;
@@ -21,6 +23,8 @@ class DiapasonButtonWidget extends StatelessWidget {
     required this.pushMidi,
     required this.pullMidi,
     required this.isPressed,
+    this.isDetectorSelected = false,
+    this.isChordGlow = false,
     required this.bellowsMode,
     required this.notation,
     required this.tuningOffset,
@@ -74,6 +78,8 @@ class DiapasonButtonWidget extends StatelessWidget {
             size: size,
             isPressed: isPressed,
             bellowsMode: bellowsMode,
+            isDetectorSelected: isDetectorSelected,
+            isChordGlow: isChordGlow,
             child: _buildNoteContent(pushName, pullName),
           ),
         ],

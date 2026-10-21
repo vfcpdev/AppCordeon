@@ -103,7 +103,7 @@ class ChordDetectorWidget extends ConsumerWidget {
                       minimumSize: const Size(0, 24),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                     ),
-                    onPressed: () {},
+                    onPressed: hasSelection ? notifier.playDetectorChord : null,
                   ),
 
                   // Arpegio
@@ -117,7 +117,7 @@ class ChordDetectorWidget extends ConsumerWidget {
                       minimumSize: const Size(0, 24),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                     ),
-                    onPressed: () {},
+                    onPressed: hasSelection ? notifier.arpeggioDetectorChord : null,
                   ),
 
                   // Limpiar
