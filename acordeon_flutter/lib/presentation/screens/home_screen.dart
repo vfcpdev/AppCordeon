@@ -88,8 +88,16 @@ class HomeScreen extends ConsumerWidget {
                             ),
                             const SizedBox(width: 8),
 
-                            // Panel de 2do Acordeón (Equiv.)
-                            const ChordSidebarWidget(accordionNumber: 2),
+                            // Stack lateral de Acordeón 2: 2do Acordeón (Equiv.) arriba y Cuadrícula de compases abajo
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                ChordSidebarWidget(accordionNumber: 2),
+                                SizedBox(height: 8),
+                                MeasureGridWidget(accordionNumber: 2),
+                              ],
+                            ),
                             const SizedBox(width: 14),
                           ],
                         ],
