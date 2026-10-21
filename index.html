@@ -262,6 +262,7 @@
                                                 <span class="scrubber-time" id="audioTimeCurrent">0:00</span>
                                                 <div class="diapason-seeker-slider-vertical-wrap">
                                                     <input type="range" id="audioSeeker" class="player-seeker-range-vertical" min="0" max="1" step="0.001" value="0" orient="vertical" title="Arrastra para avanzar o retroceder en la canción">
+                                                    <div id="audioSeekerThumbTime" class="seeker-thumb-time-badge" style="display: none;">00:00.000</div>
                                                     <div class="audio-progress-bar-fill" id="audioProgressBar" style="display: none;"></div>
                                                     <span id="audioTimeDisplay" style="display: none;">00:00 / 00:00</span>
                                                 </div>
@@ -453,13 +454,15 @@
                                             <div style="display: flex; align-items: center; gap: 6px;">
                                                 <span class="track-key-badge" id="audioMainKeyBadge" title="Tono detectado de la canción (el audio conserva su tono original; los acordes se recalculan al cambiar)">
                                                     <i class="fas fa-key" style="color: #6366f1;"></i>
-                                                    <span>Tono:</span>
                                                     <select id="audioKeySelect" class="form-select" style="font-size: 0.72rem; font-weight: 800; color: #0f172a; padding: 1px 6px; height: 22px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff; cursor: pointer;" title="Ajustar tono de referencia (solo visual; recalcula todos los acordes)">
                                                         <!-- Opciones de tonalidades generadas dinámicamente -->
                                                     </select>
                                                 </span>
-                                                <span class="track-key-badge" id="audioBpmBadge" style="background: rgba(124, 58, 237, 0.08); color: #7c3aed; border: 1px solid #ddd6fe; font-weight: 800;" title="Tempo detectado del audio">
-                                                    <i class="fas fa-drum"></i> <span id="audioBpmValue">- BPM</span>
+                                                <span class="track-key-badge" id="audioBpmBadge" style="background: rgba(124, 58, 237, 0.08); color: #7c3aed; border: 1px solid #ddd6fe; font-weight: 800; display: inline-flex; align-items: center; gap: 4px;" title="Tempo de la canción (BPM). Ajusta el valor para cambiar">
+                                                    <i class="fas fa-drum"></i>
+                                                    <input type="number" id="audioBpmInput" class="form-control" min="30" max="260" step="1" value="120" style="width: 52px; height: 22px; padding: 1px 4px; font-size: 0.75rem; font-weight: 800; text-align: center; color: #7c3aed; background: #ffffff; border: 1px solid #ddd6fe; border-radius: 4px; outline: none; cursor: pointer;" title="Cambiar tempo (BPM)">
+                                                    <span style="font-size: 0.68rem; font-weight: 800;">BPM</span>
+                                                    <span id="audioBpmValue" style="display: none;">- BPM</span>
                                                 </span>
                                                 <span class="track-key-badge" id="audioEngineBadge" style="background: rgba(234, 88, 12, 0.08); color: #ea580c; border: 1px solid #fed7aa; font-weight: 800;" title="Motor de detección armónica">
                                                     <i class="fas fa-microchip"></i> <span id="lblAnalysisEngine">Motor: -</span>

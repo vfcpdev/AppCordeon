@@ -110,6 +110,11 @@ export class AudioTrackView {
         this._btnToggleSequenceMode = document.getElementById('btnToggleSequenceMode');
         this._iconToggleSequenceMode = document.getElementById('iconToggleSequenceMode');
         this._isSequenceSelectionActive = true;
+
+        this._audioSeekerThumbTime = document.getElementById('audioSeekerThumbTime');
+        this._audioBpmInput = document.getElementById('audioBpmInput');
+        this._isPlaying = false;
+        this._isDraggingSeeker = false;
         this._btnSelectAllGridSlots = document.getElementById('btnSelectAllGridSlots');
         this._btnDeleteSelectedSlots = document.getElementById('btnDeleteSelectedSlots');
         this._btnExportChordsCsv = document.getElementById('btnExportChordsCsv');
@@ -324,9 +329,22 @@ export class AudioTrackView {
 
         if (this._timelineSeeker) {
             this._timelineSeeker.addEventListener('input', (e) => {
+                this._isDraggingSeeker = true;
                 const percent = parseFloat(e.target.value);
                 this._syncGridScrollWithProgress(percent);
                 handlers.onSeek(percent);
+                const dur = audioPlayerController.duration || (this._currentAnalysisData && this._currentAnalysisData.duration) || 0;
+                this._updateSeekerThumbBadge(percent * dur, percent, true);
+            });
+            this._timelineSeeker.addEventListener('change', () => {
+                this._isDraggingSeeker = false;
+                if (!this._isPlaying && this._audioSeekerThumbTime) {
+                    setTimeout(() => {
+                        if (!this._isPlaying && this._audioSeekerThumbTime) {
+                            this._audioSeekerThumbTime.style.display = 'none';
+                        }
+                    }, 1000);
+                }
             });
         }
 
@@ -1810,9 +1828,15 @@ export class AudioTrackView {
             this._timelineSeeker.value = progress;
         }
 
-        // Sincronizar desplazamiento de la cuadrícula de compases con el progreso del slider
-        if (typeof progress === 'number' && !isNaN(progress) && isFinite(progress)) {
-            this._syncGridScrollWithProgress(progress);
+        // Actualizar indicador temporal con minutos, segundos y milisegundos sobre el punto del slider
+        this._updateSeekerThumbBadge(currentTime, progress, this._isPlaying || this._isDraggingSeeker);
+
+        // Sincronizar desplazamiento solo si el usuario está arrastrando manualmente el slider
+        if (this._isDraggingSeeker) {
+            this._lastScrolledRowIndex = -1;
+            if (typeof progress === 'number' && !isNaN(progress) && isFinite(progress)) {
+                this._syncGridScrollWithProgress(progress);
+            }
         }
 
         // Resaltar pulso y compás en la cuadrícula de compases
@@ -1854,24 +1878,6 @@ export class AudioTrackView {
         if (newRow) {
             newRow.classList.add('active-measure');
             this._activeMeasureRow = newRow;
-
-            // Auto-scroll suave para mantener el compás actual a la vista en ambas cuadrículas
-            if (this._lastScrollMeasure !== curBar) {
-                this._lastScrollMeasure = curBar;
-                if (this._measureGridContainer) {
-                    const rowTop = newRow.offsetTop - this._measureGridContainer.offsetTop;
-                    const targetScroll = Math.max(0, rowTop - 40);
-                    this._measureGridContainer.scrollTo({ top: targetScroll, behavior: 'smooth' });
-                }
-                if (this._secondaryMeasureGridContainer) {
-                    const secRow = document.getElementById(`sec-measure-row-${curBar}`);
-                    if (secRow) {
-                        const secTop = secRow.offsetTop - this._secondaryMeasureGridContainer.offsetTop;
-                        const targetScroll = Math.max(0, secTop - 40);
-                        this._secondaryMeasureGridContainer.scrollTo({ top: targetScroll, behavior: 'smooth' });
-                    }
-                }
-            }
         }
 
         if (this._secActiveMeasureRow) {
@@ -1881,6 +1887,54 @@ export class AudioTrackView {
         if (newSecRow) {
             newSecRow.classList.add('active-measure');
             this._secActiveMeasureRow = newSecRow;
+        }
+
+        // Auto-scroll en la cuadrícula de Acordes:
+        // Cuando un acorde alcance o supere el 50% del alto visible de la cuadrícula, hacer scroll
+        // para llevar dicho compás/acorde a la parte superior del cuadro de la cuadrícula.
+        if (this._measureGridContainer && newRow) {
+            if (curBar === 0) {
+                this._lastScrolledRowIndex = -1;
+                if (this._measureGridContainer.scrollTop > 0) {
+                    this._smoothScrollGridTo(this._measureGridContainer, 0, 700);
+                }
+                if (this._secondaryMeasureGridContainer && this._secondaryMeasureGridContainer.scrollTop > 0) {
+                    this._smoothScrollGridTo(this._secondaryMeasureGridContainer, 0, 700);
+                }
+            } else {
+                if (typeof this._lastScrolledRowIndex === 'number' && curBar < this._lastScrolledRowIndex) {
+                    this._lastScrolledRowIndex = -1;
+                }
+
+                const container = this._measureGridContainer;
+                const containerRect = container.getBoundingClientRect();
+                const chordElement = newBeatSlot || newRow;
+                const chordRect = chordElement.getBoundingClientRect();
+                const chordCenterY = (chordRect.top + (chordRect.height / 2)) - containerRect.top;
+                const threshold50 = containerRect.height * 0.5;
+
+                const rowRect = newRow.getBoundingClientRect();
+                const isPastHalfway = chordCenterY >= threshold50;
+                const isAboveViewport = rowRect.top < containerRect.top;
+
+                if ((isPastHalfway || isAboveViewport) && this._lastScrolledRowIndex !== curBar) {
+                    this._lastScrolledRowIndex = curBar;
+
+                    const targetScroll = Math.max(0, container.scrollTop + (rowRect.top - containerRect.top) - 4);
+                    this._smoothScrollGridTo(container, targetScroll, 950);
+
+                    if (this._secondaryMeasureGridContainer) {
+                        const secContainer = this._secondaryMeasureGridContainer;
+                        const secRow = newSecRow || document.getElementById(`sec-measure-row-${curBar}`);
+                        if (secRow) {
+                            const secContainerRect = secContainer.getBoundingClientRect();
+                            const secRowRect = secRow.getBoundingClientRect();
+                            const secTargetScroll = Math.max(0, secContainer.scrollTop + (secRowRect.top - secContainerRect.top) - 4);
+                            this._smoothScrollGridTo(secContainer, secTargetScroll, 950);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -3824,12 +3878,31 @@ export class AudioTrackView {
             });
         }
 
+        if (this._audioBpmInput) {
+            const handleBpmChange = (e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val) && val >= 30 && val <= 260) {
+                    this.setBPM(val);
+                } else {
+                    e.target.value = this.getBPM();
+                }
+            };
+            this._audioBpmInput.addEventListener('change', handleBpmChange);
+            this._audioBpmInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleBpmChange(e);
+                    this._audioBpmInput.blur();
+                }
+            });
+        }
+
         const audioBpmBadge = document.getElementById('audioBpmBadge');
         if (audioBpmBadge) {
-            audioBpmBadge.addEventListener('click', () => {
-                if (this._playerBpmInput) {
-                    this._playerBpmInput.focus();
-                    this._playerBpmInput.select();
+            audioBpmBadge.addEventListener('click', (e) => {
+                if (e.target !== this._audioBpmInput && this._audioBpmInput) {
+                    this._audioBpmInput.focus();
+                    this._audioBpmInput.select();
                 }
             });
         }
@@ -3952,6 +4025,9 @@ export class AudioTrackView {
         this._currentBpm = val;
         metronomeEngine.setBPM(val);
 
+        if (this._audioBpmInput) {
+            this._audioBpmInput.value = val;
+        }
         if (this._playerBpmInput) {
             this._playerBpmInput.value = val;
         }
@@ -3994,10 +4070,60 @@ export class AudioTrackView {
     }
 
     /**
+     * Formatea tiempo en minutos, segundos y milisegundos (mm:ss.mmm).
+     * @private
+     * @param {number} timeSeconds
+     * @returns {string}
+     */
+    _formatTimeWithMs(timeSeconds) {
+        if (typeof timeSeconds !== 'number' || isNaN(timeSeconds) || timeSeconds < 0) {
+            timeSeconds = 0;
+        }
+        const mins = Math.floor(timeSeconds / 60);
+        const secs = Math.floor(timeSeconds % 60);
+        const ms = Math.floor((timeSeconds % 1) * 1000);
+        const mStr = String(mins).padStart(2, '0');
+        const sStr = String(secs).padStart(2, '0');
+        const msStr = String(ms).padStart(3, '0');
+        return `${mStr}:${sStr}.${msStr}`;
+    }
+
+    /**
+     * Actualiza la posición y contenido del badge de tiempo sobre el punto del slider de reproducción.
+     * @private
+     * @param {number} currentTime
+     * @param {number} progress
+     * @param {boolean} isVisible
+     */
+    _updateSeekerThumbBadge(currentTime, progress, isVisible) {
+        if (!this._audioSeekerThumbTime) return;
+        if (!isVisible) {
+            this._audioSeekerThumbTime.style.display = 'none';
+            return;
+        }
+
+        this._audioSeekerThumbTime.style.display = 'block';
+        this._audioSeekerThumbTime.textContent = this._formatTimeWithMs(currentTime);
+
+        const wrap = this._audioSeekerThumbTime.parentElement;
+        if (wrap) {
+            const h = wrap.clientHeight || 100;
+            const clamped = Math.max(0, Math.min(1, (typeof progress === 'number' && !isNaN(progress)) ? progress : 0));
+            // El thumb se mueve verticalmente desde arriba (0%) hacia abajo (100%)
+            const thumbY = 8 + (clamped * Math.max(0, h - 16));
+            this._audioSeekerThumbTime.style.top = `${Math.round(thumbY)}px`;
+        }
+    }
+
+    /**
      * Cambia el estado visual del botón Play/Pausa.
      * @param {boolean} isPlaying
      */
     setPlayingState(isPlaying) {
+        this._isPlaying = isPlaying;
+        if (this._audioSeekerThumbTime) {
+            this._audioSeekerThumbTime.style.display = isPlaying ? 'block' : 'none';
+        }
         if (!this._btnPlayPause) return;
         this._btnPlayPause.innerHTML = isPlaying
             ? '<i class="fas fa-pause"></i>'
@@ -4027,23 +4153,80 @@ export class AudioTrackView {
     }
 
     /**
+     * Realiza un desplazamiento vertical suave y a velocidad más lenta y controlada en la cuadrícula.
+     * @private
+     * @param {HTMLElement} container
+     * @param {number} targetTop
+     * @param {number} [duration=950]
+     */
+    _smoothScrollGridTo(container, targetTop, duration = 950) {
+        if (!container) return;
+        const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+        const clampedTarget = Math.max(0, Math.min(maxScroll, targetTop));
+
+        if (container._scrollAnimId) {
+            cancelAnimationFrame(container._scrollAnimId);
+            container._scrollAnimId = null;
+        }
+
+        const startTop = container.scrollTop;
+        const distance = clampedTarget - startTop;
+        if (Math.abs(distance) < 2) return;
+
+        const startTime = performance.now();
+
+        const step = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(1, elapsed / duration);
+            // Cubic ease-in-out suave para una transición lenta y agradable
+            const ease = progress < 0.5
+                ? 4 * progress * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+            container.scrollTop = startTop + (distance * ease);
+
+            if (progress < 1) {
+                container._scrollAnimId = requestAnimationFrame(step);
+            } else {
+                container.scrollTop = clampedTarget;
+                container._scrollAnimId = null;
+            }
+        };
+
+        container._scrollAnimId = requestAnimationFrame(step);
+    }
+
+    /**
      * Sincroniza la posición de desplazamiento de la cuadrícula de compases con el progreso del slider.
      * @param {number} percent - Valor entre 0 y 1 correspondiente al slider
      * @private
      */
     _syncGridScrollWithProgress(percent) {
         if (typeof percent !== 'number' || isNaN(percent) || !isFinite(percent)) return;
-        const clamped = Math.max(0, Math.min(1, percent));
-        if (this._measureGridContainer) {
-            const maxScroll = this._measureGridContainer.scrollHeight - this._measureGridContainer.clientHeight;
-            if (maxScroll > 0) {
-                this._measureGridContainer.scrollTop = clamped * maxScroll;
+        const totalBars = this._totalBars || 16;
+        if (totalBars <= 2) return;
+
+        const currentBar = Math.floor(percent * totalBars);
+        const row = document.getElementById(`measure-row-${currentBar}`);
+        if (row && this._measureGridContainer) {
+            const container = this._measureGridContainer;
+            const containerRect = container.getBoundingClientRect();
+            const rowRect = row.getBoundingClientRect();
+            const chordCenterY = (rowRect.top + (rowRect.height / 2)) - containerRect.top;
+            if (chordCenterY >= containerRect.height * 0.5 || rowRect.top < containerRect.top) {
+                container.scrollTop = Math.max(0, container.scrollTop + (rowRect.top - containerRect.top) - 4);
             }
         }
         if (this._secondaryMeasureGridContainer) {
-            const maxScrollSec = this._secondaryMeasureGridContainer.scrollHeight - this._secondaryMeasureGridContainer.clientHeight;
-            if (maxScrollSec > 0) {
-                this._secondaryMeasureGridContainer.scrollTop = clamped * maxScrollSec;
+            const secRow = document.getElementById(`sec-measure-row-${currentBar}`);
+            if (secRow) {
+                const secContainer = this._secondaryMeasureGridContainer;
+                const secContainerRect = secContainer.getBoundingClientRect();
+                const secRowRect = secRow.getBoundingClientRect();
+                const secChordCenterY = (secRowRect.top + (secRowRect.height / 2)) - secContainerRect.top;
+                if (secChordCenterY >= secContainerRect.height * 0.5 || secRowRect.top < secContainerRect.top) {
+                    secContainer.scrollTop = Math.max(0, secContainer.scrollTop + (secRowRect.top - secContainerRect.top) - 4);
+                }
             }
         }
     }

@@ -1424,6 +1424,38 @@
     padding: 4px 0;
     height: 100%;
     width: 100%;
+    position: relative !important;
+}
+
+.seeker-thumb-time-badge {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #090e17;
+    color: #38bdf8;
+    border: 1px solid #0284c7;
+    border-radius: 4px;
+    padding: 2px 5px;
+    font-size: 0.58rem;
+    font-weight: 800;
+    font-family: var(--font-mono, monospace);
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 8px rgba(56, 189, 248, 0.4);
+    line-height: 1.1;
+    text-align: center;
+}
+
+#audioBpmInput {
+    transition: all 0.15s ease;
+}
+
+#audioBpmInput:focus {
+    border-color: #7c3aed !important;
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25) !important;
 }
 
 .player-seeker-range-vertical {
