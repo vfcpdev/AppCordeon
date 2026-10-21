@@ -222,6 +222,7 @@ class AccordionSimulatorState {
     AudioAnalysisReport? audioReport,
     bool? isAnalyzingAudio,
     String? loadedAudioFileName,
+    bool clearAudio = false,
   }) {
     return AccordionSimulatorState(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -265,9 +266,9 @@ class AccordionSimulatorState {
       detectorSelectedButtons:
           detectorSelectedButtons ?? this.detectorSelectedButtons,
       detectedChord: detectedChord ?? this.detectedChord,
-      audioReport: audioReport ?? this.audioReport,
+      audioReport: clearAudio ? null : (audioReport ?? this.audioReport),
       isAnalyzingAudio: isAnalyzingAudio ?? this.isAnalyzingAudio,
-      loadedAudioFileName: loadedAudioFileName ?? this.loadedAudioFileName,
+      loadedAudioFileName: clearAudio ? null : (loadedAudioFileName ?? this.loadedAudioFileName),
     );
   }
 
@@ -544,8 +545,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   void clearAudioReport() {
     stopAudio();
     state = state.copyWith(
-      audioReport: null,
-      loadedAudioFileName: null,
+      clearAudio: true,
       isPlayingAudio: false,
     );
   }
