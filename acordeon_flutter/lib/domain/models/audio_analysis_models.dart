@@ -101,6 +101,8 @@ class AudioAnalysisReport {
   final List<DetectedChordSegment> chords;
   final String engine;
 
+  KeyDetectionResult get keyResult => mainKey;
+
   const AudioAnalysisReport({
     required this.duration,
     required this.bpm,

@@ -1,11 +1,20 @@
-abstract class WebAudioSynth {
-  factory WebAudioSynth() => getWebAudioSynth();
+import 'web_audio_synth_interface.dart';
 
-  void init();
-  void noteOn(int midiNote, double frequency, {double velocity = 0.8});
-  void noteOff(int midiNote);
-  void allNotesOff();
-  void setVolume(double volume);
+WebAudioSynth getWebAudioSynth() => WebAudioSynthStub();
+
+class WebAudioSynthStub implements WebAudioSynth {
+  @override
+  void init() {}
+
+  @override
+  void noteOn(int midiNote, double frequency, {double velocity = 0.8}) {}
+
+  @override
+  void noteOff(int midiNote) {}
+
+  @override
+  void allNotesOff() {}
+
+  @override
+  void setVolume(double volume) {}
 }
-
-WebAudioSynth getWebAudioSynth() => throw UnsupportedError('Stub');

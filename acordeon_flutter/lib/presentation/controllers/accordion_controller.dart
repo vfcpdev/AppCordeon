@@ -382,16 +382,14 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       }
 
       if (picked == null) {
-        final result = await FilePicker.platform.pickFiles(
+        final file = await FilePicker.pickFile(
           type: FileType.custom,
           allowedExtensions: ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac'],
-          withData: true,
         );
 
-        if (result != null && result.files.isNotEmpty) {
-          final file = result.files.first;
-          final bytes = file.bytes;
-          if (bytes != null && bytes.isNotEmpty) {
+        if (file != null) {
+          final bytes = await file.readAsBytes();
+          if (bytes.isNotEmpty) {
             picked = PickedAudioData(name: file.name, bytes: bytes);
           }
         }
