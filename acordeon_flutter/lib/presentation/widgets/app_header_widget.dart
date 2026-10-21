@@ -14,12 +14,17 @@ class AppHeaderWidget extends ConsumerWidget {
     final notifier = ref.read(accordionSimulatorProvider.notifier);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      width: double.infinity,
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
+        border: const Border(
+          bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -27,8 +32,8 @@ class AppHeaderWidget extends ConsumerWidget {
       ),
       child: Wrap(
         spacing: 16,
-        runSpacing: 10,
-        alignment: WrapAlignment.spaceBetween,
+        runSpacing: 8,
+        alignment: WrapAlignment.start,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           // Branding + Selectores A1 / A2
