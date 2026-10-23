@@ -604,10 +604,20 @@ enum _ChordModKey {
 
 class _ChordTools {
   static const roots = [
-    'Do#', 'Do', 'Re#', 'Re♭', 'Re', 'Mi♭', 'Mi', 'Fa#', 'Fa',
-    'Sol#', 'Sol♭', 'Sol', 'La#', 'La♭', 'La', 'Si♭', 'Si',
-    'C#', 'Db', 'C', 'D#', 'Eb', 'D', 'E', 'F#', 'Gb', 'F',
-    'G#', 'Ab', 'G', 'A#', 'Bb', 'A', 'B'
+    'Do#', 'Dob', 'Do♭', 'Do',
+    'Re#', 'Reb', 'Re♭', 'Re',
+    'Mi#', 'Mib', 'Mi♭', 'Mi',
+    'Fa#', 'Fab', 'Fa♭', 'Fa',
+    'Sol#', 'Solb', 'Sol♭', 'Sol',
+    'La#', 'Lab', 'La♭', 'La',
+    'Si#', 'Sib', 'Si♭', 'Si',
+    'C#', 'Db', 'C♭', 'C',
+    'D#', 'Eb', 'D♭', 'D',
+    'E#', 'Eb', 'E♭', 'E',
+    'F#', 'Fb', 'F♭', 'F',
+    'G#', 'Gb', 'G♭', 'G',
+    'A#', 'Ab', 'A♭', 'A',
+    'B#', 'Bb', 'B♭', 'B'
   ];
 
   static (String, String) splitChord(String chord) {
@@ -634,13 +644,15 @@ class _ChordTools {
     if (key == LogicalKeyboardKey.digit0 || key == LogicalKeyboardKey.numpad0) {
       return _ChordModKey.mayor;
     }
-    if (key == LogicalKeyboardKey.period || key == LogicalKeyboardKey.numpadDecimal) {
+    if (key == LogicalKeyboardKey.period ||
+        key == LogicalKeyboardKey.numpadDecimal ||
+        key == LogicalKeyboardKey.comma) {
       return _ChordModKey.menor;
     }
     if (key == LogicalKeyboardKey.slash || key == LogicalKeyboardKey.numpadDivide) {
       return _ChordModKey.septima;
     }
-    if (key == LogicalKeyboardKey.add) {
+    if (key == LogicalKeyboardKey.add || key == LogicalKeyboardKey.numpadAdd) {
       return _ChordModKey.aumentada;
     }
     if (key == LogicalKeyboardKey.minus || key == LogicalKeyboardKey.numpadSubtract) {

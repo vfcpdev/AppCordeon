@@ -163,4 +163,152 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Sol7'), findsOneWidget);
   });
+
+  testWidgets('MeasureGrid chord modifiers (0=Mayor, .=Menor, /=7ma, +=Aumentada, -=Disminuida, 8=Sus, 9=Cuarta) in selection mode',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: MeasureGridWidget(accordionNumber: 1),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final firstBeatFinder = find.byType(TextField).at(1);
+
+    // Tap first beat, then Arrow Right to exit edit mode leaving it selected
+    await tester.tap(firstBeatFinder);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+
+    // 1. Press 1 -> 'Do'
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+    await tester.pumpAndSettle();
+    expect(find.text('Do'), findsOneWidget);
+
+    // 2. Press '.' -> Menor ('Dom')
+    await tester.sendKeyEvent(LogicalKeyboardKey.period);
+    await tester.pumpAndSettle();
+    expect(find.text('Dom'), findsOneWidget);
+
+    // 3. Press '/' -> 7ma ('Dom7')
+    await tester.sendKeyEvent(LogicalKeyboardKey.slash);
+    await tester.pumpAndSettle();
+    expect(find.text('Dom7'), findsOneWidget);
+
+    // 4. Press '0' -> Mayor (clears minor, leaves 'Do7')
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
+    await tester.pumpAndSettle();
+    expect(find.text('Do7'), findsOneWidget);
+
+    // 5. Press '/' -> Toggles 7th off ('Do')
+    await tester.sendKeyEvent(LogicalKeyboardKey.slash);
+    await tester.pumpAndSettle();
+    expect(find.text('Do'), findsOneWidget);
+
+    // 6. Press '+' (numpad add) -> Aumentada ('Doaug')
+    await tester.sendKeyEvent(LogicalKeyboardKey.numpadAdd);
+    await tester.pumpAndSettle();
+    expect(find.text('Doaug'), findsOneWidget);
+
+    // 7. Press '-' -> Disminuida ('Dodim')
+    await tester.sendKeyEvent(LogicalKeyboardKey.minus);
+    await tester.pumpAndSettle();
+    expect(find.text('Dodim'), findsOneWidget);
+
+    // 8. Press '8' -> Sus ('Dosus')
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit8);
+    await tester.pumpAndSettle();
+    expect(find.text('Dosus'), findsOneWidget);
+
+    // 9. Press '9' -> Cuarta ('Dosus4')
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit9);
+    await tester.pumpAndSettle();
+    expect(find.text('Dosus4'), findsOneWidget);
+
+    // 10. Press '0' -> Mayor ('Do')
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
+    await tester.pumpAndSettle();
+    expect(find.text('Do'), findsOneWidget);
+  });
+
+  testWidgets('MeasureGrid chord modifiers in active TextField edit mode',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: MeasureGridWidget(accordionNumber: 1),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final firstBeatFinder = find.byType(TextField).at(1);
+    await tester.tap(firstBeatFinder);
+    await tester.pumpAndSettle();
+
+    // 1. Type '1' -> 'Do'
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+    await tester.pumpAndSettle();
+    expect(find.text('Do'), findsOneWidget);
+
+    // 2. Type '.' -> 'Dom'
+    await tester.sendKeyEvent(LogicalKeyboardKey.period);
+    await tester.pumpAndSettle();
+    expect(find.text('Dom'), findsOneWidget);
+
+    // 3. Type '/' -> 'Dom7'
+    await tester.sendKeyEvent(LogicalKeyboardKey.slash);
+    await tester.pumpAndSettle();
+    expect(find.text('Dom7'), findsOneWidget);
+
+    // 4. Type '0' -> 'Do7'
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
+    await tester.pumpAndSettle();
+    expect(find.text('Do7'), findsOneWidget);
+
+    // 5. Type '/' -> 'Do'
+    await tester.sendKeyEvent(LogicalKeyboardKey.slash);
+    await tester.pumpAndSettle();
+    expect(find.text('Do'), findsOneWidget);
+
+    // 6. Type '+' (numpad add) -> 'Doaug'
+    await tester.sendKeyEvent(LogicalKeyboardKey.numpadAdd);
+    await tester.pumpAndSettle();
+    expect(find.text('Doaug'), findsOneWidget);
+
+    // 7. Type '-' -> 'Dodim'
+    await tester.sendKeyEvent(LogicalKeyboardKey.minus);
+    await tester.pumpAndSettle();
+    expect(find.text('Dodim'), findsOneWidget);
+
+    // 8. Type '8' -> 'Dosus'
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit8);
+    await tester.pumpAndSettle();
+    expect(find.text('Dosus'), findsOneWidget);
+
+    // 9. Type '9' -> 'Dosus4'
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit9);
+    await tester.pumpAndSettle();
+    expect(find.text('Dosus4'), findsOneWidget);
+
+    // 10. Type '0' -> 'Do'
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
+    await tester.pumpAndSettle();
+    expect(find.text('Do'), findsOneWidget);
+  });
 }
