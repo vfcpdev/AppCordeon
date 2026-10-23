@@ -155,6 +155,28 @@ class DiapasonCardHeader extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Ambos (Abrir y Cerrar simultáneo)
+                        Tooltip(
+                          message: 'Ambos (Abrir y Cerrar)',
+                          child: InkWell(
+                            onTap: () => onBellowsChanged(BellowsMode.both),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: bellowsMode == BellowsMode.both ? const Color(0xFF4F46E5) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: FaIcon(
+                                FontAwesomeIcons.arrowsLeftRight,
+                                size: 11,
+                                color: bellowsMode == BellowsMode.both ? Colors.white : const Color(0xFF4F46E5),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 3),
+
                         // Abre (Azul)
                         Tooltip(
                           message: 'Abre (Fuelle)',
@@ -162,7 +184,7 @@ class DiapasonCardHeader extends StatelessWidget {
                             onTap: () => onBellowsChanged(BellowsMode.pull),
                             borderRadius: BorderRadius.circular(4),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: bellowsMode == BellowsMode.pull ? const Color(0xFF2563EB) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(4),
@@ -184,7 +206,7 @@ class DiapasonCardHeader extends StatelessWidget {
                             onTap: () => onBellowsChanged(BellowsMode.push),
                             borderRadius: BorderRadius.circular(4),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: bellowsMode == BellowsMode.push ? const Color(0xFFDC2626) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(4),

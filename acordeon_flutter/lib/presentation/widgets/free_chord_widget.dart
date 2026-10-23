@@ -171,7 +171,32 @@ class FreeChordWidget extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Abre (Azul)
+                      // Ambos (Abrir y Cerrar)
+                      Tooltip(
+                        message: 'Ambos (Abrir y Cerrar)',
+                        child: InkWell(
+                          onTap: () => notifier.setFreeChordBellows(BellowsMode.both),
+                          borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: state.freeChordBellows == BellowsMode.both
+                                  ? const Color(0xFF4F46E5)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: FaIcon(
+                              FontAwesomeIcons.arrowsLeftRight,
+                              size: 10,
+                              color: state.freeChordBellows == BellowsMode.both
+                                  ? Colors.white
+                                  : const Color(0xFF4F46E5),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+
                       // Abre (Azul)
                       Tooltip(
                         message: 'Abre (Fuelle)',

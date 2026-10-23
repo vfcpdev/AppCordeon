@@ -154,28 +154,36 @@ class DiapasonButtonWidget extends StatelessWidget {
     if (bellowsMode == BellowsMode.push) {
       return Text(
         pushName,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13.0,
           fontWeight: FontWeight.w900,
-          color: Colors.white,
-          shadows: [
-            Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 3),
-            Shadow(color: Colors.black87, blurRadius: 2),
-          ],
+          color: isPressed ? Colors.white : const Color(0xFF991B1B),
+          shadows: isPressed
+              ? const [
+                  Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 3),
+                  Shadow(color: Colors.black87, blurRadius: 2),
+                ]
+              : const [
+                  Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1),
+                ],
         ),
       );
     }
     if (bellowsMode == BellowsMode.pull) {
       return Text(
         pullName,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13.0,
           fontWeight: FontWeight.w900,
-          color: Colors.white,
-          shadows: [
-            Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 3),
-            Shadow(color: Colors.black87, blurRadius: 2),
-          ],
+          color: isPressed ? Colors.white : const Color(0xFF1E40AF),
+          shadows: isPressed
+              ? const [
+                  Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 3),
+                  Shadow(color: Colors.black87, blurRadius: 2),
+                ]
+              : const [
+                  Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1),
+                ],
         ),
       );
     }

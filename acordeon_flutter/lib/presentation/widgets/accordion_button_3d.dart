@@ -145,38 +145,6 @@ class _AccordionButton3DPainter extends CustomPainter {
         ..color = const Color(0xFF0284C7).withValues(alpha: 0.85)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
       canvas.drawCircle(center, radius + 3, glowBlue);
-    } else if (bellowsMode == BellowsMode.push) {
-      // Glow Rojo característico al Cerrar el fuelle (CSS: --push-glow: rgba(220, 38, 38, 0.55))
-      final glowPush1 = Paint()
-        ..color = const Color(0xFFDC2626).withValues(alpha: 0.65)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-      canvas.drawCircle(center, radius + 3.5, glowPush1);
-
-      final glowPush2 = Paint()
-        ..color = const Color(0xFFEF4444).withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
-      canvas.drawCircle(center, radius + 6.0, glowPush2);
-
-      final dropShadowPaint = Paint()
-        ..color = Colors.black.withValues(alpha: 0.45)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
-      canvas.drawCircle(center + const Offset(1.5, 3.5), radius, dropShadowPaint);
-    } else if (bellowsMode == BellowsMode.pull) {
-      // Glow Azul característico al Abrir el fuelle (CSS: --pull-glow: rgba(37, 99, 235, 0.55))
-      final glowPull1 = Paint()
-        ..color = const Color(0xFF2563EB).withValues(alpha: 0.65)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-      canvas.drawCircle(center, radius + 3.5, glowPull1);
-
-      final glowPull2 = Paint()
-        ..color = const Color(0xFF3B82F6).withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
-      canvas.drawCircle(center, radius + 6.0, glowPull2);
-
-      final dropShadowPaint = Paint()
-        ..color = Colors.black.withValues(alpha: 0.45)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
-      canvas.drawCircle(center + const Offset(1.5, 3.5), radius, dropShadowPaint);
     } else {
       // Sombra 3D de profundidad y relieve hacia abajo a la derecha:
       // box-shadow: 2px 5px 8px rgba(0, 0, 0, 0.6)
@@ -233,32 +201,8 @@ class _AccordionButton3DPainter extends CustomPainter {
           stops: const [0.0, 0.65, 1.0],
         ).createShader(Rect.fromCircle(center: center, radius: radius));
       }
-    } else if (bellowsMode == BellowsMode.push) {
-      // Cerrando (Push): Rojo 3D nítido
-      bodyPaint.shader = RadialGradient(
-        center: const Alignment(-0.44, -0.44),
-        radius: 0.90,
-        colors: const [
-          Color(0xFFFCA5A5), // Resalte claro rojo
-          Color(0xFFDC2626), // Rojo primario
-          Color(0xFF991B1B), // Sombra rim roja
-        ],
-        stops: const [0.0, 0.50, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
-    } else if (bellowsMode == BellowsMode.pull) {
-      // Abriendo (Pull): Azul 3D nítido
-      bodyPaint.shader = RadialGradient(
-        center: const Alignment(-0.44, -0.44),
-        radius: 0.90,
-        colors: const [
-          Color(0xFF93C5FD), // Resalte claro azul
-          Color(0xFF2563EB), // Azul primario
-          Color(0xFF1E40AF), // Sombra rim azul
-        ],
-        stops: const [0.0, 0.50, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
     } else {
-      // Modo Ambos: Perlado Nácar auténtico de acordeón Hohner / Corona
+      // Estado normal (sin presionar): Perlado Nácar auténtico de acordeón Hohner / Corona
       // CSS: radial-gradient(circle at 14px 14px, #ffffff, #d3cbbd 70%, #9e9587 100%)
       bodyPaint.shader = RadialGradient(
         center: const Alignment(-0.44, -0.44),
@@ -366,12 +310,6 @@ class _AccordionButton3DPainter extends CustomPainter {
     } else if (buttonType == ButtonType.chord) {
       // Acordes de bajos: Borde sutil esmeralda
       borderPaint.color = const Color(0xFF10B981).withValues(alpha: 0.70);
-      borderPaint.strokeWidth = 1.4;
-    } else if (bellowsMode == BellowsMode.push) {
-      borderPaint.color = const Color(0xFFF87171);
-      borderPaint.strokeWidth = 1.4;
-    } else if (bellowsMode == BellowsMode.pull) {
-      borderPaint.color = const Color(0xFF60A5FA);
       borderPaint.strokeWidth = 1.4;
     } else {
       // Borde estándar del botón de acordeón: rgba(0, 0, 0, 0.28)
