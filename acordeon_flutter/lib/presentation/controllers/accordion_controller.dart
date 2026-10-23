@@ -544,12 +544,126 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   // Reproductor y Cuadrícula
+  int? _lastPlayedBar;
+  int? _lastPlayedBeat;
+
+  /// Mapa raíz → semitono (MIDI pitch class, base Do = 60 - 12 = 48 + pitchClass)
+  static const Map<String, int> _rootPitchClass = {
+    // Latina
+    'Do#': 1, 'Do♯': 1, 'Dob': 11, 'Do♭': 11, 'Do': 0,
+    'Re#': 3, 'Re♯': 3, 'Reb': 1, 'Re♭': 1, 'Re': 2,
+    'Mi#': 5, 'Mi♯': 5, 'Mib': 3, 'Mi♭': 3, 'Mi': 4,
+    'Fa#': 6, 'Fa♯': 6, 'Fab': 4, 'Fa♭': 4, 'Fa': 5,
+    'Sol#': 8, 'Sol♯': 8, 'Solb': 6, 'Sol♭': 6, 'Sol': 7,
+    'La#': 10, 'La♯': 10, 'Lab': 8, 'La♭': 8, 'La': 9,
+    'Si#': 0, 'Si♯': 0, 'Sib': 10, 'Si♭': 10, 'Si': 11,
+    // Alemana
+    'C#': 1, 'Db': 1, 'C': 0,
+    'D#': 3, 'Eb': 3, 'D': 2,
+    'E#': 5, 'Fb': 4, 'E': 4,
+    'F#': 6, 'Gb': 6, 'F': 5,
+    'G#': 8, 'Ab': 8, 'G': 7,
+    'A#': 10, 'Bb': 10, 'A': 9,
+    'B#': 0, 'Cb': 11, 'B': 11,
+  };
+
+  /// Convierte un símbolo de acorde textual en notas MIDI (octava 4, base 60=Do4)
+  List<int> _chordSymbolToMidi(String chord) {
+    final trimmed = chord.trim();
+    if (trimmed.isEmpty) return [];
+
+    // Encontrar la raíz más larga que coincida
+    int? pitchClass;
+    String rest = '';
+    for (final entry in _rootPitchClass.entries) {
+      if (trimmed.startsWith(entry.key)) {
+        if (rest.isEmpty || entry.key.length > (trimmed.length - rest.length)) {
+          pitchClass = entry.value;
+          rest = trimmed.substring(entry.key.length);
+        }
+      }
+    }
+    if (pitchClass == null) return [];
+
+    // Nota raíz en octava 4
+    final rootMidi = 48 + pitchClass; // C4 = 60 → C3 = 48, usar octava 3 para que suene natural
+
+    final has7 = rest.contains('7');
+    final isMinor = rest.contains('m') && !rest.contains('maj') && !rest.contains('dim');
+    final isDim = rest.contains('dim');
+    final isAug = rest.contains('aug');
+    final isSus4 = rest.contains('sus4') || rest.contains('4');
+    final isSus = rest.contains('sus') && !isSus4;
+
+    final notes = <int>[rootMidi + 12]; // tónica en octava 4
+    if (isDim) {
+      notes.add(rootMidi + 12 + 3); // tercera menor
+      notes.add(rootMidi + 12 + 6); // quinta disminuida
+      if (has7) notes.add(rootMidi + 12 + 9); // séptima disminuida
+    } else if (isAug) {
+      notes.add(rootMidi + 12 + 4); // tercera mayor
+      notes.add(rootMidi + 12 + 8); // quinta aumentada
+      if (has7) notes.add(rootMidi + 12 + 10); // séptima dominante
+    } else if (isSus4) {
+      notes.add(rootMidi + 12 + 5); // cuarta justa
+      notes.add(rootMidi + 12 + 7); // quinta justa
+      if (has7) notes.add(rootMidi + 12 + 10);
+    } else if (isSus) {
+      notes.add(rootMidi + 12 + 5); // cuarta suspendida
+      notes.add(rootMidi + 12 + 7);
+    } else if (isMinor) {
+      notes.add(rootMidi + 12 + 3); // tercera menor
+      notes.add(rootMidi + 12 + 7); // quinta justa
+      if (has7) notes.add(rootMidi + 12 + 10);
+    } else {
+      // Mayor
+      notes.add(rootMidi + 12 + 4); // tercera mayor
+      notes.add(rootMidi + 12 + 7); // quinta justa
+      if (has7) notes.add(rootMidi + 12 + 10);
+    }
+    return notes;
+  }
+
+  List<int> _currentBeatNotes = [];
+
+  void _playBeatChord(int barIndex, int beatIndex) {
+    // Apagar notas del beat anterior
+    for (final n in _currentBeatNotes) {
+      _audioBridge.noteOff(n);
+    }
+    _currentBeatNotes = [];
+
+    if (barIndex < 0 || barIndex >= state.measures.length) return;
+    final row = state.measures[barIndex];
+    if (beatIndex < 0 || beatIndex >= row.beats.length) return;
+
+    final chord = row.beats[beatIndex].chord.trim();
+    if (chord.isEmpty) return;
+
+    final notes = _chordSymbolToMidi(chord);
+    for (final n in notes) {
+      _audioBridge.noteOn(n, velocity: 0.65);
+    }
+    _currentBeatNotes = notes;
+  }
+
   void togglePlayAudio() {
     final nextPlaying = !state.isPlayingAudio;
     state = state.copyWith(isPlayingAudio: nextPlaying);
     _playbackTimer?.cancel();
 
+    if (!nextPlaying) {
+      // Al pausar: apagar notas activas
+      for (final n in _currentBeatNotes) {
+        _audioBridge.noteOff(n);
+      }
+      _currentBeatNotes = [];
+    }
+
     if (nextPlaying) {
+      _lastPlayedBar = null;
+      _lastPlayedBeat = null;
+
       final bpm = state.audioReport?.bpm ?? 120.0;
       final intervalMs = ((60.0 / bpm / 2.0) * 1000).toInt().clamp(50, 1000);
 
@@ -573,6 +687,13 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
           selectedBarIndex: currentBar,
           selectedBeatIndex: currentBeat,
         );
+
+        // Reproducir acorde al entrar en un nuevo beat
+        if (currentBar != _lastPlayedBar || currentBeat != _lastPlayedBeat) {
+          _lastPlayedBar = currentBar;
+          _lastPlayedBeat = currentBeat;
+          _playBeatChord(currentBar, currentBeat);
+        }
       });
     }
   }

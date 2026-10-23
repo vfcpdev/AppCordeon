@@ -915,7 +915,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
       _registry[_nodeKey] = this;
     }
     if (oldWidget.chord != widget.chord && !_isEditing) {
-      _controller.text = widget.chord;
+      _controller.value = TextEditingValue(
+        text: widget.chord,
+        selection: TextSelection.collapsed(offset: widget.chord.length),
+      );
     }
   }
 
@@ -1034,7 +1037,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
   }
 
   void _applyChord(String chord) {
-    _controller.text = chord;
+    _controller.value = TextEditingValue(
+      text: chord,
+      selection: TextSelection.collapsed(offset: chord.length),
+    );
     widget.onChanged(chord);
     if (mounted) setState(() {});
   }
@@ -1098,16 +1104,20 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
 
         if (degree == 7 && text.isNotEmpty && isAtEnd && !text.endsWith('7')) {
           final appended = '${text}7';
-          _controller.text = appended;
-          _controller.selection = TextSelection.collapsed(offset: appended.length);
+          _controller.value = TextEditingValue(
+            text: appended,
+            selection: TextSelection.collapsed(offset: appended.length),
+          );
           _commit();
           _update();
           return KeyEventResult.handled;
         }
 
         final chord = _chordForScaleDegree(degree);
-        _controller.text = chord;
-        _controller.selection = TextSelection.collapsed(offset: chord.length);
+        _controller.value = TextEditingValue(
+          text: chord,
+          selection: TextSelection.collapsed(offset: chord.length),
+        );
         _commit();
         _update();
         return KeyEventResult.handled;
@@ -1117,8 +1127,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
       final mod = _ChordTools.parseModifierKey(event);
       if (mod != null) {
         final updated = _ChordTools.applyModifier(_controller.text, mod, widget.notation);
-        _controller.text = updated;
-        _controller.selection = TextSelection.collapsed(offset: updated.length);
+        _controller.value = TextEditingValue(
+          text: updated,
+          selection: TextSelection.collapsed(offset: updated.length),
+        );
         _commit();
         _update();
         return KeyEventResult.handled;
