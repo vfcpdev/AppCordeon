@@ -108,7 +108,7 @@ class DiapasonCardHeader extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const FaIcon(
-                          FontAwesomeIcons.accordion,
+                          FontAwesomeIcons.music,
                           size: 13,
                           color: Color(0xFF0284C7),
                         ),

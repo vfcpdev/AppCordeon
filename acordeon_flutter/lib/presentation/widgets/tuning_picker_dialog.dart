@@ -83,7 +83,7 @@ class _TuningPickerDialogState extends State<_TuningPickerDialog> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const FaIcon(
-                      FontAwesomeIcons.accordion,
+                      FontAwesomeIcons.music,
                       size: 18,
                       color: Color(0xFF38BDF8),
                     ),
