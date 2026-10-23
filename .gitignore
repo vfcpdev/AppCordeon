@@ -1,14 +1,28 @@
-# Dependencies
-node_modules/
-.npm/
-
-# OS files
+# Archivos de entorno y SO
+.DS_Store
 Thumbs.db
 Desktop.ini
-.DS_Store
-
-# Logs & temp
 *.log
-.cache/
-dist/
+
+# Flutter / Dart
+acordeon_flutter/.dart_tool/
+acordeon_flutter/.flutter-plugins
+acordeon_flutter/.flutter-plugins-dependencies
+acordeon_flutter/.packages
+acordeon_flutter/build/
+acordeon_flutter/.idea/
+acordeon_flutter/*.iml
+acordeon_flutter/windows/flutter/ephemeral/
+acordeon_flutter/android/.gradle/
+acordeon_flutter/android/local.properties
+acordeon_flutter/android/*.iml
+
+# Rust
+target/
+acordeon_engine/target/
+**/*.rs.bk
+Cargo.lock
+
+# Temporales
 tmp/
+.cache/
