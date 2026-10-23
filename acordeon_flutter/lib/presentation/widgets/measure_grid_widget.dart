@@ -591,7 +591,141 @@ class _BpmInputControlState extends State<_BpmInputControl> {
   }
 }
 
-/// Formateador que traduce la digitación de números 1 al 7 a notas de la escala natural de Do
+/// Modificadores de cualidad y extensión armónica para digitación rápida
+enum _ChordModKey {
+  mayor,      // '0'
+  menor,      // '.' o ','
+  septima,    // '/'
+  aumentada,  // '+'
+  disminuida, // '-'
+  sus,        // '8'
+  cuarta,     // '9'
+}
+
+class _ChordTools {
+  static const roots = [
+    'Do#', 'Do', 'Re#', 'Re♭', 'Re', 'Mi♭', 'Mi', 'Fa#', 'Fa',
+    'Sol#', 'Sol♭', 'Sol', 'La#', 'La♭', 'La', 'Si♭', 'Si',
+    'C#', 'Db', 'C', 'D#', 'Eb', 'D', 'E', 'F#', 'Gb', 'F',
+    'G#', 'Ab', 'G', 'A#', 'Bb', 'A', 'B'
+  ];
+
+  static (String, String) splitChord(String chord) {
+    final trimmed = chord.trim();
+    for (final r in roots) {
+      if (trimmed.startsWith(r)) {
+        return (r, trimmed.substring(r.length));
+      }
+    }
+    return ('', trimmed);
+  }
+
+  static _ChordModKey? parseModifierKey(KeyEvent event) {
+    final char = event.character;
+    if (char == '0') return _ChordModKey.mayor;
+    if (char == '.' || char == ',') return _ChordModKey.menor;
+    if (char == '/') return _ChordModKey.septima;
+    if (char == '+') return _ChordModKey.aumentada;
+    if (char == '-') return _ChordModKey.disminuida;
+    if (char == '8') return _ChordModKey.sus;
+    if (char == '9') return _ChordModKey.cuarta;
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.digit0 || key == LogicalKeyboardKey.numpad0) {
+      return _ChordModKey.mayor;
+    }
+    if (key == LogicalKeyboardKey.period || key == LogicalKeyboardKey.numpadDecimal) {
+      return _ChordModKey.menor;
+    }
+    if (key == LogicalKeyboardKey.slash || key == LogicalKeyboardKey.numpadDivide) {
+      return _ChordModKey.septima;
+    }
+    if (key == LogicalKeyboardKey.add) {
+      return _ChordModKey.aumentada;
+    }
+    if (key == LogicalKeyboardKey.minus || key == LogicalKeyboardKey.numpadSubtract) {
+      return _ChordModKey.disminuida;
+    }
+    if (key == LogicalKeyboardKey.digit8 || key == LogicalKeyboardKey.numpad8) {
+      return _ChordModKey.sus;
+    }
+    if (key == LogicalKeyboardKey.digit9 || key == LogicalKeyboardKey.numpad9) {
+      return _ChordModKey.cuarta;
+    }
+    return null;
+  }
+
+  static _ChordModKey? parseModifierChar(String char) {
+    if (char == '0') return _ChordModKey.mayor;
+    if (char == '.' || char == ',') return _ChordModKey.menor;
+    if (char == '/') return _ChordModKey.septima;
+    if (char == '+') return _ChordModKey.aumentada;
+    if (char == '-') return _ChordModKey.disminuida;
+    if (char == '8') return _ChordModKey.sus;
+    if (char == '9') return _ChordModKey.cuarta;
+    return null;
+  }
+
+  static String applyModifier(String chord, _ChordModKey mod, NotationMode notation) {
+    var (root, rest) = splitChord(chord);
+    if (root.isEmpty) {
+      root = notation == NotationMode.alemana ? 'C' : 'Do';
+    }
+
+    final has7 = rest.contains('7');
+
+    switch (mod) {
+      case _ChordModKey.mayor:
+        // Cero para Mayor: limpia menor (m), dim, aug, sus y deja la tríada mayor
+        return has7 ? '${root}7' : root;
+
+      case _ChordModKey.menor:
+        // Punto para menor: 'm'
+        return has7 ? '${root}m7' : '${root}m';
+
+      case _ChordModKey.septima:
+        // Barra diagonal con la 7ma: conmuta la séptima
+        if (has7) {
+          return root + rest.replaceAll('7', '');
+        } else {
+          return '$root$rest 7'.replaceAll(' ', '');
+        }
+
+      case _ChordModKey.aumentada:
+        // Más para Aumentada: 'aug'
+        if (rest.contains('aug')) {
+          return root + (has7 ? '7' : '');
+        }
+        return has7 ? '${root}aug7' : '${root}aug';
+
+      case _ChordModKey.disminuida:
+        // Menos para Disminuida: 'dim'
+        if (rest.contains('dim')) {
+          return root + (has7 ? '7' : '');
+        }
+        return has7 ? '${root}dim7' : '${root}dim';
+
+      case _ChordModKey.sus:
+        // 8 para Sus: 'sus'
+        if (rest.contains('sus')) {
+          return root + (has7 ? '7' : '');
+        }
+        return has7 ? '${root}sus7' : '${root}sus';
+
+      case _ChordModKey.cuarta:
+        // 9 para la Cuarta: '4' o 'sus4'
+        if (rest.contains('sus')) {
+          return has7 ? '${root}sus47' : '${root}sus4';
+        }
+        if (rest.contains('4')) {
+          return root + (has7 ? '7' : '');
+        }
+        return has7 ? '${root}47' : '${root}4';
+    }
+  }
+}
+
+/// Formateador que traduce la digitación de números 1 al 7 y modificadores armónicos
 class _ScaleDegreeInputFormatter extends TextInputFormatter {
   final NotationMode notation;
 
@@ -616,12 +750,14 @@ class _ScaleDegreeInputFormatter extends TextInputFormatter {
               ? newText[newValue.selection.baseOffset - 1]
               : newText[newText.length - 1]);
 
+      // 1 al 7: Grados de la escala natural de Do (1=Do, 2=Re, 3=Mi, 4=Fa, 5=Sol, 6=La, 7=Si)
       if (['1', '2', '3', '4', '5', '6', '7'].contains(lastEnteredChar)) {
         final degree = int.parse(lastEnteredChar);
         final scale = notation == NotationMode.alemana
             ? const ['C', 'D', 'E', 'F', 'G', 'A', 'B']
             : const ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Si'];
 
+        // Si se digita 7 al final de una nota ya existente, actúa como séptima
         if (degree == 7 && oldText.trim().isNotEmpty && !oldText.trim().endsWith('7')) {
           final appended = '${oldText.trim()}7';
           return TextEditingValue(
@@ -634,6 +770,16 @@ class _ScaleDegreeInputFormatter extends TextInputFormatter {
         return TextEditingValue(
           text: replacementNote,
           selection: TextSelection.collapsed(offset: replacementNote.length),
+        );
+      }
+
+      // Modificadores armónicos: 0 Mayor, . Menor, / 7ma, + Aumentada, - Disminuida, 8 Sus, 9 Cuarta
+      final mod = _ChordTools.parseModifierChar(lastEnteredChar);
+      if (mod != null) {
+        final updated = _ChordTools.applyModifier(oldText, mod, notation);
+        return TextEditingValue(
+          text: updated,
+          selection: TextSelection.collapsed(offset: updated.length),
         );
       }
     }
@@ -892,6 +1038,13 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
         _applyChord(_chordForScaleDegree(degree));
         return KeyEventResult.handled;
       }
+      // Modificadores armónicos: 0 Mayor, . Menor, / 7ma, + Aumentada, - Disminuida, 8 Sus, 9 Cuarta
+      final mod = _ChordTools.parseModifierKey(event);
+      if (mod != null) {
+        final updated = _ChordTools.applyModifier(_controller.text, mod, widget.notation);
+        _applyChord(updated);
+        return KeyEventResult.handled;
+      }
       if (event.logicalKey == LogicalKeyboardKey.backspace ||
           event.logicalKey == LogicalKeyboardKey.delete) {
         _applyChord('');
@@ -943,6 +1096,17 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
         final chord = _chordForScaleDegree(degree);
         _controller.text = chord;
         _controller.selection = TextSelection.collapsed(offset: chord.length);
+        _commit();
+        _update();
+        return KeyEventResult.handled;
+      }
+
+      // Modificadores armónicos: 0 Mayor, . Menor, / 7ma, + Aumentada, - Disminuida, 8 Sus, 9 Cuarta
+      final mod = _ChordTools.parseModifierKey(event);
+      if (mod != null) {
+        final updated = _ChordTools.applyModifier(_controller.text, mod, widget.notation);
+        _controller.text = updated;
+        _controller.selection = TextSelection.collapsed(offset: updated.length);
         _commit();
         _update();
         return KeyEventResult.handled;
