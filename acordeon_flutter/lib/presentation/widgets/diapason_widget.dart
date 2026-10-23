@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/models/accordion_data.dart';
 import '../controllers/accordion_controller.dart';
@@ -18,9 +19,12 @@ class DiapasonWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(accordionSimulatorProvider);
+    final notifier = ref.read(accordionSimulatorProvider.notifier);
     final isPrimary = accordionNumber == 1;
     final trebleData = isPrimary ? state.trebleData1 : state.trebleData2;
     final isMirror = isPrimary ? state.mirror1 : state.mirror2;
+    final bellowsMode = isPrimary ? state.bellows1 : state.bellows2;
+    final onBellowsChanged = isPrimary ? notifier.setBellows1 : notifier.setBellows2;
 
     final rowList = [
       _RowDef(
@@ -46,7 +50,7 @@ class DiapasonWidget extends ConsumerWidget {
     final effectiveRows = isMirror ? rowList.reversed.toList() : rowList;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(28, 34, 28, 38),
+      padding: const EdgeInsets.fromLTRB(28, 12, 28, 38),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topCenter,
@@ -63,20 +67,33 @@ class DiapasonWidget extends ConsumerWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: effectiveRows.map((rDef) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: _buildRow(
-              context: context,
-              ref: ref,
-              buttons: rDef.buttons,
-              topOffset: rDef.topOffset,
-            ),
-          );
-        }).toList(),
+        children: [
+          // ── Botones de Fuelle (⇄  ←  →) ──────────────────────────────
+          _BellowsToggle(
+            bellowsMode: bellowsMode,
+            onBellowsChanged: onBellowsChanged,
+          ),
+          const SizedBox(height: 18),
+
+          // ── Hileras de botones ────────────────────────────────────────
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: effectiveRows.map((rDef) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: _buildRow(
+                  context: context,
+                  ref: ref,
+                  buttons: rDef.buttons,
+                  topOffset: rDef.topOffset,
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
@@ -145,6 +162,111 @@ class DiapasonWidget extends ConsumerWidget {
           );
         }),
       ],
+    );
+  }
+}
+
+// ─── Widget interno: los 3 botones de fuelle ─────────────────────────────────
+class _BellowsToggle extends StatelessWidget {
+  final BellowsMode bellowsMode;
+  final ValueChanged<BellowsMode> onBellowsChanged;
+
+  const _BellowsToggle({
+    required this.bellowsMode,
+    required this.onBellowsChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ⇄  Ambos
+          _BellowsBtn(
+            icon: FontAwesomeIcons.arrowsLeftRight,
+            mode: BellowsMode.both,
+            current: bellowsMode,
+            activeColor: const Color(0xFF818CF8),
+            onTap: onBellowsChanged,
+            tooltip: 'Ambos (Abrir y Cerrar)',
+          ),
+          const SizedBox(width: 3),
+
+          // ←  Abre / Pull
+          _BellowsBtn(
+            icon: FontAwesomeIcons.arrowLeft,
+            mode: BellowsMode.pull,
+            current: bellowsMode,
+            activeColor: const Color(0xFF3B82F6),
+            onTap: onBellowsChanged,
+            tooltip: 'Abre (Pull)',
+          ),
+          const SizedBox(width: 3),
+
+          // →  Cierra / Push
+          _BellowsBtn(
+            icon: FontAwesomeIcons.arrowRight,
+            mode: BellowsMode.push,
+            current: bellowsMode,
+            activeColor: const Color(0xFFEF4444),
+            onTap: onBellowsChanged,
+            tooltip: 'Cierra (Push)',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BellowsBtn extends StatelessWidget {
+  final FaIconData icon;
+  final BellowsMode mode;
+  final BellowsMode current;
+  final Color activeColor;
+  final ValueChanged<BellowsMode> onTap;
+  final String tooltip;
+
+  const _BellowsBtn({
+    required this.icon,
+    required this.mode,
+    required this.current,
+    required this.activeColor,
+    required this.onTap,
+    required this.tooltip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = current == mode;
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: () => onTap(mode),
+        borderRadius: BorderRadius.circular(7),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isActive ? activeColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(7),
+            boxShadow: isActive
+                ? [BoxShadow(color: activeColor.withValues(alpha: 0.4), blurRadius: 8)]
+                : null,
+          ),
+          child: FaIcon(
+            icon,
+            size: 13,
+            color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.45),
+          ),
+        ),
+      ),
     );
   }
 }

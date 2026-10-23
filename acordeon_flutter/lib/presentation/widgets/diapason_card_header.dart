@@ -121,105 +121,22 @@ class DiapasonCardHeader extends StatelessWidget {
             runSpacing: 6,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              // Fuelle
+              // Fuelle (los botones ⇄ ← → viven dentro del DiapasonWidget)
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Fuelle:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                      const SizedBox(width: 3),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE2E8F0),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: const Color(0xFFCBD5E1), width: 0.8),
-                        ),
-                        child: const Text(
-                          'Esc',
-                          style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 4),
+                  const Text('Fuelle:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                  const SizedBox(width: 3),
                   Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                      color: const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0xFFCBD5E1), width: 0.8),
                     ),
-                    padding: const EdgeInsets.all(2),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Ambos (Abrir y Cerrar simultáneo)
-                        Tooltip(
-                          message: 'Ambos (Abrir y Cerrar)',
-                          child: InkWell(
-                            onTap: () => onBellowsChanged(BellowsMode.both),
-                            borderRadius: BorderRadius.circular(4),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: bellowsMode == BellowsMode.both ? const Color(0xFF4F46E5) : Colors.transparent,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: FaIcon(
-                                FontAwesomeIcons.arrowsLeftRight,
-                                size: 11,
-                                color: bellowsMode == BellowsMode.both ? Colors.white : const Color(0xFF4F46E5),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 3),
-
-                        // Abre (Azul)
-                        Tooltip(
-                          message: 'Abre (Fuelle)',
-                          child: InkWell(
-                            onTap: () => onBellowsChanged(BellowsMode.pull),
-                            borderRadius: BorderRadius.circular(4),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: bellowsMode == BellowsMode.pull ? const Color(0xFF2563EB) : Colors.transparent,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: FaIcon(
-                                FontAwesomeIcons.arrowLeft,
-                                size: 11,
-                                color: bellowsMode == BellowsMode.pull ? Colors.white : const Color(0xFF2563EB),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 3),
-
-                        // Cierra (Rojo)
-                        Tooltip(
-                          message: 'Cierra (Fuelle)',
-                          child: InkWell(
-                            onTap: () => onBellowsChanged(BellowsMode.push),
-                            borderRadius: BorderRadius.circular(4),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: bellowsMode == BellowsMode.push ? const Color(0xFFDC2626) : Colors.transparent,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: FaIcon(
-                                FontAwesomeIcons.arrowRight,
-                                size: 11,
-                                color: bellowsMode == BellowsMode.push ? Colors.white : const Color(0xFFDC2626),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: const Text(
+                      'Esc',
+                      style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
                     ),
                   ),
                 ],
