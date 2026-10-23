@@ -90,48 +90,23 @@ class DiapasonCardHeader extends StatelessWidget {
               // Botón acordeón → abre el modal de selección de afinación
               Tooltip(
                 message: 'Seleccionar acordeón',
-                child: InkWell(
-                  onTap: () => showTuningPickerDialog(
+                child: IconButton(
+                  onPressed: () => showTuningPickerDialog(
                     context: context,
                     currentTuning: currentTuning,
                     onTuningChanged: onTuningChanged,
                   ),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
+                  icon: const FaIcon(
+                    FontAwesomeIcons.music,
+                    size: 16,
+                    color: Color(0xFF0284C7),
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const FaIcon(
-                          FontAwesomeIcons.music,
-                          size: 13,
-                          color: Color(0xFF0284C7),
-                        ),
-                        const SizedBox(width: 6),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 200),
-                          child: Text(
-                            '${currentTuning.name} (${currentTuning.rowsDescription})',
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF0F172A),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.expand_more_rounded,
-                          size: 14,
-                          color: Color(0xFF64748B),
-                        ),
-                      ],
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
                     ),
                   ),
                 ),
