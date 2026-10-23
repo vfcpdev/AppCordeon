@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../controllers/accordion_controller.dart';
+import '../widgets/accordion_keyboard_listener.dart';
 import '../widgets/app_header_widget.dart';
 import '../widgets/bass_panel_widget.dart';
 import '../widgets/chord_detector_widget.dart';
-import '../widgets/chord_sidebar_widget.dart';
 import '../widgets/diapason_card_header.dart';
 import '../widgets/diapason_widget.dart';
 import '../widgets/free_chord_widget.dart';
@@ -21,11 +21,12 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: state.backgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Cabecera superior completa
-            const AppHeaderWidget(),
+      body: AccordionKeyboardListener(
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Cabecera superior completa
+              const AppHeaderWidget(),
 
             // Cuerpo principal con scroll vertical y horizontal
             Expanded(
@@ -66,10 +67,6 @@ class HomeScreen extends ConsumerWidget {
 
                             // Cuadrícula de compases y transporte vertical
                             const MeasureGridWidget(),
-                            const SizedBox(width: 8),
-
-                            // Panel de Acordes Canción (Digitaciones en A1)
-                            const ChordSidebarWidget(accordionNumber: 1),
                             const SizedBox(width: 14),
                           ],
 
@@ -92,16 +89,8 @@ class HomeScreen extends ConsumerWidget {
                             ),
                             const SizedBox(width: 8),
 
-                            // Stack lateral de Acordeón 2: 2do Acordeón (Equiv.) arriba y Cuadrícula de compases abajo
-                            Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                ChordSidebarWidget(accordionNumber: 2),
-                                SizedBox(height: 8),
-                                MeasureGridWidget(accordionNumber: 2),
-                              ],
-                            ),
+                            // Cuadrícula de compases de Acordeón 2
+                            const MeasureGridWidget(accordionNumber: 2),
                             const SizedBox(width: 14),
                           ],
                         ],
@@ -138,6 +127,7 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

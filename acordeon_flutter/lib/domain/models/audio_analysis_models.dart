@@ -82,6 +82,28 @@ class KeyDetectionResult {
     );
   }
 
+  KeyDetectionResult copyWith({
+    int? rootMod,
+    String? mode,
+    String? keyNameLat,
+    String? keyNameAle,
+    String? recommendedTuning,
+    int? recommendedOffset,
+    String? recommendedRow,
+    double? correlation,
+  }) {
+    return KeyDetectionResult(
+      rootMod: rootMod ?? this.rootMod,
+      mode: mode ?? this.mode,
+      keyNameLat: keyNameLat ?? this.keyNameLat,
+      keyNameAle: keyNameAle ?? this.keyNameAle,
+      recommendedTuning: recommendedTuning ?? this.recommendedTuning,
+      recommendedOffset: recommendedOffset ?? this.recommendedOffset,
+      recommendedRow: recommendedRow ?? this.recommendedRow,
+      correlation: correlation ?? this.correlation,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'rootMod': rootMod,
     'mode': mode,
@@ -110,6 +132,22 @@ class AudioAnalysisReport {
     required this.chords,
     this.engine = 'Rust (WebAssembly / Native DSP)',
   });
+
+  AudioAnalysisReport copyWith({
+    double? duration,
+    int? bpm,
+    KeyDetectionResult? mainKey,
+    List<DetectedChordSegment>? chords,
+    String? engine,
+  }) {
+    return AudioAnalysisReport(
+      duration: duration ?? this.duration,
+      bpm: bpm ?? this.bpm,
+      mainKey: mainKey ?? this.mainKey,
+      chords: chords ?? this.chords,
+      engine: engine ?? this.engine,
+    );
+  }
 
   factory AudioAnalysisReport.fromJson(Map<String, dynamic> json) {
     return AudioAnalysisReport(

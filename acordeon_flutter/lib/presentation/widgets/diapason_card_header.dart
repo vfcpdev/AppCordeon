@@ -125,28 +125,80 @@ class DiapasonCardHeader extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Fuelle:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Fuelle:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                      const SizedBox(width: 3),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFFCBD5E1), width: 0.8),
+                        ),
+                        child: const Text(
+                          'Esc',
+                          style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(width: 4),
-                  ToggleButtons(
-                    isSelected: [
-                      bellowsMode == BellowsMode.both,
-                      bellowsMode == BellowsMode.pull,
-                      bellowsMode == BellowsMode.push,
-                    ],
-                    onPressed: (idx) {
-                      if (idx == 0) onBellowsChanged(BellowsMode.both);
-                      if (idx == 1) onBellowsChanged(BellowsMode.pull);
-                      if (idx == 2) onBellowsChanged(BellowsMode.push);
-                    },
-                    borderRadius: BorderRadius.circular(6),
-                    selectedColor: Colors.white,
-                    fillColor: const Color(0xFF0284C7),
-                    constraints: const BoxConstraints(minHeight: 24, minWidth: 32),
-                    children: const [
-                      FaIcon(FontAwesomeIcons.arrowsLeftRight, size: 10),
-                      FaIcon(FontAwesomeIcons.arrowLeft, size: 10),
-                      FaIcon(FontAwesomeIcons.arrowRight, size: 10),
-                    ],
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Abre (Azul)
+                        Tooltip(
+                          message: 'Abre (Fuelle)',
+                          child: InkWell(
+                            onTap: () => onBellowsChanged(BellowsMode.pull),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: bellowsMode == BellowsMode.pull ? const Color(0xFF2563EB) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: FaIcon(
+                                FontAwesomeIcons.arrowLeft,
+                                size: 11,
+                                color: bellowsMode == BellowsMode.pull ? Colors.white : const Color(0xFF2563EB),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 3),
+
+                        // Cierra (Rojo)
+                        Tooltip(
+                          message: 'Cierra (Fuelle)',
+                          child: InkWell(
+                            onTap: () => onBellowsChanged(BellowsMode.push),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: bellowsMode == BellowsMode.push ? const Color(0xFFDC2626) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: FaIcon(
+                                FontAwesomeIcons.arrowRight,
+                                size: 11,
+                                color: bellowsMode == BellowsMode.push ? Colors.white : const Color(0xFFDC2626),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

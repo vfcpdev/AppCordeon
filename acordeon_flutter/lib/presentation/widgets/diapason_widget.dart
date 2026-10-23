@@ -104,6 +104,19 @@ class DiapasonWidget extends ConsumerWidget {
           final midiToPlay = currentBellows == BellowsMode.pull
               ? btn.pull + currentTuning.offset
               : btn.push + currentTuning.offset;
+
+          String? shortcut;
+          if (isPrimary) {
+            const row1Keys = ['Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '-'];
+            const row2Keys = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ñ', '{'];
+            const row3Keys = ['W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '´'];
+
+            final idx = btn.btnIndex - 1;
+            if (btn.rowKey == 'row1' && idx < row1Keys.length) shortcut = row1Keys[idx];
+            if (btn.rowKey == 'row2' && idx < row2Keys.length) shortcut = row2Keys[idx];
+            if (btn.rowKey == 'row3' && idx < row3Keys.length) shortcut = row3Keys[idx];
+          }
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 12.0),
             child: DiapasonButtonWidget(
@@ -115,6 +128,7 @@ class DiapasonWidget extends ConsumerWidget {
               bellowsMode: currentBellows,
               notation: state.notation,
               tuningOffset: currentTuning.offset,
+              shortcutLabel: shortcut,
               onPointerDown: () {
                 if (state.detectorMode) {
                   notifier.toggleDetectorButton(btn.id, midiToPlay);

@@ -32,24 +32,29 @@ class AcordeonEngineBridge implements AudioEngine {
     }
   }
 
-  @override
-  Future<void> init({double sampleRate = 44100.0}) async {
-    if (_initialized) return;
-    _initialized = true;
-    if (kIsWeb) {
-      _guard('init', () {
+  void _ensureSynth() {
+    if (_synth == null && kIsWeb) {
+      _guard('ensureSynth', () {
         _synth = createWebAudioSynth();
         _synth?.init();
         _synth?.setVolume(_volume);
       });
     }
-    debugPrint('AcordeonEngineBridge inicializado (Sample Rate: $sampleRate Hz)');
+  }
+
+  @override
+  Future<void> init({double sampleRate = 44100.0}) async {
+    if (_initialized) return;
+    _initialized = true;
+    _ensureSynth();
+    debugPrint('AcordeonEngineBridge inicializado (Sample Rate: $sampleRate Hz, synth: $_synth)');
   }
 
   @override
   void noteOn(int midiNote, {double velocity = 0.8}) {
     _activeMidiNotes.add(midiNote);
     final freq = MusicTheory.midiToFrequency(midiNote);
+    _ensureSynth();
     _guard('noteOn', () => _synth?.noteOn(midiNote, freq, velocity: velocity));
   }
 

@@ -161,26 +161,69 @@ class FreeChordWidget extends ConsumerWidget {
                     Text('Fuelle:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
                   ],
                 ),
-                ToggleButtons(
-                  isSelected: [
-                    state.freeChordBellows == BellowsMode.both,
-                    state.freeChordBellows == BellowsMode.pull,
-                    state.freeChordBellows == BellowsMode.push,
-                  ],
-                  onPressed: (idx) {
-                    if (idx == 0) notifier.setFreeChordBellows(BellowsMode.both);
-                    if (idx == 1) notifier.setFreeChordBellows(BellowsMode.pull);
-                    if (idx == 2) notifier.setFreeChordBellows(BellowsMode.push);
-                  },
-                  borderRadius: BorderRadius.circular(6),
-                  selectedColor: Colors.white,
-                  fillColor: const Color(0xFF059669),
-                  constraints: const BoxConstraints(minHeight: 22, minWidth: 32),
-                  children: const [
-                    FaIcon(FontAwesomeIcons.arrowsLeftRight, size: 9),
-                    FaIcon(FontAwesomeIcons.arrowLeft, size: 9),
-                    FaIcon(FontAwesomeIcons.arrowRight, size: 9),
-                  ],
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  padding: const EdgeInsets.all(2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Abre (Azul)
+                      // Abre (Azul)
+                      Tooltip(
+                        message: 'Abre (Fuelle)',
+                        child: InkWell(
+                          onTap: () => notifier.setFreeChordBellows(BellowsMode.pull),
+                          borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: state.freeChordBellows == BellowsMode.pull
+                                  ? const Color(0xFF2563EB)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: FaIcon(
+                              FontAwesomeIcons.arrowLeft,
+                              size: 10,
+                              color: state.freeChordBellows == BellowsMode.pull
+                                  ? Colors.white
+                                  : const Color(0xFF2563EB),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+
+                      // Cierra (Rojo)
+                      Tooltip(
+                        message: 'Cierra (Fuelle)',
+                        child: InkWell(
+                          onTap: () => notifier.setFreeChordBellows(BellowsMode.push),
+                          borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: state.freeChordBellows == BellowsMode.push
+                                  ? const Color(0xFFDC2626)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: FaIcon(
+                              FontAwesomeIcons.arrowRight,
+                              size: 10,
+                              color: state.freeChordBellows == BellowsMode.push
+                                  ? Colors.white
+                                  : const Color(0xFFDC2626),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

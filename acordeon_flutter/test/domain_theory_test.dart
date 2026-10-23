@@ -51,11 +51,14 @@ void main() {
   });
 
   group('TuningRegistry Tests', () {
-    test('Contains 7 traditional Vallenato tunings', () {
-      expect(TuningRegistry.defaultTunings.length, 7);
+    test('Contains 8 traditional Vallenato tunings including Lluvia', () {
+      expect(TuningRegistry.defaultTunings.length, 8);
       expect(TuningRegistry.getById('cinco_letras').offset, 0);
       expect(TuningRegistry.getById('rey_vallenato').offset, -3);
       expect(TuningRegistry.getById('sabanera').offset, 2);
+      expect(TuningRegistry.getById('lluvia').offset, 3);
+      expect(TuningRegistry.getById('lluvia').name, contains('Lluvia'));
+      expect(TuningRegistry.getById('lluvia').rowsDescription, 'Do♯ - Fa♯ - Si');
     });
   });
 }

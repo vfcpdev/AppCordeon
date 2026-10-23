@@ -66,6 +66,13 @@ class TuningRegistry {
       offset: -7,
       preferFlats: false,
     ),
+    TuningDefinition(
+      id: 'lluvia',
+      name: 'Lluvia (C# - F# - B)',
+      rowsDescription: 'Do♯ - Fa♯ - Si',
+      offset: 3,
+      preferFlats: false,
+    ),
   ];
 
   static TuningDefinition getById(String id) {

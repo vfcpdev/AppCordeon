@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../domain/models/audio_analysis_models.dart';
 import '../controllers/accordion_controller.dart';
+import 'edit_audio_key_bpm_dialog.dart';
 
 class AudioAnalysisDialog extends ConsumerWidget {
   final AudioAnalysisReport report;
@@ -109,14 +110,46 @@ class AudioAnalysisDialog extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'TONALIDAD DETECTADA',
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF0284C7),
-                            letterSpacing: 0.5,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'TONALIDAD DETECTADA',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0284C7),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => EditAudioKeyBpmDialog(report: report),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(4),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE0F2FE),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.edit, size: 10, color: Color(0xFF0284C7)),
+                                    SizedBox(width: 3),
+                                    Text(
+                                      'Corregir Tono/BPM',
+                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 4),
                         Text(

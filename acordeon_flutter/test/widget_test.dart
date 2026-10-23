@@ -18,7 +18,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify app title exists
-    expect(find.text('Acordeón Diatónico Pro'), findsOneWidget);
+    expect(find.text('AppCordeon'), findsOneWidget);
     // Verify accordion badges exist
     expect(find.textContaining('Acordeón 1'), findsWidgets);
     expect(find.textContaining('Acordeón 2'), findsWidgets);

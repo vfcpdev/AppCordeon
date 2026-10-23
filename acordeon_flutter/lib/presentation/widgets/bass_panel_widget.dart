@@ -394,21 +394,9 @@ class BassPanelWidget extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildToolbarIconButton(
-                  icon: FontAwesomeIcons.arrowsLeftRight,
-                  isActive: currentBellows == BellowsMode.both,
-                  onTap: () {
-                    if (isPrimary) {
-                      notifier.setBellows1(BellowsMode.both);
-                    } else {
-                      notifier.setBellows2(BellowsMode.both);
-                    }
-                  },
-                  tooltip: 'Ambos',
-                ),
-                const SizedBox(height: 2),
-                _buildToolbarIconButton(
                   icon: FontAwesomeIcons.arrowLeft,
                   isActive: currentBellows == BellowsMode.pull,
+                  activeColor: const Color(0xFF2563EB),
                   onTap: () {
                     if (isPrimary) {
                       notifier.setBellows1(BellowsMode.pull);
@@ -416,12 +404,13 @@ class BassPanelWidget extends ConsumerWidget {
                       notifier.setBellows2(BellowsMode.pull);
                     }
                   },
-                  tooltip: 'Abre',
+                  tooltip: 'Fuelle: Abre (Azul)',
                 ),
                 const SizedBox(height: 2),
                 _buildToolbarIconButton(
                   icon: FontAwesomeIcons.arrowRight,
                   isActive: currentBellows == BellowsMode.push,
+                  activeColor: const Color(0xFFDC2626),
                   onTap: () {
                     if (isPrimary) {
                       notifier.setBellows1(BellowsMode.push);
@@ -429,7 +418,7 @@ class BassPanelWidget extends ConsumerWidget {
                       notifier.setBellows2(BellowsMode.push);
                     }
                   },
-                  tooltip: 'Cierra',
+                  tooltip: 'Fuelle: Cierra (Rojo)',
                 ),
               ],
             ),
@@ -525,7 +514,9 @@ class BassPanelWidget extends ConsumerWidget {
     required bool isActive,
     required VoidCallback onTap,
     required String tooltip,
+    Color? activeColor,
   }) {
+    final effectiveColor = activeColor ?? const Color(0xFF0284C7);
     return Tooltip(
       message: tooltip,
       child: InkWell(
@@ -535,10 +526,10 @@ class BassPanelWidget extends ConsumerWidget {
           width: 24,
           height: 22,
           decoration: BoxDecoration(
-            color: isActive ? const Color(0xFF0284C7) : Colors.white,
+            color: isActive ? effectiveColor : Colors.white,
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
-              color: isActive ? const Color(0xFF0369A1) : const Color(0xFFCBD5E1),
+              color: isActive ? effectiveColor : const Color(0xFFCBD5E1),
             ),
           ),
           child: Center(

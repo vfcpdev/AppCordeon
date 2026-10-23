@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../controllers/accordion_controller.dart';
 import 'audio_analysis_dialog.dart';
+import 'edit_audio_key_bpm_dialog.dart';
 
 class TrackInfoCardWidget extends ConsumerWidget {
   const TrackInfoCardWidget({super.key});
@@ -67,54 +68,76 @@ class TrackInfoCardWidget extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
 
-              // Badge de Tonalidad detectada
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEEF2FF),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFFC7D2FE)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const FaIcon(FontAwesomeIcons.key, size: 10, color: Color(0xFF4F46E5)),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Tono: ${report.keyResult.keyNameLat}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF4338CA),
+              // Badge de Tonalidad detectada (Click para corregir)
+              InkWell(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => EditAudioKeyBpmDialog(report: report),
+                  );
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEF2FF),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFC7D2FE)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const FaIcon(FontAwesomeIcons.key, size: 10, color: Color(0xFF4F46E5)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Tono: ${report.keyResult.keyNameLat}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF4338CA),
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      const Icon(Icons.edit, size: 10, color: Color(0xFF6366F1)),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
 
-              // Badge de BPM
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFAF5FF),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFFE9D5FF)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const FaIcon(FontAwesomeIcons.drum, size: 10, color: Color(0xFF9333EA)),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${report.bpm.toStringAsFixed(0)} BPM',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF7E22CE),
+              // Badge de BPM (Click para corregir)
+              InkWell(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => EditAudioKeyBpmDialog(report: report),
+                  );
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFAF5FF),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFE9D5FF)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const FaIcon(FontAwesomeIcons.drum, size: 10, color: Color(0xFF9333EA)),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${report.bpm.toStringAsFixed(0)} BPM',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF7E22CE),
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      const Icon(Icons.edit, size: 10, color: Color(0xFFA855F7)),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: 8),

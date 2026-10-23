@@ -29,16 +29,16 @@ void main() {
 
       // Mutar solo D1
       d1.setVolume(0.42);
-      d1.setBellows(BellowsMode.push);
+      d1.setBellows(BellowsMode.pull);
       d1.toggleMirror();
 
       expect(container.read(diapasonFamilyProvider(1)).volume, 0.42);
-      expect(container.read(diapasonFamilyProvider(1)).bellows, BellowsMode.push);
+      expect(container.read(diapasonFamilyProvider(1)).bellows, BellowsMode.pull);
       expect(container.read(diapasonFamilyProvider(1)).mirror, isTrue);
 
-      // D2 permanece inalterado (aislado)
+      // D2 permanece inalterado (aislado en su estado inicial push)
       expect(container.read(diapasonFamilyProvider(2)).volume, 0.8);
-      expect(container.read(diapasonFamilyProvider(2)).bellows, BellowsMode.both);
+      expect(container.read(diapasonFamilyProvider(2)).bellows, BellowsMode.push);
       expect(container.read(diapasonFamilyProvider(2)).mirror, isFalse);
     });
 

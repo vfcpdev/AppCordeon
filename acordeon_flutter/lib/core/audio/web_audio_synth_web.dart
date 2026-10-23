@@ -35,7 +35,9 @@ class WebAudioSynthImpl implements WebAudioSynth {
       master.connect(ctx.destination);
       _ctx = ctx;
       _masterGain = master;
-    } catch (_) {}
+    } catch (e) {
+      // Ignorar o registrar error de inicialización
+    }
   }
 
   @override
@@ -103,7 +105,10 @@ class WebAudioSynthImpl implements WebAudioSynth {
         osc2: osc2,
         gainNode: noteGain,
       );
-    } catch (_) {}
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[WebAudioSynth] Error en noteOn: $e\n$st');
+    }
   }
 
   @override
@@ -121,7 +126,10 @@ class WebAudioSynthImpl implements WebAudioSynth {
 
       note.osc1.stop(now + releaseTime + 0.02);
       note.osc2.stop(now + releaseTime + 0.02);
-    } catch (_) {}
+    } catch (e) {
+      // ignore: avoid_print
+      print('[WebAudioSynth] Error en noteOff: $e');
+    }
   }
 
   @override

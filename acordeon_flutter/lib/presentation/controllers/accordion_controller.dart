@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' show Color;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/audio/analysis/tuning_recommender.dart';
 import '../../core/audio/audio_analyzer.dart';
 import '../../core/audio/audio_engine_bridge.dart';
 import '../../core/audio/audio_file_loader_interface.dart';
@@ -286,13 +287,13 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       showDiapason1: true,
       showDiapason2: true,
       tuning1: TuningRegistry.defaultTunings[0], // Cinco Letras
-      bellows1: BellowsMode.both,
+      bellows1: BellowsMode.push,
       isBass1Collapsed: false,
       mirror1: false,
       volume1: 0.8,
       isMuted1: false,
       tuning2: TuningRegistry.defaultTunings[1], // Rey Vallenato
-      bellows2: BellowsMode.both,
+      bellows2: BellowsMode.push,
       isBass2Collapsed: true,
       mirror2: false,
       volume2: 0.8,
@@ -314,7 +315,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       freeChordOctave: 'all',
       freeChordMode: 'harmonic',
       isFreeChordFixed: false,
-      freeChordBellows: BellowsMode.both,
+      freeChordBellows: BellowsMode.push,
       freeChordScaleHarmonicMode: 'triad',
       detectorMode: false,
       detectorDirection: 'auto',
@@ -401,6 +402,66 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       clearAudio: true,
       isPlayingAudio: false,
     );
+  }
+
+  void updateAudioKey(int rootMod, String mode) {
+    final report = state.audioReport;
+    if (report == null) return;
+
+    const noteNamesLat = [
+      'Do', 'Do♯', 'Re', 'Mi♭', 'Mi', 'Fa', 'Fa♯', 'Sol', 'Sol♯', 'La', 'Si♭', 'Si'
+    ];
+    const noteNamesAle = [
+      'C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'
+    ];
+
+    final isMajor = mode.toLowerCase() == 'major';
+    final keyNameLat = '${noteNamesLat[rootMod % 12]} ${isMajor ? 'Mayor' : 'Menor'}';
+    final keyNameAle = '${noteNamesAle[rootMod % 12]} ${isMajor ? 'Major' : 'Minor'}';
+
+    final (recName, recOffset, recRow) = const TuningRecommender().recommend(rootMod % 12);
+
+    final updatedKey = report.mainKey.copyWith(
+      rootMod: rootMod % 12,
+      mode: mode,
+      keyNameLat: keyNameLat,
+      keyNameAle: keyNameAle,
+      recommendedTuning: recName,
+      recommendedOffset: recOffset,
+      recommendedRow: recRow,
+    );
+
+    final updatedReport = report.copyWith(mainKey: updatedKey);
+    state = state.copyWith(audioReport: updatedReport);
+    applyDetectedTuning(updatedKey);
+  }
+
+  void updateAudioBpm(int newBpm) {
+    final clampedBpm = newBpm.clamp(30, 300);
+    final report = state.audioReport;
+    if (report == null) {
+      const defaultKey = KeyDetectionResult(
+        rootMod: 0,
+        mode: 'major',
+        keyNameLat: 'Do Mayor',
+        keyNameAle: 'C Major',
+        recommendedTuning: 'Cinco Letras (Bb-Eb-Ab)',
+        recommendedOffset: 10,
+        recommendedRow: 'row2',
+        correlation: 1.0,
+      );
+      state = state.copyWith(
+        audioReport: AudioAnalysisReport(
+          duration: 16.0,
+          bpm: clampedBpm,
+          mainKey: defaultKey,
+          chords: const [],
+        ),
+      );
+    } else {
+      final updatedReport = report.copyWith(bpm: clampedBpm);
+      state = state.copyWith(audioReport: updatedReport);
+    }
   }
 
   void applyDetectedTuning(KeyDetectionResult keyResult) {

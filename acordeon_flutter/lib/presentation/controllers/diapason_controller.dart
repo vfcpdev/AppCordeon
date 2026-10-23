@@ -19,7 +19,7 @@ class DiapasonNotifier extends Notifier<DiapasonState> {
       tuning: isFirst
           ? TuningRegistry.defaultTunings[0] // Cinco Letras
           : TuningRegistry.defaultTunings[1], // Rey Vallenato
-      bellows: BellowsMode.both,
+      bellows: BellowsMode.push,
       isBassCollapsed: !isFirst,
       mirror: false,
       volume: 0.8,

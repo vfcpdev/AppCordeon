@@ -17,7 +17,7 @@ class AcordeonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Acordeón Diatónico Pro',
+      title: 'AppCordeon',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

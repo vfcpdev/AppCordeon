@@ -47,7 +47,7 @@ class AppHeaderWidget extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
               const Text(
-                'Acordeón Diatónico Pro',
+                'AppCordeon',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
