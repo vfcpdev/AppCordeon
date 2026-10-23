@@ -1,77 +1,39 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'dart:ui' show Color;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:file_picker/file_picker.dart';
-import '../../core/audio/audio_analyzer_service.dart';
+import '../../core/audio/audio_analyzer.dart';
 import '../../core/audio/audio_engine_bridge.dart';
-import '../../core/audio/audio_file_loader.dart';
+import '../../core/audio/audio_file_loader_interface.dart';
+import '../../core/audio/demo_track_generator.dart';
 import '../../core/constants/enums.dart';
+import '../../core/di/providers.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/audio_analysis_models.dart';
+import '../../domain/models/measure_models.dart';
 import '../../domain/models/tuning.dart';
-import '../widgets/audio_analysis_dialog.dart';
+import '../../domain/theory/chord_catalog.dart';
 
-class MeasureBeat {
-  final int barIndex;
-  final int beatIndex;
-  final String chord;
-  final String timeText;
-  final bool isContinue;
+export '../../domain/models/measure_models.dart';
 
-  const MeasureBeat({
-    required this.barIndex,
-    required this.beatIndex,
-    required this.chord,
-    required this.timeText,
-    this.isContinue = false,
-  });
-
-  MeasureBeat copyWith({
-    String? chord,
-    String? timeText,
-    bool? isContinue,
-  }) {
-    return MeasureBeat(
-      barIndex: barIndex,
-      beatIndex: beatIndex,
-      chord: chord ?? this.chord,
-      timeText: timeText ?? this.timeText,
-      isContinue: isContinue ?? this.isContinue,
-    );
-  }
+/// Resultado de una operación de carga de audio. La UI decide cómo mostrarlo.
+sealed class AudioLoadResult {
+  const AudioLoadResult();
 }
 
-class MeasureRow {
-  final int barNumber;
-  final List<MeasureBeat> beats;
-
-  const MeasureRow({
-    required this.barNumber,
-    required this.beats,
-  });
+class AudioLoadSuccess extends AudioLoadResult {
+  final AudioAnalysisReport report;
+  final String fileName;
+  const AudioLoadSuccess(this.report, this.fileName);
 }
 
-class DetectedChordModel {
-  final String name;
-  final String root;
-  final String bass;
-  final String formula;
-  final String type;
-  final String inversion;
-  final List<String> alternatives;
+class AudioLoadCancelled extends AudioLoadResult {
+  const AudioLoadCancelled();
+}
 
-  const DetectedChordModel({
-    required this.name,
-    required this.root,
-    required this.bass,
-    required this.formula,
-    required this.type,
-    required this.inversion,
-    this.alternatives = const [],
-  });
+class AudioLoadFailure extends AudioLoadResult {
+  final String message;
+  const AudioLoadFailure(this.message);
 }
 
 /// Estado global del simulador de Acordeón
@@ -286,11 +248,18 @@ class AccordionSimulatorState {
 }
 
 class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
-  final AudioEngine _audioBridge = AcordeonEngineBridge();
+  late AudioEngine _audioBridge;
+  late AudioAnalyzer _analyzer;
+  late AudioFileLoader _fileLoader;
+  late DemoTrackGenerator _demoGenerator;
 
   @override
   AccordionSimulatorState build() {
-    _audioBridge.init();
+    _audioBridge = ref.read(audioEngineProvider);
+    _analyzer = ref.read(audioAnalyzerProvider);
+    _fileLoader = ref.read(audioFileLoaderProvider);
+    _demoGenerator = ref.read(demoTrackGeneratorProvider);
+    ref.onDispose(() => _playbackTimer?.cancel());
 
     // Generar compases iniciales por defecto (8 compases con 4 tiempos)
     final initialMeasures = List.generate(8, (bIdx) {
@@ -374,72 +343,40 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   Timer? _playbackTimer;
 
   // Carga y Análisis de Audio con DSP Rust
-  Future<void> pickAndAnalyzeAudio(BuildContext context) async {
+  /// IMPORTANTE (Web): no debe haber ningún `await` antes de `pickAudioFile()`
+  /// para que el navegador conserve el gesto del usuario y abra el selector.
+  Future<AudioLoadResult> pickAndAnalyzeAudio() async {
     try {
-      PickedAudioData? picked;
-
-      if (kIsWeb) {
-        picked = await createAudioFileLoader().pickAudioFile();
-      }
-
-      if (picked == null) {
-        final file = await FilePicker.pickFile(
-          type: FileType.custom,
-          allowedExtensions: ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac'],
-        );
-
-        if (file != null) {
-          final bytes = await file.readAsBytes();
-          if (bytes.isNotEmpty) {
-            picked = PickedAudioData(name: file.name, bytes: bytes);
-          }
-        }
-      }
-
-      if (picked == null) return;
-      if (!context.mounted) return;
-
-      await processAudioBytes(picked.bytes, picked.name, context);
+      final picked = await _fileLoader.pickAudioFile();
+      if (picked == null) return const AudioLoadCancelled();
+      return await processAudioBytes(picked.bytes, picked.name);
     } catch (e) {
       state = state.copyWith(isAnalyzingAudio: false);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar audio: $e')),
-        );
-      }
+      return AudioLoadFailure('Error al cargar audio: $e');
     }
   }
 
   /// Carga y analiza una pista demo clásica de Vallenato ("La Gota Fría" en Do Mayor / Cinco Letras)
-  Future<void> loadDemoAudioTrack(BuildContext context) async {
+  Future<AudioLoadResult> loadDemoAudioTrack() async {
     try {
-      state = state.copyWith(
-        isAnalyzingAudio: true,
-        loadedAudioFileName: 'La Gota Fría - Demo Vallenato.wav',
+      return await processAudioBytes(
+        _demoGenerator.generate(),
+        DemoTrackGenerator.demoFileName,
       );
-
-      final demoBytes = _generateDemoVallenatoAudio();
-      if (!context.mounted) return;
-      await processAudioBytes(demoBytes, 'La Gota Fría - Demo Vallenato.wav', context);
     } catch (e) {
       state = state.copyWith(isAnalyzingAudio: false);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al procesar demo: $e')),
-        );
-      }
+      return AudioLoadFailure('Error al procesar demo: $e');
     }
   }
 
-  /// Procesa bytes de audio con el servicio espectral y actualiza estado + acordeón
-  Future<void> processAudioBytes(Uint8List bytes, String fileName, BuildContext? context) async {
+  /// Procesa bytes de audio con el analizador inyectado y actualiza estado + acordeón
+  Future<AudioLoadResult> processAudioBytes(Uint8List bytes, String fileName) async {
     state = state.copyWith(
       isAnalyzingAudio: true,
       loadedAudioFileName: fileName,
     );
 
-    final service = AudioAnalyzerService();
-    final report = await service.analyzeAudio(bytes, fileName);
+    final report = await _analyzer.analyzeAudio(bytes, fileName);
 
     state = state.copyWith(
       isAnalyzingAudio: false,
@@ -454,93 +391,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     // Auto-aplicar acordes detectados a la cuadrícula de compases
     applyChordsToMeasures(report.chords);
 
-    if (context != null && context.mounted) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AudioAnalysisDialog(
-          report: report,
-          fileName: fileName,
-        ),
-      );
-    }
+    return AudioLoadSuccess(report, fileName);
   }
 
-  /// Genera audio WAV PCM sintetizado con progresión Paseo Vallenato (C - F - G - C a 128 BPM)
-  Uint8List _generateDemoVallenatoAudio() {
-    const sampleRate = 44100;
-    const durationSeconds = 4.0;
-    const numSamples = (sampleRate * durationSeconds);
-    final int byteLength = (numSamples * 2).toInt();
-
-    final buffer = ByteData(44 + byteLength);
-
-    // RIFF Header
-    buffer.setUint8(0, 0x52); // 'R'
-    buffer.setUint8(1, 0x49); // 'I'
-    buffer.setUint8(2, 0x46); // 'F'
-    buffer.setUint8(3, 0x46); // 'F'
-    buffer.setUint32(4, 36 + byteLength, Endian.little);
-    buffer.setUint8(8, 0x57);  // 'W'
-    buffer.setUint8(9, 0x41);  // 'A'
-    buffer.setUint8(10, 0x56); // 'V'
-    buffer.setUint8(11, 0x45); // 'E'
-
-    // 'fmt ' Subchunk
-    buffer.setUint8(12, 0x66); // 'f'
-    buffer.setUint8(13, 0x6D); // 'm'
-    buffer.setUint8(14, 0x74); // 't'
-    buffer.setUint8(15, 0x20); // ' '
-    buffer.setUint32(16, 16, Endian.little);
-    buffer.setUint16(20, 1, Endian.little); // PCM
-    buffer.setUint16(22, 1, Endian.little); // Mono
-    buffer.setUint32(24, sampleRate, Endian.little);
-    buffer.setUint32(28, sampleRate * 2, Endian.little);
-    buffer.setUint16(32, 2, Endian.little);
-    buffer.setUint16(34, 16, Endian.little); // 16 bits
-
-    // 'data' Subchunk
-    buffer.setUint8(36, 0x64); // 'd'
-    buffer.setUint8(37, 0x61); // 'a'
-    buffer.setUint8(38, 0x74); // 't'
-    buffer.setUint8(39, 0x61); // 'a'
-    buffer.setUint32(40, byteLength, Endian.little);
-
-    // Sintetizar muestras armónicas Vallenato (C, F, G, C) con pulso a 128 BPM
-    for (int i = 0; i < numSamples; i++) {
-      final t = i / sampleRate;
-      final chordPhase = (t % 4.0);
-
-      // Frecuencias fundamentales de cada acorde
-      double f1, f2, f3;
-      if (chordPhase < 1.0) {
-        // Do Mayor: C4 (261.6), E4 (329.6), G4 (392.0)
-        f1 = 261.63; f2 = 329.63; f3 = 392.00;
-      } else if (chordPhase < 2.0) {
-        // Fa Mayor: F4 (349.2), A4 (440.0), C5 (523.3)
-        f1 = 349.23; f2 = 440.00; f3 = 523.25;
-      } else if (chordPhase < 3.0) {
-        // Sol Mayor: G4 (392.0), B4 (493.9), D5 (587.3)
-        f1 = 392.00; f2 = 493.88; f3 = 587.33;
-      } else {
-        // Do Mayor resolutivo
-        f1 = 261.63; f2 = 329.63; f3 = 392.00;
-      }
-
-      // Envolvente de pulso rítmico a 128 BPM (período ~0.46875s)
-      final beatPhase = (t * (128.0 / 60.0)) % 1.0;
-      final beatEnv = math.exp(-beatPhase * 4.0);
-
-      // Onda acústica combinada
-      final s = (math.sin(2 * math.pi * f1 * t) * 0.4 +
-                 math.sin(2 * math.pi * f2 * t) * 0.3 +
-                 math.sin(2 * math.pi * f3 * t) * 0.3) * (0.6 + 0.4 * beatEnv);
-
-      final sampleInt16 = (s * 24000).clamp(-32767, 32767).toInt();
-      buffer.setInt16(44 + (i * 2), sampleInt16, Endian.little);
-    }
-
-    return buffer.buffer.asUint8List();
-  }
 
   void clearAudioReport() {
     stopAudio();
@@ -802,50 +655,11 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
   }
 
-  List<int> _calculateFreeChordNotes() {
-    final root = state.freeChordRoot;
-    final baseMidi = 60 + root; // Octava 4
-    final intervals = <int>[0];
-
-    switch (state.freeChordType) {
-      case 'min':
-        intervals.addAll([3, 7]);
-        break;
-      case 'dim':
-        intervals.addAll([3, 6]);
-        break;
-      case 'aug':
-        intervals.addAll([4, 8]);
-        break;
-      case 'sus4':
-        intervals.addAll([5, 7]);
-        break;
-      case 'maj':
-      default:
-        intervals.addAll([4, 7]);
-        break;
-    }
-
-    switch (state.freeChordFourth) {
-      case 'octave':
-        intervals.add(12);
-        break;
-      case 'dom7':
-        intervals.add(10);
-        break;
-      case 'maj7':
-        intervals.add(11);
-        break;
-      case 'maj6':
-        intervals.add(9);
-        break;
-      case 'add9':
-        intervals.add(14);
-        break;
-    }
-
-    return intervals.map((i) => baseMidi + i).toList();
-  }
+  List<int> _calculateFreeChordNotes() => ChordCatalog.notesFor(
+        root: state.freeChordRoot,
+        type: state.freeChordType,
+        extension: state.freeChordFourth,
+      );
 
   // Sección 3: Detector de Acordes
   void toggleDetectorMode() {

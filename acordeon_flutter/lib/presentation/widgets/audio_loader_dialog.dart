@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../controllers/accordion_controller.dart';
+import 'audio_load_feedback.dart';
 import 'audio_analysis_dialog.dart';
 
 class AudioLoaderDialog extends ConsumerWidget {
@@ -125,7 +126,11 @@ class AudioLoaderDialog extends ConsumerWidget {
                 // Opción 1: Seleccionar archivo del dispositivo
                 InkWell(
                   onTap: () {
-                    notifier.pickAndAnalyzeAudio(context);
+                    // Síncrono dentro del gesto: el selector se abre antes de cerrar el diálogo.
+                    final navContext = Navigator.of(context).context;
+                    notifier.pickAndAnalyzeAudio().then((r) {
+                      if (navContext.mounted) presentAudioLoadResult(navContext, r);
+                    });
                     Navigator.of(context).pop();
                   },
                   borderRadius: BorderRadius.circular(14),
@@ -181,8 +186,10 @@ class AudioLoaderDialog extends ConsumerWidget {
                 // Opción 2: Cargar demo instantáneo de Vallenato
                 InkWell(
                   onTap: () async {
+                    final navContext = Navigator.of(context).context;
                     Navigator.of(context).pop();
-                    await notifier.loadDemoAudioTrack(context);
+                    final r = await notifier.loadDemoAudioTrack();
+                    if (navContext.mounted) presentAudioLoadResult(navContext, r);
                   },
                   borderRadius: BorderRadius.circular(14),
                   child: Container(

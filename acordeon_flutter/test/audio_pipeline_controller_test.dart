@@ -33,7 +33,7 @@ void main() {
         dummyAudio[i] = (i * 7) % 256;
       }
 
-      await notifier.processAudioBytes(dummyAudio, 'test_song.mp3', null);
+      await notifier.processAudioBytes(dummyAudio, 'test_song.mp3');
 
       final state = container.read(accordionSimulatorProvider);
 

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 import '../../domain/models/audio_analysis_models.dart';
+import 'audio_analyzer.dart';
 import 'web_audio_decoder.dart';
 
 /// Servicio de Análisis Espectral y Detección Armónica de Audio
@@ -11,7 +12,7 @@ import 'web_audio_decoder.dart';
 /// - Recomendación inteligente de afinación vallenata e hilera óptima
 /// - Segmentación temporal de acordes con supresión de armónicos
 /// - Estimador de BPM por energía de ataque y autocorrelación
-class AudioAnalyzerService {
+class AudioAnalyzerService implements AudioAnalyzer {
   static const List<double> krumhanslMajor = [
     6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88
   ];
@@ -36,6 +37,7 @@ class AudioAnalyzerService {
   static const List<int> rowBaseTonics = [3, 8, 1]; // Eb, Ab, Db en Cinco Letras
 
   /// Analiza los bytes de un archivo de audio (WAV, MP3, etc.)
+  @override
   Future<AudioAnalysisReport> analyzeAudio(Uint8List bytes, String fileName) async {
     // 1. Extraer muestras de audio normalizadas en mono Float32
     Float32List samples;

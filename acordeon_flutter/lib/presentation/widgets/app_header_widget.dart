@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../controllers/accordion_controller.dart';
-import 'audio_loader_dialog.dart';
+import 'audio_load_feedback.dart';
 
 class AppHeaderWidget extends ConsumerWidget {
   const AppHeaderWidget({super.key});
@@ -95,8 +95,9 @@ class AppHeaderWidget extends ConsumerWidget {
               Tooltip(
                 message: 'Seleccionar y cargar archivo MP3 o WAV local de tu equipo',
                 child: InkWell(
-                  onTap: () {
-                    notifier.pickAndAnalyzeAudio(context);
+                  onTap: () async {
+                    final r = await notifier.pickAndAnalyzeAudio();
+                    if (context.mounted) presentAudioLoadResult(context, r);
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
@@ -162,8 +163,9 @@ class AppHeaderWidget extends ConsumerWidget {
               Tooltip(
                 message: 'Cargar Pista Demo de Vallenato (1 Clic)',
                 child: InkWell(
-                  onTap: () {
-                    notifier.loadDemoAudioTrack(context);
+                  onTap: () async {
+                    final r = await notifier.loadDemoAudioTrack();
+                    if (context.mounted) presentAudioLoadResult(context, r);
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
