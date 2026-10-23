@@ -25,113 +25,120 @@ class HomeScreen extends ConsumerWidget {
         child: SafeArea(
           left: false,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Cabecera superior completa
               const AppHeaderWidget(),
 
-            // Cuerpo principal con scroll vertical y horizontal
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(0, 6, 12, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Tarjeta de pista de audio y análisis armónico (si hay audio cargado)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: TrackInfoCardWidget(),
-                    ),
+              // Cuerpo principal con scroll vertical y horizontal
+              Expanded(
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(0, 6, 12, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Tarjeta de pista de audio y análisis armónico (si hay audio cargado)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: TrackInfoCardWidget(),
+                        ),
 
-                    // ================= FILA SUPERIOR: ESCENARIO DE DIAPASONES =================
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // DIAPASÓN 1 (Principal)
-                          if (state.showDiapason1) ...[
-                            _buildDiapasonColumn(
-                              accordionNumber: 1,
-                              currentTuning: state.tuning1,
-                              onTuningChanged: (t) => t != null ? notifier.setTuning1(t) : null,
-                              bellowsMode: state.bellows1,
-                              onBellowsChanged: notifier.setBellows1,
-                              isBassCollapsed: state.isBass1Collapsed,
-                              onToggleBass: notifier.toggleBass1,
-                              isMirror: state.mirror1,
-                              onToggleMirror: notifier.toggleMirror1,
-                              volume: state.volume1,
-                              onVolumeChanged: notifier.setVolume1,
-                              isMuted: state.isMuted1,
-                              onToggleMute: notifier.toggleMute1,
-                              syncVolume: state.syncVolume,
-                              onToggleSyncVolume: notifier.toggleSyncVolume,
+                        // ================= FILA SUPERIOR: ESCENARIO DE DIAPASONES =================
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // DIAPASÓN 1 (Principal)
+                                if (state.showDiapason1) ...[
+                                  _buildDiapasonColumn(
+                                    accordionNumber: 1,
+                                    currentTuning: state.tuning1,
+                                    onTuningChanged: (t) => t != null ? notifier.setTuning1(t) : null,
+                                    bellowsMode: state.bellows1,
+                                    onBellowsChanged: notifier.setBellows1,
+                                    isBassCollapsed: state.isBass1Collapsed,
+                                    onToggleBass: notifier.toggleBass1,
+                                    isMirror: state.mirror1,
+                                    onToggleMirror: notifier.toggleMirror1,
+                                    volume: state.volume1,
+                                    onVolumeChanged: notifier.setVolume1,
+                                    isMuted: state.isMuted1,
+                                    onToggleMute: notifier.toggleMute1,
+                                    syncVolume: state.syncVolume,
+                                    onToggleSyncVolume: notifier.toggleSyncVolume,
+                                  ),
+                                  const SizedBox(width: 8),
+
+                                  // Cuadrícula de compases y transporte vertical
+                                  const MeasureGridWidget(),
+                                  const SizedBox(width: 14),
+                                ],
+
+                                // DIAPASÓN 2 (Comparativo / Equivalente)
+                                if (state.showDiapason2) ...[
+                                  _buildDiapasonColumn(
+                                    accordionNumber: 2,
+                                    currentTuning: state.tuning2,
+                                    onTuningChanged: (t) => t != null ? notifier.setTuning2(t) : null,
+                                    bellowsMode: state.bellows2,
+                                    onBellowsChanged: notifier.setBellows2,
+                                    isBassCollapsed: state.isBass2Collapsed,
+                                    onToggleBass: notifier.toggleBass2,
+                                    isMirror: state.mirror2,
+                                    onToggleMirror: notifier.toggleMirror2,
+                                    volume: state.volume2,
+                                    onVolumeChanged: notifier.setVolume2,
+                                    isMuted: state.isMuted2,
+                                    onToggleMute: notifier.toggleMute2,
+                                  ),
+                                  const SizedBox(width: 8),
+
+                                  // Cuadrícula de compases de Acordeón 2
+                                  const MeasureGridWidget(accordionNumber: 2),
+                                  const SizedBox(width: 14),
+                                ],
+                              ],
                             ),
-                            const SizedBox(width: 8),
-
-                            // Cuadrícula de compases y transporte vertical
-                            const MeasureGridWidget(),
-                            const SizedBox(width: 14),
-                          ],
-
-                          // DIAPASÓN 2 (Comparativo / Equivalente)
-                          if (state.showDiapason2) ...[
-                            _buildDiapasonColumn(
-                              accordionNumber: 2,
-                              currentTuning: state.tuning2,
-                              onTuningChanged: (t) => t != null ? notifier.setTuning2(t) : null,
-                              bellowsMode: state.bellows2,
-                              onBellowsChanged: notifier.setBellows2,
-                              isBassCollapsed: state.isBass2Collapsed,
-                              onToggleBass: notifier.toggleBass2,
-                              isMirror: state.mirror2,
-                              onToggleMirror: notifier.toggleMirror2,
-                              volume: state.volume2,
-                              onVolumeChanged: notifier.setVolume2,
-                              isMuted: state.isMuted2,
-                              onToggleMute: notifier.toggleMute2,
-                            ),
-                            const SizedBox(width: 8),
-
-                            // Cuadrícula de compases de Acordeón 2
-                            const MeasureGridWidget(accordionNumber: 2),
-                            const SizedBox(width: 14),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // ================= FILA INFERIOR: TEORÍA ARMÓNICA =================
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          // Sección 5: Acorde Libre y Escalas
-                          SizedBox(
-                            width: 540,
-                            child: FreeChordWidget(),
                           ),
+                        ),
 
-                          SizedBox(width: 14),
+                        const SizedBox(height: 14),
 
-                          // Sección 3: Detector Inteligente de Acordes
-                          SizedBox(
-                            width: 520,
-                            child: ChordDetectorWidget(),
+                        // ================= FILA INFERIOR: TEORÍA ARMÓNICA =================
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              // Sección 5: Acorde Libre y Escalas
+                              SizedBox(
+                                width: 540,
+                                child: FreeChordWidget(),
+                              ),
+
+                              SizedBox(width: 14),
+
+                              // Sección 3: Detector Inteligente de Acordes
+                              SizedBox(
+                                width: 520,
+                                child: ChordDetectorWidget(),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
