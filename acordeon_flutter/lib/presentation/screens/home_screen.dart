@@ -31,12 +31,15 @@ class HomeScreen extends ConsumerWidget {
             // Cuerpo principal con scroll vertical y horizontal
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.fromLTRB(0, 8, 12, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Tarjeta de pista de audio y análisis armónico (si hay audio cargado)
-                    const TrackInfoCardWidget(),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: TrackInfoCardWidget(),
+                    ),
 
                     // ================= FILA SUPERIOR: ESCENARIO DE DIAPASONES =================
                     SingleChildScrollView(
@@ -187,7 +190,7 @@ class HomeScreen extends ConsumerWidget {
 
           // Cuerpo: Bajos + Diapasón 10-11-10
           Padding(
-            padding: const EdgeInsets.all(10.0),
+            padding: const EdgeInsets.fromLTRB(2, 6, 8, 8),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

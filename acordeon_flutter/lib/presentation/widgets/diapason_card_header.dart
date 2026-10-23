@@ -44,7 +44,7 @@ class DiapasonCardHeader extends StatelessWidget {
     final isPrimary = accordionNumber == 1;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(6, 6, 8, 6),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),

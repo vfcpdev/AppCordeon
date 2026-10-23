@@ -62,16 +62,16 @@ class BassPanelWidget extends ConsumerWidget {
     ];
 
     return Container(
-      margin: const EdgeInsets.only(right: 12),
+      margin: const EdgeInsets.only(right: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFCBD5E1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -81,28 +81,28 @@ class BassPanelWidget extends ConsumerWidget {
         children: [
           // Cabecera del panel de bajos
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             decoration: const BoxDecoration(
               color: Color(0xFFE2E8F0),
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(15),
-                topRight: Radius.circular(15),
+                topLeft: Radius.circular(13),
+                topRight: Radius.circular(13),
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const FaIcon(FontAwesomeIcons.drum, size: 12, color: Color(0xFF0284C7)),
-                const SizedBox(width: 5),
+                const SizedBox(width: 4),
                 Text(
                   'Bajos A$accordionNumber (12)',
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.w800,
                     color: Color(0xFF0F172A),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 InkWell(
                   onTap: () {
                     if (isPrimary) {
@@ -119,14 +119,14 @@ class BassPanelWidget extends ConsumerWidget {
 
           // Cuerpo: Tablero de bajos + Barra de herramientas vertical a la derecha
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.fromLTRB(2, 4, 4, 4),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // Diapasón de Bajos (2 columnas de 6 botones)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 6, 8),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E293B),
                     borderRadius: BorderRadius.circular(12),
