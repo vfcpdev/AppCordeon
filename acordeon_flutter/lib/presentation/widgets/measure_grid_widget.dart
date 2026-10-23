@@ -23,6 +23,7 @@ class MeasureGridWidget extends ConsumerWidget {
 
     return Container(
       width: isPrimary ? 190 : 150,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -44,7 +45,6 @@ class MeasureGridWidget extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
             decoration: BoxDecoration(
               color: isPrimary ? const Color(0xFFF1F5F9) : const Color(0xFFD1FAE5),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
               border: Border(bottom: BorderSide(color: isPrimary ? const Color(0xFFE2E8F0) : const Color(0xFFA7F3D0))),
             ),
             child: Row(
@@ -106,6 +106,7 @@ class MeasureGridWidget extends ConsumerWidget {
                         final measure = state.measures[mIdx];
                         return Container(
                           margin: const EdgeInsets.only(bottom: 5),
+                          clipBehavior: Clip.antiAlias,
                           decoration: BoxDecoration(
                             color: const Color(0xFFF8FAFC),
                             borderRadius: BorderRadius.circular(6),
@@ -119,7 +120,6 @@ class MeasureGridWidget extends ConsumerWidget {
                                 padding: const EdgeInsets.symmetric(vertical: 6),
                                 decoration: const BoxDecoration(
                                   color: Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.horizontal(left: Radius.circular(5)),
                                   border: Border(right: BorderSide(color: Color(0xFFCBD5E1))),
                                 ),
                                 child: Center(
@@ -591,6 +591,57 @@ class _BpmInputControlState extends State<_BpmInputControl> {
   }
 }
 
+/// Formateador que traduce la digitación de números 1 al 7 a notas de la escala natural de Do
+class _ScaleDegreeInputFormatter extends TextInputFormatter {
+  final NotationMode notation;
+
+  _ScaleDegreeInputFormatter({required this.notation});
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.length < oldValue.text.length) {
+      return newValue;
+    }
+
+    final newText = newValue.text;
+    final oldText = oldValue.text;
+
+    if (newText.isNotEmpty) {
+      final lastEnteredChar = newText.length == 1
+          ? newText
+          : (newValue.selection.baseOffset > 0 && newValue.selection.baseOffset <= newText.length
+              ? newText[newValue.selection.baseOffset - 1]
+              : newText[newText.length - 1]);
+
+      if (['1', '2', '3', '4', '5', '6', '7'].contains(lastEnteredChar)) {
+        final degree = int.parse(lastEnteredChar);
+        final scale = notation == NotationMode.alemana
+            ? const ['C', 'D', 'E', 'F', 'G', 'A', 'B']
+            : const ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Si'];
+
+        if (degree == 7 && oldText.trim().isNotEmpty && !oldText.trim().endsWith('7')) {
+          final appended = '${oldText.trim()}7';
+          return TextEditingValue(
+            text: appended,
+            selection: TextSelection.collapsed(offset: appended.length),
+          );
+        }
+
+        final replacementNote = scale[degree - 1];
+        return TextEditingValue(
+          text: replacementNote,
+          selection: TextSelection.collapsed(offset: replacementNote.length),
+        );
+      }
+    }
+
+    return newValue;
+  }
+}
+
 /// Celda de tiempo/acorde editable en línea: al hacer clic recibe foco directamente
 /// sin abrir ningún diálogo modal.
 class _InlineBeatChordEditor extends StatefulWidget {
@@ -873,6 +924,30 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
 
   KeyEventResult _handleTextFieldKeyEvent(FocusNode node, KeyEvent event) {
     if (event is KeyDownEvent) {
+      // Reconocer números 1 al 7 como la escala natural de Do (1=Do, 2=Re, 3=Mi, 4=Fa, 5=Sol, 6=La, 7=Si)
+      final degree = _parseScaleDegree(event);
+      if (degree != null) {
+        final text = _controller.text.trim();
+        final sel = _controller.selection;
+        final isAtEnd = sel.isCollapsed && sel.baseOffset == _controller.text.length;
+
+        if (degree == 7 && text.isNotEmpty && isAtEnd && !text.endsWith('7')) {
+          final appended = '${text}7';
+          _controller.text = appended;
+          _controller.selection = TextSelection.collapsed(offset: appended.length);
+          _commit();
+          _update();
+          return KeyEventResult.handled;
+        }
+
+        final chord = _chordForScaleDegree(degree);
+        _controller.text = chord;
+        _controller.selection = TextSelection.collapsed(offset: chord.length);
+        _commit();
+        _update();
+        return KeyEventResult.handled;
+      }
+
       if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
         // Flecha derecha: saca de foco de edición, pero permanece el cuadro seleccionado
         _commit();
@@ -983,6 +1058,12 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     contentPadding: EdgeInsets.zero,
                     border: InputBorder.none,
                   ),
+                  inputFormatters: [
+                    _ScaleDegreeInputFormatter(notation: widget.notation),
+                  ],
+                  onChanged: (_) {
+                    _commit();
+                  },
                   onSubmitted: (_) {
                     _commit();
                     _moveSelection(1);

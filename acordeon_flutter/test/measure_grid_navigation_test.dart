@@ -119,4 +119,48 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Si'), findsNothing);
   });
+
+  testWidgets('Typing numbers 1-7 while in active TextField edit mode writes C scale notes (1=Do, 2=Re, 5+7=Sol7)',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: MeasureGridWidget(accordionNumber: 1),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final firstBeatFinder = find.byType(TextField).at(1);
+
+    // 1. Tap to enter edit mode
+    await tester.tap(firstBeatFinder);
+    await tester.pumpAndSettle();
+
+    // 2. Type '1' while editing -> should write 'Do'
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+    await tester.pumpAndSettle();
+    expect(find.text('Do'), findsOneWidget);
+
+    // 3. Type '2' -> should replace with 'Re'
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+    await tester.pumpAndSettle();
+    expect(find.text('Re'), findsOneWidget);
+
+    // 4. Type '5' -> should replace with 'Sol'
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit5);
+    await tester.pumpAndSettle();
+    expect(find.text('Sol'), findsOneWidget);
+
+    // 5. Type '7' after 'Sol' -> should append to 'Sol7'
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit7);
+    await tester.pumpAndSettle();
+    expect(find.text('Sol7'), findsOneWidget);
+  });
 }
