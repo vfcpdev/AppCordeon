@@ -23,6 +23,7 @@ class HomeScreen extends ConsumerWidget {
       backgroundColor: state.backgroundColor,
       body: AccordionKeyboardListener(
         child: SafeArea(
+          left: false,
           child: Column(
             children: [
               // Cabecera superior completa
@@ -31,7 +32,7 @@ class HomeScreen extends ConsumerWidget {
             // Cuerpo principal con scroll vertical y horizontal
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(0, 8, 12, 12),
+                padding: const EdgeInsets.fromLTRB(0, 6, 12, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -190,7 +191,7 @@ class HomeScreen extends ConsumerWidget {
 
           // Cuerpo: Bajos + Diapasón 10-11-10
           Padding(
-            padding: const EdgeInsets.fromLTRB(2, 6, 8, 8),
+            padding: const EdgeInsets.fromLTRB(0, 6, 8, 8),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
