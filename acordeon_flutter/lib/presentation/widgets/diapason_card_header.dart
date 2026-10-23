@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/models/tuning.dart';
+import 'tuning_picker_dialog.dart';
 
 class DiapasonCardHeader extends StatelessWidget {
   final int accordionNumber; // 1 or 2
@@ -85,29 +86,53 @@ class DiapasonCardHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 240,
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<TuningDefinition>(
-                    value: currentTuning,
-                    isDense: true,
-                    isExpanded: true,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A),
+              const SizedBox(width: 8),
+              // Botón acordeón → abre el modal de selección de afinación
+              Tooltip(
+                message: 'Seleccionar acordeón',
+                child: InkWell(
+                  onTap: () => showTuningPickerDialog(
+                    context: context,
+                    currentTuning: currentTuning,
+                    onTuningChanged: onTuningChanged,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
                     ),
-                    items: TuningRegistry.defaultTunings.map((t) {
-                      return DropdownMenuItem(
-                        value: t,
-                        child: Text(
-                          '${t.name} (${t.rowsDescription})',
-                          overflow: TextOverflow.ellipsis,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const FaIcon(
+                          FontAwesomeIcons.accordion,
+                          size: 13,
+                          color: Color(0xFF0284C7),
                         ),
-                      );
-                    }).toList(),
-                    onChanged: onTuningChanged,
+                        const SizedBox(width: 6),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 200),
+                          child: Text(
+                            '${currentTuning.name} (${currentTuning.rowsDescription})',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.expand_more_rounded,
+                          size: 14,
+                          color: Color(0xFF64748B),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
