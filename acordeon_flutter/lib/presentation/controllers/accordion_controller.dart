@@ -435,8 +435,13 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     // Auto-aplicar afinación sugerida al Acordeón 1
     applyDetectedTuning(report.keyResult);
 
-    // Auto-aplicar acordes detectados a la cuadrícula de compases
-    applyChordsToMeasures(report.chords);
+    // Ajustar la cantidad de compases para que coincida exactamente con la
+    // duración y el BPM del audio, dejando los acordes vacíos para que su
+    // carga sea una decisión posterior del usuario.
+    generateMeasuresForAudio(
+      durationSeconds: report.duration,
+      bpm: report.bpm,
+    );
 
     return AudioLoadSuccess(report, fileName);
   }
