@@ -119,9 +119,9 @@ class BassPanelWidget extends ConsumerWidget {
 
           // Cuerpo: Tablero de bajos
           Padding(
-            padding: const EdgeInsets.fromLTRB(1, 2, 3, 2),
+            padding: const EdgeInsets.fromLTRB(1.2, 2.4, 3.6, 2.4),
             child: Container(
-              padding: const EdgeInsets.fromLTRB(9, 4, 3, 4),
+              padding: const EdgeInsets.fromLTRB(10.8, 4.8, 3.6, 4.8),
               decoration: BoxDecoration(
                 color: const Color(0xFF1E293B),
                 borderRadius: BorderRadius.circular(12),
@@ -141,7 +141,7 @@ class BassPanelWidget extends ConsumerWidget {
                     state: state,
                     notifier: notifier,
                   ),
-                  const SizedBox(width: 3),
+                  const SizedBox(width: 3.6),
                   _buildBassColumn(
                     title: 'Interior',
                     buttons: interiorButtons,
@@ -171,8 +171,8 @@ class BassPanelWidget extends ConsumerWidget {
       children: [
         // Cabecera de columna
         Container(
-          width: 24,
-          height: 12,
+          width: 29,
+          height: 14,
           decoration: BoxDecoration(
             color: const Color(0xFF0F172A),
             borderRadius: BorderRadius.circular(3),
@@ -182,14 +182,14 @@ class BassPanelWidget extends ConsumerWidget {
             child: Text(
               title,
               style: const TextStyle(
-                fontSize: 5.5,
+                fontSize: 6.6,
                 fontWeight: FontWeight.w800,
                 color: Color(0xFF38BDF8),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 3.6),
         // 6 Botones
         ...buttons.asMap().entries.map((entry) {
           final index = entry.key + 1;
@@ -221,17 +221,17 @@ class BassPanelWidget extends ConsumerWidget {
               : pushMidi + currentTuning.offset;
 
           return Padding(
-            padding: const EdgeInsets.only(bottom: 3.0),
+            padding: const EdgeInsets.only(bottom: 3.6),
             child: Stack(
               clipBehavior: Clip.none,
               alignment: Alignment.center,
               children: [
                 Positioned(
-                  left: -9,
+                  left: -10.8,
                   child: Text(
                     '$index',
                     style: TextStyle(
-                      fontSize: 5.5,
+                      fontSize: 6.6,
                       fontWeight: FontWeight.w900,
                       color: Colors.white.withValues(alpha: 0.95),
                       shadows: const [
@@ -242,7 +242,7 @@ class BassPanelWidget extends ConsumerWidget {
                   ),
                 ),
                 AccordionButton3D(
-                  size: 23.0,
+                  size: 27.6,
                   isPressed: isPressed,
                   bellowsMode: currentBellows,
                   buttonType: btn.type,
@@ -254,16 +254,16 @@ class BassPanelWidget extends ConsumerWidget {
                 // Insignia flotante Abre / Cierra al presionar bajo
                 if (isPressed && (currentBellows == BellowsMode.push || currentBellows == BellowsMode.pull))
                   Positioned(
-                    top: -6,
+                    top: -7.2,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 140),
-                      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 3.6, vertical: 0.6),
                       decoration: BoxDecoration(
                         color: currentBellows == BellowsMode.push ? const Color(0xFFDC2626) : const Color(0xFF2563EB),
                         borderRadius: BorderRadius.circular(9999),
                         border: Border.all(
                           color: currentBellows == BellowsMode.push ? const Color(0xFFFCA5A5) : const Color(0xFF93C5FD),
-                          width: 0.5,
+                          width: 0.6,
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -278,7 +278,7 @@ class BassPanelWidget extends ConsumerWidget {
                       child: Text(
                         currentBellows == BellowsMode.push ? 'CIERRA' : 'ABRE',
                         style: const TextStyle(
-                          fontSize: 4.0,
+                          fontSize: 4.8,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                           letterSpacing: 0.5,
@@ -299,7 +299,7 @@ class BassPanelWidget extends ConsumerWidget {
       return Text(
         pushName,
         style: TextStyle(
-          fontSize: 6.0,
+          fontSize: 7.2,
           fontWeight: FontWeight.w900,
           color: isPressed ? Colors.white : const Color(0xFF991B1B),
           shadows: isPressed
@@ -317,7 +317,7 @@ class BassPanelWidget extends ConsumerWidget {
       return Text(
         pullName,
         style: TextStyle(
-          fontSize: 6.0,
+          fontSize: 7.2,
           fontWeight: FontWeight.w900,
           color: isPressed ? Colors.white : const Color(0xFF1E40AF),
           shadows: isPressed
@@ -338,7 +338,7 @@ class BassPanelWidget extends ConsumerWidget {
         Text(
           pushName,
           style: TextStyle(
-            fontSize: 4.5,
+            fontSize: 5.4,
             fontWeight: FontWeight.w900,
             color: isPressed ? const Color(0xFF7F1D1D) : const Color(0xFF991B1B),
             height: 1.0,
@@ -346,15 +346,15 @@ class BassPanelWidget extends ConsumerWidget {
           ),
         ),
         Container(
-          width: 7,
-          height: 1,
+          width: 8.4,
+          height: 1.2,
           color: isPressed ? Colors.black38 : const Color(0xFF64748B),
-          margin: const EdgeInsets.symmetric(vertical: 0.8),
+          margin: const EdgeInsets.symmetric(vertical: 1.0),
         ),
         Text(
           pullName,
           style: TextStyle(
-            fontSize: 4.5,
+            fontSize: 5.4,
             fontWeight: FontWeight.w900,
             color: isPressed ? const Color(0xFF1E3A8A) : const Color(0xFF1E40AF),
             height: 1.0,

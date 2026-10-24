@@ -6,6 +6,7 @@ import '../../core/audio/analysis/tuning_recommender.dart';
 import '../../core/audio/audio_analyzer.dart';
 import '../../core/audio/audio_engine_bridge.dart';
 import '../../core/audio/audio_file_loader_interface.dart';
+import '../../core/audio/audio_file_player.dart';
 import '../../core/audio/demo_track_generator.dart';
 import '../../core/constants/enums.dart';
 import '../../core/di/providers.dart';
@@ -252,6 +253,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   late AudioEngine _audioBridge;
   late AudioAnalyzer _analyzer;
   late AudioFileLoader _fileLoader;
+  late AudioFilePlayer _audioPlayer;
   late DemoTrackGenerator _demoGenerator;
 
   @override
@@ -259,6 +261,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     _audioBridge = ref.read(audioEngineProvider);
     _analyzer = ref.read(audioAnalyzerProvider);
     _fileLoader = ref.read(audioFileLoaderProvider);
+    _audioPlayer = ref.read(audioFilePlayerProvider);
     _demoGenerator = ref.read(demoTrackGeneratorProvider);
     ref.onDispose(() => _playbackTimer?.cancel());
 
@@ -372,10 +375,23 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
   /// Procesa bytes de audio con el analizador inyectado y actualiza estado + acordeón
   Future<AudioLoadResult> processAudioBytes(Uint8List bytes, String fileName) async {
+    // Detener cualquier reproducción anterior antes de cargar la nueva pista.
+    _playbackTimer?.cancel();
+    _audioPlayer.stop();
+    _audioBridge.allNotesOff();
+    _currentBeatNotes = [];
+
     state = state.copyWith(
       isAnalyzingAudio: true,
       loadedAudioFileName: fileName,
+      isPlayingAudio: false,
+      currentAudioTime: 0.0,
     );
+
+    // Dejar el archivo listo para sonar antes del análisis: el reproductor
+    // conserva sus propios bytes y el DSP trabaja sobre una copia, así una
+    // pista siempre se puede escuchar aunque el análisis falle.
+    _audioPlayer.load(bytes, _mimeTypeFor(fileName));
 
     final report = await _analyzer.analyzeAudio(bytes, fileName);
 
@@ -393,6 +409,19 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     applyChordsToMeasures(report.chords);
 
     return AudioLoadSuccess(report, fileName);
+  }
+
+  /// Tipo MIME según la extensión del archivo cargado.
+  static String _mimeTypeFor(String fileName) {
+    final name = fileName.toLowerCase();
+    if (name.endsWith('.wav')) return 'audio/wav';
+    if (name.endsWith('.mp3')) return 'audio/mpeg';
+    if (name.endsWith('.ogg') || name.endsWith('.oga')) return 'audio/ogg';
+    if (name.endsWith('.m4a') || name.endsWith('.mp4')) return 'audio/mp4';
+    if (name.endsWith('.flac')) return 'audio/flac';
+    if (name.endsWith('.aac')) return 'audio/aac';
+    if (name.endsWith('.webm')) return 'audio/webm';
+    return 'audio/mpeg';
   }
 
 
@@ -510,6 +539,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       volume2: state.syncVolume ? vol : state.volume2,
     );
     _audioBridge.setVolume(vol);
+    _audioPlayer.setVolume(vol);
   }
 
   void toggleMute1() => state = state.copyWith(isMuted1: !state.isMuted1);
@@ -653,53 +683,80 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     _playbackTimer?.cancel();
 
     if (!nextPlaying) {
-      // Al pausar: apagar notas activas
+      // Al pausar: pausar la pista y apagar notas activas
+      _audioPlayer.pause();
       for (final n in _currentBeatNotes) {
         _audioBridge.noteOff(n);
       }
       _currentBeatNotes = [];
+      return;
     }
 
-    if (nextPlaying) {
-      _lastPlayedBar = null;
-      _lastPlayedBeat = null;
+    _lastPlayedBar = null;
+    _lastPlayedBeat = null;
 
-      final bpm = state.audioReport?.bpm ?? 120.0;
-      final intervalMs = ((60.0 / bpm / 2.0) * 1000).toInt().clamp(50, 1000);
+    // Reproducir el archivo de audio cargado desde su posición actual.
+    _audioPlayer.play();
 
-      _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
-        if (!state.isPlayingAudio) {
-          timer.cancel();
-          return;
-        }
+    final bpm = state.audioReport?.bpm ?? 120.0;
+    final intervalMs = ((60.0 / bpm / 2.0) * 1000).toInt().clamp(50, 1000);
 
-        final nextTime = state.currentAudioTime + (intervalMs / 1000.0);
-        final totalDur = state.totalAudioDuration > 0 ? state.totalAudioDuration : 16.0;
-        final wrappedTime = nextTime >= totalDur ? 0.0 : nextTime;
+    _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
+      if (!state.isPlayingAudio) {
+        timer.cancel();
+        return;
+      }
 
-        final beatDuration = 60.0 / bpm;
-        final totalBeats = (wrappedTime / beatDuration).floor();
-        final currentBar = (totalBeats ~/ 4) % (state.measures.isNotEmpty ? state.measures.length : 8);
-        final currentBeat = totalBeats % 4;
+      final hasFile = _audioPlayer.isLoaded;
+      final totalDur = hasFile && _audioPlayer.durationSeconds > 0
+          ? _audioPlayer.durationSeconds
+          : (state.totalAudioDuration > 0 ? state.totalAudioDuration : 16.0);
 
+      // Si la pista terminó, detener y volver al inicio.
+      if (hasFile && _audioPlayer.positionSeconds >= totalDur - 0.05) {
+        timer.cancel();
+        _audioPlayer.stop();
+        _audioBridge.allNotesOff();
+        _currentBeatNotes = [];
         state = state.copyWith(
-          currentAudioTime: wrappedTime,
-          selectedBarIndex: currentBar,
-          selectedBeatIndex: currentBeat,
+          isPlayingAudio: false,
+          currentAudioTime: 0.0,
+          selectedBarIndex: 0,
+          selectedBeatIndex: 0,
         );
+        return;
+      }
 
-        // Reproducir acorde al entrar en un nuevo beat
-        if (currentBar != _lastPlayedBar || currentBeat != _lastPlayedBeat) {
-          _lastPlayedBar = currentBar;
-          _lastPlayedBeat = currentBeat;
-          _playBeatChord(currentBar, currentBeat);
-        }
-      });
-    }
+      // Con archivo cargado, la posición real manda; si no, avanza el reloj.
+      final nextTime = hasFile
+          ? _audioPlayer.positionSeconds
+          : state.currentAudioTime + (intervalMs / 1000.0);
+      final wrappedTime = !hasFile && nextTime >= totalDur ? 0.0 : nextTime;
+
+      final beatDuration = 60.0 / bpm;
+      final totalBeats = (wrappedTime / beatDuration).floor();
+      final currentBar = (totalBeats ~/ 4) % (state.measures.isNotEmpty ? state.measures.length : 8);
+      final currentBeat = totalBeats % 4;
+
+      state = state.copyWith(
+        currentAudioTime: wrappedTime,
+        selectedBarIndex: currentBar,
+        selectedBeatIndex: currentBeat,
+      );
+
+      // Reproducir acorde al entrar en un nuevo beat
+      if (currentBar != _lastPlayedBar || currentBeat != _lastPlayedBeat) {
+        _lastPlayedBar = currentBar;
+        _lastPlayedBeat = currentBeat;
+        _playBeatChord(currentBar, currentBeat);
+      }
+    });
   }
 
   void stopAudio() {
     _playbackTimer?.cancel();
+    _audioPlayer.stop();
+    _currentBeatNotes = [];
     state = state.copyWith(
       isPlayingAudio: false,
       currentAudioTime: 0.0,
@@ -710,6 +767,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void seekAudio(double time) {
+    _audioPlayer.seek(time);
     state = state.copyWith(currentAudioTime: time);
   }
 

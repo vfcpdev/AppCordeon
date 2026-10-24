@@ -4,6 +4,7 @@ import '../audio/audio_analyzer.dart';
 import '../audio/audio_analyzer_service.dart';
 import '../audio/audio_engine_bridge.dart';
 import '../audio/audio_file_loader.dart';
+import '../audio/audio_file_player.dart';
 import '../audio/demo_track_generator.dart';
 import '../audio/file_picker_audio_loader.dart';
 
@@ -29,3 +30,10 @@ final audioFileLoaderProvider = Provider<AudioFileLoader>((_) {
 
 final demoTrackGeneratorProvider =
     Provider<DemoTrackGenerator>((_) => const DemoTrackGenerator());
+
+/// Reproductor del archivo de audio cargado (independiente del sintetizador).
+final audioFilePlayerProvider = Provider<AudioFilePlayer>((ref) {
+  final player = createAudioFilePlayer();
+  ref.onDispose(player.stop);
+  return player;
+});

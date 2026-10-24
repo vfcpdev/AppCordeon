@@ -170,12 +170,6 @@ class MeasureGridWidget extends ConsumerWidget {
                     ),
                   ),
                 ),
-
-                // Columna Derecha: Barra de Herramientas Vertical (Solo en Diapasón 1)
-                if (isPrimary) ...[
-                  const SizedBox(width: 6),
-                  _buildVerticalActionToolbar(context, state, notifier),
-                ],
               ],
             ),
           ),
@@ -264,73 +258,6 @@ class MeasureGridWidget extends ConsumerWidget {
     return '$mins:$secs';
   }
 
-  Widget _buildVerticalActionToolbar(
-    BuildContext context,
-    AccordionSimulatorState state,
-    AccordionSimulatorNotifier notifier,
-  ) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildActionBtn(
-          icon: FontAwesomeIcons.listOl,
-          isActive: state.sequenceMode,
-          tooltip: 'Modo Secuencia',
-          onTap: notifier.toggleSequenceMode,
-        ),
-        const SizedBox(height: 3),
-        _buildActionBtn(
-          icon: FontAwesomeIcons.checkDouble,
-          tooltip: 'Seleccionar Todos (Ctrl+A)',
-          onTap: () {},
-        ),
-        const SizedBox(height: 3),
-        _buildActionBtn(
-          icon: FontAwesomeIcons.fileArrowDown,
-          tooltip: 'Guardar / Exportar acordes a CSV',
-          onTap: () {},
-        ),
-        const SizedBox(height: 3),
-        _buildActionBtn(
-          icon: FontAwesomeIcons.fileArrowUp,
-          tooltip: 'Cargar / Importar acordes desde CSV',
-          onTap: () {},
-        ),
-        const SizedBox(height: 3),
-        _buildActionBtn(
-          icon: FontAwesomeIcons.keyboard,
-          tooltip: 'Digitar Progresión Manualmente',
-          onTap: () => _showManualProgressionDialog(context, notifier),
-        ),
-        const SizedBox(height: 3),
-        _buildActionBtn(
-          icon: FontAwesomeIcons.plus,
-          tooltip: 'Agregar un compás vacío al final',
-          onTap: notifier.addMeasure,
-        ),
-        const SizedBox(height: 3),
-        _buildActionBtn(
-          icon: FontAwesomeIcons.trashCan,
-          tooltip: 'Borrar todos los acordes de la cuadrícula',
-          color: const Color(0xFFDC2626),
-          onTap: notifier.clearAllGridChords,
-        ),
-        const SizedBox(height: 3),
-        _buildActionBtn(
-          icon: FontAwesomeIcons.gear,
-          tooltip: 'Configurar cantidad de filas visibles',
-          onTap: () {},
-        ),
-        const SizedBox(height: 3),
-        _buildActionBtn(
-          icon: FontAwesomeIcons.upRightAndDownLeftFromCenter,
-          tooltip: 'Desacoplar a ventana completa',
-          onTap: () {},
-        ),
-      ],
-    );
-  }
-
   Widget _buildTransportBtn({
     required FaIconData icon,
     required VoidCallback onTap,
@@ -367,88 +294,6 @@ class MeasureGridWidget extends ConsumerWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildActionBtn({
-    required FaIconData icon,
-    required String tooltip,
-    required VoidCallback onTap,
-    bool isActive = false,
-    Color? color,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(5),
-        child: Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: isActive ? const Color(0xFFE0F2FE) : const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(
-              color: isActive ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1),
-            ),
-          ),
-          child: Center(
-            child: FaIcon(
-              icon,
-              size: 10,
-              color: color ?? (isActive ? const Color(0xFF0284C7) : const Color(0xFF475569)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showManualProgressionDialog(BuildContext context, AccordionSimulatorNotifier notifier) {
-    final controller = TextEditingController(text: 'Bb | Eb | F7 | Bb');
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Digitar Progresión Manualmente'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Escribe los acordes separados por barra (|), espacio o coma. Ej: Sol | Re | Mim | Do',
-              style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: controller,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'ej: Bb | Eb | F7 | Bb',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final raw = controller.text;
-              final parts = raw.split(RegExp(r'[|, \n]+')).where((s) => s.isNotEmpty).toList();
-              for (int i = 0; i < parts.length; i++) {
-                final mIdx = i ~/ 4;
-                final bIdx = i % 4;
-                notifier.updateMeasureBeat(mIdx, bIdx, parts[i]);
-              }
-              Navigator.pop(ctx);
-            },
-            child: const Text('Cargar a Cuadrícula'),
-          ),
-        ],
       ),
     );
   }

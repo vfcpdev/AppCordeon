@@ -146,44 +146,7 @@ class AppHeaderWidget extends ConsumerWidget {
                           const FaIcon(FontAwesomeIcons.cloudArrowUp, size: 13, color: Color(0xFF0284C7)),
                           const SizedBox(width: 5),
                           const FaIcon(FontAwesomeIcons.music, size: 11, color: Color(0xFF0F172A)),
-                          const SizedBox(width: 6),
-                          const Text(
-                            'Cargar Audio',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
-                          ),
                         ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-
-              // Botón Demo rápido (1 Clic)
-              Tooltip(
-                message: 'Cargar Pista Demo de Vallenato (1 Clic)',
-                child: InkWell(
-                  onTap: () async {
-                    final r = await notifier.loadDemoAudioTrack();
-                    if (context.mounted) presentAudioLoadResult(context, r);
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        FaIcon(FontAwesomeIcons.wandMagicSparkles, size: 11, color: Color(0xFF2563EB)),
-                        SizedBox(width: 4),
-                        Text(
-                          'Demo',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF)),
-                        ),
                       ],
                     ),
                   ),
