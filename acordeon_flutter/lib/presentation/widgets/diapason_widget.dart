@@ -11,8 +11,6 @@ import 'tuning_picker_dialog.dart';
 class DiapasonWidget extends ConsumerWidget {
   final int accordionNumber;
   final String title;
-  final bool isBassCollapsed;
-  final VoidCallback? onToggleBass;
   final TuningDefinition? currentTuning;
   final ValueChanged<TuningDefinition?>? onTuningChanged;
 
@@ -20,8 +18,6 @@ class DiapasonWidget extends ConsumerWidget {
     super.key,
     this.accordionNumber = 1,
     this.title = 'Diapasón Principal',
-    this.isBassCollapsed = false,
-    this.onToggleBass,
     this.currentTuning,
     this.onTuningChanged,
   });
@@ -60,7 +56,7 @@ class DiapasonWidget extends ConsumerWidget {
     final effectiveRows = isMirror ? rowList.reversed.toList() : rowList;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(48, 12, 28, 38),
+      padding: const EdgeInsets.fromLTRB(28, 12, 28, 38),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topCenter,
@@ -107,47 +103,34 @@ class DiapasonWidget extends ConsumerWidget {
                 }).toList(),
               ),
               // Botón selector acordeón y botón bajos a la derecha, arriba
-              Positioned(
-                left: -36,
-                top: 0,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    if (currentTuning != null && onTuningChanged != null)
-                      Tooltip(
-                        message: 'Seleccionar acordeón',
-                        child: IconButton(
-                          onPressed: () => showTuningPickerDialog(
-                            context: context,
-                            currentTuning: currentTuning!,
-                            onTuningChanged: onTuningChanged!,
-                          ),
-                          icon: const FaIcon(
-                            FontAwesomeIcons.music,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                          visualDensity: VisualDensity.compact,
-                          style: IconButton.styleFrom(
-                            backgroundColor: Colors.white.withValues(alpha: 0.07),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
-                            ),
-                          ),
+              if (currentTuning != null && onTuningChanged != null)
+                Positioned(
+                  left: -36,
+                  top: 0,
+                  child: Tooltip(
+                    message: 'Seleccionar acordeón',
+                    child: IconButton(
+                      onPressed: () => showTuningPickerDialog(
+                        context: context,
+                        currentTuning: currentTuning!,
+                        onTuningChanged: onTuningChanged!,
+                      ),
+                      icon: const FaIcon(
+                        FontAwesomeIcons.music,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.07),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
                         ),
                       ),
-                    if (onToggleBass != null) ...[
-                      const SizedBox(height: 4),
-                      _BassToggle(
-                        isBassCollapsed: isBassCollapsed,
-                        onToggleBass: onToggleBass!,
-                      ),
-                    ],
-                  ],
+                    ),
+                  ),
                 ),
-              ),
             ],
           ),
         ],
@@ -224,73 +207,6 @@ class DiapasonWidget extends ConsumerWidget {
 }
 
 // ─── Widget interno: los 3 botones de fuelle ─────────────────────────────────
-class _BassToggle extends StatelessWidget {
-  final bool isBassCollapsed;
-  final VoidCallback onToggleBass;
-
-  const _BassToggle({
-    required this.isBassCollapsed,
-    required this.onToggleBass,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: isBassCollapsed ? 'Abrir bajos' : 'Cerrar bajos',
-      child: InkWell(
-        onTap: onToggleBass,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          width: 24,
-          height: 68,
-          decoration: BoxDecoration(
-            color: !isBassCollapsed
-                ? const Color(0xFF0284C7)
-                : Colors.white.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: !isBassCollapsed
-                  ? const Color(0xFF38BDF8)
-                  : Colors.white.withValues(alpha: 0.18),
-            ),
-            boxShadow: !isBassCollapsed
-                ? [BoxShadow(color: const Color(0xFF0284C7).withValues(alpha: 0.4), blurRadius: 8)]
-                : null,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                Text(
-                  'B',
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white, height: 1.0),
-                ),
-                Text(
-                  'a',
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white, height: 1.0),
-                ),
-                Text(
-                  'j',
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white, height: 1.0),
-                ),
-                Text(
-                  'o',
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white, height: 1.0),
-                ),
-                Text(
-                  's',
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white, height: 1.0),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _BellowsToggle extends StatelessWidget {
   final BellowsMode bellowsMode;
   final ValueChanged<BellowsMode> onBellowsChanged;

@@ -206,8 +206,6 @@ class HomeScreen extends ConsumerWidget {
                 BassPanelWidget(accordionNumber: accordionNumber),
                 DiapasonWidget(
                   accordionNumber: accordionNumber,
-                  isBassCollapsed: isBassCollapsed,
-                  onToggleBass: onToggleBass,
                   currentTuning: currentTuning,
                   onTuningChanged: onTuningChanged,
                 ),
