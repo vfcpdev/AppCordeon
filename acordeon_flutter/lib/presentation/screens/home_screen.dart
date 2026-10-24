@@ -61,19 +61,16 @@ class HomeScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(width: 8),
 
-                                  // Cuadrícula de compases al 50% de ancho del
-                                  // Constructor de Acorde (ancho 300 -> compás 150).
-                                  SizedBox(
-                                    width: 300,
-                                    child: Column(
+                                  // Compás (izquierda) + Constructor de Acorde (derecha)
+                                  // en fila horizontal. El Compás ocupa 150 px y el
+                                  // Constructor se expande al ancho restante.
+                                  IntrinsicHeight(
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
                                       children: const [
-                                        Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: MeasureGridWidget(width: 150),
-                                        ),
-                                        SizedBox(height: 8),
+                                        MeasureGridWidget(width: 150),
+                                        SizedBox(width: 8),
                                         FreeChordWidget(),
                                       ],
                                     ),
