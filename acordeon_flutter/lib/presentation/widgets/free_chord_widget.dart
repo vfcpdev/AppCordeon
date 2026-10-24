@@ -56,18 +56,6 @@ class FreeChordWidget extends ConsumerWidget {
                       color: Color(0xFF059669),
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
-                    ),
-                    child: Text(
-                      'Notas: $rootName · ${_getThird(rootName, state.freeChordType)} · ${_getFifth(rootName, state.freeChordType)}',
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                    ),
-                  ),
 
                 ],
               ),
