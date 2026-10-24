@@ -375,6 +375,116 @@ class _BellowsBtn extends StatelessWidget {
   }
 }
 
+class _VerticalVolumeControl extends StatelessWidget {
+  final double volume;
+  final bool isMuted;
+  final ValueChanged<double> onVolumeChanged;
+  final VoidCallback onToggleMute;
+  final bool? syncVolume;
+  final VoidCallback? onToggleSyncVolume;
+
+  const _VerticalVolumeControl({
+    required this.volume,
+    required this.isMuted,
+    required this.onVolumeChanged,
+    required this.onToggleMute,
+    this.syncVolume,
+    this.onToggleSyncVolume,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effective = isMuted ? 0.0 : volume;
+
+    return Container(
+      width: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '${(effective * 100).toInt()}%',
+            style: const TextStyle(
+              fontSize: 7.5,
+              fontWeight: FontWeight.w800,
+              color: Colors.white70,
+            ),
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: 20,
+            height: 170,
+            child: RotatedBox(
+              // 270°: 100% arriba y 0% abajo, como un fader vertical.
+              quarterTurns: 3,
+              child: SliderTheme(
+                data: SliderThemeData(
+                  trackHeight: 3,
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 9),
+                  activeTrackColor: const Color(0xFF38BDF8),
+                  inactiveTrackColor: Colors.white24,
+                  thumbColor: const Color(0xFF38BDF8),
+                ),
+                child: Slider(
+                  value: effective,
+                  min: 0.0,
+                  max: 1.0,
+                  onChanged: (value) {
+                    if (isMuted) onToggleMute();
+                    onVolumeChanged(value);
+                  },
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Tooltip(
+            message: isMuted ? 'Activar sonido' : 'Silenciar',
+            child: InkWell(
+              onTap: onToggleMute,
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.all(3),
+                child: FaIcon(
+                  isMuted ? FontAwesomeIcons.volumeXmark : FontAwesomeIcons.volumeHigh,
+                  size: 10,
+                  color: isMuted ? const Color(0xFFF87171) : Colors.white70,
+                ),
+              ),
+            ),
+          ),
+          if (onToggleSyncVolume != null) ...[
+            const SizedBox(height: 4),
+            Tooltip(
+              message: 'Sincronizar volumen',
+              child: InkWell(
+                onTap: onToggleSyncVolume,
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.all(3),
+                  child: FaIcon(
+                    FontAwesomeIcons.link,
+                    size: 9,
+                    color: (syncVolume ?? false)
+                        ? const Color(0xFF38BDF8)
+                        : Colors.white38,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _RowDef {
   final String rowKey;
   final String title;
