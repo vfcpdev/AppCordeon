@@ -120,14 +120,22 @@ class _AccordionButton3DPainter extends CustomPainter {
     // Gradiente del cuerpo
     final Paint bodyPaint = Paint();
     final bool isTreble = buttonType == null;
-    // En el diapasón (agudos), Abrir/Cerrar solo tiñe los botones del acorde
-    // en la dirección activa. En "Ambos" el cuerpo queda sin teñir.
-    final bool chordTint = isTreble &&
+    // En Abrir o Cerrar: tiñe el cuerpo con el color de la dirección activa.
+    // En "Ambos": tiñe split (azul/rojo) si el botón pertenece al acorde en
+    // alguna de las dos direcciones, igual que los botones de bajo.
+    final bool chordTintSingle = isTreble &&
         !isPressed &&
         !isDetectorSelected &&
         !isSelectedForRhythm &&
         ((bellowsMode == BellowsMode.pull && isChordPull) ||
             (bellowsMode == BellowsMode.push && isChordPush));
+    final bool chordTintBoth = isTreble &&
+        !isPressed &&
+        !isDetectorSelected &&
+        !isSelectedForRhythm &&
+        bellowsMode == BellowsMode.both &&
+        (isChordPull || isChordPush);
+    final bool chordTint = chordTintSingle || chordTintBoth;
 
     if (isPressed) {
       if (bellowsMode == BellowsMode.push) {
@@ -244,14 +252,14 @@ class _AccordionButton3DPainter extends CustomPainter {
       }
     }
 
-    // Modo "Ambos" en los bajos: mitad izquierda Abre (azul) y mitad derecha
-    // Cierra (rojo). En el diapasón de agudos "Ambos" no tiñe el cuerpo.
-    final bool bothSplit = !isTreble &&
-        !isPressed &&
+    // Modo "Ambos": mitad izquierda Abre (azul) · mitad derecha Cierra (rojo).
+    // Aplica tanto a los bajos como a los agudos cuando el botón pertenece al
+    // acorde activo en modo Both (chordTintBoth ya lo garantiza vía chordTint).
+    final bool bothSplit = !isPressed &&
         !isDetectorSelected &&
         !isSelectedForRhythm &&
-        !chordTint &&
-        bellowsMode == BellowsMode.both;
+        ((!isTreble && !chordTint && bellowsMode == BellowsMode.both) ||
+            chordTintBoth);
 
     if (chordTint || bothSplit) {
       // Notas del acorde / bajo: azul = Abre (pull) · rojo = Cierra (push)

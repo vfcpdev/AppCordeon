@@ -58,7 +58,8 @@ class DiapasonButtonWidget extends StatelessWidget {
     final bool chordBodyTint = !isPressed &&
         !isDetectorSelected &&
         ((bellowsMode == BellowsMode.pull && isChordPull) ||
-            (bellowsMode == BellowsMode.push && isChordPush));
+            (bellowsMode == BellowsMode.push && isChordPush) ||
+            (bellowsMode == BellowsMode.both && (isChordPull || isChordPush)));
     final bool bodyTinted = isPressed || isDetectorSelected || chordBodyTint;
 
     return Listener(

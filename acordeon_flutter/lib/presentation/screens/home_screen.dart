@@ -62,20 +62,19 @@ class HomeScreen extends ConsumerWidget {
                                   const SizedBox(width: 8),
 
                                   // Compás (izquierda, 150 px) + Constructor de Acorde (derecha, 150 px)
-                                  // Ambas columnas con el mismo ancho para un layout simétrico y compacto.
-                                  IntrinsicHeight(
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: const [
-                                        MeasureGridWidget(width: 150),
-                                        SizedBox(width: 8),
-                                        SizedBox(
-                                          width: 150,
-                                          child: FreeChordWidget(),
-                                        ),
-                                      ],
-                                    ),
+                                  // Row simple — IntrinsicHeight es incompatible con ListView
+                                  // porque ListView no implementa computeIntrinsicHeight().
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      MeasureGridWidget(width: 150),
+                                      SizedBox(width: 8),
+                                      SizedBox(
+                                        width: 150,
+                                        child: FreeChordWidget(),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(width: 14),
                                 ],
