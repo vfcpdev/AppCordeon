@@ -71,6 +71,16 @@ class AccordionSimulatorState {
   final double currentAudioTime;
   final double totalAudioDuration;
   final bool syncDiapason;
+
+  /// `true` = el transporte del Compás controla el archivo de audio cargado.
+  /// `false` = el Compás avanza por su propio reloj/BPM y la pista queda en pausa.
+  final bool isAudioCoupled;
+
+  /// Volumen propio de la sección Compás (pista y acordes sintetizados).
+  final double compasVolume;
+
+  /// Notas MIDI que están sonando en el compás actual (para el diapasón).
+  final Set<int> playingChordNotes;
   final bool sequenceMode;
   final int visibleGridRows;
   final List<MeasureRow> measures;
@@ -121,6 +131,9 @@ class AccordionSimulatorState {
     required this.currentAudioTime,
     required this.totalAudioDuration,
     required this.syncDiapason,
+    required this.isAudioCoupled,
+    required this.compasVolume,
+    required this.playingChordNotes,
     required this.sequenceMode,
     required this.visibleGridRows,
     required this.measures,
@@ -166,6 +179,9 @@ class AccordionSimulatorState {
     double? currentAudioTime,
     double? totalAudioDuration,
     bool? syncDiapason,
+    bool? isAudioCoupled,
+    double? compasVolume,
+    Set<int>? playingChordNotes,
     bool? sequenceMode,
     int? visibleGridRows,
     List<MeasureRow>? measures,
@@ -211,6 +227,9 @@ class AccordionSimulatorState {
       currentAudioTime: currentAudioTime ?? this.currentAudioTime,
       totalAudioDuration: totalAudioDuration ?? this.totalAudioDuration,
       syncDiapason: syncDiapason ?? this.syncDiapason,
+      isAudioCoupled: isAudioCoupled ?? this.isAudioCoupled,
+      compasVolume: compasVolume ?? this.compasVolume,
+      playingChordNotes: playingChordNotes ?? this.playingChordNotes,
       sequenceMode: sequenceMode ?? this.sequenceMode,
       visibleGridRows: visibleGridRows ?? this.visibleGridRows,
       measures: measures ?? this.measures,
@@ -307,6 +326,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       currentAudioTime: 0.0,
       totalAudioDuration: 180.0,
       syncDiapason: true,
+      isAudioCoupled: true,
+      compasVolume: 0.8,
+      playingChordNotes: const {},
       sequenceMode: true,
       visibleGridRows: 4,
       measures: initialMeasures,
@@ -392,6 +414,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     // conserva sus propios bytes y el DSP trabaja sobre una copia, así una
     // pista siempre se puede escuchar aunque el análisis falle.
     _audioPlayer.load(bytes, _mimeTypeFor(fileName));
+    _audioPlayer.setVolume(state.compasVolume);
 
     final report = await _analyzer.analyzeAudio(bytes, fileName);
 
@@ -539,7 +562,14 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       volume2: state.syncVolume ? vol : state.volume2,
     );
     _audioBridge.setVolume(vol);
-    _audioPlayer.setVolume(vol);
+  }
+
+  /// Volumen independiente de la sección Compás: controla la pista cargada y
+  /// la intensidad de los acordes sintetizados que marca la cuadrícula.
+  void setCompasVolume(double vol) {
+    final clamped = vol.clamp(0.0, 1.0);
+    state = state.copyWith(compasVolume: clamped);
+    _audioPlayer.setVolume(clamped);
   }
 
   void toggleMute1() => state = state.copyWith(isMuted1: !state.isMuted1);
@@ -663,27 +693,41 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
     _currentBeatNotes = [];
 
-    if (barIndex < 0 || barIndex >= state.measures.length) return;
+    if (barIndex < 0 || barIndex >= state.measures.length) {
+      state = state.copyWith(playingChordNotes: const {});
+      return;
+    }
     final row = state.measures[barIndex];
-    if (beatIndex < 0 || beatIndex >= row.beats.length) return;
+    if (beatIndex < 0 || beatIndex >= row.beats.length) {
+      state = state.copyWith(playingChordNotes: const {});
+      return;
+    }
 
     final chord = row.beats[beatIndex].chord.trim();
-    if (chord.isEmpty) return;
+    if (chord.isEmpty) {
+      state = state.copyWith(playingChordNotes: const {});
+      return;
+    }
 
     final notes = _chordSymbolToMidi(chord);
+    final velocity = (0.65 * state.compasVolume).clamp(0.0, 1.0);
     for (final n in notes) {
-      _audioBridge.noteOn(n, velocity: 0.65);
+      _audioBridge.noteOn(n, velocity: velocity);
     }
     _currentBeatNotes = notes;
+    state = state.copyWith(playingChordNotes: notes.toSet());
   }
 
   void togglePlayAudio() {
     final nextPlaying = !state.isPlayingAudio;
-    state = state.copyWith(isPlayingAudio: nextPlaying);
     _playbackTimer?.cancel();
 
     if (!nextPlaying) {
       // Al pausar: pausar la pista y apagar notas activas
+      state = state.copyWith(
+        isPlayingAudio: false,
+        playingChordNotes: const {},
+      );
       _audioPlayer.pause();
       for (final n in _currentBeatNotes) {
         _audioBridge.noteOff(n);
@@ -692,11 +736,17 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       return;
     }
 
+    state = state.copyWith(isPlayingAudio: true);
     _lastPlayedBar = null;
     _lastPlayedBeat = null;
 
-    // Reproducir el archivo de audio cargado desde su posición actual.
-    _audioPlayer.play();
+    // Acoplado: la pista manda. Desacoplado: solo avanza el Compás.
+    final useFileTransport = _audioPlayer.isLoaded && state.isAudioCoupled;
+    if (useFileTransport) {
+      _audioPlayer.play();
+    } else {
+      _audioPlayer.pause();
+    }
 
     final bpm = state.audioReport?.bpm ?? 120.0;
     final intervalMs = ((60.0 / bpm / 2.0) * 1000).toInt().clamp(50, 1000);
@@ -707,13 +757,13 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         return;
       }
 
-      final hasFile = _audioPlayer.isLoaded;
-      final totalDur = hasFile && _audioPlayer.durationSeconds > 0
+      final fileDrives = _audioPlayer.isLoaded && state.isAudioCoupled;
+      final totalDur = fileDrives && _audioPlayer.durationSeconds > 0
           ? _audioPlayer.durationSeconds
           : (state.totalAudioDuration > 0 ? state.totalAudioDuration : 16.0);
 
       // Si la pista terminó, detener y volver al inicio.
-      if (hasFile && _audioPlayer.positionSeconds >= totalDur - 0.05) {
+      if (fileDrives && _audioPlayer.positionSeconds >= totalDur - 0.05) {
         timer.cancel();
         _audioPlayer.stop();
         _audioBridge.allNotesOff();
@@ -723,15 +773,16 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
           currentAudioTime: 0.0,
           selectedBarIndex: 0,
           selectedBeatIndex: 0,
+          playingChordNotes: const {},
         );
         return;
       }
 
-      // Con archivo cargado, la posición real manda; si no, avanza el reloj.
-      final nextTime = hasFile
+      // Acoplado, la posición real manda; desacoplado, avanza el reloj.
+      final nextTime = fileDrives
           ? _audioPlayer.positionSeconds
           : state.currentAudioTime + (intervalMs / 1000.0);
-      final wrappedTime = !hasFile && nextTime >= totalDur ? 0.0 : nextTime;
+      final wrappedTime = !fileDrives && nextTime >= totalDur ? 0.0 : nextTime;
 
       final beatDuration = 60.0 / bpm;
       final totalBeats = (wrappedTime / beatDuration).floor();
@@ -762,13 +813,54 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       currentAudioTime: 0.0,
       selectedBarIndex: 0,
       selectedBeatIndex: 0,
+      playingChordNotes: const {},
     );
     _audioBridge.allNotesOff();
   }
 
   void seekAudio(double time) {
-    _audioPlayer.seek(time);
-    state = state.copyWith(currentAudioTime: time);
+    final clamped = time.clamp(
+      0.0,
+      state.totalAudioDuration > 0 ? state.totalAudioDuration : time,
+    );
+    _audioPlayer.seek(clamped);
+
+    final bpm = state.audioReport?.bpm ?? 120.0;
+    final beatDuration = 60.0 / bpm;
+    final totalBeats = (clamped / beatDuration).floor();
+    final currentBar = (totalBeats ~/ 4) %
+        (state.measures.isNotEmpty ? state.measures.length : 8);
+    final currentBeat = totalBeats % 4;
+    _lastPlayedBar = currentBar;
+    _lastPlayedBeat = currentBeat;
+
+    state = state.copyWith(
+      currentAudioTime: clamped,
+      selectedBarIndex: currentBar,
+      selectedBeatIndex: currentBeat,
+    );
+  }
+
+  /// Acopla o desacopla la pista de audio al transporte del Compás.
+  ///
+  /// - Acoplado: el archivo suena y su posición real manda sobre la cuadrícula.
+  /// - Desacoplado: la pista se pausa y el Compás sigue con su propio reloj/BPM.
+  /// Al reacoplar, la pista retoma exactamente en el tiempo actual del Compás.
+  void toggleAudioCoupling() {
+    final coupled = !state.isAudioCoupled;
+    state = state.copyWith(isAudioCoupled: coupled);
+
+    if (!_audioPlayer.isLoaded) return;
+
+    if (!coupled) {
+      _audioPlayer.pause();
+      return;
+    }
+
+    _audioPlayer.seek(state.currentAudioTime);
+    if (state.isPlayingAudio) {
+      _audioPlayer.play();
+    }
   }
 
   void toggleSyncDiapason() {

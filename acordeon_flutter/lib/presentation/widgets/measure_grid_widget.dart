@@ -173,6 +173,62 @@ class MeasureGridWidget extends ConsumerWidget {
               ],
             ),
           ),
+
+          // Volumen propio del Compás (pista + acordes marcados)
+          if (isPrimary)
+            Container(
+              padding: const EdgeInsets.fromLTRB(6, 1, 6, 4),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+              ),
+              child: Row(
+                children: [
+                  const FaIcon(
+                    FontAwesomeIcons.volumeLow,
+                    size: 9,
+                    color: Color(0xFF0284C7),
+                  ),
+                  const SizedBox(width: 2),
+                  Expanded(
+                    child: SizedBox(
+                      height: 20,
+                      child: SliderTheme(
+                        data: SliderThemeData(
+                          trackHeight: 3,
+                          thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 5,
+                          ),
+                          overlayShape: const RoundSliderOverlayShape(
+                            overlayRadius: 8,
+                          ),
+                          activeTrackColor: const Color(0xFF0284C7),
+                          inactiveTrackColor: const Color(0xFFCBD5E1),
+                          thumbColor: const Color(0xFF0284C7),
+                        ),
+                        child: Slider(
+                          value: state.compasVolume,
+                          min: 0.0,
+                          max: 1.0,
+                          onChanged: notifier.setCompasVolume,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 22,
+                    child: Text(
+                      '${(state.compasVolume * 100).toInt()}%',
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -207,6 +263,19 @@ class MeasureGridWidget extends ConsumerWidget {
           tooltip: 'Detener',
         ),
         const SizedBox(height: 4),
+        if (state.audioReport != null || state.loadedAudioFileName != null) ...[
+          _buildTransportBtn(
+            icon: state.isAudioCoupled
+                ? FontAwesomeIcons.link
+                : FontAwesomeIcons.linkSlash,
+            isActive: state.isAudioCoupled,
+            onTap: notifier.toggleAudioCoupling,
+            tooltip: state.isAudioCoupled
+                ? 'Desacoplar audio del Compás'
+                : 'Acoplar audio al Compás',
+          ),
+          const SizedBox(height: 4),
+        ],
         _buildTransportBtn(
           icon: FontAwesomeIcons.arrowsRotate,
           isActive: state.syncDiapason,

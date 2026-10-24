@@ -209,6 +209,18 @@ class DiapasonWidget extends ConsumerWidget {
           final isChordPush =
               freeChordNotes.contains(btn.push + currentTuning.offset);
 
+          // Sincronización con el Compás: resalta por clase de altura las
+          // notas del acorde que está sonando en el beat actual.
+          final syncNotes = state.syncDiapason && state.isPlayingAudio
+              ? state.playingChordNotes
+              : const <int>{};
+          final isSyncPull = syncNotes.any(
+            (n) => n % 12 == (btn.pull + currentTuning.offset) % 12,
+          );
+          final isSyncPush = syncNotes.any(
+            (n) => n % 12 == (btn.push + currentTuning.offset) % 12,
+          );
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 12.0),
             child: DiapasonButtonWidget(
@@ -217,8 +229,8 @@ class DiapasonWidget extends ConsumerWidget {
               pullMidi: btn.pull,
               isPressed: isPressed,
               isDetectorSelected: isDetector,
-              isChordPull: isChordPull,
-              isChordPush: isChordPush,
+              isChordPull: isChordPull || isSyncPull,
+              isChordPush: isChordPush || isSyncPush,
               bellowsMode: currentBellows,
               notation: state.notation,
               tuningOffset: currentTuning.offset,

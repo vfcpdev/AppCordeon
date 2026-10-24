@@ -57,33 +57,12 @@ class DiapasonCardHeader extends StatelessWidget {
           const SizedBox(height: 4),
           const Divider(height: 8, color: Color(0xFFE2E8F0)),
 
-          // Fila 2: Fuelle + Bajos + Mirror + Volumen
+          // Fila 2: Bajos + Mirror + Volumen
           Wrap(
             spacing: 8,
             runSpacing: 6,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              // Fuelle (los botones ⇄ ← → viven dentro del DiapasonWidget)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Fuelle:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                  const SizedBox(width: 3),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: const Color(0xFFCBD5E1), width: 0.8),
-                    ),
-                    child: const Text(
-                      'Esc',
-                      style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
-                    ),
-                  ),
-                ],
-              ),
-
               // Mirror (Invertir Hileras Af->Ad)
               InkWell(
                 onTap: onToggleMirror,
