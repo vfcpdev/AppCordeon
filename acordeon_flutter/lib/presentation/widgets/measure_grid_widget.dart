@@ -312,6 +312,22 @@ class MeasureGridWidget extends ConsumerWidget {
                 : 'Acoplar audio al Compás',
           ),
           const SizedBox(height: 4),
+          if (state.audioReport != null && state.audioReport!.chords.isNotEmpty) ...[
+            _buildTransportBtn(
+              icon: FontAwesomeIcons.tableCells,
+              onTap: () {
+                notifier.applyChordsToMeasures(state.audioReport!.chords);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Acordes detectados cargados en el Compás.'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+              tooltip: 'Cargar acordes analizados en el Compás',
+            ),
+            const SizedBox(height: 4),
+          ],
         ],
         _buildTransportBtn(
           icon: FontAwesomeIcons.arrowsRotate,

@@ -536,27 +536,57 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     setTuning1(match);
   }
 
+  /// Genera la cantidad de compases vacíos necesarios para cubrir la duración
+  /// completa del audio cargado según su BPM.
+  void generateMeasuresForAudio({required double durationSeconds, required int bpm}) {
+    final effectiveBpm = bpm > 0 ? bpm : 120;
+    final secondsPerBeat = 60.0 / effectiveBpm;
+    final totalBeats = (durationSeconds / secondsPerBeat).ceil();
+    // 4 tiempos por compás, con un mínimo de 8 compases
+    final totalBars = ((totalBeats + 3) ~/ 4).clamp(8, 500);
+
+    final generated = List.generate(totalBars, (barIdx) {
+      final barNumber = barIdx + 1;
+      return MeasureRow(
+        barNumber: barNumber,
+        beats: List.generate(4, (bIdx) {
+          final timeSec = (barIdx * 4 + bIdx) * secondsPerBeat;
+          final mins = (timeSec ~/ 60).toString().padLeft(2, '0');
+          final secs = ((timeSec % 60).toInt()).toString().padLeft(2, '0');
+          return MeasureBeat(
+            barIndex: barIdx,
+            beatIndex: bIdx,
+            chord: '',
+            timeText: '$mins:$secs',
+          );
+        }),
+      );
+    });
+
+    state = state.copyWith(
+      measures: generated,
+      selectedBarIndex: 0,
+      selectedBeatIndex: 0,
+    );
+  }
+
+  /// Aplica los acordes detectados a los compases existentes (por decisión posterior del usuario).
   void applyChordsToMeasures(List<DetectedChordSegment> chords) {
-    if (chords.isEmpty) return;
+    if (chords.isEmpty || state.measures.isEmpty) return;
 
     final updatedMeasures = <MeasureRow>[];
     int chordIdx = 0;
 
-    for (int bar = 1; bar <= 8; bar++) {
+    for (final measure in state.measures) {
       final beats = <MeasureBeat>[];
-      for (int b = 1; b <= 4; b++) {
+      for (final beat in measure.beats) {
         final ch = chords[chordIdx % chords.length].chordSymbol;
-        beats.add(MeasureBeat(
-          barIndex: bar,
-          beatIndex: b,
-          chord: ch,
-          timeText: '${((bar - 1) * 2.0 + (b - 1) * 0.5).toStringAsFixed(1)}s',
-        ));
-        if (b % 2 == 0) {
+        beats.add(beat.copyWith(chord: ch));
+        if (beat.beatIndex % 2 == 1) {
           chordIdx++;
         }
       }
-      updatedMeasures.add(MeasureRow(barNumber: bar, beats: beats));
+      updatedMeasures.add(MeasureRow(barNumber: measure.barNumber, beats: beats));
     }
 
     state = state.copyWith(measures: updatedMeasures);

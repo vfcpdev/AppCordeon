@@ -220,6 +220,25 @@ class _TrackInfoCardWidgetState extends ConsumerState<TrackInfoCardWidget> {
               builder: (_) => EditAudioKeyBpmDialog(report: report),
             ),
           ),
+          const SizedBox(width: 6),
+
+          // Botón para cargar los acordes analizados a la cuadrícula de compases (decisión posterior)
+          _InfoBadge(
+            icon: FontAwesomeIcons.tableCells,
+            label: 'Cargar Acordes',
+            background: const Color(0xFFECFDF5),
+            border: const Color(0xFFA7F3D0),
+            foreground: const Color(0xFF059669),
+            onTap: () {
+              notifier.applyChordsToMeasures(report.chords);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Acordes detectados cargados en la cuadrícula de compases.'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
 
           if (showDock) ...[
             const SizedBox(width: 4),
