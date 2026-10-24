@@ -190,16 +190,25 @@ class FreeChordWidget extends ConsumerWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               // Selector Tónica
-              DropdownButton<int>(
-                value: state.freeChordRoot,
-                isDense: true,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                items: List.generate(roots.length, (idx) {
-                  return DropdownMenuItem(value: idx, child: Text(roots[idx]));
-                }),
-                onChanged: (v) {
-                  if (v != null) notifier.setFreeChordRoot(v);
-                },
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFF22C55E)),
+                ),
+                child: DropdownButton<int>(
+                  value: state.freeChordRoot,
+                  isDense: true,
+                  underline: const SizedBox.shrink(),
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+                  items: List.generate(roots.length, (idx) {
+                    return DropdownMenuItem(value: idx, child: Text(roots[idx]));
+                  }),
+                  onChanged: (v) {
+                    if (v != null) notifier.setFreeChordRoot(v);
+                  },
+                ),
               ),
 
               // Selector Tipo
@@ -314,7 +323,7 @@ class FreeChordWidget extends ConsumerWidget {
                   spacing: 4,
                   runSpacing: 4,
                   children: [
-                    _buildDegreeChip('I', rootName, 'Mayor', () => notifier.selectFreeChordDegree(0, 'Mayor')),
+                    _buildDegreeChip('I', rootName, 'Mayor', () => notifier.selectFreeChordDegree(0, 'Mayor'), isActive: true),
                     _buildDegreeChip('ii', _getRelative(rootName, 2), 'menor', () => notifier.selectFreeChordDegree(2, 'menor')),
                     _buildDegreeChip('iii', _getRelative(rootName, 4), 'menor', () => notifier.selectFreeChordDegree(4, 'menor')),
                     _buildDegreeChip('IV', _getRelative(rootName, 5), 'Mayor', () => notifier.selectFreeChordDegree(5, 'Mayor')),
@@ -331,26 +340,26 @@ class FreeChordWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildDegreeChip(String roman, String note, String quality, VoidCallback onTap) {
+  Widget _buildDegreeChip(String roman, String note, String quality, VoidCallback onTap, {bool isActive = false}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
+          color: isActive ? const Color(0xFFECFDF5) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: const Color(0xFFCBD5E1)),
+          border: Border.all(color: isActive ? const Color(0xFF22C55E) : const Color(0xFFCBD5E1)),
         ),
         child: Column(
           children: [
             Text(
               roman,
-              style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
+              style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: isActive ? const Color(0xFF059669) : const Color(0xFF059669)),
             ),
             Text(
               note,
-              style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: isActive ? const Color(0xFF065F46) : const Color(0xFF0F172A)),
             ),
           ],
         ),
@@ -358,19 +367,7 @@ class FreeChordWidget extends ConsumerWidget {
     );
   }
 
-  static String _getThird(String root, String type) {
-    final idx = roots.indexOf(root);
-    if (idx == -1) return '';
-    final semitones = (type == 'min' || type == 'dim') ? 3 : 4;
-    return roots[(idx + semitones) % 12];
-  }
 
-  static String _getFifth(String root, String type) {
-    final idx = roots.indexOf(root);
-    if (idx == -1) return '';
-    final semitones = type == 'dim' ? 6 : (type == 'aug' ? 8 : 7);
-    return roots[(idx + semitones) % 12];
-  }
 
   static String _getRelative(String root, int semitones) {
     final idx = roots.indexOf(root);

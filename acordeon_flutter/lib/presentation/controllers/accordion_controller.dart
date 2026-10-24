@@ -808,6 +808,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     state = state.copyWith(
       freeChordRoot: newRoot,
       freeChordType: newType,
+      freeChordBellows: BellowsMode.push,
     );
     playFreeChord();
   }
