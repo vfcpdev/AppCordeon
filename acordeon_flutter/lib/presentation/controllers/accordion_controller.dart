@@ -1185,3 +1185,47 @@ final accordionSimulatorProvider =
     NotifierProvider<AccordionSimulatorNotifier, AccordionSimulatorState>(() {
   return AccordionSimulatorNotifier();
 });
+
+/// Selector memoizado para las clases de altura activas de un diapasón (1 o 2).
+/// Evita recalculaciones en cada frame de reproducción.
+final activeChordPitchClassesProvider =
+    Provider.family<Set<int>, int>((ref, accordionNumber) {
+  final isPrimary = accordionNumber == 1;
+  final trebleData = ref.watch(accordionSimulatorProvider.select(
+    (s) => isPrimary ? s.trebleData1 : s.trebleData2,
+  ));
+  final freeChordRoot = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordRoot));
+  final freeChordType = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordType));
+  final freeChordFourth = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordFourth));
+  final detectorSelected = ref.watch(accordionSimulatorProvider.select((s) => s.detectorSelectedButtons));
+  final syncDiapason = ref.watch(accordionSimulatorProvider.select((s) => s.syncDiapason));
+  final isPlaying = ref.watch(accordionSimulatorProvider.select((s) => s.isPlayingAudio));
+  final playingChordNotes = ref.watch(accordionSimulatorProvider.select((s) => s.playingChordNotes));
+
+  final generated = ChordCatalog.notesFor(
+    root: freeChordRoot,
+    type: freeChordType,
+    extension: freeChordFourth,
+  );
+
+  final selectedChordNotes = <int>[];
+  if (detectorSelected.isNotEmpty) {
+    final selectedIds = detectorSelected.toSet();
+    for (final row in trebleData.values) {
+      for (final btn in row) {
+        if (selectedIds.contains(btn.id)) {
+          selectedChordNotes
+            ..add(btn.pull)
+            ..add(btn.push);
+        }
+      }
+    }
+  }
+
+  return ChordCatalog.activePitchClasses(
+    generated: generated,
+    playing: syncDiapason && isPlaying ? playingChordNotes : const <int>[],
+    selected: selectedChordNotes,
+  );
+});
+
