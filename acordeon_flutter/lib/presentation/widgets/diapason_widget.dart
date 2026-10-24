@@ -197,25 +197,17 @@ class DiapasonWidget extends ConsumerWidget {
             if (btn.rowKey == 'row3' && idx < row3Keys.length) shortcut = row3Keys[idx];
           }
 
-          // Calcular notas del acorde libre para resaltar
+          // Notas del acorde libre: cada mitad del botón indica si la nota
+          // pertenece al acorde al abrir (azul) o al cerrar (rojo).
           final freeChordNotes = ChordCatalog.notesFor(
             root: state.freeChordRoot,
             type: state.freeChordType,
             extension: state.freeChordFourth,
           );
-          final currentBellowsForFree = state.freeChordBellows;
-          int? noteForFree;
-          if (currentBellowsForFree == BellowsMode.push) {
-            noteForFree = btn.push + currentTuning.offset;
-          } else if (currentBellowsForFree == BellowsMode.pull) {
-            noteForFree = btn.pull + currentTuning.offset;
-          } else {
-            // both - resaltar si coincide con push o pull
-            final np = btn.push + currentTuning.offset;
-            final nr = btn.pull + currentTuning.offset;
-            noteForFree = freeChordNotes.contains(np) ? np : (freeChordNotes.contains(nr) ? nr : null);
-          }
-          final isFreeChordGlow = noteForFree != null && freeChordNotes.contains(noteForFree);
+          final isChordPull =
+              freeChordNotes.contains(btn.pull + currentTuning.offset);
+          final isChordPush =
+              freeChordNotes.contains(btn.push + currentTuning.offset);
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 12.0),
@@ -225,7 +217,8 @@ class DiapasonWidget extends ConsumerWidget {
               pullMidi: btn.pull,
               isPressed: isPressed,
               isDetectorSelected: isDetector,
-              isChordGlow: isFreeChordGlow,
+              isChordPull: isChordPull,
+              isChordPush: isChordPush,
               bellowsMode: currentBellows,
               notation: state.notation,
               tuningOffset: currentTuning.offset,

@@ -9,7 +9,8 @@ class DiapasonButtonWidget extends StatelessWidget {
   final int pullMidi;
   final bool isPressed;
   final bool isDetectorSelected;
-  final bool isChordGlow;
+  final bool isChordPull;
+  final bool isChordPush;
   final BellowsMode bellowsMode;
   final NotationMode notation;
   final int tuningOffset;
@@ -25,7 +26,8 @@ class DiapasonButtonWidget extends StatelessWidget {
     required this.pullMidi,
     required this.isPressed,
     this.isDetectorSelected = false,
-    this.isChordGlow = false,
+    this.isChordPull = false,
+    this.isChordPush = false,
     required this.bellowsMode,
     required this.notation,
     required this.tuningOffset,
@@ -105,8 +107,9 @@ class DiapasonButtonWidget extends StatelessWidget {
             isPressed: isPressed,
             bellowsMode: bellowsMode,
             isDetectorSelected: isDetectorSelected,
-            isChordGlow: isChordGlow,
-            child: _buildNoteContent(pushName, pullName),
+            isChordPull: isChordPull,
+            isChordPush: isChordPush,
+            child: _buildNoteContent(pushName, pullName, isChordPull || isChordPush),
           ),
 
           // Insignia flotante de fuelle al presionar (CSS .bellows-action-pill: Abre / Cierra)
@@ -150,22 +153,25 @@ class DiapasonButtonWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildNoteContent(String pushName, String pullName) {
+  Widget _buildNoteContent(String pushName, String pullName, bool highlighted) {
+    final useWhite = isPressed || highlighted;
+    final labelShadows = useWhite
+        ? const [
+            Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 3),
+            Shadow(color: Colors.black87, blurRadius: 2),
+          ]
+        : const [
+            Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1),
+          ];
+
     if (bellowsMode == BellowsMode.push) {
       return Text(
         pushName,
         style: TextStyle(
           fontSize: 13.0,
           fontWeight: FontWeight.w900,
-          color: isPressed ? Colors.white : const Color(0xFF991B1B),
-          shadows: isPressed
-              ? const [
-                  Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 3),
-                  Shadow(color: Colors.black87, blurRadius: 2),
-                ]
-              : const [
-                  Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1),
-                ],
+          color: useWhite ? Colors.white : const Color(0xFF991B1B),
+          shadows: labelShadows,
         ),
       );
     }
@@ -175,15 +181,8 @@ class DiapasonButtonWidget extends StatelessWidget {
         style: TextStyle(
           fontSize: 13.0,
           fontWeight: FontWeight.w900,
-          color: isPressed ? Colors.white : const Color(0xFF1E40AF),
-          shadows: isPressed
-              ? const [
-                  Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 3),
-                  Shadow(color: Colors.black87, blurRadius: 2),
-                ]
-              : const [
-                  Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1),
-                ],
+          color: useWhite ? Colors.white : const Color(0xFF1E40AF),
+          shadows: labelShadows,
         ),
       );
     }
@@ -198,15 +197,15 @@ class DiapasonButtonWidget extends StatelessWidget {
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w900,
-            color: isPressed ? const Color(0xFF7F1D1D) : const Color(0xFF991B1B),
+            color: useWhite ? Colors.white : const Color(0xFF991B1B),
             height: 1.0,
-            shadows: const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+            shadows: labelShadows,
           ),
         ),
         Container(
           width: 15,
           height: 1,
-          color: isPressed ? Colors.black38 : const Color(0xFF64748B),
+          color: useWhite ? Colors.white54 : const Color(0xFF64748B),
           margin: const EdgeInsets.symmetric(vertical: 2.0),
         ),
         Text(
@@ -214,9 +213,9 @@ class DiapasonButtonWidget extends StatelessWidget {
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w900,
-            color: isPressed ? const Color(0xFF1E3A8A) : const Color(0xFF1E40AF),
+            color: useWhite ? Colors.white : const Color(0xFF1E40AF),
             height: 1.0,
-            shadows: const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+            shadows: labelShadows,
           ),
         ),
       ],

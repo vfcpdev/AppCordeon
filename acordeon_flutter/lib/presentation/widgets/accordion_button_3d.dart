@@ -11,7 +11,8 @@ class AccordionButton3D extends StatelessWidget {
   final BellowsMode bellowsMode;
   final ButtonType? buttonType; // null para agudos (treble), fundamental o chord para bajos
   final bool isSelectedForRhythm;
-  final bool isChordGlow;
+  final bool isChordPull;
+  final bool isChordPush;
   final bool isDetectorSelected;
   final Widget? child;
   final VoidCallback? onPointerDown;
@@ -24,7 +25,8 @@ class AccordionButton3D extends StatelessWidget {
     this.bellowsMode = BellowsMode.both,
     this.buttonType,
     this.isSelectedForRhythm = false,
-    this.isChordGlow = false,
+    this.isChordPull = false,
+    this.isChordPush = false,
     this.isDetectorSelected = false,
     this.child,
     this.onPointerDown,
@@ -53,7 +55,8 @@ class AccordionButton3D extends StatelessWidget {
             bellowsMode: bellowsMode,
             buttonType: buttonType,
             isSelectedForRhythm: isSelectedForRhythm,
-            isChordGlow: isChordGlow,
+            isChordPull: isChordPull,
+            isChordPush: isChordPush,
             isDetectorSelected: isDetectorSelected,
           ),
           child: Center(child: child),
@@ -68,7 +71,8 @@ class _AccordionButton3DPainter extends CustomPainter {
   final BellowsMode bellowsMode;
   final ButtonType? buttonType;
   final bool isSelectedForRhythm;
-  final bool isChordGlow;
+  final bool isChordPull;
+  final bool isChordPush;
   final bool isDetectorSelected;
 
   _AccordionButton3DPainter({
@@ -76,7 +80,8 @@ class _AccordionButton3DPainter extends CustomPainter {
     required this.bellowsMode,
     required this.buttonType,
     required this.isSelectedForRhythm,
-    required this.isChordGlow,
+    required this.isChordPull,
+    required this.isChordPush,
     required this.isDetectorSelected,
   });
 
@@ -85,66 +90,13 @@ class _AccordionButton3DPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
-    // 1. Sombras exteriores / Glows
+    // 1. Sombra exterior (sin halos de glow: el estado se muestra con color)
     if (isPressed) {
-      if (bellowsMode == BellowsMode.push) {
-        // Glow Rojo Vibrante al Cerrar (Push)
-        final glowPaint1 = Paint()
-          ..color = const Color(0xFFEF4444).withValues(alpha: 0.95)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
-        canvas.drawCircle(center, radius + 6, glowPaint1);
-
-        final glowPaint2 = Paint()
-          ..color = const Color(0xFFDC2626).withValues(alpha: 0.85)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 28);
-        canvas.drawCircle(center, radius + 10, glowPaint2);
-      } else if (bellowsMode == BellowsMode.pull) {
-        // Glow Azul Vibrante al Abrir (Pull)
-        final glowPaint1 = Paint()
-          ..color = const Color(0xFF60A5FA).withValues(alpha: 0.95)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
-        canvas.drawCircle(center, radius + 6, glowPaint1);
-
-        final glowPaint2 = Paint()
-          ..color = const Color(0xFF2563EB).withValues(alpha: 0.85)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 28);
-        canvas.drawCircle(center, radius + 10, glowPaint2);
-      } else {
-        // Glow dorado expansivo (CSS: 0 0 26px 8px #fde047, 0 0 48px rgba(250, 204, 21, 0.85))
-        final glowPaint1 = Paint()
-          ..color = const Color(0xFFFDE047).withValues(alpha: 0.90)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-        canvas.drawCircle(center, radius + 4, glowPaint1);
-
-        final glowPaint2 = Paint()
-          ..color = const Color(0xFFFACC15).withValues(alpha: 0.75)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
-        canvas.drawCircle(center, radius + 7, glowPaint2);
-      }
-
       // Sombra de contacto inferior comprimida
       final pressShadow = Paint()
         ..color = Colors.black.withValues(alpha: 0.50)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
       canvas.drawCircle(center + const Offset(0, 2), radius, pressShadow);
-    } else if (isChordGlow) {
-      // Glow verde vibrante para acordes
-      final glowGreen = Paint()
-        ..color = const Color(0xFF10B981).withValues(alpha: 0.85)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
-      canvas.drawCircle(center, radius + 4, glowGreen);
-    } else if (isDetectorSelected) {
-      // Glow violeta para detector armónico
-      final glowPurple = Paint()
-        ..color = const Color(0xFF8B5CF6).withValues(alpha: 0.85)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
-      canvas.drawCircle(center, radius + 4, glowPurple);
-    } else if (isSelectedForRhythm) {
-      // Glow azul para botón de bajos seleccionado para patrón rítmico
-      final glowBlue = Paint()
-        ..color = const Color(0xFF0284C7).withValues(alpha: 0.85)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-      canvas.drawCircle(center, radius + 3, glowBlue);
     } else {
       // Sombra 3D de profundidad y relieve hacia abajo a la derecha:
       // box-shadow: 2px 5px 8px rgba(0, 0, 0, 0.6)
@@ -162,6 +114,7 @@ class _AccordionButton3DPainter extends CustomPainter {
 
     // Gradiente del cuerpo
     final Paint bodyPaint = Paint();
+    final bool chordTint = !isPressed && (isChordPull || isChordPush);
 
     if (isPressed) {
       if (bellowsMode == BellowsMode.push) {
@@ -201,7 +154,31 @@ class _AccordionButton3DPainter extends CustomPainter {
           stops: const [0.0, 0.65, 1.0],
         ).createShader(Rect.fromCircle(center: center, radius: radius));
       }
-    } else {
+    } else if (isDetectorSelected) {
+      // Detector armónico: cuerpo violeta (antes glow)
+      bodyPaint.shader = RadialGradient(
+        center: const Alignment(-0.44, -0.44),
+        radius: 0.88,
+        colors: const [
+          Color(0xFFDDD6FE),
+          Color(0xFF8B5CF6),
+          Color(0xFF6D28D9),
+        ],
+        stops: const [0.0, 0.55, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    } else if (isSelectedForRhythm) {
+      // Bajos en patrón rítmico: cuerpo azul (antes glow)
+      bodyPaint.shader = RadialGradient(
+        center: const Alignment(-0.44, -0.44),
+        radius: 0.88,
+        colors: const [
+          Color(0xFFBAE6FD),
+          Color(0xFF0284C7),
+          Color(0xFF075985),
+        ],
+        stops: const [0.0, 0.55, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    } else if (!chordTint) {
       // Estado normal (sin presionar): Perlado Nácar auténtico de acordeón Hohner / Corona
       // CSS: radial-gradient(circle at 14px 14px, #ffffff, #d3cbbd 70%, #9e9587 100%)
       bodyPaint.shader = RadialGradient(
@@ -217,7 +194,47 @@ class _AccordionButton3DPainter extends CustomPainter {
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     }
 
-    canvas.drawCircle(center, radius, bodyPaint);
+    if (chordTint) {
+      // Notas del acorde: azul = Abre (pull) · rojo = Cierra (push)
+      final pullPaint = Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.35, -0.35),
+          radius: 0.85,
+          colors: const [
+            Color(0xFFBFDBFE),
+            Color(0xFF3B82F6),
+            Color(0xFF1D4ED8),
+          ],
+          stops: const [0.0, 0.55, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: radius));
+      final pushPaint = Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.35, -0.35),
+          radius: 0.85,
+          colors: const [
+            Color(0xFFFCA5A5),
+            Color(0xFFEF4444),
+            Color(0xFFB91C1C),
+          ],
+          stops: const [0.0, 0.55, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: radius));
+
+      if (isChordPull && isChordPush) {
+        // Mitad izquierda = Abre (azul) · mitad derecha = Cierra (rojo)
+        canvas.save();
+        canvas.clipRect(Rect.fromLTWH(0, 0, size.width / 2, size.height));
+        canvas.drawCircle(center, radius, pullPaint);
+        canvas.restore();
+        canvas.save();
+        canvas.clipRect(Rect.fromLTWH(size.width / 2, 0, size.width / 2, size.height));
+        canvas.drawCircle(center, radius, pushPaint);
+        canvas.restore();
+      } else {
+        canvas.drawCircle(center, radius, isChordPull ? pullPaint : pushPaint);
+      }
+    } else {
+      canvas.drawCircle(center, radius, bodyPaint);
+    }
 
     // 3. Biselado Interior y Sombras Inset
     if (!isPressed) {
@@ -303,6 +320,16 @@ class _AccordionButton3DPainter extends CustomPainter {
         borderPaint.color = const Color(0xFFFDE047);
         borderPaint.strokeWidth = 1.8;
       }
+    } else if (isChordPull || isChordPush) {
+      // Borde claro sobre el color del acorde
+      borderPaint.color = Colors.white.withValues(alpha: 0.85);
+      borderPaint.strokeWidth = 1.4;
+    } else if (isDetectorSelected) {
+      borderPaint.color = const Color(0xFFC4B5FD);
+      borderPaint.strokeWidth = 1.4;
+    } else if (isSelectedForRhythm) {
+      borderPaint.color = const Color(0xFF7DD3FC);
+      borderPaint.strokeWidth = 1.4;
     } else if (buttonType == ButtonType.fundamental) {
       // Bajos fundamentales: Borde sutil ámbar
       borderPaint.color = const Color(0xFFF59E0B).withValues(alpha: 0.70);
@@ -338,7 +365,8 @@ class _AccordionButton3DPainter extends CustomPainter {
         oldDelegate.bellowsMode != bellowsMode ||
         oldDelegate.buttonType != buttonType ||
         oldDelegate.isSelectedForRhythm != isSelectedForRhythm ||
-        oldDelegate.isChordGlow != isChordGlow ||
+        oldDelegate.isChordPull != isChordPull ||
+        oldDelegate.isChordPush != isChordPush ||
         oldDelegate.isDetectorSelected != isDetectorSelected;
   }
 }

@@ -23,13 +23,20 @@ class ChordCatalog {
   };
 
   /// Calcula las notas MIDI del acorde a partir de la raíz (0-11) en la octava 4.
+  /// Si la raíz es negativa (sin tónica) devuelve una lista vacía.
   static List<int> notesFor({
     required int root,
     required String type,
     required String extension,
     int baseMidi = 60,
   }) {
-    final intervals = <int>[...(triadIntervals[type] ?? triadIntervals['maj']!)];
+    if (root < 0) return const [];
+    final intervals = <int>[
+      if (type.isEmpty)
+        0
+      else
+        ...(triadIntervals[type] ?? triadIntervals['maj']!),
+    ];
     final ext = extensionIntervals[extension];
     if (ext != null) intervals.add(ext);
     final base = baseMidi + root;
