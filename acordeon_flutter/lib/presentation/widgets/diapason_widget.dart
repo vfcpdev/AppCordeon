@@ -418,7 +418,7 @@ class _VerticalVolumeControl extends StatelessWidget {
           const SizedBox(height: 6),
           SizedBox(
             width: 20,
-            height: 170,
+            height: 300,
             child: RotatedBox(
               // 270°: 100% arriba y 0% abajo, como un fader vertical.
               quarterTurns: 3,
