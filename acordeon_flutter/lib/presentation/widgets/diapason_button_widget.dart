@@ -18,7 +18,6 @@ class DiapasonButtonWidget extends StatelessWidget {
   final VoidCallback onPointerDown;
   final VoidCallback onPointerUp;
   final double size;
-  final String? shortcutLabel;
 
   const DiapasonButtonWidget({
     super.key,
@@ -29,13 +28,13 @@ class DiapasonButtonWidget extends StatelessWidget {
     this.isDetectorSelected = false,
     this.isChordPull = false,
     this.isChordPush = false,
+    this.showGloss = true,
     required this.bellowsMode,
     required this.notation,
     required this.tuningOffset,
     required this.onPointerDown,
     required this.onPointerUp,
     this.size = 50.0,
-    this.shortcutLabel,
   });
 
   @override
@@ -61,44 +60,20 @@ class DiapasonButtonWidget extends StatelessWidget {
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          // Número ordinal y tecla de PC ubicada fuera del botón a la izquierda con sombra
+          // Número ordinal fuera del botón a la izquierda con sombra
           Positioned(
-            left: shortcutLabel != null ? -22 : -18,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '$btnIndex',
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white.withValues(alpha: 0.95),
-                    shadows: const [
-                      Shadow(color: Colors.black, offset: Offset(0, 1), blurRadius: 3),
-                      Shadow(color: Colors.black87, blurRadius: 2),
-                    ],
-                  ),
-                ),
-                if (shortcutLabel != null)
-                  Container(
-                    margin: const EdgeInsets.only(top: 1),
-                    padding: const EdgeInsets.symmetric(horizontal: 2.5, vertical: 0.5),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.70),
-                      borderRadius: BorderRadius.circular(3),
-                      border: Border.all(color: Colors.white24, width: 0.5),
-                    ),
-                    child: Text(
-                      shortcutLabel!,
-                      style: const TextStyle(
-                        fontSize: 7.5,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFFFDE047),
-                      ),
-                    ),
-                  ),
-              ],
+            left: -12,
+            child: Text(
+              '$btnIndex',
+              style: TextStyle(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w900,
+                color: Colors.white.withValues(alpha: 0.95),
+                shadows: const [
+                  Shadow(color: Colors.black, offset: Offset(0, 1), blurRadius: 3),
+                  Shadow(color: Colors.black87, blurRadius: 2),
+                ],
+              ),
             ),
           ),
 
@@ -110,6 +85,7 @@ class DiapasonButtonWidget extends StatelessWidget {
             isDetectorSelected: isDetectorSelected,
             isChordPull: isChordPull,
             isChordPush: isChordPush,
+            showGloss: showGloss,
             child: _buildNoteContent(pushName, pullName, isChordPull || isChordPush),
           ),
 

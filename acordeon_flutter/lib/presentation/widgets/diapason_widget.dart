@@ -32,6 +32,7 @@ class DiapasonWidget extends ConsumerWidget {
     final isMirror = isPrimary ? state.mirror1 : state.mirror2;
     final bellowsMode = isPrimary ? state.bellows1 : state.bellows2;
     final onBellowsChanged = isPrimary ? notifier.setBellows1 : notifier.setBellows2;
+    final onToggleMirror = isPrimary ? notifier.toggleMirror1 : notifier.toggleMirror2;
 
     final rowList = [
       _RowDef(
@@ -135,6 +136,38 @@ class DiapasonWidget extends ConsumerWidget {
                   bellowsMode: bellowsMode,
                   onBellowsChanged: onBellowsChanged,
                 ),
+                const SizedBox(width: 6),
+                Container(
+                  width: 1,
+                  height: 26,
+                  color: Colors.white.withValues(alpha: 0.18),
+                ),
+                const SizedBox(width: 6),
+                Tooltip(
+                  message: 'Intercambiar hileras',
+                  child: IconButton(
+                    onPressed: onToggleMirror,
+                    icon: FaIcon(
+                      FontAwesomeIcons.arrowsRotate,
+                      size: 14,
+                      color: isMirror ? Colors.white : Colors.white70,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    style: IconButton.styleFrom(
+                      backgroundColor: isMirror
+                          ? const Color(0xFF0284C7)
+                          : Colors.white.withValues(alpha: 0.08),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(
+                          color: isMirror
+                              ? const Color(0xFF38BDF8)
+                              : Colors.white.withValues(alpha: 0.22),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -200,18 +233,6 @@ class DiapasonWidget extends ConsumerWidget {
               ? btn.pull + currentTuning.offset
               : btn.push + currentTuning.offset;
 
-          String? shortcut;
-          if (isPrimary) {
-            const row1Keys = ['Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '-'];
-            const row2Keys = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ñ', '{'];
-            const row3Keys = ['W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '´'];
-
-            final idx = btn.btnIndex - 1;
-            if (btn.rowKey == 'row1' && idx < row1Keys.length) shortcut = row1Keys[idx];
-            if (btn.rowKey == 'row2' && idx < row2Keys.length) shortcut = row2Keys[idx];
-            if (btn.rowKey == 'row3' && idx < row3Keys.length) shortcut = row3Keys[idx];
-          }
-
           // Notas del acorde libre: cada mitad del botón indica si la nota
           // pertenece al acorde al abrir (azul) o al cerrar (rojo).
           final freeChordNotes = ChordCatalog.notesFor(
@@ -246,10 +267,10 @@ class DiapasonWidget extends ConsumerWidget {
               isDetectorSelected: isDetector,
               isChordPull: isChordPull || isSyncPull,
               isChordPush: isChordPush || isSyncPush,
+              showGloss: !isPrimary,
               bellowsMode: currentBellows,
               notation: state.notation,
               tuningOffset: currentTuning.offset,
-              shortcutLabel: shortcut,
               onPointerDown: () {
                 if (state.detectorMode) {
                   notifier.toggleDetectorButton(btn.id, midiToPlay);

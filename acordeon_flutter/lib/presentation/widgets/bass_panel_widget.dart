@@ -10,7 +10,7 @@ import 'accordion_button_3d.dart';
 class BassPanelWidget extends ConsumerWidget {
   final int accordionNumber;
 
-  static const double _buttonSize = 27.6;
+  static const double _buttonSize = 50.0;
 
   const BassPanelWidget({
     super.key,
@@ -121,9 +121,9 @@ class BassPanelWidget extends ConsumerWidget {
 
           // Cuerpo: Tablero de bajos
           Padding(
-            padding: const EdgeInsets.fromLTRB(1.2, 2.4, 3.6, 2.4),
+            padding: const EdgeInsets.fromLTRB(2.2, 4.4, 6.5, 4.4),
             child: Container(
-              padding: const EdgeInsets.fromLTRB(10.8, 4.8, 3.6, 4.8),
+              padding: const EdgeInsets.fromLTRB(19.6, 8.7, 6.5, 8.7),
               decoration: BoxDecoration(
                 color: const Color(0xFF1E293B),
                 borderRadius: BorderRadius.circular(12),
@@ -143,7 +143,8 @@ class BassPanelWidget extends ConsumerWidget {
                     state: state,
                     notifier: notifier,
                   ),
-                  const SizedBox(width: 3.6),
+                  // Espacio suficiente para los números de la columna interior.
+                  const SizedBox(width: 18.0),
                   _buildBassColumn(
                     title: 'Interior',
                     buttons: interiorButtons,
@@ -173,25 +174,25 @@ class BassPanelWidget extends ConsumerWidget {
       children: [
         // Cabecera de columna
         Container(
-          width: 29,
-          height: 14,
+          width: _buttonSize,
+          height: 25.4,
           decoration: BoxDecoration(
             color: const Color(0xFF0F172A),
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: BorderRadius.circular(5.4),
             border: Border.all(color: Colors.white12),
           ),
           child: Center(
             child: Text(
               title,
               style: const TextStyle(
-                fontSize: 6.6,
+                fontSize: 9.5,
                 fontWeight: FontWeight.w800,
                 color: Color(0xFF38BDF8),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 3.6),
+        const SizedBox(height: 6.5),
         // 6 Botones
         ...buttons.asMap().entries.map((entry) {
           final index = entry.key + 1;
@@ -223,17 +224,20 @@ class BassPanelWidget extends ConsumerWidget {
               : pushMidi + currentTuning.offset;
 
           return Padding(
-            padding: const EdgeInsets.only(bottom: 3.6),
+            padding: const EdgeInsets.only(bottom: 6.5),
             child: Stack(
               clipBehavior: Clip.none,
               alignment: Alignment.center,
               children: [
                 Positioned(
-                  left: -10.8,
+                  // Alineado a la derecha contra el borde izquierdo del botón:
+                  // los números de 1 y 2 dígitos quedan en la misma columna.
+                  right: _buttonSize + 4.8,
                   child: Text(
                     '$index',
+                    textAlign: TextAlign.right,
                     style: TextStyle(
-                      fontSize: 6.6,
+                      fontSize: 9.5,
                       fontWeight: FontWeight.w900,
                       color: Colors.white.withValues(alpha: 0.95),
                       shadows: const [
@@ -256,23 +260,23 @@ class BassPanelWidget extends ConsumerWidget {
                 // Insignia flotante Abre / Cierra al presionar bajo
                 if (isPressed && (currentBellows == BellowsMode.push || currentBellows == BellowsMode.pull))
                   Positioned(
-                    top: -7.2,
+                    top: -13.0,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 140),
-                      padding: const EdgeInsets.symmetric(horizontal: 3.6, vertical: 0.6),
+                      padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 1.1),
                       decoration: BoxDecoration(
                         color: currentBellows == BellowsMode.push ? const Color(0xFFDC2626) : const Color(0xFF2563EB),
                         borderRadius: BorderRadius.circular(9999),
                         border: Border.all(
                           color: currentBellows == BellowsMode.push ? const Color(0xFFFCA5A5) : const Color(0xFF93C5FD),
-                          width: 0.6,
+                          width: 1.1,
                         ),
                         boxShadow: [
                           BoxShadow(
                             color: currentBellows == BellowsMode.push
                                 ? const Color(0xFFDC2626).withValues(alpha: 0.80)
                                 : const Color(0xFF2563EB).withValues(alpha: 0.80),
-                            blurRadius: 8,
+                            blurRadius: 14.5,
                             spreadRadius: 1,
                           ),
                         ],
@@ -280,7 +284,7 @@ class BassPanelWidget extends ConsumerWidget {
                       child: Text(
                         currentBellows == BellowsMode.push ? 'CIERRA' : 'ABRE',
                         style: const TextStyle(
-                          fontSize: 4.8,
+                          fontSize: 8.7,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                           letterSpacing: 0.5,
@@ -301,7 +305,7 @@ class BassPanelWidget extends ConsumerWidget {
       return Text(
         pushName,
         style: TextStyle(
-          fontSize: 7.2,
+          fontSize: 13.0,
           fontWeight: FontWeight.w900,
           color: isPressed ? Colors.white : const Color(0xFF991B1B),
           shadows: isPressed
@@ -319,7 +323,7 @@ class BassPanelWidget extends ConsumerWidget {
       return Text(
         pullName,
         style: TextStyle(
-          fontSize: 7.2,
+          fontSize: 13.0,
           fontWeight: FontWeight.w900,
           color: isPressed ? Colors.white : const Color(0xFF1E40AF),
           shadows: isPressed
@@ -347,7 +351,7 @@ class BassPanelWidget extends ConsumerWidget {
                 child: Text(
                   pullName,
                   style: TextStyle(
-                    fontSize: 5.4,
+                    fontSize: 10.0,
                     fontWeight: FontWeight.w900,
                     color: isPressed ? const Color(0xFF1E3A8A) : const Color(0xFF1E40AF),
                     height: 1.0,
@@ -358,7 +362,7 @@ class BassPanelWidget extends ConsumerWidget {
             ),
           ),
           Container(
-            width: 1.2,
+            width: 2.2,
             height: _buttonSize * 0.5,
             color: isPressed ? Colors.black38 : const Color(0xFF64748B),
           ),
@@ -369,7 +373,7 @@ class BassPanelWidget extends ConsumerWidget {
                 child: Text(
                   pushName,
                   style: TextStyle(
-                    fontSize: 5.4,
+                    fontSize: 10.0,
                     fontWeight: FontWeight.w900,
                     color: isPressed ? const Color(0xFF7F1D1D) : const Color(0xFF991B1B),
                     height: 1.0,

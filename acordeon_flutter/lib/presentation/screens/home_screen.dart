@@ -5,7 +5,6 @@ import '../widgets/accordion_keyboard_listener.dart';
 import '../widgets/app_header_widget.dart';
 import '../widgets/bass_panel_widget.dart';
 import '../widgets/chord_detector_widget.dart';
-import '../widgets/diapason_card_header.dart';
 import '../widgets/diapason_widget.dart';
 import '../widgets/free_chord_widget.dart';
 import '../widgets/measure_grid_widget.dart';
