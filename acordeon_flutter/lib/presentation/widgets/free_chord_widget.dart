@@ -15,7 +15,9 @@ class FreeChordWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(accordionSimulatorProvider);
     final notifier = ref.read(accordionSimulatorProvider.notifier);
-    final rootName = roots[state.freeChordRoot];
+    final rootName = state.freeChordRoot >= 0 && state.freeChordRoot < roots.length
+        ? roots[state.freeChordRoot]
+        : '—';
 
     return Container(
       padding: const EdgeInsets.all(8),
@@ -561,9 +563,6 @@ class FreeChordWidget extends ConsumerWidget {
             border: Border.all(
               color: isActive ? activeColor : const Color(0xFFCBD5E1),
             ),
-            boxShadow: isActive
-                ? [BoxShadow(color: activeColor.withValues(alpha: 0.35), blurRadius: 6)]
-                : null,
           ),
           child: FittedBox(
             fit: BoxFit.scaleDown,

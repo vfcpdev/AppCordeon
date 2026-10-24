@@ -784,24 +784,34 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   // Sección 5: Acorde Libre
-  void setFreeChordRoot(int root) => state = state.copyWith(freeChordRoot: root);
-  void setFreeChordType(String type) =>
-      state = state.copyWith(freeChordType: type);
-  void setFreeChordFourth(String fourth) =>
-      state = state.copyWith(freeChordFourth: fourth);
-  void setFreeChordOctave(String oct) =>
-      state = state.copyWith(freeChordOctave: oct);
+  // Cada opción funciona como interruptor: al pulsar la opción activa se
+  // desactiva (valor neutro) y al pulsarla de nuevo se vuelve a activar.
+  void setFreeChordRoot(int root) => state = state.copyWith(
+        freeChordRoot: state.freeChordRoot == root ? -1 : root,
+      );
+  void setFreeChordType(String type) => state = state.copyWith(
+        freeChordType: state.freeChordType == type ? '' : type,
+      );
+  void setFreeChordFourth(String fourth) => state = state.copyWith(
+        freeChordFourth: state.freeChordFourth == fourth ? '' : fourth,
+      );
+  void setFreeChordOctave(String oct) => state = state.copyWith(
+        freeChordOctave: state.freeChordOctave == oct ? '' : oct,
+      );
   void setFreeChordMode(String mode) =>
       state = state.copyWith(freeChordMode: mode);
   void toggleFreeChordFixed() =>
       state = state.copyWith(isFreeChordFixed: !state.isFreeChordFixed);
   void setFreeChordBellows(BellowsMode m) =>
       state = state.copyWith(freeChordBellows: m);
-  void setFreeChordScaleHarmonicMode(String mode) =>
-      state = state.copyWith(freeChordScaleHarmonicMode: mode);
+  void setFreeChordScaleHarmonicMode(String mode) => state = state.copyWith(
+        freeChordScaleHarmonicMode:
+            state.freeChordScaleHarmonicMode == mode ? '' : mode,
+      );
 
   void selectFreeChordDegree(int semitones, String quality) {
-    final newRoot = (state.freeChordRoot + semitones) % 12;
+    final baseRoot = state.freeChordRoot < 0 ? 0 : state.freeChordRoot;
+    final newRoot = (baseRoot + semitones) % 12;
     String newType = 'maj';
     if (quality.toLowerCase().contains('menor')) newType = 'min';
     if (quality.toLowerCase().contains('disminuido')) newType = 'dim';
