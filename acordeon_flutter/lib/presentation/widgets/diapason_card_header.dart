@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/models/tuning.dart';
-import 'tuning_picker_dialog.dart';
+
 
 class DiapasonCardHeader extends StatelessWidget {
   final int accordionNumber; // 1 or 2
@@ -42,7 +42,7 @@ class DiapasonCardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPrimary = accordionNumber == 1;
+  
 
     return Container(
       padding: const EdgeInsets.fromLTRB(6, 6, 8, 6),
@@ -54,66 +54,8 @@ class DiapasonCardHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Fila 1: Badge + Selector de Afinación
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isPrimary ? const Color(0xFFE0F2FE) : const Color(0xFFD1FAE5),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: isPrimary ? const Color(0xFFBAE6FD) : const Color(0xFFA7F3D0),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FaIcon(
-                      isPrimary ? FontAwesomeIcons.star : FontAwesomeIcons.clone,
-                      size: 10,
-                      color: isPrimary ? const Color(0xFF0284C7) : const Color(0xFF059669),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      'Acordeón $accordionNumber',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: isPrimary ? const Color(0xFF0369A1) : const Color(0xFF065F46),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Botón acordeón → abre el modal de selección de afinación
-              Tooltip(
-                message: 'Seleccionar acordeón',
-                child: IconButton(
-                  onPressed: () => showTuningPickerDialog(
-                    context: context,
-                    currentTuning: currentTuning,
-                    onTuningChanged: onTuningChanged,
-                  ),
-                  icon: const FaIcon(
-                    FontAwesomeIcons.music,
-                    size: 16,
-                    color: Color(0xFF0284C7),
-                  ),
-                  visualDensity: VisualDensity.compact,
-                  style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xFFF1F5F9),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      side: const BorderSide(color: Color(0xFFCBD5E1)),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 12, color: Color(0xFFE2E8F0)),
+          const SizedBox(height: 4),
+          const Divider(height: 8, color: Color(0xFFE2E8F0)),
 
           // Fila 2: Fuelle + Bajos + Mirror + Volumen
           Wrap(
@@ -140,28 +82,6 @@ class DiapasonCardHeader extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
-
-              // Toggle Bajos
-              InkWell(
-                onTap: onToggleBass,
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: !isBassCollapsed ? const Color(0xFF0284C7) : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFCBD5E1)),
-                  ),
-                  child: Text(
-                    'Bajos',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: !isBassCollapsed ? Colors.white : const Color(0xFF475569),
-                    ),
-                  ),
-                ),
               ),
 
               // Mirror (Invertir Hileras Af->Ad)

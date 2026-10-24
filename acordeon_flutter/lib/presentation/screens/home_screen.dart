@@ -204,7 +204,13 @@ class HomeScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 BassPanelWidget(accordionNumber: accordionNumber),
-                DiapasonWidget(accordionNumber: accordionNumber),
+                DiapasonWidget(
+                  accordionNumber: accordionNumber,
+                  isBassCollapsed: isBassCollapsed,
+                  onToggleBass: onToggleBass,
+                  currentTuning: currentTuning,
+                  onTuningChanged: onTuningChanged,
+                ),
               ],
             ),
           ),
