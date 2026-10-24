@@ -64,7 +64,7 @@ class HomeScreen extends ConsumerWidget {
                                   // Cuadrícula de compases al 50% de ancho; el
                                   // Constructor de Acorde conserva su ancho.
                                   SizedBox(
-                                    width: 190,
+                                    width: 231,
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -109,7 +109,7 @@ class HomeScreen extends ConsumerWidget {
                             children: const [
                               // Sección 3: Detector Inteligente de Acordes
                               SizedBox(
-                                width: 520,
+                                width: 629,
                                 child: ChordDetectorWidget(),
                               ),
                             ],
