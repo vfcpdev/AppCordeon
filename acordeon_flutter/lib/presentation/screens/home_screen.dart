@@ -61,9 +61,8 @@ class HomeScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(width: 8),
 
-                                  // Compás (izquierda) + Constructor de Acorde (derecha)
-                                  // en fila horizontal. El Compás ocupa 150 px y el
-                                  // Constructor se expande al ancho restante.
+                                  // Compás (izquierda, 150 px) + Constructor de Acorde (derecha, 150 px)
+                                  // Ambas columnas con el mismo ancho para un layout simétrico y compacto.
                                   IntrinsicHeight(
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,7 +70,10 @@ class HomeScreen extends ConsumerWidget {
                                       children: const [
                                         MeasureGridWidget(width: 150),
                                         SizedBox(width: 8),
-                                        FreeChordWidget(),
+                                        SizedBox(
+                                          width: 150,
+                                          child: FreeChordWidget(),
+                                        ),
                                       ],
                                     ),
                                   ),
