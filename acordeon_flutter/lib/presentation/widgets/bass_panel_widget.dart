@@ -365,38 +365,4 @@ class BassPanelWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildToolbarIconButton({
-    required FaIconData icon,
-    required bool isActive,
-    required VoidCallback onTap,
-    required String tooltip,
-    Color? activeColor,
-  }) {
-    final effectiveColor = activeColor ?? const Color(0xFF0284C7);
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          width: 24,
-          height: 22,
-          decoration: BoxDecoration(
-            color: isActive ? effectiveColor : Colors.white,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: isActive ? effectiveColor : const Color(0xFFCBD5E1),
-            ),
-          ),
-          child: Center(
-            child: FaIcon(
-              icon,
-              size: 10,
-              color: isActive ? Colors.white : const Color(0xFF475569),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
