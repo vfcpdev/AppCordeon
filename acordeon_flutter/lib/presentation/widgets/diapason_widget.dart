@@ -56,7 +56,7 @@ class DiapasonWidget extends ConsumerWidget {
     final effectiveRows = isMirror ? rowList.reversed.toList() : rowList;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 28, 12, 38),
+      padding: const EdgeInsets.fromLTRB(12, 36, 12, 38),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topCenter,
@@ -315,11 +315,11 @@ class _BellowsBtn extends StatelessWidget {
     final isActive = current == mode;
     return Tooltip(
       message: tooltip,
-      child: InkWell(
+      child: GestureDetector(
         onTap: () => onTap(mode),
-        borderRadius: BorderRadius.circular(7),
+        behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+          duration: const Duration(milliseconds: 80),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: isActive ? activeColor : Colors.transparent,
