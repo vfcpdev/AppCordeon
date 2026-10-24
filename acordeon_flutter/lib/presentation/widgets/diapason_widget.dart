@@ -11,15 +11,15 @@ import 'tuning_picker_dialog.dart';
 class DiapasonWidget extends ConsumerWidget {
   final int accordionNumber;
   final String title;
-  final TuningDefinition? currentTuning;
-  final ValueChanged<TuningDefinition?>? onTuningChanged;
+  final TuningDefinition currentTuning;
+  final ValueChanged<TuningDefinition?> onTuningChanged;
 
   const DiapasonWidget({
     super.key,
     this.accordionNumber = 1,
     this.title = 'Diapasón Principal',
-    this.currentTuning,
-    this.onTuningChanged,
+    required this.currentTuning,
+    required this.onTuningChanged,
   });
 
   @override
@@ -56,7 +56,7 @@ class DiapasonWidget extends ConsumerWidget {
     final effectiveRows = isMirror ? rowList.reversed.toList() : rowList;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(28, 12, 28, 38),
+      padding: const EdgeInsets.fromLTRB(12, 28, 12, 38),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topCenter,
@@ -76,14 +76,7 @@ class DiapasonWidget extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Botones de Fuelle (⇄  ←  →) ──────────────────────────────
-          _BellowsToggle(
-            bellowsMode: bellowsMode,
-            onBellowsChanged: onBellowsChanged,
-          ),
-          const SizedBox(height: 18),
-
-          // ── Hileras de botones + selector acordeón + bajos ──────────────
+          // ── Hileras de botones + selector acordeón + fuelle ──────────────
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -102,35 +95,45 @@ class DiapasonWidget extends ConsumerWidget {
                   );
                 }).toList(),
               ),
-              // Botón selector acordeón y botón bajos a la derecha, arriba
-              if (currentTuning != null && onTuningChanged != null)
-                Positioned(
-                  left: -36,
-                  top: 0,
-                  child: Tooltip(
-                    message: 'Seleccionar acordeón',
-                    child: IconButton(
-                      onPressed: () => showTuningPickerDialog(
-                        context: context,
-                        currentTuning: currentTuning!,
-                        onTuningChanged: onTuningChanged!,
-                      ),
-                      icon: const FaIcon(
-                        FontAwesomeIcons.music,
-                        size: 16,
-                        color: Colors.white,
-                      ),
-                      visualDensity: VisualDensity.compact,
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.07),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
+              // Botón selector acordeón y botones de fuelle arriba, fuera
+              Positioned(
+                left: 0,
+                top: -42,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Tooltip(
+                      message: 'Seleccionar acordeón',
+                      child: IconButton(
+                        onPressed: () => showTuningPickerDialog(
+                          context: context,
+                          currentTuning: currentTuning,
+                          onTuningChanged: onTuningChanged,
+                        ),
+                        icon: const FaIcon(
+                          FontAwesomeIcons.music,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: 0.07),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    _BellowsToggle(
+                      bellowsMode: bellowsMode,
+                      onBellowsChanged: onBellowsChanged,
+                    ),
+                  ],
                 ),
+              ),
             ],
           ),
         ],
