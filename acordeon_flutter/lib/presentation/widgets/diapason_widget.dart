@@ -98,40 +98,65 @@ class DiapasonWidget extends ConsumerWidget {
               // Botón selector acordeón y botones de fuelle arriba, fuera
               Positioned(
                 left: 0,
-                top: -42,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Tooltip(
-                      message: 'Seleccionar acordeón',
-                      child: IconButton(
-                        onPressed: () => showTuningPickerDialog(
-                          context: context,
-                          currentTuning: currentTuning,
-                          onTuningChanged: onTuningChanged,
-                        ),
-                        icon: const FaIcon(
-                          FontAwesomeIcons.music,
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                        visualDensity: VisualDensity.compact,
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withValues(alpha: 0.07),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
+                top: -48,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFF475569), Color(0xFF334155)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Tooltip(
+                        message: 'Seleccionar acordeón',
+                        child: IconButton(
+                          onPressed: () => showTuningPickerDialog(
+                            context: context,
+                            currentTuning: currentTuning,
+                            onTuningChanged: onTuningChanged,
+                          ),
+                          icon: const FaIcon(
+                            FontAwesomeIcons.music,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.white.withValues(alpha: 0.08),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(color: Colors.white.withValues(alpha: 0.22)),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    _BellowsToggle(
-                      bellowsMode: bellowsMode,
-                      onBellowsChanged: onBellowsChanged,
-                    ),
-                  ],
+                      const SizedBox(width: 6),
+                      Container(
+                        width: 1,
+                        height: 26,
+                        color: Colors.white.withValues(alpha: 0.18),
+                      ),
+                      const SizedBox(width: 6),
+                      _BellowsToggle(
+                        bellowsMode: bellowsMode,
+                        onBellowsChanged: onBellowsChanged,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
