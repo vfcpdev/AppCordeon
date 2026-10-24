@@ -27,51 +27,34 @@ class DiapasonWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(accordionSimulatorProvider);
-    final notifier = ref.read(accordionSimulatorProvider.notifier);
     final isPrimary = accordionNumber == 1;
-    final trebleData = isPrimary ? state.trebleData1 : state.trebleData2;
-    final isMirror = isPrimary ? state.mirror1 : state.mirror2;
-    final bellowsMode = isPrimary ? state.bellows1 : state.bellows2;
+    final notifier = ref.read(accordionSimulatorProvider.notifier);
+    final trebleData = ref.watch(accordionSimulatorProvider.select(
+      (s) => isPrimary ? s.trebleData1 : s.trebleData2,
+    ));
+    final isMirror = ref.watch(accordionSimulatorProvider.select(
+      (s) => isPrimary ? s.mirror1 : s.mirror2,
+    ));
+    final bellowsMode = ref.watch(accordionSimulatorProvider.select(
+      (s) => isPrimary ? s.bellows1 : s.bellows2,
+    ));
     final onBellowsChanged = isPrimary ? notifier.setBellows1 : notifier.setBellows2;
     final onToggleMirror = isPrimary ? notifier.toggleMirror1 : notifier.toggleMirror2;
 
-    // Acorde vigente: generado en el constructor + activo en el Compás +
-    // seleccionado en el detector. Sus clases de altura deciden qué botones
-    // se muestran al elegir Abrir o Cerrar con las flechas del fuelle.
-    final generatedChordNotes = ChordCatalog.notesFor(
-      root: state.freeChordRoot,
-      type: state.freeChordType,
-      extension: state.freeChordFourth,
-    );
-    final selectedChordNotes = <int>[];
-    if (state.detectorSelectedButtons.isNotEmpty) {
-      final selectedIds = state.detectorSelectedButtons.toSet();
-      for (final row in trebleData.values) {
-        for (final btn in row) {
-          if (selectedIds.contains(btn.id)) {
-            // `trebleData` ya está transpuesto: no se suma el offset otra vez.
-            selectedChordNotes
-              ..add(btn.pull)
-              ..add(btn.push);
-          }
-        }
-      }
-    }
-    final activeChordPitchClasses = ChordCatalog.activePitchClasses(
-      generated: generatedChordNotes,
-      playing: state.syncDiapason && state.isPlayingAudio
-          ? state.playingChordNotes
-          : const <int>[],
-      selected: selectedChordNotes,
-    );
+    // Selector memoizado para no recalcular acordes en cada frame ni provocar rebuilds innecesarios
+    final activeChordPitchClasses = ref.watch(activeChordPitchClassesProvider(accordionNumber));
 
     // Nombre del acorde del constructor en la notación activa (Latina/Alemana).
+    final freeChordRoot = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordRoot));
+    final freeChordType = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordType));
+    final freeChordFourth = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordFourth));
+    final notation = ref.watch(accordionSimulatorProvider.select((s) => s.notation));
+
     final chordLabel = ChordCatalog.symbolFor(
-      root: state.freeChordRoot,
-      type: state.freeChordType,
-      extension: state.freeChordFourth,
-      latin: state.notation != NotationMode.alemana,
+      root: freeChordRoot,
+      type: freeChordType,
+      extension: freeChordFourth,
+      latin: notation != NotationMode.alemana,
       display: true,
     );
 
@@ -266,11 +249,17 @@ class DiapasonWidget extends ConsumerWidget {
               ),
               const SizedBox(width: 6),
               _VerticalVolumeControl(
-                volume: isPrimary ? state.volume1 : state.volume2,
-                isMuted: isPrimary ? state.isMuted1 : state.isMuted2,
+                volume: ref.watch(accordionSimulatorProvider.select(
+                  (s) => isPrimary ? s.volume1 : s.volume2,
+                )),
+                isMuted: ref.watch(accordionSimulatorProvider.select(
+                  (s) => isPrimary ? s.isMuted1 : s.isMuted2,
+                )),
                 onVolumeChanged: isPrimary ? notifier.setVolume1 : notifier.setVolume2,
                 onToggleMute: isPrimary ? notifier.toggleMute1 : notifier.toggleMute2,
-                syncVolume: isPrimary ? state.syncVolume : null,
+                syncVolume: isPrimary
+                    ? ref.watch(accordionSimulatorProvider.select((s) => s.syncVolume))
+                    : null,
                 onToggleSyncVolume: isPrimary ? notifier.toggleSyncVolume : null,
               ),
             ],
@@ -287,11 +276,18 @@ class DiapasonWidget extends ConsumerWidget {
     required double topOffset,
     required Set<int> activeChordPitchClasses,
   }) {
-    final state = ref.watch(accordionSimulatorProvider);
     final notifier = ref.read(accordionSimulatorProvider.notifier);
     final isPrimary = accordionNumber == 1;
-    final currentTuning = isPrimary ? state.tuning1 : state.tuning2;
-    final currentBellows = isPrimary ? state.bellows1 : state.bellows2;
+    final currentTuning = ref.watch(accordionSimulatorProvider.select(
+      (s) => isPrimary ? s.tuning1 : s.tuning2,
+    ));
+    final currentBellows = ref.watch(accordionSimulatorProvider.select(
+      (s) => isPrimary ? s.bellows1 : s.bellows2,
+    ));
+    final activeButtons = ref.watch(accordionSimulatorProvider.select((s) => s.activeButtons));
+    final detectorSelectedButtons = ref.watch(accordionSimulatorProvider.select((s) => s.detectorSelectedButtons));
+    final notation = ref.watch(accordionSimulatorProvider.select((s) => s.notation));
+    final detectorMode = ref.watch(accordionSimulatorProvider.select((s) => s.detectorMode));
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -300,8 +296,8 @@ class DiapasonWidget extends ConsumerWidget {
         // Todos los botones permanecen visibles. En Abrir/Cerrar solo se
         // colorean los que producen una nota del acorde vigente.
         ...buttons.map((btn) {
-          final isPressed = state.activeButtons.contains(btn.id);
-          final isDetector = state.detectorSelectedButtons.contains(btn.id);
+          final isPressed = activeButtons.contains(btn.id);
+          final isDetector = detectorSelectedButtons.contains(btn.id);
           final midiToPlay = currentBellows == BellowsMode.pull
               ? btn.pull
               : btn.push;
@@ -322,18 +318,18 @@ class DiapasonWidget extends ConsumerWidget {
               isChordPush: isChordPush,
               showGloss: !isPrimary,
               bellowsMode: currentBellows,
-              notation: state.notation,
+              notation: notation,
               tuningOffset: currentTuning.offset,
               size: _buttonSize,
               onPointerDown: () {
-                if (state.detectorMode) {
+                if (detectorMode) {
                   notifier.toggleDetectorButton(btn.id, midiToPlay);
                 } else {
                   notifier.pressButton(btn.id, midiToPlay);
                 }
               },
               onPointerUp: () {
-                if (!state.detectorMode) {
+                if (!detectorMode) {
                   notifier.releaseButton(btn.id, midiToPlay);
                 }
               },
