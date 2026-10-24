@@ -809,11 +809,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       freeChordRoot: newRoot,
       freeChordType: newType,
     );
-    if (state.freeChordMode == 'harmonic') {
-      playFreeChord();
-    } else {
-      arpeggioFreeChord();
-    }
+    playFreeChord();
   }
 
   void playFreeChord() {
