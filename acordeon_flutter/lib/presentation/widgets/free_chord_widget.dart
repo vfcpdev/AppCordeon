@@ -90,29 +90,12 @@ class FreeChordWidget extends ConsumerWidget {
                 ],
               ),
 
-              // Botones de acción: Armónico/Melódico, Play Acorde, Play Arpegio
+              // Botones de acción: Play Acorde, Play Arpegio
               Wrap(
                 spacing: 4,
                 runSpacing: 4,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  ToggleButtons(
-                    isSelected: [
-                      state.freeChordMode == 'harmonic',
-                      state.freeChordMode == 'melodic',
-                    ],
-                    onPressed: (idx) {
-                      notifier.setFreeChordMode(idx == 0 ? 'harmonic' : 'melodic');
-                    },
-                    borderRadius: BorderRadius.circular(6),
-                    selectedColor: Colors.white,
-                    fillColor: const Color(0xFF059669),
-                    constraints: const BoxConstraints(minHeight: 22, minWidth: 54),
-                    children: const [
-                      Text('Armónico', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
-                      Text('Melódico', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
                   ElevatedButton.icon(
                     icon: const FaIcon(FontAwesomeIcons.play, size: 9),
                     label: const Text('Acorde', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
