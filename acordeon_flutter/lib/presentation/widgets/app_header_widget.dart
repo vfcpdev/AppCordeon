@@ -105,14 +105,14 @@ class AppHeaderWidget extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: state.isAnalyzingAudio
                           ? const Color(0xFFFEF3C7)
-                          : (state.audioReport != null ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC)),
+                          : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: state.isAnalyzingAudio
                             ? const Color(0xFFF59E0B)
-                            : (state.audioReport != null ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1)),
+                            : const Color(0xFFCBD5E1),
                         style: BorderStyle.solid,
-                        width: state.audioReport != null ? 1.5 : 1.0,
+                        width: 1.0,
                       ),
                     ),
                     child: Row(
@@ -129,19 +129,6 @@ class AppHeaderWidget extends ConsumerWidget {
                             'Analizando...',
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
                           ),
-                        ] else if (state.audioReport != null) ...[
-                          const FaIcon(FontAwesomeIcons.music, size: 12, color: Color(0xFF2563EB)),
-                          const SizedBox(width: 6),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 130),
-                            child: Text(
-                              state.loadedAudioFileName ?? 'Pista Cargada',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF1E40AF)),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.check_circle, size: 13, color: Color(0xFF10B981)),
                         ] else ...[
                           const FaIcon(FontAwesomeIcons.cloudArrowUp, size: 13, color: Color(0xFF0284C7)),
                           const SizedBox(width: 5),

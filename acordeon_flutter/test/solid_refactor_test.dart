@@ -253,6 +253,71 @@ void main() {
       expect(s.tuning2, TuningRegistry.defaultTunings[0]);
     });
 
+    test('el volumen del Compás es independiente del volumen del diapasón', () async {
+      final player = FakeAudioFilePlayer();
+      final c = makeContainer(
+        loader: FakeLoader(PickedAudioData(
+          name: 'demo.wav',
+          bytes: const DemoTrackGenerator().generate(),
+        )),
+        player: player,
+      );
+      addTearDown(c.dispose);
+      final n = c.read(accordionSimulatorProvider.notifier);
+
+      await n.pickAndAnalyzeAudio();
+      expect(player.calls, contains('vol:0.8'));
+
+      n.setCompasVolume(0.35);
+      expect(c.read(accordionSimulatorProvider).compasVolume, 0.35);
+      expect(player.calls, contains('vol:0.35'));
+
+      player.calls.clear();
+      n.setVolume1(0.5);
+      expect(player.calls, isNot(contains('vol:0.5')));
+    });
+
+    test('acoplar/desacoplar decide si la pista manda en el transporte', () async {
+      final player = FakeAudioFilePlayer();
+      final c = makeContainer(
+        loader: FakeLoader(PickedAudioData(
+          name: 'demo.wav',
+          bytes: const DemoTrackGenerator().generate(),
+        )),
+        player: player,
+      );
+      addTearDown(c.dispose);
+      final n = c.read(accordionSimulatorProvider.notifier);
+
+      await n.pickAndAnalyzeAudio();
+      expect(c.read(accordionSimulatorProvider).isAudioCoupled, isTrue);
+
+      // Desacoplado: la pista se pausa y el Compás sigue por su reloj.
+      n.toggleAudioCoupling();
+      expect(c.read(accordionSimulatorProvider).isAudioCoupled, isFalse);
+      expect(player.calls, contains('pause'));
+
+      // Reacoplado: la pista retoma en la posición del Compás.
+      n.seekAudio(3.0);
+      player.calls.clear();
+      n.toggleAudioCoupling();
+      expect(c.read(accordionSimulatorProvider).isAudioCoupled, isTrue);
+      expect(player.calls, contains('seek:3.0'));
+
+      // Reproduciendo, desacoplar pausa; reacoplar reanuda la pista.
+      n.togglePlayAudio();
+      expect(player.calls, contains('play'));
+      player.calls.clear();
+      n.toggleAudioCoupling();
+      expect(player.calls, contains('pause'));
+      player.calls.clear();
+      n.toggleAudioCoupling();
+      expect(player.calls.any((call) => call.startsWith('seek:')), isTrue);
+      expect(player.calls, contains('play'));
+
+      n.stopAudio();
+    });
+
     test('edición de cuadrícula', () {
       final c = makeContainer();
       addTearDown(c.dispose);

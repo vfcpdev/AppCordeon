@@ -19,9 +19,8 @@ void main() {
 
     // Verify app title exists
     expect(find.text('AppCordeon'), findsOneWidget);
-    // Verify accordion badges exist
-    expect(find.textContaining('Acordeón 1'), findsWidgets);
-    expect(find.textContaining('Acordeón 2'), findsWidgets);
+    // Verify the measure grid sections exist
+    expect(find.textContaining('Compás'), findsWidgets);
     // Verify bass headers exist
     expect(find.text('Exterior'), findsWidgets);
     expect(find.text('Interior'), findsWidgets);

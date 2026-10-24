@@ -10,6 +10,8 @@ import 'accordion_button_3d.dart';
 class BassPanelWidget extends ConsumerWidget {
   final int accordionNumber;
 
+  static const double _buttonSize = 27.6;
+
   const BassPanelWidget({
     super.key,
     this.accordionNumber = 1,
@@ -242,7 +244,7 @@ class BassPanelWidget extends ConsumerWidget {
                   ),
                 ),
                 AccordionButton3D(
-                  size: 27.6,
+                  size: _buttonSize,
                   isPressed: isPressed,
                   bellowsMode: currentBellows,
                   buttonType: btn.type,
@@ -331,37 +333,54 @@ class BassPanelWidget extends ConsumerWidget {
         ),
       );
     }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          pushName,
-          style: TextStyle(
-            fontSize: 5.4,
-            fontWeight: FontWeight.w900,
-            color: isPressed ? const Color(0xFF7F1D1D) : const Color(0xFF991B1B),
-            height: 1.0,
-            shadows: const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+    // Modo Both: cada mitad del botón muestra su nota.
+    // Izquierda (azul) = Pull / Abre · Derecha (rojo) = Push / Cierra.
+    return SizedBox(
+      width: _buttonSize,
+      height: _buttonSize,
+      child: Row(
+        children: [
+          Expanded(
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  pullName,
+                  style: TextStyle(
+                    fontSize: 5.4,
+                    fontWeight: FontWeight.w900,
+                    color: isPressed ? const Color(0xFF1E3A8A) : const Color(0xFF1E40AF),
+                    height: 1.0,
+                    shadows: const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-        Container(
-          width: 8.4,
-          height: 1.2,
-          color: isPressed ? Colors.black38 : const Color(0xFF64748B),
-          margin: const EdgeInsets.symmetric(vertical: 1.0),
-        ),
-        Text(
-          pullName,
-          style: TextStyle(
-            fontSize: 5.4,
-            fontWeight: FontWeight.w900,
-            color: isPressed ? const Color(0xFF1E3A8A) : const Color(0xFF1E40AF),
-            height: 1.0,
-            shadows: const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+          Container(
+            width: 1.2,
+            height: _buttonSize * 0.5,
+            color: isPressed ? Colors.black38 : const Color(0xFF64748B),
           ),
-        ),
-      ],
+          Expanded(
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  pushName,
+                  style: TextStyle(
+                    fontSize: 5.4,
+                    fontWeight: FontWeight.w900,
+                    color: isPressed ? const Color(0xFF7F1D1D) : const Color(0xFF991B1B),
+                    height: 1.0,
+                    shadows: const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -187,38 +187,54 @@ class DiapasonButtonWidget extends StatelessWidget {
       );
     }
 
-    // Modo Both (Push arriba en rojo, separador, Pull abajo en azul)
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          pushName,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w900,
-            color: useWhite ? Colors.white : const Color(0xFF991B1B),
-            height: 1.0,
-            shadows: labelShadows,
+    // Modo Both: cada mitad del botón muestra su nota.
+    // Izquierda (azul) = Pull / Abre · Derecha (rojo) = Push / Cierra.
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Row(
+        children: [
+          Expanded(
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  pullName,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: useWhite ? Colors.white : const Color(0xFF1E40AF),
+                    height: 1.0,
+                    shadows: labelShadows,
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-        Container(
-          width: 15,
-          height: 1,
-          color: useWhite ? Colors.white54 : const Color(0xFF64748B),
-          margin: const EdgeInsets.symmetric(vertical: 2.0),
-        ),
-        Text(
-          pullName,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w900,
-            color: useWhite ? Colors.white : const Color(0xFF1E40AF),
-            height: 1.0,
-            shadows: labelShadows,
+          Container(
+            width: 1,
+            height: size * 0.5,
+            color: useWhite ? Colors.white54 : const Color(0xFF64748B),
           ),
-        ),
-      ],
+          Expanded(
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  pushName,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: useWhite ? Colors.white : const Color(0xFF991B1B),
+                    height: 1.0,
+                    shadows: labelShadows,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

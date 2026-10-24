@@ -57,7 +57,7 @@ class DiapasonCardHeader extends StatelessWidget {
           const SizedBox(height: 4),
           const Divider(height: 8, color: Color(0xFFE2E8F0)),
 
-          // Fila 2: Bajos + Mirror + Volumen
+          // Fila 2: Mirror
           Wrap(
             spacing: 8,
             runSpacing: 6,
@@ -94,54 +94,6 @@ class DiapasonCardHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-              ),
-
-              // Volumen & Mute
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (onToggleSyncVolume != null) ...[
-                    IconButton(
-                      icon: FaIcon(
-                        FontAwesomeIcons.link,
-                        size: 10,
-                        color: syncVolume ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
-                      ),
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-                      onPressed: onToggleSyncVolume,
-                      tooltip: 'Sincronizar volumen',
-                    ),
-                  ],
-                  IconButton(
-                    icon: FaIcon(
-                      isMuted ? FontAwesomeIcons.volumeXmark : FontAwesomeIcons.volumeHigh,
-                      size: 11,
-                      color: isMuted ? Colors.red : const Color(0xFF475569),
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-                    onPressed: onToggleMute,
-                    tooltip: 'Silenciar',
-                  ),
-                  SizedBox(
-                    width: 70,
-                    height: 20,
-                    child: Slider(
-                      value: isMuted ? 0.0 : volume,
-                      min: 0.0,
-                      max: 1.0,
-                      activeColor: const Color(0xFF0284C7),
-                      onChanged: onVolumeChanged,
-                    ),
-                  ),
-                  Text(
-                    '${(volume * 100).toInt()}%',
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B)),
-                  ),
-                ],
               ),
             ],
           ),

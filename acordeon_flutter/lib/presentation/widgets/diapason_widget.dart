@@ -140,21 +140,36 @@ class DiapasonWidget extends ConsumerWidget {
           ),
           const SizedBox(height: 10),
 
-          // ── Hileras de botones ──────────────
+          // ── Hileras de botones + volumen vertical al borde derecho ──
           Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: effectiveRows.map((rDef) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: _buildRow(
-                  context: context,
-                  ref: ref,
-                  buttons: rDef.buttons,
-                  topOffset: rDef.topOffset,
-                ),
-              );
-            }).toList(),
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: effectiveRows.map((rDef) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: _buildRow(
+                      context: context,
+                      ref: ref,
+                      buttons: rDef.buttons,
+                      topOffset: rDef.topOffset,
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(width: 6),
+              _VerticalVolumeControl(
+                volume: isPrimary ? state.volume1 : state.volume2,
+                isMuted: isPrimary ? state.isMuted1 : state.isMuted2,
+                onVolumeChanged: isPrimary ? notifier.setVolume1 : notifier.setVolume2,
+                onToggleMute: isPrimary ? notifier.toggleMute1 : notifier.toggleMute2,
+                syncVolume: isPrimary ? state.syncVolume : null,
+                onToggleSyncVolume: isPrimary ? notifier.toggleSyncVolume : null,
+              ),
+            ],
           ),
         ],
       ),
@@ -215,10 +230,10 @@ class DiapasonWidget extends ConsumerWidget {
               ? state.playingChordNotes
               : const <int>{};
           final isSyncPull = syncNotes.any(
-            (n) => n % 12 == (btn.pull + currentTuning.offset) % 12,
+            (n) => n % 12 == btn.pull % 12,
           );
           final isSyncPush = syncNotes.any(
-            (n) => n % 12 == (btn.push + currentTuning.offset) % 12,
+            (n) => n % 12 == btn.push % 12,
           );
 
           return Padding(
