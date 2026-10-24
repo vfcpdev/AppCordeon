@@ -47,10 +47,17 @@ void main() {
       // 2. Verificar afinación recomendada aplicada al Acordeón 1
       expect(state.tuning1.name, isNotEmpty);
 
-      // 3. Verificar que los acordes detectados se trasladaron a la cuadrícula de compases
+      // 3. Verificar que la cantidad de compases coincide con la duración del audio
+      // y que los acordes inicialmente quedan vacíos hasta decisión del usuario.
       expect(state.measures.isNotEmpty, isTrue);
-      final hasAssignedChords = state.measures.any((m) => m.beats.any((b) => b.chord.isNotEmpty));
-      expect(hasAssignedChords, isTrue, reason: 'Los compases deben contener los acordes detectados');
+      final hasInitialChords = state.measures.any((m) => m.beats.any((b) => b.chord.isNotEmpty));
+      expect(hasInitialChords, isFalse, reason: 'Los acordes no se cargan automáticamente sin decisión posterior');
+
+      // Aplicar acordes por decisión posterior
+      notifier.applyChordsToMeasures(state.audioReport!.chords);
+      final stateWithChords = container.read(accordionSimulatorProvider);
+      final hasAssignedChords = stateWithChords.measures.any((m) => m.beats.any((b) => b.chord.isNotEmpty));
+      expect(hasAssignedChords, isTrue, reason: 'Al solicitarlo, los compases se pueblan con los acordes');
 
       // 4. Probar reproducción de transporte con compases
       notifier.togglePlayAudio();

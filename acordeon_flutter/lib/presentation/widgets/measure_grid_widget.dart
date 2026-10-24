@@ -120,7 +120,7 @@ class MeasureGridWidget extends ConsumerWidget {
               children: [
                 // Columna Izquierda: Transporte y Seeker de Tiempo (Solo en Diapasón 1)
                 if (isPrimary) ...[
-                  _buildTransportAndSeeker(state, notifier),
+                  _buildTransportAndSeeker(context, state, notifier),
                   const SizedBox(width: 4),
                 ],
 
@@ -271,7 +271,11 @@ class MeasureGridWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildTransportAndSeeker(AccordionSimulatorState state, AccordionSimulatorNotifier notifier) {
+  Widget _buildTransportAndSeeker(
+    BuildContext context,
+    AccordionSimulatorState state,
+    AccordionSimulatorNotifier notifier,
+  ) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
