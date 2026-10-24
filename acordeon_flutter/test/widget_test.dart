@@ -27,12 +27,11 @@ void main() {
     expect(find.text('Exterior'), findsWidgets);
     expect(find.text('Interior'), findsWidgets);
 
-    // El Compás crece un 10% (95→104.5 y 75→82.5) y el Constructor
-    // de Acorde conserva su ancho original (190).
+    // Verificar tamaños actuales de los widgets de compás y acordes
     final grids = find.byType(MeasureGridWidget);
     expect(grids, findsNWidgets(2));
-    expect(tester.getSize(grids.first).width, 104.5);
+    expect(tester.getSize(grids.first).width, 150.0);
     expect(tester.getSize(grids.last).width, 82.5);
-    expect(tester.getSize(find.byType(FreeChordWidget)).width, 190);
+    expect(tester.getSize(find.byType(FreeChordWidget)).width, 300.0);
   });
 }

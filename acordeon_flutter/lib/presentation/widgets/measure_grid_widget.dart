@@ -7,10 +7,12 @@ import '../controllers/accordion_controller.dart';
 
 class MeasureGridWidget extends ConsumerWidget {
   final int accordionNumber;
+  final double? width;
 
   const MeasureGridWidget({
     super.key,
     this.accordionNumber = 1,
+    this.width,
   });
 
   @override
@@ -22,7 +24,7 @@ class MeasureGridWidget extends ConsumerWidget {
     final bpm = state.audioReport?.bpm ?? 120;
 
     return Container(
-      width: isPrimary ? 104.5 : 82.5,
+      width: width ?? (isPrimary ? 104.5 : 82.5),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -127,6 +129,7 @@ class MeasureGridWidget extends ConsumerWidget {
                   child: Container(
                     constraints: const BoxConstraints(maxHeight: 330),
                     child: ListView.builder(
+                      padding: const EdgeInsets.only(right: 8),
                       shrinkWrap: true,
                       itemCount: state.measures.length,
                       itemBuilder: (context, mIdx) {
@@ -1271,13 +1274,16 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     ),
                   ],
                   const SizedBox(width: 2),
-                  // Checkbox para marcar el tiempo (extremo derecho)
-                  _BeatMarkCheckbox(
-                    key: ValueKey(
-                      'beat_checkbox_${widget.measureIndex}_${widget.beatIndex}',
+                  // Checkbox para marcar el tiempo (extremo derecho con margen para el scrollbar)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 3.0),
+                    child: _BeatMarkCheckbox(
+                      key: ValueKey(
+                        'beat_checkbox_${widget.measureIndex}_${widget.beatIndex}',
+                      ),
+                      isChecked: isMarked,
+                      onTap: widget.onToggleMark,
                     ),
-                    isChecked: isMarked,
-                    onTap: widget.onToggleMark,
                   ),
                 ],
               );
@@ -1290,8 +1296,8 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
 }
 
 
-/// Checkbox compacto para marcar un tiempo del Compás. Se mantiene pequeño
-/// para caber dentro de la celda junto al acorde.
+/// Checkbox compacto para marcar un tiempo del Compás.
+/// Optimizado con área táctil cómoda y respuesta instantánea sin retrasos.
 class _BeatMarkCheckbox extends StatelessWidget {
   final bool isChecked;
   final VoidCallback? onTap;
@@ -1308,31 +1314,33 @@ class _BeatMarkCheckbox extends StatelessWidget {
       checked: isChecked,
       label: 'Seleccionar tiempo',
       child: GestureDetector(
-        onTap: onTap,
+        onTapDown: (_) => onTap?.call(),
         behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 90),
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: isChecked ? const Color(0xFF059669) : Colors.white,
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(
-              color: isChecked
-                  ? const Color(0xFF059669)
-                  : const Color(0xFF94A3B8),
-              width: 1.2,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Container(
+            width: 13,
+            height: 13,
+            decoration: BoxDecoration(
+              color: isChecked ? const Color(0xFF059669) : Colors.white,
+              borderRadius: BorderRadius.circular(3),
+              border: Border.all(
+                color: isChecked
+                    ? const Color(0xFF059669)
+                    : const Color(0xFF94A3B8),
+                width: 1.2,
+              ),
             ),
+            child: isChecked
+                ? const Center(
+                    child: FaIcon(
+                      FontAwesomeIcons.check,
+                      size: 8,
+                      color: Colors.white,
+                    ),
+                  )
+                : null,
           ),
-          child: isChecked
-              ? const Center(
-                  child: FaIcon(
-                    FontAwesomeIcons.check,
-                    size: 7,
-                    color: Colors.white,
-                  ),
-                )
-              : null,
         ),
       ),
     );
