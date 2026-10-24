@@ -254,7 +254,7 @@ class BassPanelWidget extends ConsumerWidget {
                   buttonType: btn.type,
                   onPointerDown: () => notifier.pressButton(btn.id, midiToPlay),
                   onPointerUp: () => notifier.releaseButton(btn.id, midiToPlay),
-                  child: _buildBassButtonLabel(pushName, pullName, currentBellows, isPressed),
+                  child: _buildBassButtonLabel(pushName, pullName, currentBellows),
                 ),
 
                 // Insignia flotante Abre / Cierra al presionar bajo
@@ -300,44 +300,39 @@ class BassPanelWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildBassButtonLabel(String pushName, String pullName, BellowsMode bellows, bool isPressed) {
+  Widget _buildBassButtonLabel(String pushName, String pullName, BellowsMode bellows) {
+    // Fuelle seleccionado: solo se muestra la nota que suena en esa
+    // dirección. El cuerpo del botón ya está teñido de azul (Abre) o
+    // rojo (Cierra), por eso el texto va en blanco.
+    const labelShadows = [
+      Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 2.5),
+      Shadow(color: Colors.black87, blurRadius: 2),
+    ];
     if (bellows == BellowsMode.push) {
       return Text(
         pushName,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 13.0,
           fontWeight: FontWeight.w900,
-          color: isPressed ? Colors.white : const Color(0xFF991B1B),
-          shadows: isPressed
-              ? const [
-                  Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 2.5),
-                  Shadow(color: Colors.black87, blurRadius: 2),
-                ]
-              : const [
-                  Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1),
-                ],
+          color: Colors.white,
+          shadows: labelShadows,
         ),
       );
     }
     if (bellows == BellowsMode.pull) {
       return Text(
         pullName,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 13.0,
           fontWeight: FontWeight.w900,
-          color: isPressed ? Colors.white : const Color(0xFF1E40AF),
-          shadows: isPressed
-              ? const [
-                  Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 2.5),
-                  Shadow(color: Colors.black87, blurRadius: 2),
-                ]
-              : const [
-                  Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1),
-                ],
+          color: Colors.white,
+          shadows: labelShadows,
         ),
       );
     }
-    // Modo Both: cada mitad del botón muestra su nota.
+
+    // Modo Both: cada mitad del botón está teñida (azul/rojo), así que el
+    // texto de ambas notas va en blanco para mantener el contraste.
     // Izquierda (azul) = Pull / Abre · Derecha (rojo) = Push / Cierra.
     return SizedBox(
       width: _buttonSize,
@@ -353,9 +348,9 @@ class BassPanelWidget extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 10.0,
                     fontWeight: FontWeight.w900,
-                    color: isPressed ? const Color(0xFF1E3A8A) : const Color(0xFF1E40AF),
+                    color: Colors.white,
                     height: 1.0,
-                    shadows: const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+                    shadows: labelShadows,
                   ),
                 ),
               ),
@@ -364,7 +359,7 @@ class BassPanelWidget extends ConsumerWidget {
           Container(
             width: 2.2,
             height: _buttonSize * 0.5,
-            color: isPressed ? Colors.black38 : const Color(0xFF64748B),
+            color: Colors.white54,
           ),
           Expanded(
             child: Center(
@@ -375,9 +370,9 @@ class BassPanelWidget extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 10.0,
                     fontWeight: FontWeight.w900,
-                    color: isPressed ? const Color(0xFF7F1D1D) : const Color(0xFF991B1B),
+                    color: Colors.white,
                     height: 1.0,
-                    shadows: const [Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1)],
+                    shadows: labelShadows,
                   ),
                 ),
               ),

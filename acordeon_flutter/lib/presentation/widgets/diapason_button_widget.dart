@@ -131,7 +131,9 @@ class DiapasonButtonWidget extends StatelessWidget {
   }
 
   Widget _buildNoteContent(String pushName, String pullName, bool highlighted) {
-    final useWhite = isPressed || highlighted;
+    // En "Ambos" el cuerpo del botón va teñido en sus dos mitades, por eso
+    // las notas se muestran en blanco para mantener el contraste.
+    final useWhite = isPressed || highlighted || bellowsMode == BellowsMode.both;
     final labelShadows = useWhite
         ? const [
             Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 3),
@@ -141,6 +143,8 @@ class DiapasonButtonWidget extends StatelessWidget {
             Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1),
           ];
 
+    // Fuelle seleccionado: solo se muestran las notas que suenan en esa
+    // dirección. En "Ambos" se muestran las dos, una en cada mitad.
     if (bellowsMode == BellowsMode.push) {
       return Text(
         pushName,

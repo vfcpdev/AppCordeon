@@ -183,6 +183,30 @@ class _AccordionButton3DPainter extends CustomPainter {
         ],
         stops: const [0.0, 0.55, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
+    } else if (buttonType != null && bellowsMode == BellowsMode.pull) {
+      // Bajo sincronizado con el fuelle: Abre (pull) en azul.
+      bodyPaint.shader = RadialGradient(
+        center: const Alignment(-0.40, -0.40),
+        radius: 0.88,
+        colors: const [
+          Color(0xFFDBEAFE),
+          Color(0xFF60A5FA),
+          Color(0xFF2563EB),
+        ],
+        stops: const [0.0, 0.58, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    } else if (buttonType != null && bellowsMode == BellowsMode.push) {
+      // Bajo sincronizado con el fuelle: Cierra (push) en rojo.
+      bodyPaint.shader = RadialGradient(
+        center: const Alignment(-0.40, -0.40),
+        radius: 0.88,
+        colors: const [
+          Color(0xFFFEE2E2),
+          Color(0xFFF87171),
+          Color(0xFFDC2626),
+        ],
+        stops: const [0.0, 0.58, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
     } else if (!chordTint) {
       if (showGloss) {
         // Estado normal: perlado nácar con brillo especular.
@@ -212,8 +236,16 @@ class _AccordionButton3DPainter extends CustomPainter {
       }
     }
 
-    if (chordTint) {
-      // Notas del acorde: azul = Abre (pull) · rojo = Cierra (push)
+    // Modo "Ambos": mitad izquierda Abre (azul) y mitad derecha Cierra
+    // (rojo), igual que las dos notas que muestra el botón.
+    final bool bothSplit = !isPressed &&
+        !isDetectorSelected &&
+        !isSelectedForRhythm &&
+        !chordTint &&
+        bellowsMode == BellowsMode.both;
+
+    if (chordTint || bothSplit) {
+      // Notas del acorde / bajo: azul = Abre (pull) · rojo = Cierra (push)
       final pullPaint = Paint()
         ..shader = RadialGradient(
           center: const Alignment(-0.35, -0.35),
@@ -237,7 +269,7 @@ class _AccordionButton3DPainter extends CustomPainter {
           stops: const [0.0, 0.55, 1.0],
         ).createShader(Rect.fromCircle(center: center, radius: radius));
 
-      if (isChordPull && isChordPush) {
+      if (bothSplit || (isChordPull && isChordPush)) {
         // Mitad izquierda = Abre (azul) · mitad derecha = Cierra (rojo)
         canvas.save();
         canvas.clipRect(Rect.fromLTWH(0, 0, size.width / 2, size.height));
@@ -349,6 +381,18 @@ class _AccordionButton3DPainter extends CustomPainter {
       borderPaint.strokeWidth = 1.4;
     } else if (isSelectedForRhythm) {
       borderPaint.color = const Color(0xFF7DD3FC);
+      borderPaint.strokeWidth = 1.4;
+    } else if (buttonType != null && bellowsMode == BellowsMode.pull) {
+      // Bajo en Abre: borde azul.
+      borderPaint.color = const Color(0xFF93C5FD);
+      borderPaint.strokeWidth = 1.6;
+    } else if (buttonType != null && bellowsMode == BellowsMode.push) {
+      // Bajo en Cierra: borde rojo.
+      borderPaint.color = const Color(0xFFFCA5A5);
+      borderPaint.strokeWidth = 1.6;
+    } else if (bothSplit) {
+      // Modo Ambos: borde claro sobre las dos mitades.
+      borderPaint.color = Colors.white.withValues(alpha: 0.85);
       borderPaint.strokeWidth = 1.4;
     } else if (buttonType == ButtonType.fundamental) {
       // Bajos fundamentales: Borde sutil ámbar
