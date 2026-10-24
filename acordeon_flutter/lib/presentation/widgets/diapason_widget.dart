@@ -57,7 +57,7 @@ class DiapasonWidget extends ConsumerWidget {
     final effectiveRows = isMirror ? rowList.reversed.toList() : rowList;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 36, 12, 38),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topCenter,
@@ -76,91 +76,85 @@ class DiapasonWidget extends ConsumerWidget {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Hileras de botones + selector acordeón + fuelle ──────────────
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: effectiveRows.map((rDef) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: _buildRow(
-                      context: context,
-                      ref: ref,
-                      buttons: rDef.buttons,
-                      topOffset: rDef.topOffset,
-                    ),
-                  );
-                }).toList(),
+          // ── Barra superior: selector de acordeón + fuelle ──────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF475569), Color(0xFF334155)],
               ),
-              // Botón selector acordeón y botones de fuelle arriba, fuera
-              Positioned(
-                left: 0,
-                top: -48,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0xFF475569), Color(0xFF334155)],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Tooltip(
+                  message: 'Seleccionar acordeón',
+                  child: IconButton(
+                    onPressed: () => showTuningPickerDialog(
+                      context: context,
+                      currentTuning: currentTuning,
+                      onTuningChanged: onTuningChanged,
                     ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                    icon: const FaIcon(
+                      FontAwesomeIcons.music,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.08),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: Colors.white.withValues(alpha: 0.22)),
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Tooltip(
-                        message: 'Seleccionar acordeón',
-                        child: IconButton(
-                          onPressed: () => showTuningPickerDialog(
-                            context: context,
-                            currentTuning: currentTuning,
-                            onTuningChanged: onTuningChanged,
-                          ),
-                          icon: const FaIcon(
-                            FontAwesomeIcons.music,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                          visualDensity: VisualDensity.compact,
-                          style: IconButton.styleFrom(
-                            backgroundColor: Colors.white.withValues(alpha: 0.08),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              side: BorderSide(color: Colors.white.withValues(alpha: 0.22)),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        width: 1,
-                        height: 26,
-                        color: Colors.white.withValues(alpha: 0.18),
-                      ),
-                      const SizedBox(width: 6),
-                      _BellowsToggle(
-                        bellowsMode: bellowsMode,
-                        onBellowsChanged: onBellowsChanged,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Container(
+                  width: 1,
+                  height: 26,
+                  color: Colors.white.withValues(alpha: 0.18),
+                ),
+                const SizedBox(width: 6),
+                _BellowsToggle(
+                  bellowsMode: bellowsMode,
+                  onBellowsChanged: onBellowsChanged,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // ── Hileras de botones ──────────────
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: effectiveRows.map((rDef) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: _buildRow(
+                  context: context,
+                  ref: ref,
+                  buttons: rDef.buttons,
+                  topOffset: rDef.topOffset,
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),

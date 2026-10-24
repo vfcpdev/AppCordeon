@@ -34,7 +34,7 @@ class FreeChordWidget extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cabecera: Título, Notas del acorde y Factibilidad
+          // Cabecera: título, acorde resultante y fuelle
           Wrap(
             spacing: 8,
             runSpacing: 6,
@@ -46,8 +46,6 @@ class FreeChordWidget extends ConsumerWidget {
                 runSpacing: 4,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  const FaIcon(FontAwesomeIcons.music, size: 13, color: Color(0xFF059669)),
-                  const SizedBox(width: 2),
                   const Text(
                     'Constructor de Acorde',
                     style: TextStyle(
@@ -71,6 +69,92 @@ class FreeChordWidget extends ConsumerWidget {
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF065F46),
                       ),
+                    ),
+                  ),
+
+                  // Fuelle para Acorde Libre (a la derecha del nombre del acorde)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Tooltip(
+                          message: 'Ambos (Abrir y Cerrar)',
+                          child: InkWell(
+                            onTap: () => notifier.setFreeChordBellows(BellowsMode.both),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                              decoration: BoxDecoration(
+                                color: state.freeChordBellows == BellowsMode.both
+                                    ? const Color(0xFF4F46E5)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: FaIcon(
+                                FontAwesomeIcons.arrowsLeftRight,
+                                size: 10,
+                                color: state.freeChordBellows == BellowsMode.both
+                                    ? Colors.white
+                                    : const Color(0xFF4F46E5),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Tooltip(
+                          message: 'Abre (Fuelle)',
+                          child: InkWell(
+                            onTap: () => notifier.setFreeChordBellows(BellowsMode.pull),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                              decoration: BoxDecoration(
+                                color: state.freeChordBellows == BellowsMode.pull
+                                    ? const Color(0xFF2563EB)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: FaIcon(
+                                FontAwesomeIcons.arrowLeft,
+                                size: 10,
+                                color: state.freeChordBellows == BellowsMode.pull
+                                    ? Colors.white
+                                    : const Color(0xFF2563EB),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Tooltip(
+                          message: 'Cierra (Fuelle)',
+                          child: InkWell(
+                            onTap: () => notifier.setFreeChordBellows(BellowsMode.push),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                              decoration: BoxDecoration(
+                                color: state.freeChordBellows == BellowsMode.push
+                                    ? const Color(0xFFDC2626)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: FaIcon(
+                                FontAwesomeIcons.arrowRight,
+                                size: 10,
+                                color: state.freeChordBellows == BellowsMode.push
+                                    ? Colors.white
+                                    : const Color(0xFFDC2626),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -109,93 +193,6 @@ class FreeChordWidget extends ConsumerWidget {
                 ],
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-
-          // Fuelle para Acorde Libre
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: const Color(0xFFCBD5E1)),
-            ),
-            padding: const EdgeInsets.all(2),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Tooltip(
-                  message: 'Ambos (Abrir y Cerrar)',
-                  child: InkWell(
-                    onTap: () => notifier.setFreeChordBellows(BellowsMode.both),
-                    borderRadius: BorderRadius.circular(4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: state.freeChordBellows == BellowsMode.both
-                            ? const Color(0xFF4F46E5)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: FaIcon(
-                        FontAwesomeIcons.arrowsLeftRight,
-                        size: 10,
-                        color: state.freeChordBellows == BellowsMode.both
-                            ? Colors.white
-                            : const Color(0xFF4F46E5),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 2),
-                Tooltip(
-                  message: 'Abre (Fuelle)',
-                  child: InkWell(
-                    onTap: () => notifier.setFreeChordBellows(BellowsMode.pull),
-                    borderRadius: BorderRadius.circular(4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: state.freeChordBellows == BellowsMode.pull
-                            ? const Color(0xFF2563EB)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: FaIcon(
-                        FontAwesomeIcons.arrowLeft,
-                        size: 10,
-                        color: state.freeChordBellows == BellowsMode.pull
-                            ? Colors.white
-                            : const Color(0xFF2563EB),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 2),
-                Tooltip(
-                  message: 'Cierra (Fuelle)',
-                  child: InkWell(
-                    onTap: () => notifier.setFreeChordBellows(BellowsMode.push),
-                    borderRadius: BorderRadius.circular(4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: state.freeChordBellows == BellowsMode.push
-                            ? const Color(0xFFDC2626)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: FaIcon(
-                        FontAwesomeIcons.arrowRight,
-                        size: 10,
-                        color: state.freeChordBellows == BellowsMode.push
-                            ? Colors.white
-                            : const Color(0xFFDC2626),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
           const SizedBox(height: 8),
 
