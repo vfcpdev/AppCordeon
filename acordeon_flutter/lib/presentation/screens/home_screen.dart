@@ -74,8 +74,20 @@ class HomeScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(width: 8),
 
-                                  // Cuadrícula de compases y transporte vertical
-                                  const MeasureGridWidget(),
+                                  // Cuadrícula de compases, transporte vertical
+                                  // y Constructor de Acorde debajo (mismo ancho)
+                                  SizedBox(
+                                    width: 190,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: const [
+                                        MeasureGridWidget(),
+                                        SizedBox(height: 8),
+                                        FreeChordWidget(),
+                                      ],
+                                    ),
+                                  ),
                                   const SizedBox(width: 14),
                                 ],
 
@@ -115,14 +127,6 @@ class HomeScreen extends ConsumerWidget {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: const [
-                              // Sección 5: Acorde Libre y Escalas
-                              SizedBox(
-                                width: 540,
-                                child: FreeChordWidget(),
-                              ),
-
-                              SizedBox(width: 14),
-
                               // Sección 3: Detector Inteligente de Acordes
                               SizedBox(
                                 width: 520,

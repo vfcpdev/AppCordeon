@@ -18,6 +18,8 @@ class ChordCatalog {
     'maj7': 11,
     'maj6': 9,
     'add9': 14,
+    'min7': 10,
+    'dim7': 9,
   };
 
   /// Calcula las notas MIDI del acorde a partir de la raíz (0-11) en la octava 4.

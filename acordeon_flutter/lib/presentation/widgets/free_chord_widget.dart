@@ -18,7 +18,7 @@ class FreeChordWidget extends ConsumerWidget {
     final rootName = roots[state.freeChordRoot];
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -49,14 +49,30 @@ class FreeChordWidget extends ConsumerWidget {
                   const FaIcon(FontAwesomeIcons.music, size: 13, color: Color(0xFF059669)),
                   const SizedBox(width: 2),
                   const Text(
-                    'Acorde Libre',
+                    'Constructor de Acorde',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w900,
                       color: Color(0xFF059669),
                     ),
                   ),
-
+                  // Tónica seleccionada (sigla del acorde resultante)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFF22C55E)),
+                    ),
+                    child: Text(
+                      '$rootName${_typeSymbol(state.freeChordType)}${_extensionSymbol(state.freeChordFourth, state.freeChordType)}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF065F46),
+                      ),
+                    ),
+                  ),
                 ],
               ),
 
@@ -183,91 +199,208 @@ class FreeChordWidget extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
 
-          // Selectores: Tónica, Tipo, 4ta nota y Octava
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          // ══════════════ CONSTRUCTOR DE ACORDE (MATRICIAL) ══════════════
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Selector Tónica
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFF22C55E)),
-                ),
-                child: DropdownButton<int>(
-                  value: state.freeChordRoot,
-                  isDense: true,
-                  underline: const SizedBox.shrink(),
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
-                  items: List.generate(roots.length, (idx) {
-                    return DropdownMenuItem(value: idx, child: Text(roots[idx]));
+              // Tónica: 12 notas en matriz 4 × 3
+              _buildMatrixSection(
+                title: 'Tónica',
+                color: const Color(0xFF0284C7),
+                child: _buildMatrixGrid(
+                  columns: 4,
+                  cells: List.generate(roots.length, (idx) {
+                    return _buildOptionButton(
+                      sigla: roots[idx],
+                      tooltip: 'Tónica ${roots[idx]}',
+                      isActive: state.freeChordRoot == idx,
+                      activeColor: const Color(0xFF059669),
+                      onTap: () => notifier.setFreeChordRoot(idx),
+                    );
                   }),
-                  onChanged: (v) {
-                    if (v != null) notifier.setFreeChordRoot(v);
-                  },
                 ),
               ),
+              const SizedBox(height: 8),
 
-              // Selector Tipo
-              DropdownButton<String>(
-                value: state.freeChordType,
-                isDense: true,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                items: const [
-                  DropdownMenuItem(value: 'maj', child: Text('Mayor')),
-                  DropdownMenuItem(value: 'min', child: Text('Menor')),
-                  DropdownMenuItem(value: 'dim', child: Text('Disminuido')),
-                  DropdownMenuItem(value: 'aug', child: Text('Aumentado')),
-                  DropdownMenuItem(value: 'sus4', child: Text('Suspendido 4')),
-                ],
-                onChanged: (v) {
-                  if (v != null) notifier.setFreeChordType(v);
-                },
+              // Cualidad
+              _buildMatrixSection(
+                title: 'Cualidad',
+                color: const Color(0xFF059669),
+                child: _buildMatrixGrid(
+                  columns: 5,
+                  cells: [
+                    _buildOptionButton(
+                      sigla: 'M',
+                      tooltip: 'Mayor',
+                      isActive: state.freeChordType == 'maj',
+                      activeColor: const Color(0xFF059669),
+                      onTap: () => notifier.setFreeChordType('maj'),
+                    ),
+                    _buildOptionButton(
+                      sigla: 'm',
+                      tooltip: 'Menor',
+                      isActive: state.freeChordType == 'min',
+                      activeColor: const Color(0xFF059669),
+                      onTap: () => notifier.setFreeChordType('min'),
+                    ),
+                    _buildOptionButton(
+                      sigla: '°',
+                      tooltip: 'Disminuido',
+                      isActive: state.freeChordType == 'dim',
+                      activeColor: const Color(0xFF059669),
+                      onTap: () => notifier.setFreeChordType('dim'),
+                    ),
+                    _buildOptionButton(
+                      sigla: '+',
+                      tooltip: 'Aumentado',
+                      isActive: state.freeChordType == 'aug',
+                      activeColor: const Color(0xFF059669),
+                      onTap: () => notifier.setFreeChordType('aug'),
+                    ),
+                    _buildOptionButton(
+                      sigla: 'sus4',
+                      tooltip: 'Suspendido 4',
+                      isActive: state.freeChordType == 'sus4',
+                      activeColor: const Color(0xFF059669),
+                      onTap: () => notifier.setFreeChordType('sus4'),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(height: 8),
 
-              // Selector 4ta nota
-              DropdownButton<String>(
-                value: state.freeChordFourth,
-                isDense: true,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                items: const [
-                  DropdownMenuItem(value: 'none', child: Text('Sin 4ta (Tríada)')),
-                  DropdownMenuItem(value: 'octave', child: Text('+ Octava (+8va)')),
-                  DropdownMenuItem(value: 'dom7', child: Text('+ 7ma Dominante')),
-                  DropdownMenuItem(value: 'maj7', child: Text('+ 7ma Mayor (Maj7)')),
-                  DropdownMenuItem(value: 'maj6', child: Text('+ 6ta Mayor')),
-                  DropdownMenuItem(value: 'add9', child: Text('+ 9na (Add9)')),
-                ],
-                onChanged: (v) {
-                  if (v != null) notifier.setFreeChordFourth(v);
-                },
+              // Estructura
+              _buildMatrixSection(
+                title: 'Estructura',
+                color: const Color(0xFFEA580C),
+                child: _buildMatrixGrid(
+                  columns: 2,
+                  cells: [
+                    _buildOptionButton(
+                      sigla: '3',
+                      tooltip: 'Tríada',
+                      isActive: state.freeChordScaleHarmonicMode == 'triad',
+                      activeColor: const Color(0xFFEA580C),
+                      onTap: () => notifier.setFreeChordScaleHarmonicMode('triad'),
+                    ),
+                    _buildOptionButton(
+                      sigla: '4',
+                      tooltip: 'Cuatríada (7mas)',
+                      isActive: state.freeChordScaleHarmonicMode == 'seventh',
+                      activeColor: const Color(0xFFEA580C),
+                      onTap: () => notifier.setFreeChordScaleHarmonicMode('seventh'),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(height: 8),
 
-              // Toggle Octava
-              ToggleButtons(
-                isSelected: [
-                  state.freeChordOctave == 'all',
-                  state.freeChordOctave == '3',
-                  state.freeChordOctave == '4',
-                  state.freeChordOctave == '5',
-                ],
-                onPressed: (idx) {
-                  final vals = ['all', '3', '4', '5'];
-                  notifier.setFreeChordOctave(vals[idx]);
-                },
-                borderRadius: BorderRadius.circular(6),
-                selectedColor: Colors.white,
-                fillColor: const Color(0xFF0284C7),
-                constraints: const BoxConstraints(minHeight: 22, minWidth: 32),
-                children: const [
-                  Text('Todas', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
-                  Text('3', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
-                  Text('4', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
-                  Text('5', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
-                ],
+              // Octava
+              _buildMatrixSection(
+                title: 'Octava',
+                color: const Color(0xFF0284C7),
+                child: _buildMatrixGrid(
+                  columns: 4,
+                  cells: [
+                    _buildOptionButton(
+                      sigla: 'Todas',
+                      tooltip: 'Todas las octavas',
+                      isActive: state.freeChordOctave == 'all',
+                      activeColor: const Color(0xFF0284C7),
+                      onTap: () => notifier.setFreeChordOctave('all'),
+                    ),
+                    _buildOptionButton(
+                      sigla: '3',
+                      tooltip: 'Octava 3',
+                      isActive: state.freeChordOctave == '3',
+                      activeColor: const Color(0xFF0284C7),
+                      onTap: () => notifier.setFreeChordOctave('3'),
+                    ),
+                    _buildOptionButton(
+                      sigla: '4',
+                      tooltip: 'Octava 4',
+                      isActive: state.freeChordOctave == '4',
+                      activeColor: const Color(0xFF0284C7),
+                      onTap: () => notifier.setFreeChordOctave('4'),
+                    ),
+                    _buildOptionButton(
+                      sigla: '5',
+                      tooltip: 'Octava 5',
+                      isActive: state.freeChordOctave == '5',
+                      activeColor: const Color(0xFF0284C7),
+                      onTap: () => notifier.setFreeChordOctave('5'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Extensión: matriz 4 columnas × 2 filas
+              // Fila 1: séptimas · Fila 2: añadidas + casilla "sin extensión"
+              _buildMatrixSection(
+                title: 'Extensión',
+                color: const Color(0xFF7C3AED),
+                child: _buildMatrixGrid(
+                  columns: 4,
+                  cells: [
+                    _buildOptionButton(
+                      sigla: '7',
+                      tooltip: 'Séptima dominante',
+                      isActive: state.freeChordFourth == 'dom7',
+                      activeColor: const Color(0xFF7C3AED),
+                      onTap: () => notifier.setFreeChordFourth('dom7'),
+                    ),
+                    _buildOptionButton(
+                      sigla: 'maj7',
+                      tooltip: 'Séptima mayor',
+                      isActive: state.freeChordFourth == 'maj7',
+                      activeColor: const Color(0xFF7C3AED),
+                      onTap: () => notifier.setFreeChordFourth('maj7'),
+                    ),
+                    _buildOptionButton(
+                      sigla: 'm7',
+                      tooltip: 'Séptima menor',
+                      isActive: state.freeChordFourth == 'min7',
+                      activeColor: const Color(0xFF7C3AED),
+                      onTap: () => notifier.setFreeChordFourth('min7'),
+                    ),
+                    _buildOptionButton(
+                      sigla: '°7',
+                      tooltip: 'Séptima disminuida',
+                      isActive: state.freeChordFourth == 'dim7',
+                      activeColor: const Color(0xFF7C3AED),
+                      onTap: () => notifier.setFreeChordFourth('dim7'),
+                    ),
+                    _buildOptionButton(
+                      sigla: '6',
+                      tooltip: 'Sexta mayor',
+                      isActive: state.freeChordFourth == 'maj6',
+                      activeColor: const Color(0xFF7C3AED),
+                      onTap: () => notifier.setFreeChordFourth('maj6'),
+                    ),
+                    _buildOptionButton(
+                      sigla: 'add9',
+                      tooltip: 'Novena añadida',
+                      isActive: state.freeChordFourth == 'add9',
+                      activeColor: const Color(0xFF7C3AED),
+                      onTap: () => notifier.setFreeChordFourth('add9'),
+                    ),
+                    _buildOptionButton(
+                      sigla: '8',
+                      tooltip: 'Octava añadida',
+                      isActive: state.freeChordFourth == 'octave',
+                      activeColor: const Color(0xFF7C3AED),
+                      onTap: () => notifier.setFreeChordFourth('octave'),
+                    ),
+                    _buildOptionButton(
+                      sigla: '—',
+                      tooltip: 'Sin extensión',
+                      isActive: state.freeChordFourth == 'none',
+                      activeColor: const Color(0xFF7C3AED),
+                      onTap: () => notifier.setFreeChordFourth('none'),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -289,30 +422,13 @@ class FreeChordWidget extends ConsumerWidget {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      'Escala del Acorde: $rootName Mayor',
+                      'Grados de la escala de $rootName',
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF059669),
                         letterSpacing: 0.3,
                       ),
-                    ),
-                    ToggleButtons(
-                      isSelected: [
-                        state.freeChordScaleHarmonicMode == 'triad',
-                        state.freeChordScaleHarmonicMode == 'seventh',
-                      ],
-                      onPressed: (idx) {
-                        notifier.setFreeChordScaleHarmonicMode(idx == 0 ? 'triad' : 'seventh');
-                      },
-                      borderRadius: BorderRadius.circular(4),
-                      selectedColor: Colors.white,
-                      fillColor: const Color(0xFF059669),
-                      constraints: const BoxConstraints(minHeight: 18, minWidth: 44),
-                      children: const [
-                        Text('Tríadas', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold)),
-                        Text('7mas', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold)),
-                      ],
                     ),
                   ],
                 ),
@@ -338,6 +454,176 @@ class FreeChordWidget extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Sección matricial: etiqueta pequeña + rejilla de celdas alineadas.
+  Widget _buildMatrixSection({
+    required String title,
+    required Color color,
+    required Widget child,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 3,
+              height: 9,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 8.5,
+                fontWeight: FontWeight.w900,
+                color: color,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 3),
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(7),
+            border: Border.all(color: const Color(0xFFCBD5E1)),
+          ),
+          child: child,
+        ),
+      ],
+    );
+  }
+
+  /// Distribuye las celdas en filas de [columns] columnas de igual ancho.
+  Widget _buildMatrixGrid({
+    required int columns,
+    required List<Widget> cells,
+    double spacing = 3,
+    double rowHeight = 24,
+  }) {
+    final rows = <Widget>[];
+    for (var start = 0; start < cells.length; start += columns) {
+      if (rows.isNotEmpty) rows.add(SizedBox(height: spacing));
+      rows.add(
+        SizedBox(
+          height: rowHeight,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var col = 0; col < columns; col++) ...[
+                if (col > 0) SizedBox(width: spacing),
+                Expanded(
+                  child: start + col < cells.length
+                      ? cells[start + col]
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: rows,
+    );
+  }
+
+  /// Botón compacto con sigla de acorde (M, m, °, +, 7, maj7…).
+  Widget _buildOptionButton({
+    required String sigla,
+    required String tooltip,
+    required bool isActive,
+    required Color activeColor,
+    required VoidCallback onTap,
+    double minWidth = 26,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 90),
+          constraints: BoxConstraints(minWidth: minWidth, minHeight: 22),
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isActive ? activeColor : Colors.white,
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(
+              color: isActive ? activeColor : const Color(0xFFCBD5E1),
+            ),
+            boxShadow: isActive
+                ? [BoxShadow(color: activeColor.withValues(alpha: 0.35), blurRadius: 6)]
+                : null,
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              sigla,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                height: 1.0,
+                color: isActive ? Colors.white : const Color(0xFF334155),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Sigla de la cualidad (M, m, °, +, sus4).
+  static String _typeSymbol(String type) {
+    switch (type) {
+      case 'maj':
+        return '';
+      case 'min':
+        return 'm';
+      case 'dim':
+        return '°';
+      case 'aug':
+        return '+';
+      case 'sus4':
+        return 'sus4';
+      default:
+        return '';
+    }
+  }
+
+  /// Sigla de la extensión (—, 8, 6, add9, 7, maj7, m7, °7).
+  static String _extensionSymbol(String ext, [String type = '']) {
+    switch (ext) {
+      case 'octave':
+        return '8';
+      case 'dom7':
+        return '7';
+      case 'maj7':
+        return 'maj7';
+      case 'maj6':
+        return '6';
+      case 'add9':
+        return 'add9';
+      case 'min7':
+        return type == 'min' ? '7' : 'm7';
+      case 'dim7':
+        return type == 'dim' ? '7' : '°7';
+      default:
+        return '';
+    }
   }
 
   Widget _buildDegreeChip(String roman, String note, String quality, VoidCallback onTap, {bool isActive = false}) {
