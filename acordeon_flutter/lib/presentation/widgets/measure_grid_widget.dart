@@ -22,7 +22,7 @@ class MeasureGridWidget extends ConsumerWidget {
     final bpm = state.audioReport?.bpm ?? 120;
 
     return Container(
-      width: isPrimary ? 190 : 150,
+      width: isPrimary ? 104.5 : 82.5,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -47,40 +47,67 @@ class MeasureGridWidget extends ConsumerWidget {
               color: isPrimary ? const Color(0xFFF1F5F9) : const Color(0xFFD1FAE5),
               border: Border(bottom: BorderSide(color: isPrimary ? const Color(0xFFE2E8F0) : const Color(0xFFA7F3D0))),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      FaIcon(
-                        isPrimary ? FontAwesomeIcons.music : FontAwesomeIcons.link,
-                        size: 8,
-                        color: isPrimary ? const Color(0xFF0284C7) : const Color(0xFF059669),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // En la tarjeta estrecha el título no cabe junto al BPM.
+                final showTitle = constraints.maxWidth >= 80;
+                final compactBpm = constraints.maxWidth < 120;
+                return Row(
+                  children: [
+                    if (showTitle) ...[
+                      Expanded(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            FaIcon(
+                              isPrimary
+                                  ? FontAwesomeIcons.music
+                                  : FontAwesomeIcons.link,
+                              size: 8,
+                              color: isPrimary
+                                  ? const Color(0xFF0284C7)
+                                  : const Color(0xFF059669),
+                            ),
+                            const SizedBox(width: 3),
+                            Flexible(
+                              child: Text(
+                                isPrimary ? 'Compás' : 'Compás A2',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 9.0,
+                                  fontWeight: FontWeight.w900,
+                                  color: isPrimary
+                                      ? const Color(0xFF0F172A)
+                                      : const Color(0xFF059669),
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 3),
-                      Flexible(
-                        child: Text(
-                          isPrimary ? 'Compás' : 'Compás A2',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 9.0,
-                            fontWeight: FontWeight.w900,
-                            color: isPrimary ? const Color(0xFF0F172A) : const Color(0xFF059669),
-                            letterSpacing: 0.2,
+                      const SizedBox(width: 2),
+                    ],
+                    // Control de BPM editable con botones subir/bajar
+                    Expanded(
+                      child: Align(
+                        alignment: showTitle
+                            ? Alignment.centerRight
+                            : Alignment.center,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: _BpmInputControl(
+                            bpm: bpm,
+                            compact: compactBpm,
+                            onChanged: (newVal) =>
+                                notifier.updateAudioBpm(newVal),
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 2),
-                // Control de BPM editable con botones subir/bajar
-                _BpmInputControl(
-                  bpm: bpm,
-                  onChanged: (newVal) => notifier.updateAudioBpm(newVal),
-                ),
-              ],
+                    ),
+                  ],
+                );
+              },
             ),
           ),
 
@@ -154,10 +181,17 @@ class MeasureGridWidget extends ConsumerWidget {
                                       chord: beat.chord,
                                       timeText: beat.timeText,
                                       isCurrentPlayhead: isCurrentPlayhead,
+                                      isMarked: notifier.isBeatMarked(mIdx, beatIdx),
                                       hasBottomBorder: beatIdx < measure.beats.length - 1,
                                       notation: state.notation,
                                       onChanged: (newChord) {
                                         notifier.updateMeasureBeat(mIdx, beatIdx, newChord);
+                                      },
+                                      onSelected: () {
+                                        notifier.selectBeat(mIdx, beatIdx);
+                                      },
+                                      onToggleMark: () {
+                                        notifier.toggleBeatMark(mIdx, beatIdx);
                                       },
                                     );
                                   }).toList(),
@@ -285,9 +319,15 @@ class MeasureGridWidget extends ConsumerWidget {
         const SizedBox(height: 8),
 
         // Tiempo actual y Seeker Vertical
-        Text(
-          _formatTime(state.currentAudioTime),
-          style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+        SizedBox(
+          width: 26,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _formatTime(state.currentAudioTime),
+              style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+            ),
+          ),
         ),
         SizedBox(
           height: 140,
@@ -314,9 +354,15 @@ class MeasureGridWidget extends ConsumerWidget {
             ),
           ),
         ),
-        Text(
-          '-${_formatTime((state.totalAudioDuration - state.currentAudioTime).clamp(0.0, double.infinity))}',
-          style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+        SizedBox(
+          width: 26,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '-${_formatTime((state.totalAudioDuration - state.currentAudioTime).clamp(0.0, double.infinity))}',
+              style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+            ),
+          ),
         ),
       ],
     );
@@ -374,10 +420,12 @@ class MeasureGridWidget extends ConsumerWidget {
 class _BpmInputControl extends StatefulWidget {
   final int bpm;
   final ValueChanged<int> onChanged;
+  final bool compact;
 
   const _BpmInputControl({
     required this.bpm,
     required this.onChanged,
+    this.compact = false,
   });
 
   @override
@@ -442,15 +490,17 @@ class _BpmInputControlState extends State<_BpmInputControl> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'BPM',
-            style: TextStyle(
-              fontSize: 7.5,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF64748B),
+          if (!widget.compact) ...[
+            const Text(
+              'BPM',
+              style: TextStyle(
+                fontSize: 7.5,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF64748B),
+              ),
             ),
-          ),
-          const SizedBox(width: 2),
+            const SizedBox(width: 2),
+          ],
           // Cuadro de texto editable
           SizedBox(
             width: 32,
@@ -726,9 +776,12 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final String chord;
   final String timeText;
   final bool isCurrentPlayhead;
+  final bool isMarked;
   final bool hasBottomBorder;
   final NotationMode notation;
   final ValueChanged<String> onChanged;
+  final VoidCallback? onSelected;
+  final VoidCallback? onToggleMark;
 
   const _InlineBeatChordEditor({
     required this.accordionId,
@@ -738,9 +791,12 @@ class _InlineBeatChordEditor extends StatefulWidget {
     required this.chord,
     required this.timeText,
     required this.isCurrentPlayhead,
+    required this.isMarked,
     required this.hasBottomBorder,
     this.notation = NotationMode.latina,
     required this.onChanged,
+    this.onSelected,
+    this.onToggleMark,
   });
 
   @override
@@ -807,6 +863,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
           }
           _update();
         }
+        widget.onSelected?.call();
       } else {
         _update();
       }
@@ -886,6 +943,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     _isEditing = false;
     _focusNode.unfocus();
     _cellFocusNode.requestFocus();
+    widget.onSelected?.call();
     if (mounted) {
       setState(() {});
       Scrollable.ensureVisible(
@@ -907,6 +965,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     if (oldKey != null && oldKey != _nodeKey) {
       _registry[oldKey]?._setIdle();
     }
+    widget.onSelected?.call();
     _isEditing = true;
     _focusNode.requestFocus();
     _controller.selection = TextSelection(
@@ -1087,6 +1146,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     final isPlaying = widget.isCurrentPlayhead;
     final isCellSelected = _isCellHighlighted;
     final isFocusedOrSelected = _isEditing || isCellSelected;
+    final isMarked = widget.isMarked;
 
     return Focus(
       focusNode: _cellFocusNode,
@@ -1102,7 +1162,11 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                 ? const Color(0xFFDBEAFE) // Resaltado azul suave y vivo para cuadro seleccionado
                 : (_isEditing
                     ? Colors.white // Fondo blanco limpio al editar
-                    : (isPlaying ? const Color(0xFFFEF3C7) : Colors.white)),
+                    : (isPlaying
+                        ? const Color(0xFFFEF3C7)
+                        : (isMarked
+                            ? const Color(0xFFF0FDF4) // Tiempo marcado con el checkbox
+                            : Colors.white))),
             borderRadius: BorderRadius.circular(4),
             border: isCellSelected
                 ? Border.all(color: const Color(0xFF2563EB), width: 1.8) // Cuadro resaltado nítido con borde completo
@@ -1110,10 +1174,17 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     ? Border.all(color: const Color(0xFF3B82F6), width: 1.8) // Borde activo de edición
                     : (isPlaying
                         ? Border.all(color: const Color(0xFFF59E0B), width: 1.8)
-                        : Border.all(
-                            color: widget.hasBottomBorder ? const Color(0xFFE2E8F0) : Colors.transparent,
-                            width: 0.8,
-                          ))),
+                        : (isMarked
+                            ? Border.all(
+                                color: const Color(0xFF059669),
+                                width: 1.2,
+                              )
+                            : Border.all(
+                                color: widget.hasBottomBorder
+                                    ? const Color(0xFFE2E8F0)
+                                    : Colors.transparent,
+                                width: 0.8,
+                              )))),
             boxShadow: isCellSelected
                 ? [
                     BoxShadow(
@@ -1132,60 +1203,136 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                       ]
                     : null),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Cuadro de texto interactivo con foco directo y navegación Tab + Arriba / Abajo
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  readOnly: !_isEditing,
-                  textAlignVertical: TextAlignVertical.center,
-                  style: TextStyle(
-                    fontSize: 8.5,
-                    fontWeight: (isFocusedOrSelected || hasChord) ? FontWeight.w900 : FontWeight.w500,
-                    color: isPlaying
-                        ? const Color(0xFFB45309)
-                        : (isFocusedOrSelected
-                            ? const Color(0xFF1D4ED8)
-                            : (hasChord ? const Color(0xFF0F172A) : const Color(0xFF94A3B8))),
-                  ),
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    hintText: '-',
-                    hintStyle: TextStyle(
-                      fontSize: 8.5,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF94A3B8),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Con la tarjeta de Compás estrecha, el tiempo no cabe junto al
+              // acorde y al checkbox: se oculta para evitar desbordamientos.
+              final showTime = constraints.maxWidth >= 68;
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Cuadro de texto interactivo con foco directo y navegación Tab + Arriba / Abajo
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      readOnly: !_isEditing,
+                      textAlignVertical: TextAlignVertical.center,
+                      style: TextStyle(
+                        fontSize: 8.5,
+                        fontWeight: (isFocusedOrSelected || hasChord)
+                            ? FontWeight.w900
+                            : FontWeight.w500,
+                        color: isPlaying
+                            ? const Color(0xFFB45309)
+                            : (isFocusedOrSelected
+                                ? const Color(0xFF1D4ED8)
+                                : (hasChord
+                                    ? const Color(0xFF0F172A)
+                                    : const Color(0xFF94A3B8))),
+                      ),
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        hintText: '-',
+                        hintStyle: TextStyle(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF94A3B8),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        border: InputBorder.none,
+                      ),
+                      inputFormatters: [
+                        _ScaleDegreeInputFormatter(notation: widget.notation),
+                      ],
+                      onChanged: (_) {
+                        _commit();
+                      },
+                      onSubmitted: (_) {
+                        _commit();
+                        _moveSelection(1);
+                      },
                     ),
-                    contentPadding: EdgeInsets.zero,
-                    border: InputBorder.none,
                   ),
-                  inputFormatters: [
-                    _ScaleDegreeInputFormatter(notation: widget.notation),
+                  if (showTime) ...[
+                    const SizedBox(width: 2),
+                    Text(
+                      widget.timeText,
+                      style: TextStyle(
+                        fontSize: 7.5,
+                        fontWeight: isCellSelected
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                        color: isCellSelected
+                            ? const Color(0xFF1D4ED8)
+                            : const Color(0xFF64748B),
+                        fontFamily: 'monospace',
+                      ),
+                    ),
                   ],
-                  onChanged: (_) {
-                    _commit();
-                  },
-                  onSubmitted: (_) {
-                    _commit();
-                    _moveSelection(1);
-                  },
-                ),
-              ),
-              const SizedBox(width: 2),
-              Text(
-                widget.timeText,
-                style: TextStyle(
-                  fontSize: 7.5,
-                  fontWeight: isCellSelected ? FontWeight.w800 : FontWeight.w600,
-                  color: isCellSelected ? const Color(0xFF1D4ED8) : const Color(0xFF64748B),
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ],
+                  const SizedBox(width: 2),
+                  // Checkbox para marcar el tiempo (extremo derecho)
+                  _BeatMarkCheckbox(
+                    key: ValueKey(
+                      'beat_checkbox_${widget.measureIndex}_${widget.beatIndex}',
+                    ),
+                    isChecked: isMarked,
+                    onTap: widget.onToggleMark,
+                  ),
+                ],
+              );
+            },
           ),
+        ),
+      ),
+    );
+  }
+}
+
+
+/// Checkbox compacto para marcar un tiempo del Compás. Se mantiene pequeño
+/// para caber dentro de la celda junto al acorde.
+class _BeatMarkCheckbox extends StatelessWidget {
+  final bool isChecked;
+  final VoidCallback? onTap;
+
+  const _BeatMarkCheckbox({
+    super.key,
+    required this.isChecked,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      checked: isChecked,
+      label: 'Seleccionar tiempo',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 90),
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: isChecked ? const Color(0xFF059669) : Colors.white,
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(
+              color: isChecked
+                  ? const Color(0xFF059669)
+                  : const Color(0xFF94A3B8),
+              width: 1.2,
+            ),
+          ),
+          child: isChecked
+              ? const Center(
+                  child: FaIcon(
+                    FontAwesomeIcons.check,
+                    size: 7,
+                    color: Colors.white,
+                  ),
+                )
+              : null,
         ),
       ),
     );

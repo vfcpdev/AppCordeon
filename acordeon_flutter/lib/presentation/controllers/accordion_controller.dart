@@ -87,6 +87,10 @@ class AccordionSimulatorState {
   final int? selectedBarIndex;
   final int? selectedBeatIndex;
 
+  /// Tiempos marcados con el checkbox de la cuadrícula. Si hay alguno, la
+  /// inserción desde el Constructor y la reproducción se limitan a ellos.
+  final Set<int> markedBeats;
+
   // Sección 5: Acorde Libre y Escalas
   final int freeChordRoot; // 0=Do, 1=Do#, etc.
   final String freeChordType; // maj, min, dim, aug, sus4
@@ -139,6 +143,7 @@ class AccordionSimulatorState {
     required this.measures,
     this.selectedBarIndex,
     this.selectedBeatIndex,
+    this.markedBeats = const {},
     required this.freeChordRoot,
     required this.freeChordType,
     required this.freeChordFourth,
@@ -187,6 +192,7 @@ class AccordionSimulatorState {
     List<MeasureRow>? measures,
     int? selectedBarIndex,
     int? selectedBeatIndex,
+    Set<int>? markedBeats,
     int? freeChordRoot,
     String? freeChordType,
     String? freeChordFourth,
@@ -235,6 +241,7 @@ class AccordionSimulatorState {
       measures: measures ?? this.measures,
       selectedBarIndex: selectedBarIndex ?? this.selectedBarIndex,
       selectedBeatIndex: selectedBeatIndex ?? this.selectedBeatIndex,
+      markedBeats: markedBeats ?? this.markedBeats,
       freeChordRoot: freeChordRoot ?? this.freeChordRoot,
       freeChordType: freeChordType ?? this.freeChordType,
       freeChordFourth: freeChordFourth ?? this.freeChordFourth,
@@ -649,6 +656,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final rootMidi = 48 + pitchClass; // C4 = 60 → C3 = 48, usar octava 3 para que suene natural
 
     final has7 = rest.contains('7');
+    final isMaj7 = rest.contains('maj7');
     final isMinor = rest.contains('m') && !rest.contains('maj') && !rest.contains('dim');
     final isDim = rest.contains('dim');
     final isAug = rest.contains('aug');
@@ -659,27 +667,36 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     if (isDim) {
       notes.add(rootMidi + 12 + 3); // tercera menor
       notes.add(rootMidi + 12 + 6); // quinta disminuida
-      if (has7) notes.add(rootMidi + 12 + 9); // séptima disminuida
     } else if (isAug) {
       notes.add(rootMidi + 12 + 4); // tercera mayor
       notes.add(rootMidi + 12 + 8); // quinta aumentada
-      if (has7) notes.add(rootMidi + 12 + 10); // séptima dominante
     } else if (isSus4) {
       notes.add(rootMidi + 12 + 5); // cuarta justa
       notes.add(rootMidi + 12 + 7); // quinta justa
-      if (has7) notes.add(rootMidi + 12 + 10);
     } else if (isSus) {
       notes.add(rootMidi + 12 + 5); // cuarta suspendida
       notes.add(rootMidi + 12 + 7);
     } else if (isMinor) {
       notes.add(rootMidi + 12 + 3); // tercera menor
       notes.add(rootMidi + 12 + 7); // quinta justa
-      if (has7) notes.add(rootMidi + 12 + 10);
     } else {
       // Mayor
       notes.add(rootMidi + 12 + 4); // tercera mayor
       notes.add(rootMidi + 12 + 7); // quinta justa
-      if (has7) notes.add(rootMidi + 12 + 10);
+    }
+
+    // Extensiones: séptima según la cualidad, sexta, novena añadida y octava.
+    if (has7) {
+      notes.add(rootMidi + 12 + (isDim ? 9 : (isMaj7 ? 11 : 10)));
+    }
+    if (rest.contains('6') && !rest.contains('add9')) {
+      notes.add(rootMidi + 12 + 9);
+    }
+    if (rest.contains('add9')) {
+      notes.add(rootMidi + 12 + 14);
+    }
+    if (rest.contains('8')) {
+      notes.add(rootMidi + 12 + 12);
     }
     return notes;
   }
@@ -699,6 +716,13 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
     final row = state.measures[barIndex];
     if (beatIndex < 0 || beatIndex >= row.beats.length) {
+      state = state.copyWith(playingChordNotes: const {});
+      return;
+    }
+
+    // Si hay tiempos marcados, solo esos acordes se ejecutan.
+    if (state.markedBeats.isNotEmpty &&
+        !state.markedBeats.contains(beatKey(barIndex, beatIndex))) {
       state = state.copyWith(playingChordNotes: const {});
       return;
     }
@@ -878,6 +902,24 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     );
   }
 
+  /// Clave plana de un tiempo. La cuadrícula usa 4 tiempos por compás.
+  static int beatKey(int barIndex, int beatIndex) => barIndex * 4 + beatIndex;
+
+  bool isBeatMarked(int barIndex, int beatIndex) =>
+      state.markedBeats.contains(beatKey(barIndex, beatIndex));
+
+  /// Marca o desmarca un tiempo con el checkbox del Compás. Los tiempos
+  /// marcados reciben el acorde del Constructor de forma simultánea y son los
+  /// únicos que se ejecutan durante la reproducción.
+  void toggleBeatMark(int barIndex, int beatIndex) {
+    final key = beatKey(barIndex, beatIndex);
+    final next = Set<int>.from(state.markedBeats);
+    if (!next.remove(key)) next.add(key);
+    state = state.copyWith(markedBeats: next);
+  }
+
+  void clearBeatMarks() => state = state.copyWith(markedBeats: const {});
+
   void setBeatChord(int barIdx, int beatIdx, String chord) {
     final newMeasures = state.measures.map((m) {
       if (m.barNumber - 1 != barIdx) return m;
@@ -931,6 +973,54 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     updatedMeasures[barIndex] = MeasureRow(barNumber: row.barNumber, beats: updatedBeats);
 
     state = state.copyWith(measures: updatedMeasures);
+  }
+
+  /// Inserta el acorde generado en el constructor. Si hay tiempos marcados con
+  /// el checkbox, se asigna a todos ellos a la vez; si no, a la celda
+  /// actualmente seleccionada. Devuelve el símbolo insertado, o `null` si no
+  /// hay tónica o destino válido.
+  String? insertFreeChordIntoSelectedBeat() {
+    final symbol = ChordCatalog.symbolFor(
+      root: state.freeChordRoot,
+      type: state.freeChordType,
+      extension: state.freeChordFourth,
+      latin: state.notation != NotationMode.alemana,
+    );
+    if (symbol.isEmpty) return null;
+
+    // Inserción simultánea en todos los tiempos marcados.
+    if (state.markedBeats.isNotEmpty) {
+      final updatedMeasures = List<MeasureRow>.from(state.measures);
+      var applied = false;
+
+      for (final key in state.markedBeats) {
+        final barIndex = key ~/ 4;
+        final beatIndex = key % 4;
+        if (barIndex < 0 || barIndex >= updatedMeasures.length) continue;
+        final row = updatedMeasures[barIndex];
+        if (beatIndex < 0 || beatIndex >= row.beats.length) continue;
+
+        final beats = List<MeasureBeat>.from(row.beats);
+        beats[beatIndex] = beats[beatIndex].copyWith(chord: symbol);
+        updatedMeasures[barIndex] =
+            MeasureRow(barNumber: row.barNumber, beats: beats);
+        applied = true;
+      }
+
+      if (!applied) return null;
+      state = state.copyWith(measures: updatedMeasures);
+      return symbol;
+    }
+
+    final barIndex = state.selectedBarIndex;
+    final beatIndex = state.selectedBeatIndex;
+    if (barIndex == null || beatIndex == null) return null;
+    if (barIndex < 0 || barIndex >= state.measures.length) return null;
+    final row = state.measures[barIndex];
+    if (beatIndex < 0 || beatIndex >= row.beats.length) return null;
+
+    updateMeasureBeat(barIndex, beatIndex, symbol);
+    return symbol;
   }
 
   // Sección 5: Acorde Libre

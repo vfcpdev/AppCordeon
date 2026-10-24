@@ -125,9 +125,10 @@ class _AccordionKeyboardListenerState extends ConsumerState<AccordionKeyboardLis
           final buttons = nextState.trebleData1[rowKey];
           if (buttons != null && btnIndex < buttons.length) {
             final btnModel = buttons[btnIndex];
+            // `trebleData1` ya está transpuesto según la afinación.
             final newMidi = (next == BellowsMode.pull)
-                ? btnModel.pull + nextState.tuning1.offset
-                : btnModel.push + nextState.tuning1.offset;
+                ? btnModel.pull
+                : btnModel.push;
             final buttonId = '${rowKey}_$btnIndex';
             _pressedKeys[entry.key] = (buttonId, newMidi);
             notifier.pressButton(buttonId, newMidi);
@@ -168,10 +169,10 @@ class _AccordionKeyboardListenerState extends ConsumerState<AccordionKeyboardLis
     final btnModel = buttons[btnIndex];
 
     final currentBellows = state.bellows1;
-    final currentTuning = state.tuning1;
+    // `trebleData1` ya está transpuesto según la afinación.
     final midiToPlay = (currentBellows == BellowsMode.pull)
-        ? btnModel.pull + currentTuning.offset
-        : btnModel.push + currentTuning.offset;
+        ? btnModel.pull
+        : btnModel.push;
 
     if (event is KeyDownEvent) {
       if (!_pressedKeys.containsKey(event.logicalKey)) {

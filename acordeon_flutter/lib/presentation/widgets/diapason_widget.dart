@@ -10,6 +10,8 @@ import 'diapason_button_widget.dart';
 import 'tuning_picker_dialog.dart';
 
 class DiapasonWidget extends ConsumerWidget {
+  static const double _buttonSize = 50.0;
+
   final int accordionNumber;
   final String title;
   final TuningDefinition currentTuning;
@@ -33,6 +35,45 @@ class DiapasonWidget extends ConsumerWidget {
     final bellowsMode = isPrimary ? state.bellows1 : state.bellows2;
     final onBellowsChanged = isPrimary ? notifier.setBellows1 : notifier.setBellows2;
     final onToggleMirror = isPrimary ? notifier.toggleMirror1 : notifier.toggleMirror2;
+
+    // Acorde vigente: generado en el constructor + activo en el Compás +
+    // seleccionado en el detector. Sus clases de altura deciden qué botones
+    // se muestran al elegir Abrir o Cerrar con las flechas del fuelle.
+    final generatedChordNotes = ChordCatalog.notesFor(
+      root: state.freeChordRoot,
+      type: state.freeChordType,
+      extension: state.freeChordFourth,
+    );
+    final selectedChordNotes = <int>[];
+    if (state.detectorSelectedButtons.isNotEmpty) {
+      final selectedIds = state.detectorSelectedButtons.toSet();
+      for (final row in trebleData.values) {
+        for (final btn in row) {
+          if (selectedIds.contains(btn.id)) {
+            // `trebleData` ya está transpuesto: no se suma el offset otra vez.
+            selectedChordNotes
+              ..add(btn.pull)
+              ..add(btn.push);
+          }
+        }
+      }
+    }
+    final activeChordPitchClasses = ChordCatalog.activePitchClasses(
+      generated: generatedChordNotes,
+      playing: state.syncDiapason && state.isPlayingAudio
+          ? state.playingChordNotes
+          : const <int>[],
+      selected: selectedChordNotes,
+    );
+
+    // Nombre del acorde del constructor en la notación activa (Latina/Alemana).
+    final chordLabel = ChordCatalog.symbolFor(
+      root: state.freeChordRoot,
+      type: state.freeChordType,
+      extension: state.freeChordFourth,
+      latin: state.notation != NotationMode.alemana,
+      display: true,
+    );
 
     final rowList = [
       _RowDef(
@@ -102,28 +143,57 @@ class DiapasonWidget extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Tooltip(
-                  message: 'Seleccionar acordeón',
-                  child: IconButton(
-                    onPressed: () => showTuningPickerDialog(
-                      context: context,
-                      currentTuning: currentTuning,
-                      onTuningChanged: onTuningChanged,
-                    ),
-                    icon: const FaIcon(
-                      FontAwesomeIcons.music,
-                      size: 16,
-                      color: Colors.white,
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withValues(alpha: 0.08),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(color: Colors.white.withValues(alpha: 0.22)),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Tooltip(
+                      message: 'Seleccionar acordeón',
+                      child: IconButton(
+                        onPressed: () => showTuningPickerDialog(
+                          context: context,
+                          currentTuning: currentTuning,
+                          onTuningChanged: onTuningChanged,
+                        ),
+                        icon: const FaIcon(
+                          FontAwesomeIcons.music,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: 0.08),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.22),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 3),
+                    // Nombre del acorde en la notación seleccionada.
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        chordLabel.isEmpty ? '—' : chordLabel,
+                        key: ValueKey('diapason_chord_label_$accordionNumber'),
+                        style: const TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.black,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(width: 6),
                 Container(
@@ -189,6 +259,7 @@ class DiapasonWidget extends ConsumerWidget {
                       ref: ref,
                       buttons: rDef.buttons,
                       topOffset: rDef.topOffset,
+                      activeChordPitchClasses: activeChordPitchClasses,
                     ),
                   );
                 }).toList(),
@@ -214,6 +285,7 @@ class DiapasonWidget extends ConsumerWidget {
     required WidgetRef ref,
     required List<TrebleButtonModel> buttons,
     required double topOffset,
+    required Set<int> activeChordPitchClasses,
   }) {
     final state = ref.watch(accordionSimulatorProvider);
     final notifier = ref.read(accordionSimulatorProvider.notifier);
@@ -225,37 +297,18 @@ class DiapasonWidget extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (topOffset > 0) SizedBox(height: topOffset),
-        // Botones de la hilera con espaciado natural de 12px
+        // Todos los botones permanecen visibles. En Abrir/Cerrar solo se
+        // colorean los que producen una nota del acorde vigente.
         ...buttons.map((btn) {
           final isPressed = state.activeButtons.contains(btn.id);
           final isDetector = state.detectorSelectedButtons.contains(btn.id);
           final midiToPlay = currentBellows == BellowsMode.pull
-              ? btn.pull + currentTuning.offset
-              : btn.push + currentTuning.offset;
+              ? btn.pull
+              : btn.push;
 
-          // Notas del acorde libre: cada mitad del botón indica si la nota
-          // pertenece al acorde al abrir (azul) o al cerrar (rojo).
-          final freeChordNotes = ChordCatalog.notesFor(
-            root: state.freeChordRoot,
-            type: state.freeChordType,
-            extension: state.freeChordFourth,
-          );
-          final isChordPull =
-              freeChordNotes.contains(btn.pull + currentTuning.offset);
-          final isChordPush =
-              freeChordNotes.contains(btn.push + currentTuning.offset);
-
-          // Sincronización con el Compás: resalta por clase de altura las
-          // notas del acorde que está sonando en el beat actual.
-          final syncNotes = state.syncDiapason && state.isPlayingAudio
-              ? state.playingChordNotes
-              : const <int>{};
-          final isSyncPull = syncNotes.any(
-            (n) => n % 12 == btn.pull % 12,
-          );
-          final isSyncPush = syncNotes.any(
-            (n) => n % 12 == btn.push % 12,
-          );
+          // `btn.pull`/`btn.push` ya incluyen la transposición de la afinación.
+          final isChordPull = activeChordPitchClasses.contains(btn.pull % 12);
+          final isChordPush = activeChordPitchClasses.contains(btn.push % 12);
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 12.0),
@@ -265,12 +318,13 @@ class DiapasonWidget extends ConsumerWidget {
               pullMidi: btn.pull,
               isPressed: isPressed,
               isDetectorSelected: isDetector,
-              isChordPull: isChordPull || isSyncPull,
-              isChordPush: isChordPush || isSyncPush,
+              isChordPull: isChordPull,
+              isChordPush: isChordPush,
               showGloss: !isPrimary,
               bellowsMode: currentBellows,
               notation: state.notation,
               tuningOffset: currentTuning.offset,
+              size: _buttonSize,
               onPointerDown: () {
                 if (state.detectorMode) {
                   notifier.toggleDetectorButton(btn.id, midiToPlay);

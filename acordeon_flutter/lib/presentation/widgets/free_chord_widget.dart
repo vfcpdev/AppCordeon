@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
+import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
 
 class FreeChordWidget extends ConsumerWidget {
@@ -18,6 +19,31 @@ class FreeChordWidget extends ConsumerWidget {
     final rootName = state.freeChordRoot >= 0 && state.freeChordRoot < roots.length
         ? roots[state.freeChordRoot]
         : '—';
+
+    // Celda(s) del Compás que recibirán el acorde generado: todos los tiempos
+    // marcados con el checkbox o, si no hay ninguno, la celda seleccionada.
+    final barIndex = state.selectedBarIndex;
+    final beatIndex = state.selectedBeatIndex;
+    final hasSelectedCell = barIndex != null &&
+        beatIndex != null &&
+        barIndex >= 0 &&
+        barIndex < state.measures.length &&
+        beatIndex >= 0 &&
+        beatIndex < state.measures[barIndex].beats.length;
+    final markedCount = state.markedBeats.length;
+    final targetLabel = markedCount > 0
+        ? '$markedCount tiempo${markedCount == 1 ? '' : 's'} marcado${markedCount == 1 ? '' : 's'}'
+        : (hasSelectedCell
+            ? 'Compás ${barIndex + 1} · Tiempo ${beatIndex + 1}'
+            : 'sin celda seleccionada');
+    final insertSymbol = ChordCatalog.symbolFor(
+      root: state.freeChordRoot,
+      type: state.freeChordType,
+      extension: state.freeChordFourth,
+      latin: state.notation != NotationMode.alemana,
+    );
+    final canInsert =
+        insertSymbol.isNotEmpty && (markedCount > 0 || hasSelectedCell);
 
     return Container(
       padding: const EdgeInsets.all(8),
@@ -191,6 +217,40 @@ class FreeChordWidget extends ConsumerWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                     ),
                     onPressed: notifier.arpeggioFreeChord,
+                  ),
+                  // Inserta el acorde generado en la celda seleccionada del Compás.
+                  Tooltip(
+                    message: canInsert
+                        ? 'Agregar $insertSymbol a $targetLabel'
+                        : 'Selecciona una tónica y marca tiempos o una celda del Compás',
+                    child: ElevatedButton.icon(
+                      icon: const FaIcon(FontAwesomeIcons.plus, size: 9),
+                      label: const Text('Compás', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF7C3AED),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(0xFFE2E8F0),
+                        disabledForegroundColor: const Color(0xFF94A3B8),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        minimumSize: const Size(0, 22),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      onPressed: canInsert
+                          ? () {
+                              final symbol =
+                                  notifier.insertFreeChordIntoSelectedBeat();
+                              if (symbol == null) return;
+                              ScaffoldMessenger.of(context)
+                                ..hideCurrentSnackBar()
+                                ..showSnackBar(
+                                  SnackBar(
+                                    content: Text('$symbol → $targetLabel'),
+                                    duration: const Duration(milliseconds: 1400),
+                                  ),
+                                );
+                            }
+                          : null,
+                    ),
                   ),
                 ],
               ),

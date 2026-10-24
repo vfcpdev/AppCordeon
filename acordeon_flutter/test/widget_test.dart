@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:acordeon_flutter/main.dart';
+import 'package:acordeon_flutter/presentation/widgets/free_chord_widget.dart';
+import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
 void main() {
   testWidgets('AcordeonApp renders home screen with diapasón and controls',
@@ -24,5 +26,13 @@ void main() {
     // Verify bass headers exist
     expect(find.text('Exterior'), findsWidgets);
     expect(find.text('Interior'), findsWidgets);
+
+    // El Compás crece un 10% (95→104.5 y 75→82.5) y el Constructor
+    // de Acorde conserva su ancho original (190).
+    final grids = find.byType(MeasureGridWidget);
+    expect(grids, findsNWidgets(2));
+    expect(tester.getSize(grids.first).width, 104.5);
+    expect(tester.getSize(grids.last).width, 82.5);
+    expect(tester.getSize(find.byType(FreeChordWidget)).width, 190);
   });
 }

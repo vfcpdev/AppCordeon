@@ -52,6 +52,15 @@ class DiapasonButtonWidget extends StatelessWidget {
       tuningOffset: tuningOffset,
     );
 
+    // El cuerpo se tiñe solo cuando el botón está presionado, seleccionado
+    // en el detector o pertenece al acorde en la dirección Abrir/Cerrar.
+    // En "Ambos" el cuerpo queda en blanco y solo se colorean las notas.
+    final bool chordBodyTint = !isPressed &&
+        !isDetectorSelected &&
+        ((bellowsMode == BellowsMode.pull && isChordPull) ||
+            (bellowsMode == BellowsMode.push && isChordPush));
+    final bool bodyTinted = isPressed || isDetectorSelected || chordBodyTint;
+
     return Listener(
       onPointerDown: (_) => onPointerDown(),
       onPointerUp: (_) => onPointerUp(),
@@ -86,7 +95,7 @@ class DiapasonButtonWidget extends StatelessWidget {
             isChordPull: isChordPull,
             isChordPush: isChordPush,
             showGloss: showGloss,
-            child: _buildNoteContent(pushName, pullName, isChordPull || isChordPush),
+            child: _buildNoteContent(pushName, pullName, bodyTinted),
           ),
 
           // Insignia flotante de fuelle al presionar (CSS .bellows-action-pill: Abre / Cierra)
@@ -130,10 +139,11 @@ class DiapasonButtonWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildNoteContent(String pushName, String pullName, bool highlighted) {
-    // En "Ambos" el cuerpo del botón va teñido en sus dos mitades, por eso
-    // las notas se muestran en blanco para mantener el contraste.
-    final useWhite = isPressed || highlighted || bellowsMode == BellowsMode.both;
+  Widget _buildNoteContent(String pushName, String pullName, bool bodyTinted) {
+    // El botón siempre muestra sus dos notas, una en cada mitad: la de Abrir
+    // en azul y la de Cerrar en rojo. Si el cuerpo está teñido (presionado,
+    // detector o acorde en Abrir/Cerrar) las notas pasan a blanco.
+    final useWhite = bodyTinted;
     final labelShadows = useWhite
         ? const [
             Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 3),
@@ -143,32 +153,6 @@ class DiapasonButtonWidget extends StatelessWidget {
             Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1),
           ];
 
-    // Fuelle seleccionado: solo se muestran las notas que suenan en esa
-    // dirección. En "Ambos" se muestran las dos, una en cada mitad.
-    if (bellowsMode == BellowsMode.push) {
-      return Text(
-        pushName,
-        style: TextStyle(
-          fontSize: 13.0,
-          fontWeight: FontWeight.w900,
-          color: useWhite ? Colors.white : const Color(0xFF991B1B),
-          shadows: labelShadows,
-        ),
-      );
-    }
-    if (bellowsMode == BellowsMode.pull) {
-      return Text(
-        pullName,
-        style: TextStyle(
-          fontSize: 13.0,
-          fontWeight: FontWeight.w900,
-          color: useWhite ? Colors.white : const Color(0xFF1E40AF),
-          shadows: labelShadows,
-        ),
-      );
-    }
-
-    // Modo Both: cada mitad del botón muestra su nota.
     // Izquierda (azul) = Pull / Abre · Derecha (rojo) = Push / Cierra.
     return SizedBox(
       width: size,

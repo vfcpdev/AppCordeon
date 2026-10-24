@@ -117,6 +117,51 @@ void main() {
       expect(ChordCatalog.notesFor(root: 0, type: 'maj', extension: 'add9').last, 74);
       expect(ChordCatalog.notesFor(root: 0, type: '???', extension: 'none'), [60, 64, 67]);
     });
+
+    test('activePitchClasses une generado, activo y seleccionado por clase de altura', () {
+      final classes = ChordCatalog.activePitchClasses(
+        generated: [60, 64, 67], // Do mayor
+        playing: [62, 66, 69], // Re mayor
+        selected: [70], // Si♭
+      );
+      expect(classes, {0, 4, 7, 2, 6, 9, 10});
+    });
+
+    test('activePitchClasses devuelve vacío sin ningún acorde', () {
+      expect(ChordCatalog.activePitchClasses(), isEmpty);
+    });
+
+    test('symbolFor genera símbolos compatibles con la cuadrícula del Compás', () {
+      expect(
+        ChordCatalog.symbolFor(root: 0, type: 'maj', extension: 'none'),
+        'Do',
+      );
+      expect(
+        ChordCatalog.symbolFor(root: 1, type: 'min', extension: 'dom7'),
+        'Do#m7',
+      );
+      expect(
+        ChordCatalog.symbolFor(root: 6, type: 'dim', extension: 'dim7'),
+        'Fa#dim7',
+      );
+      expect(
+        ChordCatalog.symbolFor(root: 7, type: 'sus4', extension: 'none'),
+        'Solsus4',
+      );
+      expect(
+        ChordCatalog.symbolFor(
+          root: 10,
+          type: 'maj',
+          extension: 'maj7',
+          latin: false,
+        ),
+        'Bbmaj7',
+      );
+      expect(
+        ChordCatalog.symbolFor(root: -1, type: 'maj', extension: 'none'),
+        '',
+      );
+    });
   });
 
   group('Inyección de dependencias (DIP)', () {
@@ -332,6 +377,50 @@ void main() {
       n.clearAllGridChords();
       final all = c.read(accordionSimulatorProvider).measures.expand((m) => m.beats);
       expect(all.every((b) => b.chord.isEmpty), isTrue);
+    });
+
+    test('inserta el acorde generado en la celda seleccionada del Compás', () {
+      final c = makeContainer();
+      addTearDown(c.dispose);
+      final n = c.read(accordionSimulatorProvider.notifier);
+
+      n.selectBeat(2, 3);
+      n.setFreeChordRoot(7); // Sol
+      n.setFreeChordType('min');
+      n.setFreeChordFourth('dom7');
+
+      final symbol = n.insertFreeChordIntoSelectedBeat();
+      expect(symbol, 'Solm7');
+      expect(
+        c.read(accordionSimulatorProvider).measures[2].beats[3].chord,
+        'Solm7',
+      );
+    });
+
+    test('inserta con notación alemana y no inserta sin tónica', () {
+      final c = makeContainer();
+      addTearDown(c.dispose);
+      final n = c.read(accordionSimulatorProvider.notifier);
+
+      n.setNotation(NotationMode.alemana);
+      n.selectBeat(0, 1);
+      n.setFreeChordRoot(10); // Si♭ → Bb
+      n.setFreeChordType('maj');
+      n.setFreeChordFourth('maj6');
+
+      expect(n.insertFreeChordIntoSelectedBeat(), 'Bb6');
+      expect(
+        c.read(accordionSimulatorProvider).measures[0].beats[1].chord,
+        'Bb6',
+      );
+
+      // Sin tónica (tocar la tónica activa la desactiva) no se inserta nada.
+      n.setFreeChordRoot(10);
+      expect(n.insertFreeChordIntoSelectedBeat(), isNull);
+      expect(
+        c.read(accordionSimulatorProvider).measures[0].beats[1].chord,
+        'Bb6',
+      );
     });
   });
 }

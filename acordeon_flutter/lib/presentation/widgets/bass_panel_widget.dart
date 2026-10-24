@@ -219,9 +219,10 @@ class BassPanelWidget extends ConsumerWidget {
           final pullName = btn.type == ButtonType.chord ? '$rawPull${isMinorPull ? "m" : ""}' : rawPull;
 
           final currentBellows = isPrimary ? state.bellows1 : state.bellows2;
+          // `bassData` ya está transpuesto según la afinación.
           final midiToPlay = currentBellows == BellowsMode.pull
-              ? pullMidi + currentTuning.offset
-              : pushMidi + currentTuning.offset;
+              ? pullMidi
+              : pushMidi;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 6.5),

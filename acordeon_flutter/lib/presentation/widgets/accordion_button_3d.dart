@@ -119,7 +119,15 @@ class _AccordionButton3DPainter extends CustomPainter {
 
     // Gradiente del cuerpo
     final Paint bodyPaint = Paint();
-    final bool chordTint = !isPressed && (isChordPull || isChordPush);
+    final bool isTreble = buttonType == null;
+    // En el diapasón (agudos), Abrir/Cerrar solo tiñe los botones del acorde
+    // en la dirección activa. En "Ambos" el cuerpo queda sin teñir.
+    final bool chordTint = isTreble &&
+        !isPressed &&
+        !isDetectorSelected &&
+        !isSelectedForRhythm &&
+        ((bellowsMode == BellowsMode.pull && isChordPull) ||
+            (bellowsMode == BellowsMode.push && isChordPush));
 
     if (isPressed) {
       if (bellowsMode == BellowsMode.push) {
@@ -236,9 +244,10 @@ class _AccordionButton3DPainter extends CustomPainter {
       }
     }
 
-    // Modo "Ambos": mitad izquierda Abre (azul) y mitad derecha Cierra
-    // (rojo), igual que las dos notas que muestra el botón.
-    final bool bothSplit = !isPressed &&
+    // Modo "Ambos" en los bajos: mitad izquierda Abre (azul) y mitad derecha
+    // Cierra (rojo). En el diapasón de agudos "Ambos" no tiñe el cuerpo.
+    final bool bothSplit = !isTreble &&
+        !isPressed &&
         !isDetectorSelected &&
         !isSelectedForRhythm &&
         !chordTint &&
@@ -269,7 +278,7 @@ class _AccordionButton3DPainter extends CustomPainter {
           stops: const [0.0, 0.55, 1.0],
         ).createShader(Rect.fromCircle(center: center, radius: radius));
 
-      if (bothSplit || (isChordPull && isChordPush)) {
+      if (bothSplit) {
         // Mitad izquierda = Abre (azul) · mitad derecha = Cierra (rojo)
         canvas.save();
         canvas.clipRect(Rect.fromLTWH(0, 0, size.width / 2, size.height));
@@ -280,7 +289,12 @@ class _AccordionButton3DPainter extends CustomPainter {
         canvas.drawCircle(center, radius, pushPaint);
         canvas.restore();
       } else {
-        canvas.drawCircle(center, radius, isChordPull ? pullPaint : pushPaint);
+        // Agudos en Abrir/Cerrar: todo el cuerpo con el color de la dirección.
+        canvas.drawCircle(
+          center,
+          radius,
+          bellowsMode == BellowsMode.pull ? pullPaint : pushPaint,
+        );
       }
     } else {
       canvas.drawCircle(center, radius, bodyPaint);
@@ -372,7 +386,7 @@ class _AccordionButton3DPainter extends CustomPainter {
         borderPaint.color = const Color(0xFFFDE047);
         borderPaint.strokeWidth = 1.8;
       }
-    } else if (isChordPull || isChordPush) {
+    } else if (chordTint) {
       // Borde claro sobre el color del acorde
       borderPaint.color = Colors.white.withValues(alpha: 0.85);
       borderPaint.strokeWidth = 1.4;
