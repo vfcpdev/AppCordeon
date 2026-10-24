@@ -14,6 +14,7 @@ class AccordionButton3D extends StatelessWidget {
   final bool isChordPull;
   final bool isChordPush;
   final bool isDetectorSelected;
+  final bool showGloss;
   final Widget? child;
   final VoidCallback? onPointerDown;
   final VoidCallback? onPointerUp;
@@ -28,6 +29,7 @@ class AccordionButton3D extends StatelessWidget {
     this.isChordPull = false,
     this.isChordPush = false,
     this.isDetectorSelected = false,
+    this.showGloss = true,
     this.child,
     this.onPointerDown,
     this.onPointerUp,
@@ -58,6 +60,7 @@ class AccordionButton3D extends StatelessWidget {
             isChordPull: isChordPull,
             isChordPush: isChordPush,
             isDetectorSelected: isDetectorSelected,
+            showGloss: showGloss,
           ),
           child: Center(child: child),
         ),
@@ -74,6 +77,7 @@ class _AccordionButton3DPainter extends CustomPainter {
   final bool isChordPull;
   final bool isChordPush;
   final bool isDetectorSelected;
+  final bool showGloss;
 
   _AccordionButton3DPainter({
     required this.isPressed,
@@ -83,6 +87,7 @@ class _AccordionButton3DPainter extends CustomPainter {
     required this.isChordPull,
     required this.isChordPush,
     required this.isDetectorSelected,
+    required this.showGloss,
   });
 
   @override
@@ -179,19 +184,32 @@ class _AccordionButton3DPainter extends CustomPainter {
         stops: const [0.0, 0.55, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     } else if (!chordTint) {
-      // Estado normal (sin presionar): Perlado Nácar auténtico de acordeón Hohner / Corona
-      // CSS: radial-gradient(circle at 14px 14px, #ffffff, #d3cbbd 70%, #9e9587 100%)
-      bodyPaint.shader = RadialGradient(
-        center: const Alignment(-0.44, -0.44),
-        radius: 0.88,
-        colors: const [
-          Color(0xFFFFFFFF), // Brillo especular superior
-          Color(0xFFE5DFD4), // Nácar claro
-          Color(0xFFD3CBBD), // Nácar medio
-          Color(0xFF9E9587), // Reborde 3D biselado
-        ],
-        stops: const [0.0, 0.35, 0.70, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
+      if (showGloss) {
+        // Estado normal: perlado nácar con brillo especular.
+        bodyPaint.shader = RadialGradient(
+          center: const Alignment(-0.44, -0.44),
+          radius: 0.88,
+          colors: const [
+            Color(0xFFFFFFFF), // Brillo especular superior
+            Color(0xFFE5DFD4), // Nácar claro
+            Color(0xFFD3CBBD), // Nácar medio
+            Color(0xFF9E9587), // Reborde 3D biselado
+          ],
+          stops: const [0.0, 0.35, 0.70, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: radius));
+      } else {
+        // Estado mate: sin brillo ni luminosidad, solo volumen 3D.
+        bodyPaint.shader = RadialGradient(
+          center: const Alignment(-0.30, -0.30),
+          radius: 0.90,
+          colors: const [
+            Color(0xFFD8D2C6),
+            Color(0xFFC9C1B3),
+            Color(0xFFB0A797),
+          ],
+          stops: const [0.0, 0.65, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: radius));
+      }
     }
 
     if (chordTint) {
@@ -253,40 +271,42 @@ class _AccordionButton3DPainter extends CustomPainter {
         ).createShader(Rect.fromCircle(center: center, radius: radius));
       canvas.drawCircle(center, radius, innerShadowPaint);
 
-      // Inset Highlight superior izquierda: inset 1px 1px 2px rgba(255, 255, 255, 0.85)
-      // Genera el resalte de filo blanco pulido
-      final innerHighlightPaint = Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(-0.65, -0.65),
-          radius: 0.50,
-          colors: [
-            Colors.white.withValues(alpha: 0.85),
-            Colors.white.withValues(alpha: 0.0),
-          ],
-        ).createShader(Rect.fromCircle(center: center, radius: radius));
-      canvas.drawCircle(center, radius, innerHighlightPaint);
+      if (showGloss) {
+        // Inset Highlight superior izquierda: inset 1px 1px 2px rgba(255, 255, 255, 0.85)
+        // Genera el resalte de filo blanco pulido
+        final innerHighlightPaint = Paint()
+          ..shader = RadialGradient(
+            center: const Alignment(-0.65, -0.65),
+            radius: 0.50,
+            colors: [
+              Colors.white.withValues(alpha: 0.85),
+              Colors.white.withValues(alpha: 0.0),
+            ],
+          ).createShader(Rect.fromCircle(center: center, radius: radius));
+        canvas.drawCircle(center, radius, innerHighlightPaint);
 
-      // 4. Glint / Brillo Especular de Laca en forma ovalada superior
-      final specularCenter = Offset(size.width * 0.36, size.height * 0.28);
-      canvas.save();
-      canvas.translate(specularCenter.dx, specularCenter.dy);
-      canvas.rotate(-math.pi / 8);
-      final glintRect = Rect.fromCenter(
-        center: Offset.zero,
-        width: size.width * 0.34,
-        height: size.height * 0.16,
-      );
-      final glintPaint = Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white.withValues(alpha: 0.60),
-            Colors.white.withValues(alpha: 0.05),
-          ],
-        ).createShader(glintRect);
-      canvas.drawOval(glintRect, glintPaint);
-      canvas.restore();
+        // 4. Glint / Brillo Especular de Laca en forma ovalada superior
+        final specularCenter = Offset(size.width * 0.36, size.height * 0.28);
+        canvas.save();
+        canvas.translate(specularCenter.dx, specularCenter.dy);
+        canvas.rotate(-math.pi / 8);
+        final glintRect = Rect.fromCenter(
+          center: Offset.zero,
+          width: size.width * 0.34,
+          height: size.height * 0.16,
+        );
+        final glintPaint = Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.white.withValues(alpha: 0.60),
+              Colors.white.withValues(alpha: 0.05),
+            ],
+          ).createShader(glintRect);
+        canvas.drawOval(glintRect, glintPaint);
+        canvas.restore();
+      }
     } else {
       // Inset Shadow al estar presionado (hunde el botón en el orificio)
       final pressDepressionPaint = Paint()
@@ -367,6 +387,7 @@ class _AccordionButton3DPainter extends CustomPainter {
         oldDelegate.isSelectedForRhythm != isSelectedForRhythm ||
         oldDelegate.isChordPull != isChordPull ||
         oldDelegate.isChordPush != isChordPush ||
-        oldDelegate.isDetectorSelected != isDetectorSelected;
+        oldDelegate.isDetectorSelected != isDetectorSelected ||
+        oldDelegate.showGloss != showGloss;
   }
 }

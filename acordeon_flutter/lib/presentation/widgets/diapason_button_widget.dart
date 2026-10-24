@@ -11,6 +11,7 @@ class DiapasonButtonWidget extends StatelessWidget {
   final bool isDetectorSelected;
   final bool isChordPull;
   final bool isChordPush;
+  final bool showGloss;
   final BellowsMode bellowsMode;
   final NotationMode notation;
   final int tuningOffset;
