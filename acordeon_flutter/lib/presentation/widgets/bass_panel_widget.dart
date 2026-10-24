@@ -117,51 +117,39 @@ class BassPanelWidget extends ConsumerWidget {
             ),
           ),
 
-          // Cuerpo: Tablero de bajos + Barra de herramientas vertical a la derecha
+          // Cuerpo: Tablero de bajos
           Padding(
-            padding: const EdgeInsets.fromLTRB(2, 4, 4, 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Diapasón de Bajos (2 columnas de 6 botones)
-                Container(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 6, 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.35),
-                        blurRadius: 10,
-                      ),
-                    ],
+            padding: const EdgeInsets.fromLTRB(2, 4, 6, 4),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 8, 6, 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 10,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildBassColumn(
-                        title: 'Exterior',
-                        buttons: exteriorButtons,
-                        state: state,
-                        notifier: notifier,
-                      ),
-                      const SizedBox(width: 6),
-                      _buildBassColumn(
-                        title: 'Interior',
-                        buttons: interiorButtons,
-                        state: state,
-                        notifier: notifier,
-                      ),
-                    ],
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildBassColumn(
+                    title: 'Exterior',
+                    buttons: exteriorButtons,
+                    state: state,
+                    notifier: notifier,
                   ),
-                ),
-
-                const SizedBox(width: 8),
-
-                // Barra de herramientas vertical apilada a la derecha
-                _buildVerticalToolbar(state, notifier),
-              ],
+                  const SizedBox(width: 6),
+                  _buildBassColumn(
+                    title: 'Interior',
+                    buttons: interiorButtons,
+                    state: state,
+                    notifier: notifier,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -374,160 +362,6 @@ class BassPanelWidget extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildVerticalToolbar(AccordionSimulatorState state, AccordionSimulatorNotifier notifier) {
-    final isPrimary = accordionNumber == 1;
-    final currentBellows = isPrimary ? state.bellows1 : state.bellows2;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE2E8F0),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFCBD5E1)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Selector de Fuelle Vertical
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: const Color(0xFFCBD5E1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildToolbarIconButton(
-                  icon: FontAwesomeIcons.arrowsLeftRight,
-                  isActive: currentBellows == BellowsMode.both,
-                  activeColor: const Color(0xFF4F46E5),
-                  onTap: () {
-                    if (isPrimary) {
-                      notifier.setBellows1(BellowsMode.both);
-                    } else {
-                      notifier.setBellows2(BellowsMode.both);
-                    }
-                  },
-                  tooltip: 'Fuelle: Ambos (Abrir y Cerrar)',
-                ),
-                const SizedBox(height: 2),
-                _buildToolbarIconButton(
-                  icon: FontAwesomeIcons.arrowLeft,
-                  isActive: currentBellows == BellowsMode.pull,
-                  activeColor: const Color(0xFF2563EB),
-                  onTap: () {
-                    if (isPrimary) {
-                      notifier.setBellows1(BellowsMode.pull);
-                    } else {
-                      notifier.setBellows2(BellowsMode.pull);
-                    }
-                  },
-                  tooltip: 'Fuelle: Abre (Azul)',
-                ),
-                const SizedBox(height: 2),
-                _buildToolbarIconButton(
-                  icon: FontAwesomeIcons.arrowRight,
-                  isActive: currentBellows == BellowsMode.push,
-                  activeColor: const Color(0xFFDC2626),
-                  onTap: () {
-                    if (isPrimary) {
-                      notifier.setBellows1(BellowsMode.push);
-                    } else {
-                      notifier.setBellows2(BellowsMode.push);
-                    }
-                  },
-                  tooltip: 'Fuelle: Cierra (Rojo)',
-                ),
-              ],
-            ),
-          ),
-
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 4),
-            child: SizedBox(width: 16, child: Divider(height: 1, color: Color(0xFFCBD5E1))),
-          ),
-
-          // Botones de Reproducción
-          _buildToolbarIconButton(
-            icon: FontAwesomeIcons.play,
-            isActive: false,
-            onTap: () {},
-            tooltip: 'Reproducir ritmo',
-          ),
-          const SizedBox(height: 4),
-          _buildToolbarIconButton(
-            icon: FontAwesomeIcons.pause,
-            isActive: false,
-            onTap: () {},
-            tooltip: 'Pausar',
-          ),
-          const SizedBox(height: 4),
-          _buildToolbarIconButton(
-            icon: FontAwesomeIcons.backwardStep,
-            isActive: false,
-            onTap: () {},
-            tooltip: 'Reiniciar compás',
-          ),
-
-          const SizedBox(height: 4),
-
-          // Píldora de Metrónomo Vertical
-          Container(
-            width: 24,
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(5),
-              border: Border.all(color: const Color(0xFFCBD5E1)),
-            ),
-            child: const Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FaIcon(FontAwesomeIcons.stopwatch, size: 9, color: Color(0xFF64748B)),
-                SizedBox(height: 1),
-                Text(
-                  '120',
-                  style: TextStyle(
-                    fontSize: 7.5,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 4),
-            child: SizedBox(width: 16, child: Divider(height: 1, color: Color(0xFFCBD5E1))),
-          ),
-
-          _buildToolbarIconButton(
-            icon: FontAwesomeIcons.fileImport,
-            isActive: false,
-            onTap: () {},
-            tooltip: 'Cargar MusicXML',
-          ),
-          const SizedBox(height: 4),
-          _buildToolbarIconButton(
-            icon: FontAwesomeIcons.fileArrowDown,
-            isActive: false,
-            onTap: () {},
-            tooltip: 'Exportar MIDI',
-          ),
-          const SizedBox(height: 4),
-          _buildToolbarIconButton(
-            icon: FontAwesomeIcons.arrowsRotate,
-            isActive: false,
-            onTap: () {},
-            tooltip: 'Invertir columnas (Espejo)',
-          ),
-        ],
-      ),
     );
   }
 
