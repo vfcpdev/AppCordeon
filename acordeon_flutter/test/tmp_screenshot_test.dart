@@ -19,11 +19,16 @@ void main() {
         child: RepaintBoundary(key: key, child: const AcordeonApp()),
       ),
     );
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     final boundary =
         key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-    final image = await boundary.toImage(pixelRatio: 1.0);
+    late final ui.Image image;
+    await tester.runAsync(() async {
+      image = await boundary.toImage(pixelRatio: 1.0);
+    });
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     final file = File(
       r'C:\Users\vfcp1\AppData\Local\Temp\opencode\bass_panel.png',
