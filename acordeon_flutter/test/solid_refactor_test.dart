@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:acordeon_flutter/core/audio/audio_analyzer.dart';
 import 'package:acordeon_flutter/core/audio/audio_engine_bridge.dart';
 import 'package:acordeon_flutter/core/audio/audio_file_loader_interface.dart';
+import 'package:acordeon_flutter/core/audio/audio_file_player_interface.dart';
 import 'package:acordeon_flutter/core/audio/demo_track_generator.dart';
 import 'package:acordeon_flutter/core/audio/file_picker_audio_loader.dart';
 import 'package:acordeon_flutter/core/constants/enums.dart';
@@ -45,18 +46,60 @@ class ThrowingAnalyzer implements AudioAnalyzer {
       throw StateError('boom');
 }
 
+class FakeAudioFilePlayer implements AudioFilePlayer {
+  final List<String> calls = [];
+  bool loaded = false;
+  double position = 0;
+  double duration = 10;
+
+  @override
+  bool get isLoaded => loaded;
+
+  @override
+  double get positionSeconds => position;
+
+  @override
+  double get durationSeconds => duration;
+
+  @override
+  void load(Uint8List bytes, String mimeType) {
+    loaded = true;
+    calls.add('load:${bytes.length}:$mimeType');
+  }
+
+  @override
+  void play() => calls.add('play');
+
+  @override
+  void pause() => calls.add('pause');
+
+  @override
+  void stop() => calls.add('stop');
+
+  @override
+  void seek(double seconds) {
+    position = seconds;
+    calls.add('seek:$seconds');
+  }
+
+  @override
+  void setVolume(double volume) => calls.add('vol:$volume');
+}
+
 void main() {
   late FakeAudioEngine engine;
 
   ProviderContainer makeContainer({
     AudioFileLoader? loader,
     AudioAnalyzer? analyzer,
+    AudioFilePlayer? player,
   }) {
     engine = FakeAudioEngine();
     return ProviderContainer(overrides: [
       audioEngineProvider.overrideWithValue(engine),
       if (loader != null) audioFileLoaderProvider.overrideWithValue(loader),
       if (analyzer != null) audioAnalyzerProvider.overrideWithValue(analyzer),
+      if (player != null) audioFilePlayerProvider.overrideWithValue(player),
     ]);
   }
 
@@ -123,6 +166,48 @@ void main() {
       final r = await c.read(accordionSimulatorProvider.notifier).pickAndAnalyzeAudio();
       expect(r, isA<AudioLoadFailure>());
       expect(c.read(accordionSimulatorProvider).isAnalyzingAudio, isFalse);
+    });
+
+    test('el archivo se entrega al reproductor aunque el análisis falle', () async {
+      final player = FakeAudioFilePlayer();
+      final bytes = Uint8List.fromList([1, 2, 3, 4]);
+      final c = makeContainer(
+        loader: FakeLoader(PickedAudioData(name: 'cancion.mp3', bytes: bytes)),
+        analyzer: ThrowingAnalyzer(),
+        player: player,
+      );
+      addTearDown(c.dispose);
+      final r = await c.read(accordionSimulatorProvider.notifier).pickAndAnalyzeAudio();
+      expect(r, isA<AudioLoadFailure>());
+      expect(player.loaded, isTrue);
+      expect(player.calls, contains('load:4:audio/mpeg'));
+    });
+
+    test('play, pausa y stop delegan en el reproductor del archivo', () async {
+      final player = FakeAudioFilePlayer();
+      final c = makeContainer(
+        loader: FakeLoader(PickedAudioData(
+          name: 'demo.wav',
+          bytes: const DemoTrackGenerator().generate(),
+        )),
+        player: player,
+      );
+      addTearDown(c.dispose);
+      final n = c.read(accordionSimulatorProvider.notifier);
+
+      final r = await n.pickAndAnalyzeAudio();
+      expect(r, isA<AudioLoadSuccess>());
+      expect(player.loaded, isTrue);
+
+      n.togglePlayAudio();
+      expect(player.calls, contains('play'));
+
+      n.togglePlayAudio();
+      expect(player.calls, contains('pause'));
+
+      n.togglePlayAudio();
+      n.stopAudio();
+      expect(player.calls, contains('stop'));
     });
 
     test('FallbackAudioLoader prueba los cargadores en orden', () async {

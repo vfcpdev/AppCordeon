@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:js_interop';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
 
 import 'audio_file_player_interface.dart';
@@ -44,8 +44,8 @@ class WebAudioFilePlayer implements AudioFilePlayer {
       _audio = audio;
     } catch (e) {
       // Si el navegador no puede crear el Blob, se deja sin reproducción.
-      _audio = null;
-      _objectUrl = null;
+      debugPrint('WebAudioFilePlayer.load falló: $e');
+      _release();
     }
   }
 
@@ -54,7 +54,10 @@ class WebAudioFilePlayer implements AudioFilePlayer {
     final audio = _audio;
     if (audio == null) return;
     // El gesto del usuario (botón Play) permite iniciar la reproducción.
-    unawaited(audio.play().toDart.catchError((Object _) => null));
+    unawaited(audio.play().toDart.catchError((Object e) {
+      debugPrint('WebAudioFilePlayer.play falló: $e');
+      return null;
+    }));
   }
 
   @override

@@ -10,6 +10,9 @@ class StandardPcmDecoder implements PcmDecoder {
 
   @override
   Float32List decodePcmOrSimulate(Uint8List bytes) {
+    // Sin bytes no hay nada que analizar (evita módulo por cero más abajo).
+    if (bytes.isEmpty) return Float32List(0);
+
     // Si es un archivo WAV con encabezado RIFF, extraer muestras PCM
     if (bytes.length > 44 &&
         bytes[0] == 0x52 && // 'R'
