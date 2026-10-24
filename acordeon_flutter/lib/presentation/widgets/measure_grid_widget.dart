@@ -224,7 +224,9 @@ class MeasureGridWidget extends ConsumerWidget {
           height: 140,
           width: 22,
           child: RotatedBox(
-            quarterTurns: 3,
+            // 1 cuarto de giro: el mínimo (00:00) queda arriba y el avance
+            // baja por la pista, como un seeker de reproducción vertical.
+            quarterTurns: 1,
             child: SliderTheme(
               data: SliderThemeData(
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
