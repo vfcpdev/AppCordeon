@@ -11,7 +11,7 @@
     "**/.dart_tool/**",
     "**/build/**",
     "**/.plugin_symlinks/**",
-    "**/windows/**",
+    "**/windows/flutter/ephemeral/**",
     "**/ios/**",
     "**/linux/**",
     "**/macos/**"
