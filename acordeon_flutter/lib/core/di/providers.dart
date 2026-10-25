@@ -7,6 +7,7 @@ import '../audio/audio_file_loader.dart';
 import '../audio/audio_file_player.dart';
 import '../audio/demo_track_generator.dart';
 import '../audio/file_picker_audio_loader.dart';
+import '../storage/file_storage.dart';
 
 /// Composition root: único lugar donde se eligen implementaciones concretas.
 /// En pruebas se sustituyen con `ProviderContainer(overrides: [...])`.
@@ -36,4 +37,8 @@ final audioFilePlayerProvider = Provider<AudioFilePlayer>((ref) {
   final player = createAudioFilePlayer();
   ref.onDispose(player.stop);
   return player;
+});
+
+final fileStorageProvider = Provider<FileStorageService>((_) {
+  return createFileStorageService();
 });

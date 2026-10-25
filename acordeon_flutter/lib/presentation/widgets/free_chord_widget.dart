@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
+import 'tonic_bar_widget.dart';
 
 class FreeChordWidget extends ConsumerWidget {
   const FreeChordWidget({super.key});
@@ -262,23 +263,8 @@ class FreeChordWidget extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Tónica: 12 notas en matriz 4 × 3
-              _buildMatrixSection(
-                title: 'Tónica',
-                color: const Color(0xFF0284C7),
-                child: _buildMatrixGrid(
-                  columns: 4,
-                  cells: List.generate(roots.length, (idx) {
-                    return _buildOptionButton(
-                      sigla: roots[idx],
-                      tooltip: 'Tónica ${roots[idx]}',
-                      isActive: state.freeChordRoot == idx,
-                      activeColor: const Color(0xFF059669),
-                      onTap: () => notifier.setFreeChordRoot(idx),
-                    );
-                  }),
-                ),
-              ),
+              // Barra vertical de Tónica (Desacoplable / En Columnas)
+              const TonicBarWidget(),
               const SizedBox(height: 8),
 
               // Cualidad

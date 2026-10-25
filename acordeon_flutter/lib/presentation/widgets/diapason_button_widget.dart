@@ -141,9 +141,6 @@ class DiapasonButtonWidget extends StatelessWidget {
   }
 
   Widget _buildNoteContent(String pushName, String pullName, bool bodyTinted) {
-    // El botón siempre muestra sus dos notas, una en cada mitad: la de Abrir
-    // en azul y la de Cerrar en rojo. Si el cuerpo está teñido (presionado,
-    // detector o acorde en Abrir/Cerrar) las notas pasan a blanco.
     final useWhite = bodyTinted;
     final labelShadows = useWhite
         ? const [
@@ -154,7 +151,53 @@ class DiapasonButtonWidget extends StatelessWidget {
             Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1),
           ];
 
-    // Izquierda (azul) = Pull / Abre · Derecha (rojo) = Push / Cierra.
+    // Fuelle abriendo: solo muestra la nota de abrir (pull).
+    if (bellowsMode == BellowsMode.pull) {
+      return SizedBox(
+        width: size,
+        height: size,
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              pullName,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: useWhite ? Colors.white : const Color(0xFF1E40AF),
+                height: 1.0,
+                shadows: labelShadows,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Fuelle cerrando: solo muestra la nota de cerrar (push).
+    if (bellowsMode == BellowsMode.push) {
+      return SizedBox(
+        width: size,
+        height: size,
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              pushName,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: useWhite ? Colors.white : const Color(0xFF991B1B),
+                height: 1.0,
+                shadows: labelShadows,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Fuelle en Ambos: muestra ambas notas (Abre a la izquierda en azul, Cierra a la derecha en rojo).
     return SizedBox(
       width: size,
       height: size,

@@ -12,10 +12,12 @@ import '../../core/constants/enums.dart';
 import '../../core/di/providers.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/audio_analysis_models.dart';
+import '../../domain/models/measure_json_serializer.dart';
 import '../../domain/models/measure_models.dart';
 import '../../domain/models/tuning.dart';
 import '../../domain/theory/chord_catalog.dart';
 
+export '../../domain/models/measure_json_serializer.dart';
 export '../../domain/models/measure_models.dart';
 
 /// Resultado de una operación de carga de audio. La UI decide cómo mostrarlo.
@@ -1077,6 +1079,35 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
     updateMeasureBeat(barIndex, beatIndex, symbol);
     return symbol;
+  }
+
+  /// Exporta los compases actuales a formato JSON (incluye 4 secciones por compás con sus acordes).
+  String exportMeasuresToJson({String? name}) {
+    return MeasureJsonSerializer.exportToJson(
+      state.measures,
+      bpm: state.audioReport?.bpm,
+      name: name,
+    );
+  }
+
+  /// Restaura los compases a partir de una cadena JSON y actualiza el estado.
+  /// Retorna null si tuvo éxito, o el mensaje de error si falló.
+  String? loadMeasuresFromJson(String jsonContent) {
+    try {
+      final restored = MeasureJsonSerializer.importFromJson(jsonContent);
+      if (restored.isEmpty) return 'El archivo no contiene compases válidos.';
+      state = state.copyWith(
+        measures: restored,
+        markedBeats: const {},
+        selectedBarIndex: 0,
+        selectedBeatIndex: 0,
+      );
+      return null; // éxito
+    } on FormatException catch (e) {
+      return 'Formato inválido: ${e.message}';
+    } catch (e) {
+      return 'Error al importar: $e';
+    }
   }
 
   // Sección 5: Acorde Libre

@@ -84,7 +84,7 @@ class DiapasonCardHeader extends StatelessWidget {
                       ),
                       const SizedBox(width: 3),
                       Text(
-                        isMirror ? 'Ad<-Af' : 'Af->Ad',
+                        isMirror ? 'Af<-Ad' : 'Ad->Af',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
+import '../../core/di/providers.dart';
 import '../controllers/accordion_controller.dart';
 
 class MeasureGridWidget extends ConsumerWidget {
@@ -53,31 +54,118 @@ class MeasureGridWidget extends ConsumerWidget {
                 color: Color(0xFFF8FAFC),
                 border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Botón cuadrado rojo de borrado: aparece sobre el botón de
-                  // selección cuando hay checkboxes marcados
-                  if (hasMarks) ...[
-                    _DeleteAllChordsButton(
-                      onTap: () {
-                        notifier.deleteAllGridChords();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Acordes borrados de la cuadrícula.',
+                  // Botones de Guardar (JSON) e Importar (JSON) — solo ícono para caber en ~95px
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Tooltip(
+                        message: 'Guardar compases en JSON',
+                        child: InkWell(
+                          onTap: () async {
+                            final jsonStr = notifier.exportMeasuresToJson();
+                            final storage = ref.read(fileStorageProvider);
+                            final timestamp = DateTime.now().millisecondsSinceEpoch;
+                            await storage.saveFile(
+                              fileName: 'compases_$timestamp.json',
+                              content: jsonStr,
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Compases guardados en formato JSON.'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0284C7),
+                              borderRadius: BorderRadius.circular(4),
                             ),
-                            duration: Duration(seconds: 2),
+                            child: const FaIcon(
+                              FontAwesomeIcons.download,
+                              size: 9,
+                              color: Colors.white,
+                            ),
                           ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 2),
-                  ],
-                  _SelectAllBeatsButton(
-                    allMarked: allMarked,
-                    onTap: notifier.toggleAllBeatMarks,
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      Tooltip(
+                        message: 'Importar compases desde archivo JSON',
+                        child: InkWell(
+                          onTap: () async {
+                            final storage = ref.read(fileStorageProvider);
+                            final content = await storage.pickTextFile(allowedExtensions: ['json']);
+                            if (content != null && content.isNotEmpty) {
+                              final errorMsg = notifier.loadMeasuresFromJson(content);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      errorMsg ?? 'Compases restaurados exitosamente.',
+                                    ),
+                                    backgroundColor: errorMsg == null
+                                        ? const Color(0xFF059669)
+                                        : const Color(0xFFDC2626),
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF059669),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const FaIcon(
+                              FontAwesomeIcons.upload,
+                              size: 9,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Botones de selección masiva y borrado
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (hasMarks) ...[
+                        _DeleteAllChordsButton(
+                          onTap: () {
+                            notifier.deleteAllGridChords();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Acordes borrados de la cuadrícula.'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 3),
+                        // Desmarcar todas las casillas seleccionadas
+                        _ClearMarksButton(
+                          onTap: notifier.clearBeatMarks,
+                        ),
+                        const SizedBox(width: 3),
+                      ],
+                      _SelectAllBeatsButton(
+                        allMarked: allMarked,
+                        onTap: notifier.toggleAllBeatMarks,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1495,5 +1583,40 @@ class _DeleteAllChordsButton extends StatelessWidget {
   }
 }
 
+/// Botón naranja con ícono de deselección: desmarca todas las casillas
+/// marcadas en la cuadrícula del Compás sin borrar los acordes escritos.
+class _ClearMarksButton extends StatelessWidget {
+  final VoidCallback onTap;
 
+  const _ClearMarksButton({required this.onTap});
 
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Desmarcar selección',
+      child: GestureDetector(
+        onTapDown: (_) => onTap(),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: 15,
+          height: 15,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF59E0B),
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(
+              color: const Color(0xFFD97706),
+              width: 1.2,
+            ),
+          ),
+          child: const Center(
+            child: FaIcon(
+              FontAwesomeIcons.squareXmark,
+              size: 8,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

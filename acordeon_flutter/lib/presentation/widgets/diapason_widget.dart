@@ -103,6 +103,53 @@ class DiapasonWidget extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Pill de Tonalidad del acordeón seleccionado en el borde superior ──
+          Align(
+            alignment: Alignment.center,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                ),
+                borderRadius: BorderRadius.circular(9999),
+                border: Border.all(color: const Color(0xFF38BDF8), width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0284C7).withValues(alpha: 0.40),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const FaIcon(
+                    FontAwesomeIcons.music,
+                    size: 9.5,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Tonalidad: ${currentTuning.name}',
+                    key: ValueKey('diapason_tuning_pill_$accordionNumber'),
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 0.4,
+                      shadows: [
+                        Shadow(color: Colors.black45, offset: Offset(0, 1), blurRadius: 2),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // ── Barra superior: selector de acordeón + fuelle ──────────────
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
