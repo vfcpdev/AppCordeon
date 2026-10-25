@@ -32,6 +32,6 @@ void main() {
     expect(grids, findsNWidgets(2));
     expect(tester.getSize(grids.first).width, 150.0);
     expect(tester.getSize(grids.last).width, 82.5);
-    expect(tester.getSize(find.byType(FreeChordWidget)).width, 300.0);
+    expect(tester.getSize(find.byType(FreeChordWidget)).width, 150.0);
   });
 }

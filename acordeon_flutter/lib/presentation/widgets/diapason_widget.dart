@@ -60,9 +60,9 @@ class DiapasonWidget extends ConsumerWidget {
 
     final rowList = [
       _RowDef(
-        rowKey: 'row1',
-        title: 'Hilera 1\nAfuera',
-        buttons: trebleData['row1'] ?? [],
+        rowKey: 'row3',
+        title: 'Hilera 3\nAdentro',
+        buttons: trebleData['row3'] ?? [],
         topOffset: 31.0,
       ),
       _RowDef(
@@ -72,9 +72,9 @@ class DiapasonWidget extends ConsumerWidget {
         topOffset: 0.0,
       ),
       _RowDef(
-        rowKey: 'row3',
-        title: 'Hilera 3\nAdentro',
-        buttons: trebleData['row3'] ?? [],
+        rowKey: 'row1',
+        title: 'Hilera 1\nAfuera',
+        buttons: trebleData['row1'] ?? [],
         topOffset: 31.0,
       ),
     ];
