@@ -104,17 +104,16 @@ class MeasureGridWidget extends ConsumerWidget {
                             final storage = ref.read(fileStorageProvider);
                             final content = await storage.pickTextFile(allowedExtensions: ['json']);
                             if (content != null && content.isNotEmpty) {
-                              final errorMsg = notifier.loadMeasuresFromJson(content);
+                              final success = notifier.loadMeasuresFromJson(content);
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      errorMsg ?? 'Compases restaurados exitosamente.',
+                                      success
+                                          ? 'Compases restaurados exitosamente desde JSON.'
+                                          : 'Error al importar: archivo JSON no válido.',
                                     ),
-                                    backgroundColor: errorMsg == null
-                                        ? const Color(0xFF059669)
-                                        : const Color(0xFFDC2626),
-                                    duration: const Duration(seconds: 3),
+                                    duration: const Duration(seconds: 2),
                                   ),
                                 );
                               }

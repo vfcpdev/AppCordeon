@@ -1091,22 +1091,19 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   /// Restaura los compases a partir de una cadena JSON y actualiza el estado.
-  /// Retorna null si tuvo éxito, o el mensaje de error si falló.
-  String? loadMeasuresFromJson(String jsonContent) {
+  bool loadMeasuresFromJson(String jsonContent) {
     try {
       final restored = MeasureJsonSerializer.importFromJson(jsonContent);
-      if (restored.isEmpty) return 'El archivo no contiene compases válidos.';
+      if (restored.isEmpty) return false;
       state = state.copyWith(
         measures: restored,
         markedBeats: const {},
         selectedBarIndex: 0,
         selectedBeatIndex: 0,
       );
-      return null; // éxito
-    } on FormatException catch (e) {
-      return 'Formato inválido: ${e.message}';
-    } catch (e) {
-      return 'Error al importar: $e';
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

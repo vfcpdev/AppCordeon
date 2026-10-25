@@ -31,7 +31,7 @@ class WebFileStorageService implements FileStorageService {
     input.type = 'file';
     input.accept = (allowedExtensions != null && allowedExtensions.isNotEmpty)
         ? allowedExtensions.map((ext) => '.$ext').join(',')
-        : '.json,application/json,text/plain';
+        : '.json,application/json';
     input.style.position = 'fixed';
     input.style.top = '-1000px';
     input.style.left = '-1000px';
@@ -56,33 +56,22 @@ class WebFileStorageService implements FileStorageService {
       final reader = web.FileReader();
       reader.onloadend = ((web.ProgressEvent e) {
         input.remove();
-        if (!completer.isCompleted) {
+        final result = reader.result;
+        if (result != null) {
           try {
-            // readAsText() garantiza que result sea un DOMString (JSString).
-            // Usamos dartify() o toString() como fallback universal.
-            final result = reader.result;
-            if (result == null) {
-              completer.complete(null);
-              return;
-            }
-            // dartify() convierte JSString → Dart String de forma confiable
-            final dartResult = result.dartify();
-            if (dartResult is String) {
-              completer.complete(dartResult);
-            } else if (dartResult != null) {
-              // Fallback: podría venir como Uint8List si el browser usó binary
-              try {
-                final asBytes = (result as JSArrayBuffer).toDart.asUint8List();
-                completer.complete(utf8.decode(asBytes));
-              } catch (_) {
-                completer.complete(result.toString());
-              }
+            if (result.isA<JSString>()) {
+              completer.complete((result as JSString).toDart);
+            } else if (result.isA<JSArrayBuffer>()) {
+              final uint8List = (result as JSArrayBuffer).toDart.asUint8List();
+              completer.complete(utf8.decode(uint8List));
             } else {
-              completer.complete(null);
+              completer.complete(result.toString());
             }
           } catch (err) {
             if (!completer.isCompleted) completer.complete(null);
           }
+        } else {
+          if (!completer.isCompleted) completer.complete(null);
         }
       }).toJS;
 
@@ -91,7 +80,6 @@ class WebFileStorageService implements FileStorageService {
         if (!completer.isCompleted) completer.complete(null);
       }).toJS;
 
-      // readAsText garantiza DOMString — más confiable que readAsArrayBuffer
       reader.readAsText(file);
     }).toJS;
 
