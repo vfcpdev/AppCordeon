@@ -955,6 +955,27 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
   void clearBeatMarks() => state = state.copyWith(markedBeats: const {});
 
+  /// Marca o desmarca todos los tiempos de la cuadrícula. Si todos los
+  /// checkboxes están marcados, los desmarca; si no, los marca a todos.
+  void toggleAllBeatMarks() {
+    final total = state.measures.length * 4;
+    final allMarked = total > 0 && state.markedBeats.length == total;
+    if (allMarked) {
+      state = state.copyWith(markedBeats: const {});
+    } else {
+      state = state.copyWith(
+        markedBeats: {for (var i = 0; i < total; i++) i},
+      );
+    }
+  }
+
+  /// Borra todos los acordes registrados en la cuadrícula y desmarca
+  /// todos los checkboxes.
+  void deleteAllGridChords() {
+    clearAllGridChords();
+    clearBeatMarks();
+  }
+
   void setBeatChord(int barIdx, int beatIdx, String chord) {
     final newMeasures = state.measures.map((m) {
       if (m.barNumber - 1 != barIdx) return m;

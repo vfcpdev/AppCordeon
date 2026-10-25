@@ -22,6 +22,9 @@ class MeasureGridWidget extends ConsumerWidget {
     final isPrimary = accordionNumber == 1;
 
     final bpm = state.audioReport?.bpm ?? 120;
+    final totalBeats = state.measures.length * 4;
+    final allMarked = totalBeats > 0 && state.markedBeats.length == totalBeats;
+    final hasMarks = state.markedBeats.isNotEmpty;
 
     return Container(
       width: width ?? (isPrimary ? 104.5 : 82.5),
@@ -42,6 +45,43 @@ class MeasureGridWidget extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Minibarra superior: selección masiva de checkboxes y borrado de acordes
+          if (isPrimary)
+            Container(
+              padding: const EdgeInsets.fromLTRB(4, 2, 4, 2),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FAFC),
+                border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Botón cuadrado rojo de borrado: aparece sobre el botón de
+                  // selección cuando hay checkboxes marcados
+                  if (hasMarks) ...[
+                    _DeleteAllChordsButton(
+                      onTap: () {
+                        notifier.deleteAllGridChords();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Acordes borrados de la cuadrícula.',
+                            ),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 2),
+                  ],
+                  _SelectAllBeatsButton(
+                    allMarked: allMarked,
+                    onTap: notifier.toggleAllBeatMarks,
+                  ),
+                ],
+              ),
+            ),
           // Cabecera: Título "Compás" + Control de BPM editable con Subir / Bajar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
@@ -1360,6 +1400,94 @@ class _BeatMarkCheckbox extends StatelessWidget {
                     ),
                   )
                 : null,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Botón cuadrado de la minibarra que marca o desmarca todos los checkboxes
+/// de la cuadrícula del Compás.
+class _SelectAllBeatsButton extends StatelessWidget {
+  final bool allMarked;
+  final VoidCallback onTap;
+
+  const _SelectAllBeatsButton({
+    required this.allMarked,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: allMarked ? 'Deseleccionar todos' : 'Seleccionar todos',
+      child: GestureDetector(
+        onTapDown: (_) => onTap(),
+        behavior: HitTestBehavior.opaque,
+        child: Semantics(
+          checked: allMarked,
+          label: 'Seleccionar todos los tiempos',
+          child: Container(
+            width: 15,
+            height: 15,
+            decoration: BoxDecoration(
+              color: allMarked ? const Color(0xFF0284C7) : Colors.white,
+              borderRadius: BorderRadius.circular(3),
+              border: Border.all(
+                color: allMarked
+                    ? const Color(0xFF0369A1)
+                    : const Color(0xFF94A3B8),
+                width: 1.2,
+              ),
+            ),
+            child: allMarked
+                ? const Center(
+                    child: FaIcon(
+                      FontAwesomeIcons.check,
+                      size: 8,
+                      color: Colors.white,
+                    ),
+                  )
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Botón cuadrado rojo con icono de basura de la minibarra: borra todos los
+/// acordes registrados en la cuadrícula del Compás.
+class _DeleteAllChordsButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _DeleteAllChordsButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Borrar todos los acordes',
+      child: GestureDetector(
+        onTapDown: (_) => onTap(),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: 15,
+          height: 15,
+          decoration: BoxDecoration(
+            color: const Color(0xFFDC2626),
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(
+              color: const Color(0xFFB91C1C),
+              width: 1.2,
+            ),
+          ),
+          child: const Center(
+            child: FaIcon(
+              FontAwesomeIcons.trash,
+              size: 8,
+              color: Colors.white,
+            ),
           ),
         ),
       ),
