@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../../core/di/providers.dart';
-import '../../domain/models/measure_models.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
 
@@ -47,14 +46,16 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final totalBeats = state.measures.length * 4;
     final allMarked = totalBeats > 0 && state.markedBeats.length == totalBeats;
     final hasMarks = state.markedBeats.isNotEmpty;
-    final effectiveWidth = widget.width ?? (isPrimary ? 180.0 : 160.0);
+    final effectiveWidth = widget.width ?? (isPrimary ? 104.5 : 82.5);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          width: effectiveWidth,
+    return SizedBox(
+      width: effectiveWidth,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            width: effectiveWidth,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -444,6 +445,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     // Informa si el acorde está completo o incompleto según el fuelle (Abre y Cierra)
     _buildChordBellowsInfoCard(context, state, effectiveWidth),
   ],
+),
 );
   }
 
@@ -548,46 +550,48 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  FaIcon(
-                    FontAwesomeIcons.circleInfo,
-                    size: 9.5,
-                    color: !hasTarget
-                        ? const Color(0xFF64748B)
-                        : (currentIsComplete ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FaIcon(
+                  FontAwesomeIcons.circleInfo,
+                  size: 9.5,
+                  color: !hasTarget
+                      ? const Color(0xFF64748B)
+                      : (currentIsComplete ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+                ),
+                const SizedBox(width: 4),
+                const Text(
+                  'Estado del Acorde',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
                   ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'Estado del Acorde',
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A),
+                ),
+                if (contextLabel.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      contextLabel,
+                      style: const TextStyle(
+                        fontSize: 7.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF475569),
+                      ),
                     ),
                   ),
                 ],
-              ),
-              if (contextLabel.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    contextLabel,
-                    style: const TextStyle(
-                      fontSize: 7.5,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF475569),
-                    ),
-                  ),
-                ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 4),
           if (!hasTarget)
@@ -603,29 +607,31 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
               ),
             )
           else ...[
-            Row(
-              children: [
-                Text(
-                  targetChord,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF0F172A),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Acorde: $targetChord',
+                    style: const TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F172A),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
+                  const SizedBox(width: 4),
+                  Text(
                     '(${chordNoteNames.join('·')})',
-                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 8.0,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF64748B),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 5),
             _buildBellowsCompletenessRow(
@@ -676,64 +682,66 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
           width: isTargetBellows ? 1.2 : 0.8,
         ),
       ),
-      child: Row(
-        children: [
-          FaIcon(
-            isPush ? FontAwesomeIcons.arrowRight : FontAwesomeIcons.arrowLeft,
-            size: 7.5,
-            color: accentColor,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 8.5,
-              fontWeight: FontWeight.w800,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FaIcon(
+              isPush ? FontAwesomeIcons.arrowRight : FontAwesomeIcons.arrowLeft,
+              size: 7.5,
               color: accentColor,
             ),
-          ),
-          const SizedBox(width: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
-            decoration: BoxDecoration(
-              color: badgeBg,
-              borderRadius: BorderRadius.circular(3),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 8.5,
+                fontWeight: FontWeight.w800,
+                color: accentColor,
+              ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FaIcon(
-                  isComplete ? FontAwesomeIcons.check : FontAwesomeIcons.xmark,
-                  size: 6.5,
-                  color: badgeFg,
-                ),
-                const SizedBox(width: 2),
-                Text(
-                  isComplete ? 'Completo' : 'Incompleto ($presentCount/$totalNotes)',
-                  style: TextStyle(
-                    fontSize: 7.5,
-                    fontWeight: FontWeight.w800,
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
+              decoration: BoxDecoration(
+                color: badgeBg,
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FaIcon(
+                    isComplete ? FontAwesomeIcons.check : FontAwesomeIcons.xmark,
+                    size: 6.5,
                     color: badgeFg,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 2),
+                  Text(
+                    isComplete ? 'Completo' : 'Incompleto ($presentCount/$totalNotes)',
+                    style: TextStyle(
+                      fontSize: 7.5,
+                      fontWeight: FontWeight.w800,
+                      color: badgeFg,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          if (!isComplete && missingNames.isNotEmpty) ...[
-            const SizedBox(width: 3),
-            Expanded(
-              child: Text(
+            if (!isComplete && missingNames.isNotEmpty) ...[
+              const SizedBox(width: 3),
+              Text(
                 'Falta: ${missingNames.join(',')}',
-                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 7.0,
                   color: Color(0xFFDC2626),
                   fontWeight: FontWeight.w600,
                 ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -1265,6 +1273,7 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final int totalMeasures;
   final String chord;
   final String timeText;
+  final BellowsMode bellows;
   final bool isCurrentPlayhead;
   final bool isMarked;
   final bool hasBottomBorder;
@@ -1272,6 +1281,7 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final VoidCallback? onSelected;
   final VoidCallback? onToggleMark;
+  final ValueChanged<BellowsMode>? onBellowsChanged;
 
   const _InlineBeatChordEditor({
     required this.accordionId,
@@ -1280,6 +1290,7 @@ class _InlineBeatChordEditor extends StatefulWidget {
     required this.totalMeasures,
     required this.chord,
     required this.timeText,
+    this.bellows = BellowsMode.both,
     required this.isCurrentPlayhead,
     required this.isMarked,
     required this.hasBottomBorder,
@@ -1287,6 +1298,7 @@ class _InlineBeatChordEditor extends StatefulWidget {
     required this.onChanged,
     this.onSelected,
     this.onToggleMark,
+    this.onBellowsChanged,
   });
 
   @override
@@ -1697,7 +1709,8 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
             builder: (context, constraints) {
               // Con la tarjeta de Compás estrecha, el tiempo no cabe junto al
               // acorde y al checkbox: se oculta para evitar desbordamientos.
-              final showTime = constraints.maxWidth >= 68;
+              final showArrows = constraints.maxWidth >= 65;
+              final showTime = constraints.maxWidth >= 100;
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1761,15 +1774,27 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     ),
                   ],
                   const SizedBox(width: 2),
-                  // Checkbox para marcar el tiempo (extremo derecho con margen para el scrollbar)
+                  // Checkbox para marcar el tiempo y flechas Abre/Cierre a su derecha
                   Padding(
-                    padding: const EdgeInsets.only(right: 3.0),
-                    child: _BeatMarkCheckbox(
-                      key: ValueKey(
-                        'beat_checkbox_${widget.measureIndex}_${widget.beatIndex}',
-                      ),
-                      isChecked: isMarked,
-                      onTap: widget.onToggleMark,
+                    padding: const EdgeInsets.only(right: 2.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _BeatMarkCheckbox(
+                          key: ValueKey(
+                            'beat_checkbox_${widget.measureIndex}_${widget.beatIndex}',
+                          ),
+                          isChecked: isMarked,
+                          onTap: widget.onToggleMark,
+                        ),
+                        if (showArrows) ...[
+                          const SizedBox(width: 2),
+                          _BeatBellowsArrows(
+                            bellows: widget.bellows,
+                            onBellowsChanged: widget.onBellowsChanged,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
@@ -1778,6 +1803,85 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Flechas de Abre (←) y Cierre (→) a la derecha de la casilla de verificación
+/// para definir el acorde a aplicar según el fuelle.
+class _BeatBellowsArrows extends StatelessWidget {
+  final BellowsMode bellows;
+  final ValueChanged<BellowsMode>? onBellowsChanged;
+
+  const _BeatBellowsArrows({
+    required this.bellows,
+    this.onBellowsChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isPull = bellows == BellowsMode.pull;
+    final isPush = bellows == BellowsMode.push;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Flecha Abre (Pull) - Izquierda Azul
+        Tooltip(
+          message: 'Abre (Fuelle abriendo)',
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => onBellowsChanged?.call(BellowsMode.pull),
+            child: Container(
+              width: 13.5,
+              height: 13.5,
+              decoration: BoxDecoration(
+                color: isPull ? const Color(0xFFEFF6FF) : Colors.transparent,
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(
+                  color: isPull ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
+                  width: 1,
+                ),
+              ),
+              child: Center(
+                child: FaIcon(
+                  FontAwesomeIcons.arrowLeft,
+                  size: 7.0,
+                  color: isPull ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 2),
+        // Flecha Cierre (Push) - Derecha Roja
+        Tooltip(
+          message: 'Cierra (Fuelle cerrando)',
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => onBellowsChanged?.call(BellowsMode.push),
+            child: Container(
+              width: 13.5,
+              height: 13.5,
+              decoration: BoxDecoration(
+                color: isPush ? const Color(0xFFFEF2F2) : Colors.transparent,
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(
+                  color: isPush ? const Color(0xFFEF4444) : const Color(0xFFCBD5E1),
+                  width: 1,
+                ),
+              ),
+              child: Center(
+                child: FaIcon(
+                  FontAwesomeIcons.arrowRight,
+                  size: 7.0,
+                  color: isPush ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1804,7 +1908,7 @@ class _BeatMarkCheckbox extends StatelessWidget {
         onTapDown: (_) => onTap?.call(),
         behavior: HitTestBehavior.opaque,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 2),
           child: Container(
             width: 13,
             height: 13,
