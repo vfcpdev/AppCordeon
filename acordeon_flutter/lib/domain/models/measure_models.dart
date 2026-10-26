@@ -1,3 +1,5 @@
+import '../../core/constants/enums.dart';
+
 /// Modelos de dominio de la cuadrícula de compases y del detector de acordes.
 class MeasureBeat {
   final int barIndex;
@@ -5,6 +7,7 @@ class MeasureBeat {
   final String chord;
   final String timeText;
   final bool isContinue;
+  final BellowsMode bellows;
 
   const MeasureBeat({
     required this.barIndex,
@@ -12,12 +15,14 @@ class MeasureBeat {
     required this.chord,
     required this.timeText,
     this.isContinue = false,
+    this.bellows = BellowsMode.both,
   });
 
   MeasureBeat copyWith({
     String? chord,
     String? timeText,
     bool? isContinue,
+    BellowsMode? bellows,
   }) {
     return MeasureBeat(
       barIndex: barIndex,
@@ -25,6 +30,7 @@ class MeasureBeat {
       chord: chord ?? this.chord,
       timeText: timeText ?? this.timeText,
       isContinue: isContinue ?? this.isContinue,
+      bellows: bellows ?? this.bellows,
     );
   }
 }

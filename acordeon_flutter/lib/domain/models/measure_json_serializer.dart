@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../core/constants/enums.dart';
 import 'measure_models.dart';
 
 /// Servicio para exportar e importar compases con sus 4 secciones/tiempos en formato JSON.
@@ -24,6 +25,7 @@ class MeasureJsonSerializer {
             'chord': b.chord,
             'timeText': b.timeText,
             'isContinue': b.isContinue,
+            'bellows': b.bellows.name,
           };
         }).toList(),
       };
@@ -71,6 +73,11 @@ class MeasureJsonSerializer {
         final isContinue = beatMap?['isContinue'] == true;
         final timeText =
             beatMap?['timeText']?.toString() ?? _defaultTimeText(bIdx, beatIdx);
+        final bellowsStr = beatMap?['bellows']?.toString();
+        final bellows = BellowsMode.values.firstWhere(
+          (v) => v.name == bellowsStr,
+          orElse: () => BellowsMode.both,
+        );
 
         beats.add(MeasureBeat(
           barIndex: bIdx,
@@ -78,6 +85,7 @@ class MeasureJsonSerializer {
           chord: chord,
           timeText: timeText,
           isContinue: isContinue,
+          bellows: bellows,
         ));
       }
 

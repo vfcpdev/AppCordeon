@@ -129,5 +129,93 @@ class ChordCatalog {
     }
     return result;
   }
+
+  static const Map<String, int> rootPitchClasses = {
+    'Do#': 1, 'Reb': 1, 'Re#': 3, 'Mib': 3, 'Fa#': 6, 'Solb': 6, 'Sol#': 8, 'Lab': 8, 'La#': 10, 'Sib': 10,
+    'Do': 0, 'Re': 2, 'Mi': 4, 'Fa': 5, 'Sol': 7, 'La': 9, 'Si': 11,
+    'C#': 1, 'Db': 1, 'D#': 3, 'Eb': 3, 'F#': 6, 'Gb': 6, 'G#': 8, 'Ab': 8, 'A#': 10, 'Bb': 10,
+    'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
+  };
+
+  /// Extrae las clases de altura (0..11) a partir de una cadena de acorde (p. ej. 'Do', 'Sol7', 'Am', etc.)
+  static Set<int> pitchClassesForChordSymbol(String chord) {
+    final trimmed = chord.trim();
+    if (trimmed.isEmpty) return const {};
+
+    int? rootPc;
+    String rest = '';
+    for (final entry in rootPitchClasses.entries) {
+      if (trimmed.startsWith(entry.key)) {
+        if (rootPc == null || entry.key.length > (trimmed.length - rest.length)) {
+          rootPc = entry.value;
+          rest = trimmed.substring(entry.key.length);
+        }
+      }
+    }
+    if (rootPc == null) return const {};
+
+    final isDim = rest.contains('dim') || rest.contains('°');
+    final isAug = rest.contains('aug') || rest.contains('+');
+    final isSus4 = rest.contains('sus4') || rest.contains('4');
+    final isSus = rest.contains('sus') && !isSus4;
+    final isMinor = (rest.contains('m') && !rest.contains('maj') && !rest.contains('dim'));
+    final has7 = rest.contains('7');
+    final isMaj7 = rest.contains('maj7');
+
+    final pcs = <int>{rootPc};
+    if (isDim) {
+      pcs.add((rootPc + 3) % 12);
+      pcs.add((rootPc + 6) % 12);
+    } else if (isAug) {
+      pcs.add((rootPc + 4) % 12);
+      pcs.add((rootPc + 8) % 12);
+    } else if (isSus4 || isSus) {
+      pcs.add((rootPc + 5) % 12);
+      pcs.add((rootPc + 7) % 12);
+    } else if (isMinor) {
+      pcs.add((rootPc + 3) % 12);
+      pcs.add((rootPc + 7) % 12);
+    } else {
+      // Mayor
+      pcs.add((rootPc + 4) % 12);
+      pcs.add((rootPc + 7) % 12);
+    }
+
+    if (has7) {
+      pcs.add((rootPc + (isDim ? 9 : (isMaj7 ? 11 : 10))) % 12);
+    }
+    if (rest.contains('6') && !rest.contains('add9')) {
+      pcs.add((rootPc + 9) % 12);
+    }
+    if (rest.contains('add9')) {
+      pcs.add((rootPc + 2) % 12);
+    }
+    return pcs;
+  }
+}
+
+/// Resultado del análisis de completitud armónica según la dirección del fuelle.
+class ChordBellowsAnalysis {
+  final String chordName;
+  final List<String> chordNotes;
+  final Set<int> chordPitchClasses;
+  final bool isCompletePush;
+  final bool isCompletePull;
+  final Set<int> missingPush;
+  final Set<int> missingPull;
+  final List<String> missingPushNames;
+  final List<String> missingPullNames;
+
+  const ChordBellowsAnalysis({
+    required this.chordName,
+    required this.chordNotes,
+    required this.chordPitchClasses,
+    required this.isCompletePush,
+    required this.isCompletePull,
+    required this.missingPush,
+    required this.missingPull,
+    required this.missingPushNames,
+    required this.missingPullNames,
+  });
 }
 

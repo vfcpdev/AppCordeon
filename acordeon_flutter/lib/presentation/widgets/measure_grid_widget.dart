@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../../core/di/providers.dart';
+import '../../domain/models/measure_models.dart';
+import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
 
-class MeasureGridWidget extends ConsumerWidget {
+class MeasureGridWidget extends ConsumerStatefulWidget {
   final int accordionNumber;
   final double? width;
 
@@ -17,35 +19,59 @@ class MeasureGridWidget extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MeasureGridWidget> createState() => _MeasureGridWidgetState();
+}
+
+class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
+  late final ScrollController _compasScrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _compasScrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _compasScrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(accordionSimulatorProvider);
     final notifier = ref.read(accordionSimulatorProvider.notifier);
-    final isPrimary = accordionNumber == 1;
+    final isPrimary = widget.accordionNumber == 1;
 
     final bpm = state.audioReport?.bpm ?? 120;
     final totalBeats = state.measures.length * 4;
     final allMarked = totalBeats > 0 && state.markedBeats.length == totalBeats;
     final hasMarks = state.markedBeats.isNotEmpty;
+    final effectiveWidth = widget.width ?? (isPrimary ? 180.0 : 160.0);
 
-    return Container(
-      width: width ?? (isPrimary ? 104.5 : 82.5),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFCBD5E1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          width: effectiveWidth,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFCBD5E1)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
           // Minibarra superior: selección masiva de checkboxes y borrado de acordes
           if (isPrimary)
             Container(
@@ -255,82 +281,98 @@ class MeasureGridWidget extends ConsumerWidget {
                 Expanded(
                   child: Container(
                     constraints: const BoxConstraints(maxHeight: 330),
-                    child: ListView.builder(
-                      padding: const EdgeInsets.only(right: 8),
-                      shrinkWrap: true,
-                      itemCount: state.measures.length,
-                      itemBuilder: (context, mIdx) {
-                        final measure = state.measures[mIdx];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 5),
-                          clipBehavior: Clip.antiAlias,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFCBD5E1)),
-                          ),
-                          child: Row(
-                            children: [
-                              // Número de compás
-                              Container(
-                                width: 18,
-                                padding: const EdgeInsets.symmetric(vertical: 6),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFF1F5F9),
-                                  border: Border(right: BorderSide(color: Color(0xFFCBD5E1))),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '${measure.barNumber}',
-                                    style: const TextStyle(
-                                      fontSize: 9.0,
-                                      fontWeight: FontWeight.w900,
-                                      color: Color(0xFF0F172A),
+                    child: RawScrollbar(
+                      controller: _compasScrollController,
+                      thumbVisibility: true,
+                      trackVisibility: true,
+                      thickness: 8.0, // Aumentado ~30% sobre el grosor estándar (6.0px -> 8.0px)
+                      radius: const Radius.circular(4),
+                      thumbColor: const Color(0xFF94A3B8),
+                      trackColor: const Color(0xFFF1F5F9),
+                      trackBorderColor: const Color(0xFFE2E8F0),
+                      padding: EdgeInsets.zero,
+                      child: ListView.builder(
+                        controller: _compasScrollController,
+                        padding: const EdgeInsets.only(right: 12),
+                        shrinkWrap: true,
+                        itemCount: state.measures.length,
+                        itemBuilder: (context, mIdx) {
+                          final measure = state.measures[mIdx];
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 5),
+                            clipBehavior: Clip.antiAlias,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                            ),
+                            child: Row(
+                              children: [
+                                // Número de compás
+                                Container(
+                                  width: 18,
+                                  padding: const EdgeInsets.symmetric(vertical: 6),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFF1F5F9),
+                                    border: Border(right: BorderSide(color: Color(0xFFCBD5E1))),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${measure.barNumber}',
+                                      style: const TextStyle(
+                                        fontSize: 9.0,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFF0F172A),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
 
-                              // 4 Beats / Tiempos del compás
-                              Expanded(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: measure.beats.asMap().entries.map((entry) {
-                                    final beatIdx = entry.key;
-                                    final beat = entry.value;
+                                // 4 Beats / Tiempos del compás
+                                Expanded(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: measure.beats.asMap().entries.map((entry) {
+                                      final beatIdx = entry.key;
+                                      final beat = entry.value;
 
-                                    final isCurrentPlayhead = state.isPlayingAudio &&
-                                        state.selectedBarIndex == mIdx &&
-                                        state.selectedBeatIndex == beatIdx;
+                                      final isCurrentPlayhead = state.isPlayingAudio &&
+                                          state.selectedBarIndex == mIdx &&
+                                          state.selectedBeatIndex == beatIdx;
 
-                                    return _InlineBeatChordEditor(
-                                      accordionId: accordionNumber,
-                                      measureIndex: mIdx,
-                                      beatIndex: beatIdx,
-                                      totalMeasures: state.measures.length,
-                                      chord: beat.chord,
-                                      timeText: beat.timeText,
-                                      isCurrentPlayhead: isCurrentPlayhead,
-                                      isMarked: notifier.isBeatMarked(mIdx, beatIdx),
-                                      hasBottomBorder: beatIdx < measure.beats.length - 1,
-                                      notation: state.notation,
-                                      onChanged: (newChord) {
-                                        notifier.updateMeasureBeat(mIdx, beatIdx, newChord);
-                                      },
-                                      onSelected: () {
-                                        notifier.selectBeat(mIdx, beatIdx);
-                                      },
-                                      onToggleMark: () {
-                                        notifier.toggleBeatMark(mIdx, beatIdx);
-                                      },
-                                    );
-                                  }).toList(),
+                                      return _InlineBeatChordEditor(
+                                        accordionId: widget.accordionNumber,
+                                        measureIndex: mIdx,
+                                        beatIndex: beatIdx,
+                                        totalMeasures: state.measures.length,
+                                        chord: beat.chord,
+                                        timeText: beat.timeText,
+                                        bellows: beat.bellows,
+                                        isCurrentPlayhead: isCurrentPlayhead,
+                                        isMarked: notifier.isBeatMarked(mIdx, beatIdx),
+                                        hasBottomBorder: beatIdx < measure.beats.length - 1,
+                                        notation: state.notation,
+                                        onChanged: (newChord) {
+                                          notifier.updateMeasureBeat(mIdx, beatIdx, newChord);
+                                        },
+                                        onSelected: () {
+                                          notifier.selectBeat(mIdx, beatIdx);
+                                        },
+                                        onToggleMark: () {
+                                          notifier.toggleBeatMark(mIdx, beatIdx);
+                                        },
+                                        onBellowsChanged: (bellows) {
+                                          notifier.setBeatBellows(mIdx, beatIdx, bellows);
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -393,6 +435,304 @@ class MeasureGridWidget extends ConsumerWidget {
                 ],
               ),
             ),
+        ],
+      ),
+    ),
+    const SizedBox(height: 6),
+
+    // Sección de Información debajo de la ventana de Compás:
+    // Informa si el acorde está completo o incompleto según el fuelle (Abre y Cierra)
+    _buildChordBellowsInfoCard(context, state, effectiveWidth),
+  ],
+);
+  }
+
+  /// Sección informativa que reporta si el acorde está completo o incompleto según el fuelle.
+  Widget _buildChordBellowsInfoCard(
+    BuildContext context,
+    AccordionSimulatorState state,
+    double cardWidth,
+  ) {
+    final isPrimary = widget.accordionNumber == 1;
+    final treble = isPrimary ? state.trebleData1 : state.trebleData2;
+    final notation = state.notation;
+    final isLatin = notation != NotationMode.alemana;
+
+    // Determinar qué acorde inspeccionar:
+    // 1) Tiempo seleccionado en el Compás
+    // 2) Acorde activo del constructor libre
+    final selectedBar = state.selectedBarIndex;
+    final selectedBeat = state.selectedBeatIndex;
+    MeasureBeat? activeBeat;
+    if (selectedBar != null &&
+        selectedBeat != null &&
+        selectedBar >= 0 &&
+        selectedBar < state.measures.length) {
+      final row = state.measures[selectedBar];
+      if (selectedBeat >= 0 && selectedBeat < row.beats.length) {
+        activeBeat = row.beats[selectedBeat];
+      }
+    }
+
+    String targetChord = '';
+    BellowsMode targetBellows = isPrimary ? state.bellows1 : state.bellows2;
+    String contextLabel = '';
+
+    if (activeBeat != null && activeBeat.chord.trim().isNotEmpty) {
+      targetChord = activeBeat.chord.trim();
+      targetBellows = activeBeat.bellows != BellowsMode.both
+          ? activeBeat.bellows
+          : targetBellows;
+      contextLabel = 'C${activeBeat.barIndex + 1}.${activeBeat.beatIndex + 1}';
+    } else {
+      targetChord = ChordCatalog.symbolFor(
+        root: state.freeChordRoot,
+        type: state.freeChordType,
+        extension: state.freeChordFourth,
+        latin: isLatin,
+        display: true,
+      );
+      contextLabel = 'Constructor';
+    }
+
+    // Clases de altura disponibles físicamente en el diapasón según el fuelle
+    final pullPcs = <int>{};
+    final pushPcs = <int>{};
+    for (final row in treble.values) {
+      for (final btn in row) {
+        pullPcs.add(btn.pull % 12);
+        pushPcs.add(btn.push % 12);
+      }
+    }
+
+    final chordPcs = ChordCatalog.pitchClassesForChordSymbol(targetChord);
+    final hasTarget = targetChord.isNotEmpty && chordPcs.isNotEmpty;
+
+    final missingPush = chordPcs.difference(pushPcs);
+    final missingPull = chordPcs.difference(pullPcs);
+    final isCompletePush = hasTarget && missingPush.isEmpty;
+    final isCompletePull = hasTarget && missingPull.isEmpty;
+
+    final namesList = isLatin ? ChordCatalog.latinRootNames : ChordCatalog.germanRootNames;
+    final chordNoteNames = chordPcs.map((pc) => namesList[pc]).toList();
+    final missingPushNames = missingPush.map((pc) => namesList[pc]).toList();
+    final missingPullNames = missingPull.map((pc) => namesList[pc]).toList();
+
+    final isSelectedPull = targetBellows == BellowsMode.pull;
+    final isSelectedPush = targetBellows == BellowsMode.push;
+    final currentIsComplete = isSelectedPull
+        ? isCompletePull
+        : (isSelectedPush ? isCompletePush : (isCompletePush || isCompletePull));
+
+    return Container(
+      width: cardWidth,
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: !hasTarget
+              ? const Color(0xFFCBD5E1)
+              : (currentIsComplete ? const Color(0xFF86EFAC) : const Color(0xFFFCA5A5)),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  FaIcon(
+                    FontAwesomeIcons.circleInfo,
+                    size: 9.5,
+                    color: !hasTarget
+                        ? const Color(0xFF64748B)
+                        : (currentIsComplete ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'Estado del Acorde',
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+              if (contextLabel.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    contextLabel,
+                    style: const TextStyle(
+                      fontSize: 7.5,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          if (!hasTarget)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 2),
+              child: Text(
+                'Selecciona un compás o acorde para ver disponibilidad por fuelle.',
+                style: TextStyle(
+                  fontSize: 8.0,
+                  color: Color(0xFF94A3B8),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else ...[
+            Row(
+              children: [
+                Text(
+                  targetChord,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    '(${chordNoteNames.join('·')})',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 8.0,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            _buildBellowsCompletenessRow(
+              label: 'Cierra',
+              isPush: true,
+              isComplete: isCompletePush,
+              isTargetBellows: isSelectedPush,
+              missingNames: missingPushNames,
+              totalNotes: chordPcs.length,
+            ),
+            const SizedBox(height: 3),
+            _buildBellowsCompletenessRow(
+              label: 'Abre',
+              isPush: false,
+              isComplete: isCompletePull,
+              isTargetBellows: isSelectedPull,
+              missingNames: missingPullNames,
+              totalNotes: chordPcs.length,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBellowsCompletenessRow({
+    required String label,
+    required bool isPush,
+    required bool isComplete,
+    required bool isTargetBellows,
+    required List<String> missingNames,
+    required int totalNotes,
+  }) {
+    final accentColor = isPush ? const Color(0xFFDC2626) : const Color(0xFF2563EB);
+    final badgeBg = isComplete ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2);
+    final badgeFg = isComplete ? const Color(0xFF15803D) : const Color(0xFFB91C1C);
+    final presentCount = totalNotes - missingNames.length;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+      decoration: BoxDecoration(
+        color: isTargetBellows
+            ? (isPush ? const Color(0xFFFFF1F2) : const Color(0xFFEFF6FF))
+            : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(
+          color: isTargetBellows ? accentColor : const Color(0xFFE2E8F0),
+          width: isTargetBellows ? 1.2 : 0.8,
+        ),
+      ),
+      child: Row(
+        children: [
+          FaIcon(
+            isPush ? FontAwesomeIcons.arrowRight : FontAwesomeIcons.arrowLeft,
+            size: 7.5,
+            color: accentColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 8.5,
+              fontWeight: FontWeight.w800,
+              color: accentColor,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
+            decoration: BoxDecoration(
+              color: badgeBg,
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FaIcon(
+                  isComplete ? FontAwesomeIcons.check : FontAwesomeIcons.xmark,
+                  size: 6.5,
+                  color: badgeFg,
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  isComplete ? 'Completo' : 'Incompleto ($presentCount/$totalNotes)',
+                  style: TextStyle(
+                    fontSize: 7.5,
+                    fontWeight: FontWeight.w800,
+                    color: badgeFg,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!isComplete && missingNames.isNotEmpty) ...[
+            const SizedBox(width: 3),
+            Expanded(
+              child: Text(
+                'Falta: ${missingNames.join(',')}',
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 7.0,
+                  color: Color(0xFFDC2626),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

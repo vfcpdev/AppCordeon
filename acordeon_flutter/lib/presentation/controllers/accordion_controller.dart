@@ -764,7 +764,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       return;
     }
 
-    final chord = row.beats[beatIndex].chord.trim();
+    final beat = row.beats[beatIndex];
+    final chord = beat.chord.trim();
     if (chord.isEmpty) {
       state = state.copyWith(playingChordNotes: const {});
       return;
@@ -776,7 +777,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       _audioBridge.noteOn(n, velocity: velocity);
     }
     _currentBeatNotes = notes;
-    state = state.copyWith(playingChordNotes: notes.toSet());
+    state = state.copyWith(
+      playingChordNotes: notes.toSet(),
+      bellows1: beat.bellows != BellowsMode.both ? beat.bellows : state.bellows1,
+    );
   }
 
   void togglePlayAudio() {
@@ -1031,6 +1035,58 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     updatedMeasures[barIndex] = MeasureRow(barNumber: row.barNumber, beats: updatedBeats);
 
     state = state.copyWith(measures: updatedMeasures);
+  }
+
+  /// Define el fuelle (Abre o Cierra) para un tiempo del compás y define el acorde a aplicar.
+  /// Si el tiempo no tiene acorde, asigna el acorde actual del constructor armónico.
+  /// Si hay tiempos seleccionados con el checkbox, se aplica masivamente a todos ellos.
+  void setBeatBellows(int barIndex, int beatIndex, BellowsMode bellows) {
+    if (barIndex < 0 || barIndex >= state.measures.length) return;
+    final row = state.measures[barIndex];
+    if (beatIndex < 0 || beatIndex >= row.beats.length) return;
+
+    final targetBeat = row.beats[beatIndex];
+    final newBellows = targetBeat.bellows == bellows ? BellowsMode.both : bellows;
+
+    final updatedMeasures = List<MeasureRow>.from(state.measures);
+    final key = beatKey(barIndex, beatIndex);
+
+    final generatedSymbol = ChordCatalog.symbolFor(
+      root: state.freeChordRoot,
+      type: state.freeChordType,
+      extension: state.freeChordFourth,
+      latin: state.notation != NotationMode.alemana,
+    );
+
+    if (state.markedBeats.contains(key)) {
+      for (final markedKey in state.markedBeats) {
+        final bIdx = markedKey ~/ 4;
+        final tIdx = markedKey % 4;
+        if (bIdx >= 0 && bIdx < updatedMeasures.length) {
+          final r = updatedMeasures[bIdx];
+          if (tIdx >= 0 && tIdx < r.beats.length) {
+            final bts = List<MeasureBeat>.from(r.beats);
+            final currentChord = bts[tIdx].chord;
+            final finalChord = currentChord.isNotEmpty ? currentChord : generatedSymbol;
+            bts[tIdx] = bts[tIdx].copyWith(bellows: newBellows, chord: finalChord);
+            updatedMeasures[bIdx] = MeasureRow(barNumber: r.barNumber, beats: bts);
+          }
+        }
+      }
+    } else {
+      final beats = List<MeasureBeat>.from(row.beats);
+      final currentChord = targetBeat.chord;
+      final finalChord = currentChord.isNotEmpty ? currentChord : generatedSymbol;
+      beats[beatIndex] = targetBeat.copyWith(bellows: newBellows, chord: finalChord);
+      updatedMeasures[barIndex] = MeasureRow(barNumber: row.barNumber, beats: beats);
+    }
+
+    state = state.copyWith(
+      measures: updatedMeasures,
+      selectedBarIndex: barIndex,
+      selectedBeatIndex: beatIndex,
+      bellows1: newBellows != BellowsMode.both ? newBellows : state.bellows1,
+    );
   }
 
   /// Inserta el acorde generado en el constructor. Si hay tiempos marcados con

@@ -198,6 +198,27 @@ class DiapasonButtonWidget extends StatelessWidget {
     }
 
     // Fuelle en Ambos: muestra ambas notas (Abre a la izquierda en azul, Cierra a la derecha en rojo).
+    final pullUseWhite = isPressed || isDetectorSelected || isChordPull;
+    final pushUseWhite = isPressed || isDetectorSelected || isChordPush;
+
+    final pullShadows = pullUseWhite
+        ? const [
+            Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 3),
+            Shadow(color: Colors.black87, blurRadius: 2),
+          ]
+        : const [
+            Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1),
+          ];
+
+    final pushShadows = pushUseWhite
+        ? const [
+            Shadow(color: Colors.black, offset: Offset(0, 1.5), blurRadius: 3),
+            Shadow(color: Colors.black87, blurRadius: 2),
+          ]
+        : const [
+            Shadow(color: Colors.white70, offset: Offset(0, 0.5), blurRadius: 1),
+          ];
+
     return SizedBox(
       width: size,
       height: size,
@@ -212,9 +233,9 @@ class DiapasonButtonWidget extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
-                    color: useWhite ? Colors.white : const Color(0xFF1E40AF),
+                    color: pullUseWhite ? Colors.white : const Color(0xFF1E40AF),
                     height: 1.0,
-                    shadows: labelShadows,
+                    shadows: pullShadows,
                   ),
                 ),
               ),
@@ -223,7 +244,7 @@ class DiapasonButtonWidget extends StatelessWidget {
           Container(
             width: 1,
             height: size * 0.5,
-            color: useWhite ? Colors.white54 : const Color(0xFF64748B),
+            color: (pullUseWhite || pushUseWhite) ? Colors.white54 : const Color(0xFF64748B),
           ),
           Expanded(
             child: Center(
@@ -234,9 +255,9 @@ class DiapasonButtonWidget extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
-                    color: useWhite ? Colors.white : const Color(0xFF991B1B),
+                    color: pushUseWhite ? Colors.white : const Color(0xFF991B1B),
                     height: 1.0,
-                    shadows: labelShadows,
+                    shadows: pushShadows,
                   ),
                 ),
               ),

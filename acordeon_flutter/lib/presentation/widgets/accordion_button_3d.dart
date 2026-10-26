@@ -287,15 +287,28 @@ class _AccordionButton3DPainter extends CustomPainter {
         ).createShader(Rect.fromCircle(center: center, radius: radius));
 
       if (bothSplit) {
-        // Mitad izquierda = Abre (azul) · mitad derecha = Cierra (rojo)
-        canvas.save();
-        canvas.clipRect(Rect.fromLTWH(0, 0, size.width / 2, size.height));
-        canvas.drawCircle(center, radius, pullPaint);
-        canvas.restore();
-        canvas.save();
-        canvas.clipRect(Rect.fromLTWH(size.width / 2, 0, size.width / 2, size.height));
-        canvas.drawCircle(center, radius, pushPaint);
-        canvas.restore();
+        // En agudos: solo la mitad que pertenezca al acorde se pinta; la otra conserva el nácar blanco.
+        // En bajos (buttonType != null): siempre es split azul/rojo.
+        final paintPullHalf = !isTreble || isChordPull;
+        final paintPushHalf = !isTreble || isChordPush;
+
+        // Primero dibuja la base perlada por defecto
+        canvas.drawCircle(center, radius, bodyPaint);
+
+        if (paintPullHalf) {
+          // Mitad izquierda = Abre (azul)
+          canvas.save();
+          canvas.clipRect(Rect.fromLTWH(0, 0, size.width / 2, size.height));
+          canvas.drawCircle(center, radius, pullPaint);
+          canvas.restore();
+        }
+        if (paintPushHalf) {
+          // Mitad derecha = Cierra (rojo)
+          canvas.save();
+          canvas.clipRect(Rect.fromLTWH(size.width / 2, 0, size.width / 2, size.height));
+          canvas.drawCircle(center, radius, pushPaint);
+          canvas.restore();
+        }
       } else {
         // Agudos en Abrir/Cerrar: todo el cuerpo con el color de la dirección.
         canvas.drawCircle(
