@@ -23,29 +23,29 @@ void main() {
       final container = ProviderContainer();
       final notifier = container.read(accordionSimulatorProvider.notifier);
 
-      // Inicialmente hay 4 compases
+      // Inicialmente hay 8 compases
       var state = container.read(accordionSimulatorProvider);
-      expect(state.measures.length, 4);
+      expect(state.measures.length, 8);
 
-      // Asignar Sol7 en 1.1, 2.3, 5.2
-      final count = notifier.applyMultiBeatChord(chord: 'Sol7', pattern: '1.1, 2.3, 5.2');
+      // Asignar Sol7 en 1.1, 2.3, 10.2
+      final count = notifier.applyMultiBeatChord(chord: 'Sol7', pattern: '1.1, 2.3, 10.2');
       expect(count, 3);
 
       state = container.read(accordionSimulatorProvider);
-      // Debe haberse expandido automáticamente a 5 compases
-      expect(state.measures.length, greaterThanOrEqualTo(5));
+      // Debe haberse expandido automáticamente a 10 compases
+      expect(state.measures.length, greaterThanOrEqualTo(10));
 
       // Verificar que los cuadros específicos recibieron el acorde
       expect(state.measures[0].beats[0].chord, 'Sol7'); // Compás 1 cuadro 1
       expect(state.measures[1].beats[2].chord, 'Sol7'); // Compás 2 cuadro 3
-      expect(state.measures[4].beats[1].chord, 'Sol7'); // Compás 5 cuadro 2
+      expect(state.measures[9].beats[1].chord, 'Sol7'); // Compás 10 cuadro 2
 
       // Otros cuadros deben permanecer vacíos
       expect(state.measures[0].beats[1].chord, '');
       expect(state.measures[1].beats[0].chord, '');
 
       expect(state.multiBeatChord, 'Sol7');
-      expect(state.multiBeatPattern, '1.1, 2.3, 5.2');
+      expect(state.multiBeatPattern, '1.1, 2.3, 10.2');
     });
   });
 
@@ -102,8 +102,7 @@ void main() {
 
       final container = ProviderContainer();
       final notifier = container.read(accordionSimulatorProvider.notifier);
-      notifier.setFreeChordRoot(0); // Do
-      notifier.setShowMultiBeatModal(true);
+      notifier.openMultiBeatModalForChord('Do');
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -137,7 +136,6 @@ void main() {
 
       final state = container.read(accordionSimulatorProvider);
       expect(state.showMultiBeatModal, isFalse);
-      expect(state.measures.length, greaterThanOrEqualTo(5));
       expect(state.measures[0].beats[0].chord, 'Do');
       expect(state.measures[1].beats[2].chord, 'Do');
       expect(state.measures[4].beats[1].chord, 'Do');
