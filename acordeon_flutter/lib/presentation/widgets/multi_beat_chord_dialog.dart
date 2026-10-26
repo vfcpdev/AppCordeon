@@ -23,16 +23,29 @@ class _MultiBeatChordDialogState extends ConsumerState<MultiBeatChordDialog> {
   void initState() {
     super.initState();
     final state = ref.read(accordionSimulatorProvider);
-    _controller = TextEditingController(text: state.multiBeatPattern);
-  }
-
-  @override
-  void didUpdateWidget(covariant MultiBeatChordDialog oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final state = ref.read(accordionSimulatorProvider);
-    if (state.multiBeatPattern != _controller.text) {
-      _controller.text = state.multiBeatPattern;
+    var pattern = state.multiBeatPattern;
+    if (pattern.isEmpty) {
+      final currentChord = state.multiBeatChord?.trim().isNotEmpty == true
+          ? state.multiBeatChord!
+          : ChordCatalog.symbolFor(
+              root: state.freeChordRoot,
+              type: state.freeChordType,
+              extension: state.freeChordFourth,
+              latin: state.notation != NotationMode.alemana,
+            );
+      if (currentChord.isNotEmpty) {
+        final pos = <String>[];
+        for (var m = 0; m < state.measures.length; m++) {
+          for (var b = 0; b < state.measures[m].beats.length; b++) {
+            if (state.measures[m].beats[b].chord.trim() == currentChord) {
+              pos.add('${m + 1}.${b + 1}');
+            }
+          }
+        }
+        pattern = pos.join(', ');
+      }
     }
+    _controller = TextEditingController(text: pattern);
   }
 
   @override
@@ -65,7 +78,11 @@ class _MultiBeatChordDialogState extends ConsumerState<MultiBeatChordDialog> {
       return;
     }
 
-    final count = notifier.applyMultiBeatChord(chord: chord, pattern: pattern);
+    final count = notifier.applyMultiBeatChord(
+      chord: chord,
+      pattern: pattern,
+      replaceExisting: true,
+    );
     notifier.setShowMultiBeatModal(false);
 
     if (context.mounted) {
@@ -89,6 +106,18 @@ class _MultiBeatChordDialogState extends ConsumerState<MultiBeatChordDialog> {
     final state = ref.watch(accordionSimulatorProvider);
     final notifier = ref.read(accordionSimulatorProvider.notifier);
     final screen = MediaQuery.sizeOf(context);
+
+    // Escuchar cambios en multiBeatPattern para mantener sincronizado el cuadro de texto
+    ref.listen<String>(
+      accordionSimulatorProvider.select((s) => s.multiBeatPattern),
+      (prev, next) {
+        if (_controller.text != next) {
+          _controller.text = next;
+          _controller.selection = TextSelection.collapsed(offset: next.length);
+          setState(() {});
+        }
+      },
+    );
 
     // Ajustar posición inicial para que quede centrada/visible
     if (!_hasCalculatedInitialPos) {
@@ -115,6 +144,26 @@ class _MultiBeatChordDialogState extends ConsumerState<MultiBeatChordDialog> {
     final namesList = isLatin ? ChordCatalog.latinRootNames : ChordCatalog.germanRootNames;
     final notes = chordPcs.map((pc) => namesList[pc]).toList();
     final notesStr = notes.isNotEmpty ? '(${notes.join(' - ')})' : '';
+
+    // Posiciones donde ya existe este acorde en todos los compases y cuadros
+    final currentPositions = <String>[];
+    for (var m = 0; m < state.measures.length; m++) {
+      for (var b = 0; b < state.measures[m].beats.length; b++) {
+        if (state.measures[m].beats[b].chord.trim() == currentChord) {
+          currentPositions.add('${m + 1}.${b + 1}');
+        }
+      }
+    }
+    final currentPositionsStr = currentPositions.join(', ');
+
+    // Cadena de texto de todos los compases y cuadros disponibles en la cuadrícula
+    final allPositions = <String>[];
+    for (var m = 0; m < state.measures.length; m++) {
+      for (var b = 0; b < 4; b++) {
+        allPositions.add('${m + 1}.${b + 1}');
+      }
+    }
+    final allPositionsStr = allPositions.join(', ');
 
     return Positioned(
       left: _position.dx.clamp(10.0, (screen.width - 325).clamp(10.0, double.infinity)),
@@ -306,6 +355,16 @@ class _MultiBeatChordDialogState extends ConsumerState<MultiBeatChordDialog> {
                       spacing: 4,
                       runSpacing: 4,
                       children: [
+                        if (currentPositions.isNotEmpty)
+                          _buildPresetChip(
+                            currentPositionsStr,
+                            label: 'Actuales (${currentPositions.length})',
+                            isHighlight: true,
+                          ),
+                        _buildPresetChip(
+                          allPositionsStr,
+                          label: 'Todos los cuadros (${allPositions.length})',
+                        ),
                         _buildPresetChip('1.1, 2.1, 3.1, 4.1', label: 'Tiempos 1 (1-4)'),
                         _buildPresetChip('1.1, 1.2, 1.3, 1.4', label: 'Compás 1 completo'),
                       ],
@@ -366,26 +425,30 @@ class _MultiBeatChordDialogState extends ConsumerState<MultiBeatChordDialog> {
     );
   }
 
-  Widget _buildPresetChip(String pattern, {required String label}) {
+  Widget _buildPresetChip(String pattern, {required String label, bool isHighlight = false}) {
     return InkWell(
       onTap: () {
         _controller.text = pattern;
+        _controller.selection = TextSelection.collapsed(offset: pattern.length);
         setState(() {});
       },
       borderRadius: BorderRadius.circular(4),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
+          color: isHighlight ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: const Color(0xFFCBD5E1), width: 0.8),
+          border: Border.all(
+            color: isHighlight ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
+            width: isHighlight ? 1.0 : 0.8,
+          ),
         ),
         child: Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 8.5,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF334155),
+            fontWeight: isHighlight ? FontWeight.w700 : FontWeight.w600,
+            color: isHighlight ? const Color(0xFF1D4ED8) : const Color(0xFF334155),
           ),
         ),
       ),

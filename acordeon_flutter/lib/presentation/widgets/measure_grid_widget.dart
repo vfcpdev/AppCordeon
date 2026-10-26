@@ -48,7 +48,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final hasMarks = state.markedBeats.isNotEmpty;
     final effectiveWidth = widget.width ?? (isPrimary ? 104.5 : 82.5);
 
-    // Detectar si el acorde del cuadro seleccionado coincide con el acorde de asignación múltiple
+    // Detectar si hay un acorde seleccionado en algún cuadro del compás o en el constructor
     final selectedBar = state.selectedBarIndex;
     final selectedBeat = state.selectedBeatIndex;
     String? selectedChord;
@@ -60,8 +60,22 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         if (c.isNotEmpty) selectedChord = c;
       }
     }
-    final isEditActive = selectedChord != null &&
-        (state.multiBeatChord == null || state.multiBeatChord!.isEmpty || selectedChord == state.multiBeatChord);
+
+    final constructorChord = ChordCatalog.symbolFor(
+      root: state.freeChordRoot,
+      type: state.freeChordType,
+      extension: state.freeChordFourth,
+      latin: state.notation != NotationMode.alemana,
+    );
+
+    final chordToEdit = selectedChord ??
+        ((state.multiBeatChord != null && state.multiBeatChord!.isNotEmpty)
+            ? state.multiBeatChord
+            : (constructorChord.isNotEmpty ? constructorChord : null));
+
+    final hasOccurrences = chordToEdit != null &&
+        state.measures.any((m) => m.beats.any((b) => b.chord.trim() == chordToEdit));
+    final isEditActive = selectedChord != null || hasOccurrences;
 
     return SizedBox(
       width: effectiveWidth,
@@ -185,22 +199,24 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                           // Botón de edición a la derecha de importar compás
                           Tooltip(
                             message: isEditActive
-                                ? 'Editar asignación múltiple de $selectedChord'
-                                : 'Selecciona el acorde en el compás para editarlo',
+                                ? 'Editar asignación múltiple de $chordToEdit'
+                                : 'Selecciona un acorde en el compás para editarlo',
                             child: InkWell(
                               key: const ValueKey('edit_multi_beat_chord_btn'),
                               onTap: isEditActive
                                   ? () {
+                                      final targetChord = chordToEdit;
+                                      if (targetChord == null || targetChord.isEmpty) return;
                                       final positions = <String>[];
                                       for (var m = 0; m < state.measures.length; m++) {
                                         for (var b = 0; b < state.measures[m].beats.length; b++) {
-                                          if (state.measures[m].beats[b].chord.trim() == selectedChord) {
+                                          if (state.measures[m].beats[b].chord.trim() == targetChord) {
                                             positions.add('${m + 1}.${b + 1}');
                                           }
                                         }
                                       }
                                       notifier.openMultiBeatModalForChord(
-                                        selectedChord!,
+                                        targetChord,
                                         pattern: positions.join(', '),
                                       );
                                     }

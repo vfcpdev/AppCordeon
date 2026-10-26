@@ -174,12 +174,62 @@ void main() {
       notifier.selectBeat(0, 0);
       await tester.pumpAndSettle();
 
-      // Pulsar el botón de edición debe abrir el modal para ese acorde
+      // Pulsar el botón de edición debe abrir el modal para ese acorde y precargar la cadena de texto
       await tester.tap(editBtnFinder);
       await tester.pumpAndSettle();
 
       expect(container.read(accordionSimulatorProvider).showMultiBeatModal, isTrue);
       expect(container.read(accordionSimulatorProvider).multiBeatChord, 'Sol7');
+      expect(container.read(accordionSimulatorProvider).multiBeatPattern, '1.1, 2.3');
+    });
+
+    testWidgets('Al editar la cadena de texto en el modal, se muestran todas las posiciones y se actualiza la asignación',
+        (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final container = ProviderContainer();
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      // Asignar Sol7 en 1.1 y 2.3
+      notifier.applyMultiBeatChord(chord: 'Sol7', pattern: '1.1, 2.3');
+
+      // Abrir modal de edición para Sol7 (debe recolectar '1.1, 2.3')
+      notifier.openMultiBeatModalForChord('Sol7');
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: Stack(
+                children: [
+                  MultiBeatChordDialog(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // El campo de texto debe mostrar la cadena de texto separada por comas de todos los compases y cuadros
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.controller?.text, '1.1, 2.3');
+
+      // Editar la cadena de texto a 1.1, 2.4
+      await tester.enterText(find.byType(TextField), '1.1, 2.4');
+      await tester.pumpAndSettle();
+
+      // Confirmar edición
+      await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+
+      final state = container.read(accordionSimulatorProvider);
+      expect(state.measures[0].beats[0].chord, 'Sol7'); // 1.1 sigue teniendo Sol7
+      expect(state.measures[1].beats[2].chord, '');     // 2.3 se limpió porque se editó
+      expect(state.measures[1].beats[3].chord, 'Sol7'); // 2.4 ahora tiene Sol7
     });
   });
 }

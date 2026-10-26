@@ -1148,30 +1148,16 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
   /// Activa o desactiva la visibilidad del modal movible de asignación múltiple de acorde.
   void setShowMultiBeatModal(bool show) {
-    if (show && state.multiBeatChord == null) {
-      final symbol = ChordCatalog.symbolFor(
-        root: state.freeChordRoot,
-        type: state.freeChordType,
-        extension: state.freeChordFourth,
-        latin: state.notation != NotationMode.alemana,
-      );
-      state = state.copyWith(showMultiBeatModal: true, multiBeatChord: symbol);
-    } else {
-      state = state.copyWith(showMultiBeatModal: show);
-    }
-  }
-
-  /// Alterna el estado del modal movible para el acorde actual del constructor armónico.
-  void toggleMultiBeatModal() {
-    final willShow = !state.showMultiBeatModal;
-    if (willShow) {
-      final symbol = ChordCatalog.symbolFor(
-        root: state.freeChordRoot,
-        type: state.freeChordType,
-        extension: state.freeChordFourth,
-        latin: state.notation != NotationMode.alemana,
-      );
-      // Recolectar posiciones actuales si ya existen en la cuadrícula
+    if (show) {
+      final symbol = (state.multiBeatChord?.trim().isNotEmpty == true)
+          ? state.multiBeatChord!.trim()
+          : ChordCatalog.symbolFor(
+              root: state.freeChordRoot,
+              type: state.freeChordType,
+              extension: state.freeChordFourth,
+              latin: state.notation != NotationMode.alemana,
+            );
+      // Recolectar todas las posiciones actuales de este acorde en todos los compases y cuadros
       final positions = <String>[];
       for (var m = 0; m < state.measures.length; m++) {
         for (var b = 0; b < state.measures[m].beats.length; b++) {
@@ -1194,18 +1180,42 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
   }
 
+  /// Alterna el estado del modal movible para el acorde actual del constructor armónico.
+  void toggleMultiBeatModal() {
+    setShowMultiBeatModal(!state.showMultiBeatModal);
+  }
+
   /// Abre el modal movible enfocado en un acorde específico y precarga sus posiciones.
   void openMultiBeatModalForChord(String chord, {String? pattern}) {
+    final effectiveChord = chord.trim();
+    String effectivePattern = pattern ?? '';
+    if (pattern == null && effectiveChord.isNotEmpty) {
+      final positions = <String>[];
+      for (var m = 0; m < state.measures.length; m++) {
+        for (var b = 0; b < state.measures[m].beats.length; b++) {
+          if (state.measures[m].beats[b].chord.trim() == effectiveChord) {
+            positions.add('${m + 1}.${b + 1}');
+          }
+        }
+      }
+      effectivePattern = positions.join(', ');
+    }
+
     state = state.copyWith(
       showMultiBeatModal: true,
-      multiBeatChord: chord,
-      multiBeatPattern: pattern ?? state.multiBeatPattern,
+      multiBeatChord: effectiveChord,
+      multiBeatPattern: effectivePattern,
     );
   }
 
   /// Aplica el acorde en múltiples compases según el patrón "Compás.Cuadro" (ej: "1.1, 2.3, 5.2").
   /// Expande automáticamente los compases de la cuadrícula si el patrón requiere compases adicionales.
-  int applyMultiBeatChord({required String chord, required String pattern}) {
+  /// Si [replaceExisting] es true, limpia las asignaciones previas de este acorde para reflejar exactamente la edición.
+  int applyMultiBeatChord({
+    required String chord,
+    required String pattern,
+    bool replaceExisting = true,
+  }) {
     if (chord.trim().isEmpty) return 0;
     final positions = parseMultiBeatPositions(pattern);
     if (positions.isEmpty) return 0;
@@ -1238,6 +1248,27 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       );
     }
 
+    final trimmedChord = chord.trim();
+
+    // En modo edición (replaceExisting), remover asignaciones previas de este acorde
+    // para que la nueva cadena de texto sea la definición exacta
+    if (replaceExisting) {
+      for (var m = 0; m < updatedMeasures.length; m++) {
+        final row = updatedMeasures[m];
+        var modified = false;
+        final newBeats = List<MeasureBeat>.from(row.beats);
+        for (var b = 0; b < newBeats.length; b++) {
+          if (newBeats[b].chord.trim() == trimmedChord) {
+            newBeats[b] = newBeats[b].copyWith(chord: '');
+            modified = true;
+          }
+        }
+        if (modified) {
+          updatedMeasures[m] = MeasureRow(barNumber: row.barNumber, beats: newBeats);
+        }
+      }
+    }
+
     var appliedCount = 0;
     for (final pos in positions) {
       final bIdx = pos.barNumber - 1;
@@ -1246,7 +1277,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         final row = updatedMeasures[bIdx];
         if (tIdx >= 0 && tIdx < row.beats.length) {
           final beats = List<MeasureBeat>.from(row.beats);
-          beats[tIdx] = beats[tIdx].copyWith(chord: chord.trim());
+          beats[tIdx] = beats[tIdx].copyWith(chord: trimmedChord);
           updatedMeasures[bIdx] = MeasureRow(barNumber: row.barNumber, beats: beats);
           appliedCount++;
         }
@@ -1255,7 +1286,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
     state = state.copyWith(
       measures: updatedMeasures,
-      multiBeatChord: chord.trim(),
+      multiBeatChord: trimmedChord,
       multiBeatPattern: pattern,
       selectedBarIndex: positions.first.barNumber - 1,
       selectedBeatIndex: positions.first.beatNumber - 1,
