@@ -120,7 +120,10 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                ],
               ),
+              if (state.showMultiBeatModal)
+                const MultiBeatChordDialog(),
             ],
           ),
         ),
