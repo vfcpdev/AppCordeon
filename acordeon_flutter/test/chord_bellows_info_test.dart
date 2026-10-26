@@ -71,18 +71,23 @@ void main() {
   });
 
   group('AccordionSimulatorNotifier - Flechas de Fuelle en Tiempos', () {
-    test('setBeatBellows asigna dirección de fuelle y acorde en el tiempo seleccionado', () {
+    test('setBeatBellows solo asigna dirección si hay acorde registrado y no modifica el acorde', () {
       final container = ProviderContainer();
       final notifier = container.read(accordionSimulatorProvider.notifier);
 
-      // Configuramos un acorde en el constructor: Sol Mayor (root = 7)
-      notifier.setFreeChordRoot(7); // Sol
-
-      // Asignar Abre al tiempo 1 del compás 0 (que inicialmente no tiene acorde)
+      // Si el tiempo 1 no tiene acorde, setBeatBellows no hace nada
       notifier.setBeatBellows(0, 1, BellowsMode.pull);
+      var state = container.read(accordionSimulatorProvider);
+      expect(state.measures[0].beats[1].bellows, BellowsMode.both);
+      expect(state.measures[0].beats[1].chord, '');
 
-      final state = container.read(accordionSimulatorProvider);
-      final beat = state.measures[0].beats[1];
+      // Registramos un acorde en el tiempo 1: 'Sol'
+      notifier.updateMeasureBeat(0, 1, 'Sol');
+
+      // Ahora asignar Abre sí aplica el fuelle al tiempo con acorde registrado
+      notifier.setBeatBellows(0, 1, BellowsMode.pull);
+      state = container.read(accordionSimulatorProvider);
+      var beat = state.measures[0].beats[1];
 
       expect(beat.bellows, BellowsMode.pull);
       expect(beat.chord, 'Sol');
@@ -94,6 +99,7 @@ void main() {
       notifier.setBeatBellows(0, 1, BellowsMode.pull);
       final stateAfterToggle = container.read(accordionSimulatorProvider);
       expect(stateAfterToggle.measures[0].beats[1].bellows, BellowsMode.both);
+      expect(stateAfterToggle.measures[0].beats[1].chord, 'Sol');
     });
   });
 
