@@ -60,5 +60,16 @@ void main() {
       expect(TuningRegistry.getById('lluvia').name, contains('Lluvia'));
       expect(TuningRegistry.getById('lluvia').rowsDescription, 'Do♯ - Fa♯ - Si');
     });
+
+    test('sortByPitchAscending ordena las afinaciones de menor a mayor tono (-7 a +3)', () {
+      TuningRegistry.sortByPitchAscending();
+      final offsets = TuningRegistry.orderedTunings.map((t) => t.offset).toList();
+      expect(offsets, [-7, -5, -3, -1, 0, 1, 2, 3]);
+      expect(TuningRegistry.orderedTunings.first.id, 'anisada');
+      expect(TuningRegistry.orderedTunings.last.id, 'lluvia');
+
+      TuningRegistry.resetToDefaultOrder();
+      expect(TuningRegistry.orderedTunings.first.id, 'cinco_letras');
+    });
   });
 }

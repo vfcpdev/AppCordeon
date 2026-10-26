@@ -268,13 +268,13 @@ class DiapasonWidget extends ConsumerWidget {
                                 gradient: const LinearGradient(
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
-                                  colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                                  colors: [Color(0xFF059669), Color(0xFF047857)],
                                 ),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFF38BDF8), width: 1.2),
+                                border: Border.all(color: const Color(0xFF34D399), width: 1.2),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF0284C7).withValues(alpha: 0.35),
+                                    color: const Color(0xFF059669).withValues(alpha: 0.35),
                                     blurRadius: 6,
                                     offset: const Offset(0, 2),
                                   ),

@@ -340,28 +340,53 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 2.5,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0284C7),
-                                borderRadius: BorderRadius.circular(2),
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 2.5,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0284C7),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 3),
-                            const Text(
-                              'Tónica',
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF0284C7),
+                              const SizedBox(width: 3),
+                              const Text(
+                                'Tónica',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0284C7),
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 3),
+                              // Etiqueta del Acorde a la derecha del título Tónica
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFECFDF5),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: const Color(0xFF22C55E)),
+                                  ),
+                                  child: Text(
+                                    currentChordDisplay,
+                                    style: const TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF065F46),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 3),
                         // Botón desacoplar / acoplar
                         Builder(
                           builder: (btnContext) {
@@ -400,74 +425,50 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
                 ),
                 const SizedBox(height: 4),
 
-                // Etiqueta del Acorde (sigla) y Botón de Compás (+) a su derecha
+                // Botón de Compás (+) a solas, sin la etiqueta del acorde a su izquierda
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Flexible(
+                  child: Center(
+                    child: Tooltip(
+                      message: canInsert
+                          ? 'Agregar $insertSymbol a $targetLabel'
+                          : 'Selecciona una tónica y marca tiempos o una celda del Compás',
+                      child: InkWell(
+                        key: const ValueKey('insert_chord_to_compas_btn'),
+                        onTap: canInsert
+                            ? () {
+                                final symbol =
+                                    notifier.insertFreeChordIntoSelectedBeat();
+                                if (symbol == null) return;
+                                ScaffoldMessenger.of(context)
+                                  ..hideCurrentSnackBar()
+                                  ..showSnackBar(
+                                    SnackBar(
+                                      content: Text('$symbol → $targetLabel'),
+                                      duration: const Duration(milliseconds: 1400),
+                                    ),
+                                  );
+                              }
+                            : null,
+                        borderRadius: BorderRadius.circular(5),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3.5),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFECFDF5),
+                            color: canInsert
+                                ? const Color(0xFF16A34A)
+                                : const Color(0xFFE2E8F0),
                             borderRadius: BorderRadius.circular(5),
-                            border: Border.all(color: const Color(0xFF22C55E)),
                           ),
-                          child: Text(
-                            currentChordDisplay,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF065F46),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          child: FaIcon(
+                            FontAwesomeIcons.plus,
+                            size: 11,
+                            color: canInsert
+                                ? Colors.white
+                                : const Color(0xFF94A3B8),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Tooltip(
-                        message: canInsert
-                            ? 'Agregar $insertSymbol a $targetLabel'
-                            : 'Selecciona una tónica y marca tiempos o una celda del Compás',
-                        child: InkWell(
-                          key: const ValueKey('insert_chord_to_compas_btn'),
-                          onTap: canInsert
-                              ? () {
-                                  final symbol =
-                                      notifier.insertFreeChordIntoSelectedBeat();
-                                  if (symbol == null) return;
-                                  ScaffoldMessenger.of(context)
-                                    ..hideCurrentSnackBar()
-                                    ..showSnackBar(
-                                      SnackBar(
-                                        content: Text('$symbol → $targetLabel'),
-                                        duration: const Duration(milliseconds: 1400),
-                                      ),
-                                    );
-                                }
-                              : null,
-                          borderRadius: BorderRadius.circular(5),
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: canInsert
-                                  ? const Color(0xFF16A34A)
-                                  : const Color(0xFFE2E8F0),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            child: FaIcon(
-                              FontAwesomeIcons.plus,
-                              size: 13,
-                              color: canInsert
-                                  ? Colors.white
-                                  : const Color(0xFF94A3B8),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 4),

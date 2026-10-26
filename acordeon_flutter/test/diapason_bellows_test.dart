@@ -173,5 +173,53 @@ void main() {
 
     expect(selectedTuning, isNotNull);
     expect(selectedTuning?.id, secondTuning.id);
+    // El diálogo permanece abierto para permitir probar o comparar afinaciones
+    expect(find.text('Seleccionar acordeón'), findsOneWidget);
+  });
+
+  testWidgets('el diálogo de afinación permite ordenar por tono ascendente y restablecer',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      TuningRegistry.resetToDefaultOrder();
+      tester.view.resetPhysicalSize();
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: DiapasonWidget(
+              currentTuning: TuningRegistry.defaultTunings[0],
+              onTuningChanged: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Abrir diálogo
+    await tester.tap(find.byKey(const ValueKey('diapason_tuning_btn_1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tono ascendente'), findsOneWidget);
+    expect(find.text('Restablecer'), findsOneWidget);
+    expect(find.byKey(const ValueKey('drag_handle_cinco_letras')), findsOneWidget);
+
+    // Pulsamos "Tono ascendente"
+    await tester.tap(find.byKey(const ValueKey('btn_sort_pitch_asc')));
+    await tester.pumpAndSettle();
+
+    // Verificamos que Anisada (-7) ahora está en primera posición
+    expect(TuningRegistry.orderedTunings.first.id, 'anisada');
+    expect(TuningRegistry.orderedTunings.last.id, 'lluvia');
+
+    // Pulsamos "Restablecer"
+    await tester.tap(find.byKey(const ValueKey('btn_reset_tuning_order')));
+    await tester.pumpAndSettle();
+
+    expect(TuningRegistry.orderedTunings.first.id, 'cinco_letras');
   });
 }
