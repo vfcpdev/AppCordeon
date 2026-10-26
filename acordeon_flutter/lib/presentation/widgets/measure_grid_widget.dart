@@ -46,8 +46,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
       );
       _compasScrollController.animateTo(
         target,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOutCubic,
       );
     }
   }
@@ -73,24 +73,29 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     }
 
     final viewportHeight = _compasScrollController.position.viewportDimension;
-    final visibleCount = (viewportHeight / itemHeight).floor().clamp(2, 6);
+    final effectiveViewport = viewportHeight > 100 ? viewportHeight : 330.0;
+    final visibleCount = (effectiveViewport / itemHeight).floor().clamp(2, 6);
     final topVisibleBar = (currentOffset / itemHeight).floor();
     final penultimateVisibleBar = topVisibleBar + visibleCount - 1;
 
     if (currentBar >= penultimateVisibleBar && currentBar > topVisibleBar) {
       final target = (currentBar * itemHeight).clamp(0.0, maxScroll);
-      _compasScrollController.animateTo(
-        target,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOutCubic,
-      );
+      if ((target - currentOffset).abs() > 4.0) {
+        _compasScrollController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOutCubic,
+        );
+      }
     } else if (currentBar < topVisibleBar) {
       final target = (currentBar * itemHeight).clamp(0.0, maxScroll);
-      _compasScrollController.animateTo(
-        target,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOutCubic,
-      );
+      if ((target - currentOffset).abs() > 4.0) {
+        _compasScrollController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOutCubic,
+        );
+      }
     }
   }
 
@@ -99,6 +104,18 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final state = ref.watch(accordionSimulatorProvider);
     final notifier = ref.read(accordionSimulatorProvider.notifier);
     final isPrimary = widget.accordionNumber == 1;
+
+    // Al cargar un nuevo archivo de audio, reiniciar el scroll vertical al compás 0 (inicio de la sección)
+    ref.listen<String?>(
+      accordionSimulatorProvider.select((s) => s.loadedAudioFileName),
+      (prevFile, currentFile) {
+        if (currentFile != null && currentFile != prevFile) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToBar(0);
+          });
+        }
+      },
+    );
 
     // Escucha cambios de compás durante reproducción/audio para scroll automático
     ref.listen<int?>(

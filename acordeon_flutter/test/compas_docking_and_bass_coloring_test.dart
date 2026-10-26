@@ -133,4 +133,30 @@ void main() {
     // El título de Acordeón 2 dice 'Compás A2'
     expect(find.text('Compás A2'), findsOneWidget);
   });
+
+  testWidgets('Al cambiar o avanzar el compás, la cuadrícula de compases actualiza la selección',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: AcordeonApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AcordeonApp)),
+    );
+    final notifier = container.read(accordionSimulatorProvider.notifier);
+
+    // Cambiar compás a 2 (penúltimo compás visible)
+    notifier.selectBeat(2, 0);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(container.read(accordionSimulatorProvider).selectedBarIndex, 2);
+  });
 }

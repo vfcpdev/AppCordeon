@@ -31,9 +31,10 @@ class WebAudioFilePlayer implements AudioFilePlayer {
   void load(Uint8List bytes, String mimeType) {
     _release();
     try {
+      final safeMime = mimeType.trim().isNotEmpty ? mimeType : 'audio/mpeg';
       final blob = web.Blob(
         [bytes.toJS].toJS,
-        web.BlobPropertyBag(type: mimeType),
+        web.BlobPropertyBag(type: safeMime),
       );
       final url = web.URL.createObjectURL(blob);
       _objectUrl = url;
@@ -41,6 +42,9 @@ class WebAudioFilePlayer implements AudioFilePlayer {
         ..src = url
         ..preload = 'auto'
         ..volume = _volume;
+      audio.style.display = 'none';
+      web.document.body?.appendChild(audio);
+      audio.load();
       _audio = audio;
     } catch (e) {
       // Si el navegador no puede crear el Blob, se deja sin reproducción.
@@ -53,11 +57,15 @@ class WebAudioFilePlayer implements AudioFilePlayer {
   void play() {
     final audio = _audio;
     if (audio == null) return;
-    // El gesto del usuario (botón Play) permite iniciar la reproducción.
-    unawaited(audio.play().toDart.catchError((Object e) {
-      debugPrint('WebAudioFilePlayer.play falló: $e');
-      return null;
-    }));
+    try {
+      final promise = audio.play();
+      unawaited(promise.toDart.catchError((Object e) {
+        debugPrint('WebAudioFilePlayer.play error: $e');
+        return null;
+      }));
+    } catch (e) {
+      debugPrint('WebAudioFilePlayer.play sincrónico falló: $e');
+    }
   }
 
   @override
@@ -97,6 +105,7 @@ class WebAudioFilePlayer implements AudioFilePlayer {
       audio.pause();
       audio.removeAttribute('src');
       audio.load();
+      audio.remove();
     }
     _audio = null;
     final url = _objectUrl;

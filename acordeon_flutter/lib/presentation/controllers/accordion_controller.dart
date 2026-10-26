@@ -132,6 +132,13 @@ class AccordionSimulatorState {
   final Offset? _compas2Position;
   Offset get compas2Position => _compas2Position ?? const Offset(440, 70);
 
+  // Barra de canción acoplable/desacoplable y movible
+  final bool? _isSongBarUndocked;
+  bool get isSongBarUndocked => _isSongBarUndocked ?? false;
+
+  final Offset? _songBarPosition;
+  Offset get songBarPosition => _songBarPosition ?? const Offset(20, 50);
+
   const AccordionSimulatorState({
     required this.backgroundColor,
     required this.notation,
@@ -186,10 +193,14 @@ class AccordionSimulatorState {
     Offset? compas1Position,
     bool? isCompas2Undocked,
     Offset? compas2Position,
+    bool? isSongBarUndocked,
+    Offset? songBarPosition,
   })  : _isCompas1Undocked = isCompas1Undocked ?? false,
         _compas1Position = compas1Position ?? const Offset(220, 70),
         _isCompas2Undocked = isCompas2Undocked ?? false,
-        _compas2Position = compas2Position ?? const Offset(440, 70);
+        _compas2Position = compas2Position ?? const Offset(440, 70),
+        _isSongBarUndocked = isSongBarUndocked ?? false,
+        _songBarPosition = songBarPosition ?? const Offset(20, 50);
 
   AccordionSimulatorState copyWith({
     Color? backgroundColor,
@@ -247,6 +258,8 @@ class AccordionSimulatorState {
     Offset? compas1Position,
     bool? isCompas2Undocked,
     Offset? compas2Position,
+    bool? isSongBarUndocked,
+    Offset? songBarPosition,
   }) {
     return AccordionSimulatorState(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -304,6 +317,8 @@ class AccordionSimulatorState {
       compas1Position: compas1Position ?? this.compas1Position,
       isCompas2Undocked: isCompas2Undocked ?? this.isCompas2Undocked,
       compas2Position: compas2Position ?? this.compas2Position,
+      isSongBarUndocked: isSongBarUndocked ?? this.isSongBarUndocked,
+      songBarPosition: songBarPosition ?? this.songBarPosition,
     );
   }
 
@@ -424,6 +439,14 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     } else {
       state = state.copyWith(compas2Position: position);
     }
+  }
+
+  void toggleUndockSongBar() {
+    state = state.copyWith(isSongBarUndocked: !state.isSongBarUndocked);
+  }
+
+  void setSongBarPosition(Offset position) {
+    state = state.copyWith(songBarPosition: position);
   }
 
   void setNotation(NotationMode notation) {
@@ -884,6 +907,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     // Acoplado: la pista manda. Desacoplado: solo avanza el Compás.
     final useFileTransport = _audioPlayer.isLoaded && state.isAudioCoupled;
     if (useFileTransport) {
+      _audioPlayer.seek(state.currentAudioTime);
       _audioPlayer.play();
     } else {
       _audioPlayer.pause();
@@ -899,12 +923,13 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       }
 
       final fileDrives = _audioPlayer.isLoaded && state.isAudioCoupled;
-      final totalDur = fileDrives && _audioPlayer.durationSeconds > 0
-          ? _audioPlayer.durationSeconds
+      final audioDur = _audioPlayer.durationSeconds;
+      final totalDur = fileDrives && audioDur > 0
+          ? audioDur
           : (state.totalAudioDuration > 0 ? state.totalAudioDuration : 16.0);
 
-      // Si la pista terminó, detener y volver al inicio.
-      if (fileDrives && _audioPlayer.positionSeconds >= totalDur - 0.05) {
+      // Si la pista terminó (y ya avanzó más allá del inicio > 0.5s), detener y volver al inicio.
+      if (fileDrives && _audioPlayer.positionSeconds > 0.5 && _audioPlayer.positionSeconds >= totalDur - 0.1) {
         timer.cancel();
         _audioPlayer.stop();
         _audioBridge.allNotesOff();
@@ -957,6 +982,25 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       playingChordNotes: const {},
     );
     _audioBridge.allNotesOff();
+  }
+
+  /// Retrocede al compás anterior y sincroniza la posición del audio y de la cuadrícula.
+  void previousBar() {
+    final bpm = state.audioReport?.bpm ?? 120.0;
+    final secondsPerBar = (60.0 / bpm) * 4.0;
+    final currentBar = state.selectedBarIndex ?? 0;
+    final targetBar = (currentBar - 1).clamp(0, state.measures.isNotEmpty ? state.measures.length - 1 : 0);
+    seekAudio(targetBar * secondsPerBar);
+  }
+
+  /// Avanza al siguiente compás y sincroniza la posición del audio y de la cuadrícula.
+  void nextBar() {
+    final bpm = state.audioReport?.bpm ?? 120.0;
+    final secondsPerBar = (60.0 / bpm) * 4.0;
+    final currentBar = state.selectedBarIndex ?? 0;
+    final maxBar = state.measures.isNotEmpty ? state.measures.length - 1 : 0;
+    final targetBar = (currentBar + 1).clamp(0, maxBar);
+    seekAudio(targetBar * secondsPerBar);
   }
 
   void seekAudio(double time) {
