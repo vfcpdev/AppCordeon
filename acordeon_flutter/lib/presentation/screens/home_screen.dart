@@ -43,10 +43,13 @@ class HomeScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Tarjeta de pista de audio y análisis armónico (si hay audio cargado)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8),
-                              child: TrackInfoCardWidget(),
-                            ),
+                            if (state.audioReport != null)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                child: state.isSongBarUndocked
+                                    ? _buildSongBarPlaceholder(notifier)
+                                    : const TrackInfoCardWidget(),
+                              ),
 
                             // ================= FILA SUPERIOR: ESCENARIO DE DIAPASONES =================
                             Align(
@@ -144,6 +147,13 @@ class HomeScreen extends ConsumerWidget {
                   position: state.compas2Position,
                   onPositionChanged: (pos) => notifier.setCompasPosition(2, pos),
                   onDock: () => notifier.toggleUndockCompas(2),
+                ),
+              if (state.isSongBarUndocked && state.audioReport != null)
+                _buildFloatingSongBar(
+                  context: context,
+                  position: state.songBarPosition,
+                  onPositionChanged: notifier.setSongBarPosition,
+                  onDock: notifier.toggleUndockSongBar,
                 ),
               if (state.showMultiBeatModal)
                 const MultiBeatChordDialog(),
@@ -345,6 +355,166 @@ class HomeScreen extends ConsumerWidget {
                 accordionNumber: accordionNumber,
                 width: 185,
                 isUndocked: true,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSongBarPlaceholder(AccordionSimulatorNotifier notifier) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF86EFAC), width: 1.0),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const FaIcon(
+            FontAwesomeIcons.music,
+            size: 11,
+            color: Color(0xFF16A34A),
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'Barra de canción desacoplada (flotante)',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF15803D),
+            ),
+          ),
+          const SizedBox(width: 12),
+          InkWell(
+            onTap: notifier.toggleUndockSongBar,
+            borderRadius: BorderRadius.circular(5),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FaIcon(
+                    FontAwesomeIcons.compress,
+                    size: 9,
+                    color: Color(0xFF16A34A),
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'Volver a acoplar',
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF15803D),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingSongBar({
+    required BuildContext context,
+    required Offset position,
+    required ValueChanged<Offset> onPositionChanged,
+    required VoidCallback onDock,
+  }) {
+    final screenSize = MediaQuery.sizeOf(context);
+    final clampedX = position.dx.clamp(0.0, (screenSize.width - 400).clamp(0.0, double.infinity));
+    final clampedY = position.dy.clamp(0.0, (screenSize.height - 100).clamp(0.0, double.infinity));
+
+    return Positioned(
+      left: clampedX,
+      top: clampedY,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF38BDF8), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.22),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Barra de arrastre superior
+              GestureDetector(
+                onPanUpdate: (details) {
+                  onPositionChanged(Offset(clampedX + details.delta.dx, clampedY + details.delta.dy));
+                },
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.move,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE0F2FE),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const FaIcon(
+                          FontAwesomeIcons.upDownLeftRight,
+                          size: 9.5,
+                          color: Color(0xFF0284C7),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Barra de Canción (Móvil)',
+                          style: TextStyle(
+                            fontSize: 10.0,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0369A1),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        Tooltip(
+                          message: 'Volver a acoplar',
+                          child: InkWell(
+                            onTap: onDock,
+                            child: const Padding(
+                              padding: EdgeInsets.all(2.0),
+                              child: FaIcon(
+                                FontAwesomeIcons.compress,
+                                size: 9.5,
+                                color: Color(0xFF0284C7),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Contenido interactivo (los botones responden de inmediato)
+              const Padding(
+                padding: EdgeInsets.all(4.0),
+                child: TrackInfoCardWidget(isFloating: true),
               ),
             ],
           ),

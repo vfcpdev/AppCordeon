@@ -139,6 +139,44 @@ class AccordionSimulatorState {
   final Offset? _songBarPosition;
   Offset get songBarPosition => _songBarPosition ?? const Offset(20, 50);
 
+  /// Acorde activo en el Compás actual (o el más reciente dentro del compás/tiempo).
+  String get activeCompasChord {
+    if (selectedBarIndex == null || selectedBarIndex! < 0 || selectedBarIndex! >= measures.length) {
+      return '';
+    }
+    final row = measures[selectedBarIndex!];
+    final beatIdx = selectedBeatIndex ?? 0;
+
+    // 1. Probar en el beat seleccionado
+    if (beatIdx >= 0 && beatIdx < row.beats.length) {
+      final c = row.beats[beatIdx].chord.trim();
+      if (c.isNotEmpty) return c;
+    }
+
+    // 2. Probar hacia atrás en el mismo compás
+    for (int b = beatIdx - 1; b >= 0; b--) {
+      final c = row.beats[b].chord.trim();
+      if (c.isNotEmpty) return c;
+    }
+
+    // 3. Probar en cualquier beat del mismo compás
+    for (final b in row.beats) {
+      final c = b.chord.trim();
+      if (c.isNotEmpty) return c;
+    }
+
+    // 4. Si el compás actual está totalmente vacío, buscar hacia atrás en compases previos
+    for (int m = selectedBarIndex! - 1; m >= 0; m--) {
+      final prevRow = measures[m];
+      for (int b = prevRow.beats.length - 1; b >= 0; b--) {
+        final c = prevRow.beats[b].chord.trim();
+        if (c.isNotEmpty) return c;
+      }
+    }
+
+    return '';
+  }
+
   const AccordionSimulatorState({
     required this.backgroundColor,
     required this.notation,
@@ -1057,9 +1095,18 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void selectBeat(int barIdx, int beatIdx) {
+    BellowsMode nextBellows = state.bellows1;
+    if (barIdx >= 0 && barIdx < state.measures.length) {
+      final beats = state.measures[barIdx].beats;
+      if (beatIdx >= 0 && beatIdx < beats.length) {
+        final b = beats[beatIdx].bellows;
+        if (b != BellowsMode.both) nextBellows = b;
+      }
+    }
     state = state.copyWith(
       selectedBarIndex: barIdx,
       selectedBeatIndex: beatIdx,
+      bellows1: nextBellows,
     );
   }
 
@@ -1154,7 +1201,15 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final updatedMeasures = List<MeasureRow>.from(state.measures);
     updatedMeasures[barIndex] = MeasureRow(barNumber: row.barNumber, beats: updatedBeats);
 
-    state = state.copyWith(measures: updatedMeasures);
+    final beatBellows = updatedBeats[beatIndex].bellows;
+    final nextBellows = beatBellows != BellowsMode.both ? beatBellows : state.bellows1;
+
+    state = state.copyWith(
+      measures: updatedMeasures,
+      selectedBarIndex: barIndex,
+      selectedBeatIndex: beatIndex,
+      bellows1: nextBellows,
+    );
   }
 
   /// Define el fuelle (Abre o Cierra) para un tiempo del compás.
@@ -1723,6 +1778,14 @@ final activeChordPitchClassesProvider =
     extension: freeChordFourth,
   );
 
+  // Acorde activo en el Compás (seleccionado o reproduciéndose)
+  final compasChord = ref.watch(accordionSimulatorProvider.select((s) => s.activeCompasChord));
+
+  // Clases de altura del acorde del Compás
+  final compasPcs = compasChord.isNotEmpty
+      ? ChordCatalog.pitchClassesForChordSymbol(compasChord)
+      : const <int>{};
+
   final selectedChordNotes = <int>[];
   if (detectorSelected.isNotEmpty) {
     final selectedIds = detectorSelected.toSet();
@@ -1737,16 +1800,25 @@ final activeChordPitchClassesProvider =
     }
   }
 
-  // Si isFreeChordFixed es verdadero, el acorde del constructor permanece siempre activo.
-  // Si no está fijo y la canción está sonando con sincronización, la canción toma precedencia.
-  final chordFromConstructor = (isFreeChordFixed || !isPlaying || !syncDiapason)
-      ? generated
-      : const <int>[];
+  // Si hay un acorde en el Compás y el constructor no está fijado manualmente,
+  // el acorde del Compás toma precedencia en el diapasón.
+  final Set<int> baseChordPcs;
+  if (!isFreeChordFixed && compasPcs.isNotEmpty) {
+    baseChordPcs = compasPcs;
+  } else {
+    baseChordPcs = (isFreeChordFixed || !isPlaying || !syncDiapason)
+        ? generated.map((n) => n % 12).toSet()
+        : const <int>{};
+  }
 
-  return ChordCatalog.activePitchClasses(
-    generated: chordFromConstructor,
-    playing: syncDiapason && isPlaying ? playingChordNotes : const <int>[],
-    selected: selectedChordNotes,
-  );
+  final playingPcs = (syncDiapason && isPlaying)
+      ? playingChordNotes.map((n) => n % 12).toSet()
+      : const <int>{};
+
+  return <int>{
+    ...baseChordPcs,
+    ...playingPcs,
+    ...selectedChordNotes.map((n) => n % 12),
+  };
 });
 

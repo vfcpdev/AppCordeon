@@ -469,118 +469,106 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 4.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Columna Izquierda: Transporte y Seeker de Tiempo
-                _buildTransportAndSeeker(context, state, notifier),
-                const SizedBox(width: 4),
-
-                // Columna Central: Cuadrícula de Compases con 4 Tiempos por fila
-                Expanded(
-                  child: Container(
-                    constraints: const BoxConstraints(maxHeight: 330),
-                    child: RawScrollbar(
-                      controller: _compasScrollController,
-                      thumbVisibility: true,
-                      trackVisibility: true,
-                      thickness: 8.0, // Aumentado ~30% sobre el grosor estándar (6.0px -> 8.0px)
-                      radius: const Radius.circular(4),
-                      thumbColor: const Color(0xFF94A3B8),
-                      trackColor: const Color(0xFFF1F5F9),
-                      trackBorderColor: const Color(0xFFE2E8F0),
-                      padding: EdgeInsets.zero,
-                      child: ListView.builder(
-                        controller: _compasScrollController,
-                        padding: const EdgeInsets.only(right: 12),
-                        shrinkWrap: true,
-                        itemCount: state.measures.length,
-                        itemBuilder: (context, mIdx) {
-                          final measure = state.measures[mIdx];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 5),
-                            clipBehavior: Clip.antiAlias,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFFCBD5E1)),
-                            ),
-                            child: Row(
-                              children: [
-                                // Número de compás
-                                Container(
-                                  width: 18,
-                                  padding: const EdgeInsets.symmetric(vertical: 6),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFF1F5F9),
-                                    border: Border(right: BorderSide(color: Color(0xFFCBD5E1))),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '${measure.barNumber}',
-                                      style: const TextStyle(
-                                        fontSize: 9.0,
-                                        fontWeight: FontWeight.w900,
-                                        color: Color(0xFF0F172A),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // 4 Beats / Tiempos del compás
-                                Expanded(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: measure.beats.asMap().entries.map((entry) {
-                                      final beatIdx = entry.key;
-                                      final beat = entry.value;
-
-                                      final isCurrentPlayhead = state.isPlayingAudio &&
-                                          state.selectedBarIndex == mIdx &&
-                                          state.selectedBeatIndex == beatIdx;
-
-                                      return _InlineBeatChordEditor(
-                                        accordionId: widget.accordionNumber,
-                                        measureIndex: mIdx,
-                                        beatIndex: beatIdx,
-                                        totalMeasures: state.measures.length,
-                                        chord: beat.chord,
-                                        timeText: beat.timeText,
-                                        bellows: beat.bellows,
-                                        isCurrentPlayhead: isCurrentPlayhead,
-                                        isMarked: notifier.isBeatMarked(mIdx, beatIdx),
-                                        isSelected: state.selectedBarIndex == mIdx && state.selectedBeatIndex == beatIdx,
-                                        hasBottomBorder: beatIdx < measure.beats.length - 1,
-                                        notation: state.notation,
-                                        onChanged: (newChord) {
-                                          notifier.updateMeasureBeat(mIdx, beatIdx, newChord);
-                                        },
-                                        onSelected: () {
-                                          notifier.selectBeat(mIdx, beatIdx);
-                                        },
-                                        onNavigate: (bar, beat) {
-                                          notifier.selectBeat(bar, beat);
-                                          _scrollToBar(bar);
-                                        },
-                                        onToggleMark: () {
-                                          notifier.toggleBeatMark(mIdx, beatIdx);
-                                        },
-                                        onBellowsChanged: (bellows) {
-                                          notifier.setBeatBellows(mIdx, beatIdx, bellows);
-                                        },
-                                      );
-                                    }).toList(),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 330),
+              child: RawScrollbar(
+                controller: _compasScrollController,
+                thumbVisibility: true,
+                trackVisibility: true,
+                thickness: 8.0, // Aumentado ~30% sobre el grosor estándar (6.0px -> 8.0px)
+                radius: const Radius.circular(4),
+                thumbColor: const Color(0xFF94A3B8),
+                trackColor: const Color(0xFFF1F5F9),
+                trackBorderColor: const Color(0xFFE2E8F0),
+                padding: EdgeInsets.zero,
+                child: ListView.builder(
+                  controller: _compasScrollController,
+                  padding: const EdgeInsets.only(right: 12),
+                  shrinkWrap: true,
+                  itemCount: state.measures.length,
+                  itemBuilder: (context, mIdx) {
+                    final measure = state.measures[mIdx];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 5),
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
                       ),
-                    ),
-                  ),
+                      child: Row(
+                        children: [
+                          // Número de compás
+                          Container(
+                            width: 18,
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF1F5F9),
+                              border: Border(right: BorderSide(color: Color(0xFFCBD5E1))),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${measure.barNumber}',
+                                style: const TextStyle(
+                                  fontSize: 9.0,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // 4 Beats / Tiempos del compás
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: measure.beats.asMap().entries.map((entry) {
+                                final beatIdx = entry.key;
+                                final beat = entry.value;
+
+                                final isCurrentPlayhead = state.isPlayingAudio &&
+                                    state.selectedBarIndex == mIdx &&
+                                    state.selectedBeatIndex == beatIdx;
+
+                                return _InlineBeatChordEditor(
+                                  accordionId: widget.accordionNumber,
+                                  measureIndex: mIdx,
+                                  beatIndex: beatIdx,
+                                  totalMeasures: state.measures.length,
+                                  chord: beat.chord,
+                                  timeText: beat.timeText,
+                                  bellows: beat.bellows,
+                                  isCurrentPlayhead: isCurrentPlayhead,
+                                  isMarked: notifier.isBeatMarked(mIdx, beatIdx),
+                                  isSelected: state.selectedBarIndex == mIdx && state.selectedBeatIndex == beatIdx,
+                                  hasBottomBorder: beatIdx < measure.beats.length - 1,
+                                  notation: state.notation,
+                                  onChanged: (newChord) {
+                                    notifier.updateMeasureBeat(mIdx, beatIdx, newChord);
+                                  },
+                                  onSelected: () {
+                                    notifier.selectBeat(mIdx, beatIdx);
+                                  },
+                                  onNavigate: (bar, beat) {
+                                    notifier.selectBeat(bar, beat);
+                                    _scrollToBar(bar);
+                                  },
+                                  onToggleMark: () {
+                                    notifier.toggleBeatMark(mIdx, beatIdx);
+                                  },
+                                  onBellowsChanged: (bellows) {
+                                    notifier.setBeatBellows(mIdx, beatIdx, bellows);
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              ],
+              ),
             ),
           ),
 
@@ -943,173 +931,6 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTransportAndSeeker(
-    BuildContext context,
-    AccordionSimulatorState state,
-    AccordionSimulatorNotifier notifier,
-  ) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildTransportBtn(
-          icon: FontAwesomeIcons.backwardStep,
-          onTap: () {},
-          tooltip: 'Compás Anterior',
-        ),
-        const SizedBox(height: 4),
-        _buildTransportBtn(
-          icon: state.isPlayingAudio ? FontAwesomeIcons.pause : FontAwesomeIcons.play,
-          isPrimary: true,
-          onTap: notifier.togglePlayAudio,
-          tooltip: 'Reproducir / Pausar',
-        ),
-        const SizedBox(height: 4),
-        _buildTransportBtn(
-          icon: FontAwesomeIcons.forwardStep,
-          onTap: () {},
-          tooltip: 'Siguiente Compás',
-        ),
-        const SizedBox(height: 4),
-        _buildTransportBtn(
-          icon: FontAwesomeIcons.stop,
-          onTap: notifier.stopAudio,
-          tooltip: 'Detener',
-        ),
-        const SizedBox(height: 4),
-        if (state.audioReport != null || state.loadedAudioFileName != null) ...[
-          _buildTransportBtn(
-            icon: state.isAudioCoupled
-                ? FontAwesomeIcons.link
-                : FontAwesomeIcons.linkSlash,
-            isActive: state.isAudioCoupled,
-            onTap: notifier.toggleAudioCoupling,
-            tooltip: state.isAudioCoupled
-                ? 'Desacoplar audio del Compás'
-                : 'Acoplar audio al Compás',
-          ),
-          const SizedBox(height: 4),
-          if (state.audioReport != null && state.audioReport!.chords.isNotEmpty) ...[
-            _buildTransportBtn(
-              icon: FontAwesomeIcons.tableCells,
-              onTap: () {
-                notifier.applyChordsToMeasures(state.audioReport!.chords);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Acordes detectados cargados en el Compás.'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-              tooltip: 'Cargar acordes analizados en el Compás',
-            ),
-            const SizedBox(height: 4),
-          ],
-        ],
-        _buildTransportBtn(
-          icon: FontAwesomeIcons.arrowsRotate,
-          isActive: state.syncDiapason,
-          onTap: notifier.toggleSyncDiapason,
-          tooltip: 'Sincronizar Diapasón',
-        ),
-        const SizedBox(height: 8),
-
-        // Tiempo actual y Seeker Vertical
-        SizedBox(
-          width: 26,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              _formatTime(state.currentAudioTime),
-              style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
-            ),
-          ),
-        ),
-        SizedBox(
-          height: 140,
-          width: 22,
-          child: RotatedBox(
-            // 1 cuarto de giro: el mínimo (00:00) queda arriba y el avance
-            // baja por la pista, como un seeker de reproducción vertical.
-            quarterTurns: 1,
-            child: SliderTheme(
-              data: SliderThemeData(
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                trackHeight: 3.5,
-                activeTrackColor: const Color(0xFF0284C7),
-                inactiveTrackColor: const Color(0xFFCBD5E1),
-                thumbColor: const Color(0xFF0284C7),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
-              ),
-              child: Slider(
-                value: state.currentAudioTime.clamp(0.0, state.totalAudioDuration > 0 ? state.totalAudioDuration : 1.0),
-                min: 0.0,
-                max: state.totalAudioDuration > 0 ? state.totalAudioDuration : 1.0,
-                onChanged: (v) => notifier.seekAudio(v),
-              ),
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 26,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              '-${_formatTime((state.totalAudioDuration - state.currentAudioTime).clamp(0.0, double.infinity))}',
-              style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _formatTime(double sec) {
-    final s = sec.clamp(0.0, 99999.0).toInt();
-    final mins = (s ~/ 60).toString().padLeft(2, '0');
-    final secs = (s % 60).toString().padLeft(2, '0');
-    return '$mins:$secs';
-  }
-
-  Widget _buildTransportBtn({
-    required FaIconData icon,
-    required VoidCallback onTap,
-    required String tooltip,
-    bool isPrimary = false,
-    bool isActive = false,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          width: 26,
-          height: 26,
-          decoration: BoxDecoration(
-            color: isPrimary
-                ? const Color(0xFF0284C7)
-                : (isActive ? const Color(0xFFE0F2FE) : const Color(0xFFF1F5F9)),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: isPrimary
-                  ? const Color(0xFF0369A1)
-                  : (isActive ? const Color(0xFF38BDF8) : const Color(0xFFCBD5E1)),
-            ),
-          ),
-          child: Center(
-            child: FaIcon(
-              icon,
-              size: 11,
-              color: isPrimary
-                  ? Colors.white
-                  : (isActive ? const Color(0xFF0284C7) : const Color(0xFF334155)),
-            ),
-          ),
         ),
       ),
     );

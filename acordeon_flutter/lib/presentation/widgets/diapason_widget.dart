@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/tuning.dart';
+import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
 import 'diapason_button_widget.dart';
 import 'tonic_bar_widget.dart';
@@ -49,6 +50,13 @@ class DiapasonWidget extends ConsumerWidget {
     final freeChordType = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordType));
     final freeChordFourth = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordFourth));
     final notation = ref.watch(accordionSimulatorProvider.select((s) => s.notation));
+    final isFreeChordFixed = ref.watch(accordionSimulatorProvider.select((s) => s.isFreeChordFixed));
+
+    // Acorde activo en el Compás (seleccionado o reproduciéndose)
+    final compasChord = ref.watch(accordionSimulatorProvider.select((s) => s.activeCompasChord));
+    final formattedCompasChord = compasChord.isNotEmpty
+        ? ChordCatalog.formatChordForNotation(compasChord, notation)
+        : '';
 
     final rowList = [
       _RowDef(
@@ -232,16 +240,26 @@ class DiapasonWidget extends ConsumerWidget {
                                   ),
                                 ],
                               ),
-                              child: Text.rich(
-                                TonicBarWidget.buildChordNameSpans(
-                                  root: freeChordRoot,
-                                  type: freeChordType,
-                                  extension: freeChordFourth,
-                                  latin: notation != NotationMode.alemana,
-                                  fontSize: 9.0,
-                                ),
-                                key: ValueKey('diapason_chord_label_$accordionNumber'),
-                              ),
+                              child: (!isFreeChordFixed && formattedCompasChord.isNotEmpty)
+                                  ? Text(
+                                      formattedCompasChord,
+                                      key: ValueKey('diapason_chord_label_$accordionNumber'),
+                                      style: const TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    )
+                                  : Text.rich(
+                                      TonicBarWidget.buildChordNameSpans(
+                                        root: freeChordRoot,
+                                        type: freeChordType,
+                                        extension: freeChordFourth,
+                                        latin: notation != NotationMode.alemana,
+                                        fontSize: 9.0,
+                                      ),
+                                      key: ValueKey('diapason_chord_label_$accordionNumber'),
+                                    ),
                             ),
                           ),
                         ),
@@ -316,6 +334,7 @@ class DiapasonWidget extends ConsumerWidget {
                       buttons: rDef.buttons,
                       topOffset: rDef.topOffset,
                       activeChordPitchClasses: activeChordPitchClasses,
+                      compasChord: compasChord,
                     ),
                   );
                 }).toList(),
@@ -348,6 +367,7 @@ class DiapasonWidget extends ConsumerWidget {
     required List<TrebleButtonModel> buttons,
     required double topOffset,
     required Set<int> activeChordPitchClasses,
+    required String compasChord,
   }) {
     final notifier = ref.read(accordionSimulatorProvider.notifier);
     final isPrimary = accordionNumber == 1;
@@ -362,6 +382,7 @@ class DiapasonWidget extends ConsumerWidget {
     final notation = ref.watch(accordionSimulatorProvider.select((s) => s.notation));
     final detectorMode = ref.watch(accordionSimulatorProvider.select((s) => s.detectorMode));
     final freeChordOctave = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordOctave));
+    final isFreeChordFixed = ref.watch(accordionSimulatorProvider.select((s) => s.isFreeChordFixed));
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -378,6 +399,7 @@ class DiapasonWidget extends ConsumerWidget {
 
           // `btn.pull`/`btn.push` ya incluyen la transposición de la afinación.
           bool matchesOctave(int midi) {
+            if (!isFreeChordFixed && compasChord.isNotEmpty) return true;
             if (freeChordOctave == 'all' || freeChordOctave.isEmpty) return true;
             // Octava 3: 48 a 59, Octava 4: 60 a 71, Octava 5: 72 a 83
             final oct = (midi / 12).floor() - 1;

@@ -159,4 +159,56 @@ void main() {
 
     expect(container.read(accordionSimulatorProvider).selectedBarIndex, 2);
   });
+
+  testWidgets('Barra de canción: botones de reproducción horizontales, opciones agrupadas y desacople eficaz',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: AcordeonApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AcordeonApp)),
+    );
+    final notifier = container.read(accordionSimulatorProvider.notifier);
+
+    // Cargar la pista demo para activar la barra de la canción
+    await notifier.loadDemoAudioTrack();
+    await tester.pumpAndSettle();
+
+    // La barra de la canción debe estar visible
+    expect(find.text('La Gota Fría - Demo Vallenato.wav'), findsOneWidget);
+
+    // Botones de reproducción horizontales (Atrás, Play, Adelante, Detener)
+    expect(find.byTooltip('Compás Anterior'), findsOneWidget);
+    expect(find.byTooltip('Reproducir'), findsOneWidget);
+    expect(find.byTooltip('Siguiente Compás'), findsOneWidget);
+    expect(find.byTooltip('Detener'), findsOneWidget);
+
+    // Opciones agrupadas (Tono, BPM, Cargar Acordes)
+    expect(find.textContaining('Tono:'), findsOneWidget);
+    expect(find.textContaining('BPM'), findsWidgets);
+    expect(find.text('Cargar Acordes'), findsOneWidget);
+
+    // Desacoplar la barra de la canción
+    notifier.toggleUndockSongBar();
+    await tester.pumpAndSettle();
+
+    expect(container.read(accordionSimulatorProvider).isSongBarUndocked, isTrue);
+    expect(find.text('Barra de Canción (Móvil)'), findsOneWidget);
+    expect(find.text('Barra de canción desacoplada (flotante)'), findsOneWidget);
+
+    // Volver a acoplar
+    notifier.toggleUndockSongBar();
+    await tester.pumpAndSettle();
+
+    expect(container.read(accordionSimulatorProvider).isSongBarUndocked, isFalse);
+    expect(find.text('Barra de Canción (Móvil)'), findsNothing);
+  });
 }
