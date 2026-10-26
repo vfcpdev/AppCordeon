@@ -1119,14 +1119,6 @@ class _ChordTools {
     return null;
   }
 
-  static _ChordModKey? parseModifierChar(String char) {
-    if (char == '.' || char == ',') return _ChordModKey.menor;
-    if (char == '/') return _ChordModKey.septima;
-    if (char == '+') return _ChordModKey.aumentada;
-    if (char == '-') return _ChordModKey.disminuida;
-    return null;
-  }
-
   static String applyModifier(String chord, _ChordModKey mod, NotationMode notation) {
     var (root, rest) = splitChord(chord);
     if (root.isEmpty) {
