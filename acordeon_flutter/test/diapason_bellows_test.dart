@@ -133,4 +133,45 @@ void main() {
     await tester.pumpAndSettle();
     expect(label().textSpan?.toPlainText(), 'Acorde:   C   Disminuido   Séptima');
   });
+
+  testWidgets('el botón de tonalidad es funcional y abre el selector de afinación',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    TuningDefinition? selectedTuning;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: DiapasonWidget(
+              currentTuning: TuningRegistry.defaultTunings[0],
+              onTuningChanged: (t) => selectedTuning = t,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // El botón existe con la key asignada
+    final tuningBtn = find.byKey(const ValueKey('diapason_tuning_btn_1'));
+    expect(tuningBtn, findsOneWidget);
+
+    // Al pulsarlo, se abre el diálogo de afinaciones
+    await tester.tap(tuningBtn);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Seleccionar acordeón'), findsOneWidget);
+
+    // Seleccionamos otra afinación de la lista
+    final secondTuning = TuningRegistry.defaultTunings[1];
+    await tester.tap(find.text(secondTuning.name).first);
+    await tester.pumpAndSettle();
+
+    expect(selectedTuning, isNotNull);
+    expect(selectedTuning?.id, secondTuning.id);
+  });
 }

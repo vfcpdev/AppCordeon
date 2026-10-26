@@ -75,6 +75,26 @@ class TuningRegistry {
     ),
   ];
 
+  static List<TuningDefinition> _orderedTunings = List.from(defaultTunings);
+
+  /// Lista ordenada actual de afinaciones (personalizada o por tono).
+  static List<TuningDefinition> get orderedTunings => List.unmodifiable(_orderedTunings);
+
+  /// Actualiza la lista con un orden personalizado (por ejemplo mediante Drag & Drop).
+  static void setOrderedTunings(List<TuningDefinition> tunings) {
+    _orderedTunings = List.from(tunings);
+  }
+
+  /// Restablece el orden al predeterminado de fábrica.
+  static void resetToDefaultOrder() {
+    _orderedTunings = List.from(defaultTunings);
+  }
+
+  /// Ordena la lista de forma ascendente por tono (del acordeón más grave al más agudo, según offset).
+  static void sortByPitchAscending() {
+    _orderedTunings.sort((a, b) => a.offset.compareTo(b.offset));
+  }
+
   static TuningDefinition getById(String id) {
     return defaultTunings.firstWhere(
       (t) => t.id == id,
