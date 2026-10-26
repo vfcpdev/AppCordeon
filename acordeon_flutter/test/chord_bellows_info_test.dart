@@ -175,6 +175,13 @@ void main() {
       expect(find.text('Cierra'), findsOneWidget);
       expect(find.text('Abre'), findsOneWidget);
 
+      // Asigna un acorde al primer tiempo para habilitar las flechas de fuelle
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MeasureGridWidget)),
+      );
+      container.read(accordionSimulatorProvider.notifier).updateMeasureBeat(0, 0, 'Do');
+      await tester.pumpAndSettle();
+
       // Verifica que existan tooltips o íconos de flechas en los tiempos
       expect(find.byTooltip('Abre (Fuelle abriendo)'), findsWidgets);
       expect(find.byTooltip('Cierra (Fuelle cerrando)'), findsWidgets);

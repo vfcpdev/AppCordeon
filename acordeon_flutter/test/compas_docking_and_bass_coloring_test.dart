@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:acordeon_flutter/core/constants/enums.dart';
 import 'package:acordeon_flutter/main.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/accordion_button_3d.dart';
 import 'package:acordeon_flutter/presentation/widgets/bass_panel_widget.dart';
+import 'package:acordeon_flutter/presentation/widgets/diapason_button_widget.dart';
+import 'package:acordeon_flutter/presentation/widgets/diapason_widget.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
 void main() {
@@ -210,5 +213,88 @@ void main() {
 
     expect(container.read(accordionSimulatorProvider).isSongBarUndocked, isFalse);
     expect(find.text('Barra de Canción (Móvil)'), findsNothing);
+  });
+
+  testWidgets('Garantiza que el acorde en el Compás se muestre en el Diapasón principal',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: AcordeonApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(DiapasonWidget).first),
+    );
+    final notifier = container.read(accordionSimulatorProvider.notifier);
+
+    // 1. Registramos un acorde en el Compás 1, Beat 0: "Sol7" y seleccionamos ese beat
+    notifier.updateMeasureBeat(0, 0, 'Sol7');
+    notifier.selectBeat(0, 0);
+    await tester.pumpAndSettle();
+
+    // Verificamos que activeCompasChord en el estado sea 'Sol7'
+    expect(container.read(accordionSimulatorProvider).activeCompasChord, 'Sol7');
+
+    // 2. Comprobamos la etiqueta flotante sobre el Diapasón Principal
+    final labelFinder = find.byKey(const ValueKey('diapason_chord_label_1'));
+    expect(labelFinder, findsOneWidget);
+    final labelWidget = tester.widget<Text>(labelFinder);
+    final labelText = labelWidget.textSpan?.toPlainText() ?? '';
+    expect(labelText, contains('Sol7'));
+    expect(labelText, contains('Sol'));
+    expect(labelText, contains('Si'));
+    expect(labelText, contains('Re'));
+    expect(labelText, contains('Fa'));
+
+    // 3. Comprobamos que activeChordPitchClassesProvider(1) contenga las clases de altura de Sol7 (7, 11, 2, 5)
+    final activePcs = container.read(activeChordPitchClassesProvider(1));
+    expect(activePcs, containsAll(<int>{7, 11, 2, 5}));
+
+    // 4. Verificamos que los botones correspondientes a Sol7 en el Diapasón 1 estén coloreados/marcados
+    final diapason1Buttons = tester.widgetList<DiapasonButtonWidget>(
+      find.descendant(
+        of: find.byWidgetPredicate(
+          (w) => w is DiapasonWidget && w.accordionNumber == 1,
+        ),
+        matching: find.byType(DiapasonButtonWidget),
+      ),
+    ).toList();
+
+    expect(diapason1Buttons.isNotEmpty, isTrue);
+    final sol7Buttons = diapason1Buttons.where(
+      (btn) => activePcs.contains(btn.pullMidi % 12) || activePcs.contains(btn.pushMidi % 12),
+    );
+    expect(sol7Buttons.isNotEmpty, isTrue);
+    for (final btn in sol7Buttons) {
+      if (activePcs.contains(btn.pullMidi % 12)) {
+        expect(btn.isChordPull, isTrue);
+      }
+      if (activePcs.contains(btn.pushMidi % 12)) {
+        expect(btn.isChordPush, isTrue);
+      }
+    }
+
+    // 5. Verificamos que al cambiar la notación a alemana, la etiqueta del compás se actualice a G7
+    notifier.setNotation(NotationMode.alemana);
+    await tester.pumpAndSettle();
+
+    final labelWidgetGerman = tester.widget<Text>(labelFinder);
+    final labelTextGerman = labelWidgetGerman.textSpan?.toPlainText() ?? '';
+    expect(labelTextGerman, contains('G7'));
+    expect(labelTextGerman, contains('G'));
+    expect(labelTextGerman, contains('B'));
+    expect(labelTextGerman, contains('D'));
+    expect(labelTextGerman, contains('F'));
+
+    // 6. Si se asigna dirección de fuelle 'Cierra' (push) al beat del compás, el fuelle del diapasón 1 se sincroniza
+    notifier.setBeatBellows(0, 0, BellowsMode.push);
+    await tester.pumpAndSettle();
+    expect(container.read(accordionSimulatorProvider).bellows1, BellowsMode.push);
   });
 }

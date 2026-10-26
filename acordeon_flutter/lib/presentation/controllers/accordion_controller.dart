@@ -400,9 +400,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
           return MeasureBeat(
             barIndex: bIdx,
             beatIndex: beatIdx,
-            chord: (bIdx == 0 && beatIdx == 0) ? 'Bb' : '',
+            chord: '',
             timeText: '$mins:$secs',
-            isContinue: (bIdx == 0 && beatIdx > 0),
+            isContinue: false,
           );
         }),
       );
@@ -437,8 +437,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       sequenceMode: true,
       visibleGridRows: 4,
       measures: initialMeasures,
-      selectedBarIndex: 0,
-      selectedBeatIndex: 0,
+      selectedBarIndex: null,
+      selectedBeatIndex: null,
       freeChordRoot: 0, // Do
       freeChordType: 'maj',
       freeChordFourth: 'none',

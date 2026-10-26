@@ -240,26 +240,22 @@ class DiapasonWidget extends ConsumerWidget {
                                   ),
                                 ],
                               ),
-                              child: (!isFreeChordFixed && formattedCompasChord.isNotEmpty)
-                                  ? Text(
-                                      formattedCompasChord,
-                                      key: ValueKey('diapason_chord_label_$accordionNumber'),
-                                      style: const TextStyle(
-                                        fontSize: 9.5,
-                                        fontWeight: FontWeight.w900,
-                                        color: Color(0xFF0F172A),
-                                      ),
-                                    )
-                                  : Text.rich(
-                                      TonicBarWidget.buildChordNameSpans(
+                              child: Text.rich(
+                                (!isFreeChordFixed && formattedCompasChord.isNotEmpty)
+                                    ? ChordCatalog.buildChordLabelSpans(
+                                        chord: compasChord,
+                                        notation: notation,
+                                        fontSize: 9.0,
+                                      )
+                                    : TonicBarWidget.buildChordNameSpans(
                                         root: freeChordRoot,
                                         type: freeChordType,
                                         extension: freeChordFourth,
                                         latin: notation != NotationMode.alemana,
                                         fontSize: 9.0,
                                       ),
-                                      key: ValueKey('diapason_chord_label_$accordionNumber'),
-                                    ),
+                                key: ValueKey('diapason_chord_label_$accordionNumber'),
+                              ),
                             ),
                           ),
                         ),

@@ -1,3 +1,4 @@
+import 'package:flutter/painting.dart';
 import '../../core/constants/enums.dart';
 
 /// Catálogo de intervalos de acordes (Open/Closed: añadir un tipo = añadir una entrada).
@@ -256,6 +257,49 @@ class ChordCatalog {
       pcs.add((rootPc + 2) % 12);
     }
     return pcs;
+  }
+
+  /// Genera un TextSpan con el nombre del acorde y sus notas entre paréntesis para la etiqueta flotante.
+  static TextSpan buildChordLabelSpans({
+    required String chord,
+    required NotationMode notation,
+    double fontSize = 9.0,
+  }) {
+    final latin = notation != NotationMode.alemana;
+    final formatted = formatChordForNotation(chord, notation);
+    final pcs = pitchClassesForChordSymbol(chord);
+    final rootNames = latin ? latinRootNames : germanRootNames;
+
+    final notes = <String>[];
+    for (final pc in pcs) {
+      final name = rootNames[pc % 12];
+      if (!notes.contains(name)) notes.add(name);
+    }
+    final notesStr = notes.isNotEmpty ? '   (${notes.join(' - ')})' : '';
+
+    return TextSpan(
+      children: [
+        TextSpan(
+          text: formatted,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFF0F172A),
+            letterSpacing: 0.3,
+          ),
+        ),
+        if (notesStr.isNotEmpty)
+          TextSpan(
+            text: notesStr,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF047857),
+              letterSpacing: 0.2,
+            ),
+          ),
+      ],
+    );
   }
 }
 
