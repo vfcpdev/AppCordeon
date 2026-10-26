@@ -62,7 +62,7 @@ class HomeScreen extends ConsumerWidget {
                                     currentTuning: state.tuning1,
                                     onTuningChanged: (t) => t != null ? notifier.setTuning1(t) : null,
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 6),
 
                                   // Compás (izquierda, 150 px) + Constructor de Acorde (derecha, 150 px)
                                   // Row simple — IntrinsicHeight es incompatible con ListView
@@ -71,15 +71,15 @@ class HomeScreen extends ConsumerWidget {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: const [
-                                      MeasureGridWidget(width: 150),
-                                      SizedBox(width: 8),
+                                      MeasureGridWidget(width: 165),
+                                      SizedBox(width: 6),
                                       SizedBox(
                                         width: 150,
                                         child: FreeChordWidget(),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(width: 14),
+                                  const SizedBox(width: 10),
                                 ],
 
                                 // DIAPASÓN 2 (Comparativo / Equivalente)
@@ -89,18 +89,18 @@ class HomeScreen extends ConsumerWidget {
                                     currentTuning: state.tuning2,
                                     onTuningChanged: (t) => t != null ? notifier.setTuning2(t) : null,
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 6),
 
                                   // Cuadrícula de compases de Acordeón 2
                                   const MeasureGridWidget(accordionNumber: 2),
-                                  const SizedBox(width: 14),
+                                  const SizedBox(width: 10),
                                 ],
                               ],
                             ),
                           ),
                         ),
 
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 10),
 
                         // ================= FILA INFERIOR: TEORÍA ARMÓNICA =================
                         SingleChildScrollView(
@@ -156,7 +156,7 @@ class HomeScreen extends ConsumerWidget {
         children: [
           // Cuerpo: Bajos + Diapasón 10-11-10
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, 8, 8, 8),
+            padding: const EdgeInsets.fromLTRB(0, 6, 6, 6),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

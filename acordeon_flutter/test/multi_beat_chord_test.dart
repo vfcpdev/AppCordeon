@@ -46,6 +46,13 @@ void main() {
 
       expect(state.multiBeatChord, 'Sol7');
       expect(state.multiBeatPattern, '1.1, 2.3, 10.2');
+
+      // Los cuadros registrados deben quedar seleccionados en markedBeats
+      expect(state.markedBeats, containsAll([
+        AccordionSimulatorNotifier.beatKey(0, 0),
+        AccordionSimulatorNotifier.beatKey(1, 2),
+        AccordionSimulatorNotifier.beatKey(9, 1),
+      ]));
     });
   });
 
@@ -230,6 +237,13 @@ void main() {
       expect(state.measures[0].beats[0].chord, 'Sol7'); // 1.1 sigue teniendo Sol7
       expect(state.measures[1].beats[2].chord, '');     // 2.3 se limpió porque se editó
       expect(state.measures[1].beats[3].chord, 'Sol7'); // 2.4 ahora tiene Sol7
+
+      // Los cuadros registrados al editar deben quedar seleccionados
+      expect(state.markedBeats, containsAll([
+        AccordionSimulatorNotifier.beatKey(0, 0),
+        AccordionSimulatorNotifier.beatKey(1, 3),
+      ]));
+      expect(state.markedBeats, isNot(contains(AccordionSimulatorNotifier.beatKey(1, 2))));
     });
   });
 }

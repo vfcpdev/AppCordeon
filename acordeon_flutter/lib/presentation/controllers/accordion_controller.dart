@@ -1142,7 +1142,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final row = state.measures[barIndex];
     if (beatIndex < 0 || beatIndex >= row.beats.length) return null;
 
+    final key = beatKey(barIndex, beatIndex);
     updateMeasureBeat(barIndex, beatIndex, symbol);
+    state = state.copyWith(markedBeats: Set<int>.from(state.markedBeats)..add(key));
     return symbol;
   }
 
@@ -1159,10 +1161,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
             );
       // Recolectar todas las posiciones actuales de este acorde en todos los compases y cuadros
       final positions = <String>[];
+      final chordMarkedBeats = <int>{};
       for (var m = 0; m < state.measures.length; m++) {
         for (var b = 0; b < state.measures[m].beats.length; b++) {
           if (state.measures[m].beats[b].chord.trim() == symbol) {
             positions.add('${m + 1}.${b + 1}');
+            chordMarkedBeats.add(beatKey(m, b));
           }
         }
       }
@@ -1174,6 +1178,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         showMultiBeatModal: true,
         multiBeatChord: symbol,
         multiBeatPattern: pattern,
+        markedBeats: chordMarkedBeats.isNotEmpty ? chordMarkedBeats : state.markedBeats,
       );
     } else {
       state = state.copyWith(showMultiBeatModal: false);
@@ -1186,18 +1191,23 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   /// Abre el modal movible enfocado en un acorde específico y precarga sus posiciones.
+  /// Además, deja seleccionados (marcados) todos los cuadros donde se encuentra este acorde.
   void openMultiBeatModalForChord(String chord, {String? pattern}) {
     final effectiveChord = chord.trim();
     String effectivePattern = pattern ?? '';
-    if (pattern == null && effectiveChord.isNotEmpty) {
-      final positions = <String>[];
-      for (var m = 0; m < state.measures.length; m++) {
-        for (var b = 0; b < state.measures[m].beats.length; b++) {
-          if (state.measures[m].beats[b].chord.trim() == effectiveChord) {
-            positions.add('${m + 1}.${b + 1}');
-          }
+    final positions = <String>[];
+    final chordMarkedBeats = <int>{};
+
+    for (var m = 0; m < state.measures.length; m++) {
+      for (var b = 0; b < state.measures[m].beats.length; b++) {
+        if (state.measures[m].beats[b].chord.trim() == effectiveChord) {
+          positions.add('${m + 1}.${b + 1}');
+          chordMarkedBeats.add(beatKey(m, b));
         }
       }
+    }
+
+    if (pattern == null && effectiveChord.isNotEmpty) {
       effectivePattern = positions.join(', ');
     }
 
@@ -1205,12 +1215,16 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       showMultiBeatModal: true,
       multiBeatChord: effectiveChord,
       multiBeatPattern: effectivePattern,
+      markedBeats: chordMarkedBeats.isNotEmpty ? chordMarkedBeats : state.markedBeats,
+      selectedBarIndex: positions.isNotEmpty ? int.parse(positions.first.split('.').first) - 1 : state.selectedBarIndex,
+      selectedBeatIndex: positions.isNotEmpty ? int.parse(positions.first.split('.').last) - 1 : state.selectedBeatIndex,
     );
   }
 
   /// Aplica el acorde en múltiples compases según el patrón "Compás.Cuadro" (ej: "1.1, 2.3, 5.2").
   /// Expande automáticamente los compases de la cuadrícula si el patrón requiere compases adicionales.
   /// Si [replaceExisting] es true, limpia las asignaciones previas de este acorde para reflejar exactamente la edición.
+  /// Todos los cuadros registrados quedan seleccionados en [markedBeats].
   int applyMultiBeatChord({
     required String chord,
     required String pattern,
@@ -1270,6 +1284,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
 
     var appliedCount = 0;
+    final newMarkedBeats = <int>{};
     for (final pos in positions) {
       final bIdx = pos.barNumber - 1;
       final tIdx = pos.beatNumber - 1;
@@ -1279,6 +1294,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
           final beats = List<MeasureBeat>.from(row.beats);
           beats[tIdx] = beats[tIdx].copyWith(chord: trimmedChord);
           updatedMeasures[bIdx] = MeasureRow(barNumber: row.barNumber, beats: beats);
+          newMarkedBeats.add(beatKey(bIdx, tIdx));
           appliedCount++;
         }
       }
@@ -1288,6 +1304,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       measures: updatedMeasures,
       multiBeatChord: trimmedChord,
       multiBeatPattern: pattern,
+      markedBeats: newMarkedBeats,
       selectedBarIndex: positions.first.barNumber - 1,
       selectedBeatIndex: positions.first.beatNumber - 1,
     );
@@ -1316,23 +1333,25 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     return result;
   }
 
-  /// Exporta los compases actuales a formato JSON (incluye 4 secciones por compás con sus acordes).
+  /// Exporta los compases actuales a formato JSON (incluye 4 secciones por compás con sus acordes, fuelle, afinación y tiempos marcados).
   String exportMeasuresToJson({String? name}) {
     return MeasureJsonSerializer.exportToJson(
       state.measures,
       bpm: state.audioReport?.bpm,
       name: name,
+      tuning: state.tuning1.name,
+      markedBeats: state.markedBeats,
     );
   }
 
   /// Restaura los compases a partir de una cadena JSON y actualiza el estado.
   bool loadMeasuresFromJson(String jsonContent) {
     try {
-      final restored = MeasureJsonSerializer.importFromJson(jsonContent);
-      if (restored.isEmpty) return false;
+      final parsed = MeasureJsonSerializer.parseJsonData(jsonContent);
+      if (parsed.measures.isEmpty) return false;
       state = state.copyWith(
-        measures: restored,
-        markedBeats: const {},
+        measures: parsed.measures,
+        markedBeats: parsed.markedBeats,
         selectedBarIndex: 0,
         selectedBeatIndex: 0,
       );

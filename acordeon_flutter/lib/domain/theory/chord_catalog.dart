@@ -72,6 +72,10 @@ class ChordCatalog {
     'F#', 'G', 'Ab', 'A', 'Bb', 'B',
   ];
 
+  /// Cadena de texto más larga que puede generarse para un nombre de acorde
+  /// en el sistema ('Sol#' [4] + 'sus4' [4] + 'maj7' [4] = 'Sol#sus4maj7' [12 caracteres]).
+  static const String maxChordName = 'Sol#sus4maj7';
+
   /// Símbolo textual del acorde (p. ej. `Dom7`, `Sol°7`, `Cadd9`) listo para
   /// guardarse en una celda del Compás. Devuelve vacío si no hay tónica.
   ///

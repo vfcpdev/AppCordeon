@@ -46,7 +46,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final totalBeats = state.measures.length * 4;
     final allMarked = totalBeats > 0 && state.markedBeats.length == totalBeats;
     final hasMarks = state.markedBeats.isNotEmpty;
-    final effectiveWidth = widget.width ?? (isPrimary ? 104.5 : 82.5);
+    final effectiveWidth = widget.width ?? (isPrimary ? 115.0 : 82.5);
 
     // Detectar si hay un acorde seleccionado en algún cuadro del compás o en el constructor
     final selectedBar = state.selectedBarIndex;
@@ -123,7 +123,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Tooltip(
-                            message: 'Guardar compases en JSON',
+                            message: 'Guardar compases en JSON (Exportar)',
                             child: InkWell(
                               onTap: () async {
                                 final jsonStr = notifier.exportMeasuresToJson();
@@ -150,7 +150,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                   borderRadius: BorderRadius.circular(5),
                                 ),
                                 child: const FaIcon(
-                                  FontAwesomeIcons.download,
+                                  FontAwesomeIcons.floppyDisk,
                                   size: 13.5,
                                   color: Colors.white,
                                 ),
@@ -1391,7 +1391,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     if (oldWidget.chord != widget.chord && !_isEditing) {
       _controller.value = TextEditingValue(
         text: widget.chord,
-        selection: TextSelection.collapsed(offset: widget.chord.length),
+        selection: const TextSelection.collapsed(offset: 0),
       );
     }
   }
@@ -1632,50 +1632,56 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               // Con la tarjeta de Compás estrecha, el tiempo no cabe junto al
-              // acorde y al checkbox: se oculta para evitar desbordamientos.
+              // acorde y al checkbox: se oculta para dar prioridad total al nombre completo del acorde.
               final showArrows = constraints.maxWidth >= 65;
-              final showTime = constraints.maxWidth >= 100;
+              final showTime = constraints.maxWidth >= 120;
+              final isLongChord = hasChord && widget.chord.length > 5;
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Cuadro de texto interactivo con foco directo y navegación Tab + Arriba / Abajo
+                  // Cuadro de texto interactivo con foco directo y visualización completa del acorde
                   Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      readOnly: !_isEditing,
-                      textAlignVertical: TextAlignVertical.center,
-                      style: TextStyle(
-                        fontSize: 8.5,
-                        fontWeight: (isFocusedOrSelected || hasChord)
-                            ? FontWeight.w900
-                            : FontWeight.w500,
-                        color: isPlaying
-                            ? const Color(0xFFB45309)
-                            : (isFocusedOrSelected
-                                ? const Color(0xFF1D4ED8)
-                                : (hasChord
-                                    ? const Color(0xFF0F172A)
-                                    : const Color(0xFF94A3B8))),
-                      ),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        hintText: '-',
-                        hintStyle: TextStyle(
-                          fontSize: 8.5,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF94A3B8),
+                    child: Tooltip(
+                      message: hasChord ? 'Acorde: ${widget.chord}' : '',
+                      waitDuration: const Duration(milliseconds: 600),
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        readOnly: !_isEditing,
+                        textAlignVertical: TextAlignVertical.center,
+                        style: TextStyle(
+                          fontSize: isLongChord ? 7.8 : 8.8,
+                          letterSpacing: isLongChord ? -0.3 : -0.1,
+                          fontWeight: (isFocusedOrSelected || hasChord)
+                              ? FontWeight.w900
+                              : FontWeight.w500,
+                          color: isPlaying
+                              ? const Color(0xFFB45309)
+                              : (isFocusedOrSelected
+                                  ? const Color(0xFF1D4ED8)
+                                  : (hasChord
+                                      ? const Color(0xFF0F172A)
+                                      : const Color(0xFF94A3B8))),
                         ),
-                        contentPadding: EdgeInsets.zero,
-                        border: InputBorder.none,
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          hintText: '-',
+                          hintStyle: TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF94A3B8),
+                          ),
+                          contentPadding: EdgeInsets.zero,
+                          border: InputBorder.none,
+                        ),
+                        onChanged: (_) {
+                          _commit();
+                        },
+                        onSubmitted: (_) {
+                          _commit();
+                          _moveSelection(1);
+                        },
                       ),
-                      onChanged: (_) {
-                        _commit();
-                      },
-                      onSubmitted: (_) {
-                        _commit();
-                        _moveSelection(1);
-                      },
                     ),
                   ),
                   if (showTime) ...[

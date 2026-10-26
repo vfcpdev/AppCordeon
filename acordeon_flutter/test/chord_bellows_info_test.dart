@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:acordeon_flutter/core/constants/enums.dart';
 import 'package:acordeon_flutter/domain/theory/chord_catalog.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
@@ -61,9 +62,23 @@ void main() {
         ),
       ];
 
-      final jsonStr = MeasureJsonSerializer.exportToJson(rows);
-      final restored = MeasureJsonSerializer.importFromJson(jsonStr);
+      final jsonStr = MeasureJsonSerializer.exportToJson(
+        rows,
+        tuning: 'Cinco Letras (SOL-DO-FA)',
+        bpm: 130,
+        markedBeats: {0, 1},
+      );
+      final parsed = MeasureJsonSerializer.parseJsonData(jsonStr);
 
+      expect(parsed.tuning, 'Cinco Letras (SOL-DO-FA)');
+      expect(parsed.bpm, 130);
+      expect(parsed.markedBeats, {0, 1});
+      expect(parsed.timeSignature, '4/4');
+      expect(parsed.measures.first.beats[0].bellows, BellowsMode.pull);
+      expect(parsed.measures.first.beats[1].bellows, BellowsMode.push);
+      expect(parsed.measures.first.beats[2].bellows, BellowsMode.both);
+
+      final restored = MeasureJsonSerializer.importFromJson(jsonStr);
       expect(restored.first.beats[0].bellows, BellowsMode.pull);
       expect(restored.first.beats[1].bellows, BellowsMode.push);
       expect(restored.first.beats[2].bellows, BellowsMode.both);
@@ -129,6 +144,35 @@ void main() {
       // Verifica que existan tooltips o íconos de flechas en los tiempos
       expect(find.byTooltip('Abre (Fuelle abriendo)'), findsWidgets);
       expect(find.byTooltip('Cierra (Fuelle cerrando)'), findsWidgets);
+
+      // Verifica el botón de guardar con icono floppyDisk
+      expect(find.byTooltip('Guardar compases en JSON (Exportar)'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate((w) => w is FaIcon && w.icon?.codePoint == FontAwesomeIcons.floppyDisk.codePoint),
+        findsOneWidget,
+      );
+    });
+
+    test('AccordionSimulatorNotifier exporta e importa compases preservando afinación y selecciones', () {
+      final container = ProviderContainer();
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      notifier.setBeatChord(0, 0, 'DoM');
+      notifier.setBeatBellows(0, 0, BellowsMode.pull);
+      notifier.toggleBeatMark(0, 0);
+
+      final key00 = AccordionSimulatorNotifier.beatKey(0, 0);
+      final jsonStr = notifier.exportMeasuresToJson();
+      expect(jsonStr.contains('Cinco Letras'), isTrue);
+      expect(jsonStr.contains('$key00'), isTrue);
+
+      final success = notifier.loadMeasuresFromJson(jsonStr);
+      expect(success, isTrue);
+
+      final state = container.read(accordionSimulatorProvider);
+      expect(state.measures[0].beats[0].chord, 'DoM');
+      expect(state.measures[0].beats[0].bellows, BellowsMode.pull);
+      expect(state.markedBeats.contains(key00), isTrue);
     });
   });
 }
