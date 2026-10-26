@@ -412,49 +412,93 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
                 ),
                 const SizedBox(height: 4),
 
-                // Botón de Compás (+) a solas, sin la etiqueta del acorde a su izquierda
+                // Botón de Compás (+) y checkbox para modal de asignación múltiple a su derecha
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Center(
-                    child: Tooltip(
-                      message: canInsert
-                          ? 'Agregar $insertSymbol a $targetLabel'
-                          : 'Selecciona una tónica y marca tiempos o una celda del Compás',
-                      child: InkWell(
-                        key: const ValueKey('insert_chord_to_compas_btn'),
-                        onTap: canInsert
-                            ? () {
-                                final symbol =
-                                    notifier.insertFreeChordIntoSelectedBeat();
-                                if (symbol == null) return;
-                                ScaffoldMessenger.of(context)
-                                  ..hideCurrentSnackBar()
-                                  ..showSnackBar(
-                                    SnackBar(
-                                      content: Text('$symbol → $targetLabel'),
-                                      duration: const Duration(milliseconds: 1400),
-                                    ),
-                                  );
-                              }
-                            : null,
-                        borderRadius: BorderRadius.circular(5),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3.5),
-                          decoration: BoxDecoration(
-                            color: canInsert
-                                ? const Color(0xFF16A34A)
-                                : const Color(0xFFE2E8F0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Tooltip(
+                          message: canInsert
+                              ? 'Agregar $insertSymbol a $targetLabel'
+                              : 'Selecciona una tónica y marca tiempos o una celda del Compás',
+                          child: InkWell(
+                            key: const ValueKey('insert_chord_to_compas_btn'),
+                            onTap: canInsert
+                                ? () {
+                                    final symbol =
+                                        notifier.insertFreeChordIntoSelectedBeat();
+                                    if (symbol == null) return;
+                                    ScaffoldMessenger.of(context)
+                                      ..hideCurrentSnackBar()
+                                      ..showSnackBar(
+                                        SnackBar(
+                                          content: Text('$symbol → $targetLabel'),
+                                          duration: const Duration(milliseconds: 1400),
+                                        ),
+                                      );
+                                  }
+                                : null,
                             borderRadius: BorderRadius.circular(5),
-                          ),
-                          child: FaIcon(
-                            FontAwesomeIcons.plus,
-                            size: 11,
-                            color: canInsert
-                                ? Colors.white
-                                : const Color(0xFF94A3B8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3.5),
+                              decoration: BoxDecoration(
+                                color: canInsert
+                                    ? const Color(0xFF16A34A)
+                                    : const Color(0xFFE2E8F0),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: FaIcon(
+                                FontAwesomeIcons.plus,
+                                size: 11,
+                                color: canInsert
+                                    ? Colors.white
+                                    : const Color(0xFF94A3B8),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 5),
+                        // Checkbox para asignación a múltiples compases
+                        Tooltip(
+                          message: state.showMultiBeatModal
+                              ? 'Cerrar ventana de asignación múltiple'
+                              : 'Asignar acorde a varios compases (Compás.Cuadro)',
+                          child: InkWell(
+                            key: const ValueKey('multi_beat_modal_checkbox'),
+                            onTap: () {
+                              notifier.toggleMultiBeatModal();
+                            },
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              width: 17,
+                              height: 17,
+                              decoration: BoxDecoration(
+                                color: state.showMultiBeatModal
+                                    ? const Color(0xFF2563EB)
+                                    : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: state.showMultiBeatModal
+                                      ? const Color(0xFF1D4ED8)
+                                      : const Color(0xFF94A3B8),
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: Center(
+                                child: state.showMultiBeatModal
+                                    ? const FaIcon(
+                                        FontAwesomeIcons.check,
+                                        size: 9.5,
+                                        color: Colors.white,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
