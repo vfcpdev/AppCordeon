@@ -8,6 +8,7 @@ import '../widgets/chord_detector_widget.dart';
 import '../widgets/diapason_widget.dart';
 import '../widgets/free_chord_widget.dart';
 import '../widgets/measure_grid_widget.dart';
+import '../widgets/multi_beat_chord_dialog.dart';
 import '../widgets/track_info_card_widget.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -23,18 +24,20 @@ class HomeScreen extends ConsumerWidget {
       body: AccordionKeyboardListener(
         child: SafeArea(
           left: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              // Cabecera superior completa
-              const AppHeaderWidget(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Cabecera superior completa
+                  const AppHeaderWidget(),
 
-              // Cuerpo principal con scroll vertical y horizontal
-              Expanded(
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(0, 6, 12, 12),
+                  // Cuerpo principal con scroll vertical y horizontal
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(0, 6, 12, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
