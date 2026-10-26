@@ -45,11 +45,8 @@ void main() {
     );
     final notifier = container.read(accordionSimulatorProvider.notifier);
 
-    // Con el acorde por defecto en el constructor (ej. Do Mayor: Do, Mi, Sol):
-    // Clases de altura: 0, 4, 7
-    notifier.setFreeChordRoot(0); // Do
-    notifier.setFreeChordType('maj'); // Mayor
-    notifier.setFreeChordFourth('none');
+    // Seleccionamos Re Mayor (root: 2) para verificar la concordancia armónica con los bajos
+    notifier.setFreeChordRoot(2); // Re
     await tester.pumpAndSettle();
 
     final buttons3D = tester.widgetList<AccordionButton3D>(
