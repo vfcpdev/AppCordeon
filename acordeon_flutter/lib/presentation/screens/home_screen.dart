@@ -116,10 +116,9 @@ class HomeScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
                 ],
               ),
               if (state.showMultiBeatModal)

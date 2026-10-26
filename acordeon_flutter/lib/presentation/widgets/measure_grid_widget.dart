@@ -260,7 +260,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           // Cabecera: Título "Compás" + Control de BPM editable con Subir / Bajar
