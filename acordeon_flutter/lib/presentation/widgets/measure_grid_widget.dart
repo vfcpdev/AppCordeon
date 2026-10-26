@@ -52,11 +52,63 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     }
   }
 
+  /// Desplaza verticalmente el scroll cuando la reproducción o selección llega al
+  /// penúltimo compás visible, llevando ese cuadro de compás al inicio de la sección.
+  void _handlePlaybackAutoScroll(int currentBar) {
+    if (!_compasScrollController.hasClients) return;
+
+    const itemHeight = 92.0;
+    final currentOffset = _compasScrollController.offset;
+    final maxScroll = _compasScrollController.position.maxScrollExtent;
+
+    if (currentBar == 0) {
+      if (currentOffset > 0) {
+        _compasScrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+      return;
+    }
+
+    final viewportHeight = _compasScrollController.position.viewportDimension;
+    final visibleCount = (viewportHeight / itemHeight).floor().clamp(2, 6);
+    final topVisibleBar = (currentOffset / itemHeight).floor();
+    final penultimateVisibleBar = topVisibleBar + visibleCount - 1;
+
+    if (currentBar >= penultimateVisibleBar && currentBar > topVisibleBar) {
+      final target = (currentBar * itemHeight).clamp(0.0, maxScroll);
+      _compasScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubic,
+      );
+    } else if (currentBar < topVisibleBar) {
+      final target = (currentBar * itemHeight).clamp(0.0, maxScroll);
+      _compasScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOutCubic,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(accordionSimulatorProvider);
     final notifier = ref.read(accordionSimulatorProvider.notifier);
     final isPrimary = widget.accordionNumber == 1;
+
+    // Escucha cambios de compás durante reproducción/audio para scroll automático
+    ref.listen<int?>(
+      accordionSimulatorProvider.select((s) => s.selectedBarIndex),
+      (prevBar, currentBar) {
+        if (currentBar != null && currentBar != prevBar) {
+          _handlePlaybackAutoScroll(currentBar);
+        }
+      },
+    );
 
     final bpm = state.audioReport?.bpm ?? 120;
     final totalBeats = state.measures.length * 4;

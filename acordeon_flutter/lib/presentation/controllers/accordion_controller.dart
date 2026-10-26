@@ -120,10 +120,17 @@ class AccordionSimulatorState {
   final String? multiBeatChord;
 
   // Cuadro de compás acoplable/desacoplable y movible
-  final bool isCompas1Undocked;
-  final Offset compas1Position;
-  final bool isCompas2Undocked;
-  final Offset compas2Position;
+  final bool? _isCompas1Undocked;
+  bool get isCompas1Undocked => _isCompas1Undocked ?? false;
+
+  final Offset? _compas1Position;
+  Offset get compas1Position => _compas1Position ?? const Offset(220, 70);
+
+  final bool? _isCompas2Undocked;
+  bool get isCompas2Undocked => _isCompas2Undocked ?? false;
+
+  final Offset? _compas2Position;
+  Offset get compas2Position => _compas2Position ?? const Offset(440, 70);
 
   const AccordionSimulatorState({
     required this.backgroundColor,
@@ -175,11 +182,14 @@ class AccordionSimulatorState {
     this.showMultiBeatModal = false,
     this.multiBeatPattern = '',
     this.multiBeatChord,
-    this.isCompas1Undocked = false,
-    this.compas1Position = const Offset(220, 70),
-    this.isCompas2Undocked = false,
-    this.compas2Position = const Offset(440, 70),
-  });
+    bool? isCompas1Undocked,
+    Offset? compas1Position,
+    bool? isCompas2Undocked,
+    Offset? compas2Position,
+  })  : _isCompas1Undocked = isCompas1Undocked ?? false,
+        _compas1Position = compas1Position ?? const Offset(220, 70),
+        _isCompas2Undocked = isCompas2Undocked ?? false,
+        _compas2Position = compas2Position ?? const Offset(440, 70);
 
   AccordionSimulatorState copyWith({
     Color? backgroundColor,
