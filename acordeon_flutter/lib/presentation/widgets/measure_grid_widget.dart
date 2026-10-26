@@ -1487,41 +1487,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     }
     return KeyEventResult.ignored;
   }
-          selection: TextSelection.collapsed(offset: updated.length),
-        );
-        _commit();
-        _update();
-        return KeyEventResult.handled;
-      }
 
-      if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-        // Flecha derecha: saca de foco de edición, pero permanece el cuadro seleccionado
-        _commit();
-        _setSelected();
-        return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        // Flecha abajo: cambia al compás/cuadro siguiente
-        _moveSelection(1);
-        return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        // Flecha arriba: cambia al compás/cuadro anterior
-        _moveSelection(-1);
-        return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.tab ||
-          event.logicalKey == LogicalKeyboardKey.escape) {
-        // Tab o Escape: saca de foco de edición pero mantiene cuadro seleccionado
-        _commit();
-        _setSelected();
-        return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.enter ||
-          event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-        _commit();
-        _moveSelection(1);
-        return KeyEventResult.handled;
-      }
-    }
-    return KeyEventResult.ignored;
-  }
 
   @override
   Widget build(BuildContext context) {
