@@ -1096,18 +1096,12 @@ class _ChordTools {
 
   static _ChordModKey? parseModifierKey(KeyEvent event) {
     final char = event.character;
-    if (char == '0') return _ChordModKey.mayor;
     if (char == '.' || char == ',') return _ChordModKey.menor;
     if (char == '/') return _ChordModKey.septima;
     if (char == '+') return _ChordModKey.aumentada;
     if (char == '-') return _ChordModKey.disminuida;
-    if (char == '8') return _ChordModKey.sus;
-    if (char == '9') return _ChordModKey.cuarta;
 
     final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.digit0 || key == LogicalKeyboardKey.numpad0) {
-      return _ChordModKey.mayor;
-    }
     if (key == LogicalKeyboardKey.period ||
         key == LogicalKeyboardKey.numpadDecimal ||
         key == LogicalKeyboardKey.comma) {
@@ -1122,23 +1116,14 @@ class _ChordTools {
     if (key == LogicalKeyboardKey.minus || key == LogicalKeyboardKey.numpadSubtract) {
       return _ChordModKey.disminuida;
     }
-    if (key == LogicalKeyboardKey.digit8 || key == LogicalKeyboardKey.numpad8) {
-      return _ChordModKey.sus;
-    }
-    if (key == LogicalKeyboardKey.digit9 || key == LogicalKeyboardKey.numpad9) {
-      return _ChordModKey.cuarta;
-    }
     return null;
   }
 
   static _ChordModKey? parseModifierChar(String char) {
-    if (char == '0') return _ChordModKey.mayor;
     if (char == '.' || char == ',') return _ChordModKey.menor;
     if (char == '/') return _ChordModKey.septima;
     if (char == '+') return _ChordModKey.aumentada;
     if (char == '-') return _ChordModKey.disminuida;
-    if (char == '8') return _ChordModKey.sus;
-    if (char == '9') return _ChordModKey.cuarta;
     return null;
   }
 
@@ -1198,69 +1183,6 @@ class _ChordTools {
         }
         return has7 ? '${root}47' : '${root}4';
     }
-  }
-}
-
-/// Formateador que traduce la digitación de números 1 al 7 y modificadores armónicos
-class _ScaleDegreeInputFormatter extends TextInputFormatter {
-  final NotationMode notation;
-
-  _ScaleDegreeInputFormatter({required this.notation});
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    if (newValue.text.length < oldValue.text.length) {
-      return newValue;
-    }
-
-    final newText = newValue.text;
-    final oldText = oldValue.text;
-
-    if (newText.isNotEmpty) {
-      final lastEnteredChar = newText.length == 1
-          ? newText
-          : (newValue.selection.baseOffset > 0 && newValue.selection.baseOffset <= newText.length
-              ? newText[newValue.selection.baseOffset - 1]
-              : newText[newText.length - 1]);
-
-      // 1 al 7: Grados de la escala natural de Do (1=Do, 2=Re, 3=Mi, 4=Fa, 5=Sol, 6=La, 7=Si)
-      if (['1', '2', '3', '4', '5', '6', '7'].contains(lastEnteredChar)) {
-        final degree = int.parse(lastEnteredChar);
-        final scale = notation == NotationMode.alemana
-            ? const ['C', 'D', 'E', 'F', 'G', 'A', 'B']
-            : const ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Si'];
-
-        // Si se digita 7 al final de una nota ya existente, actúa como séptima
-        if (degree == 7 && oldText.trim().isNotEmpty && !oldText.trim().endsWith('7')) {
-          final appended = '${oldText.trim()}7';
-          return TextEditingValue(
-            text: appended,
-            selection: TextSelection.collapsed(offset: appended.length),
-          );
-        }
-
-        final replacementNote = scale[degree - 1];
-        return TextEditingValue(
-          text: replacementNote,
-          selection: TextSelection.collapsed(offset: replacementNote.length),
-        );
-      }
-
-      // Modificadores armónicos: 0 Mayor, . Menor, / 7ma, + Aumentada, - Disminuida, 8 Sus, 9 Cuarta
-      final mod = _ChordTools.parseModifierChar(lastEnteredChar);
-      if (mod != null) {
-        final updated = _ChordTools.applyModifier(oldText, mod, notation);
-        return TextEditingValue(
-          text: updated,
-          selection: TextSelection.collapsed(offset: updated.length),
-        );
-      }
-    }
-
-    return newValue;
   }
 }
 
@@ -1484,35 +1406,6 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     }
   }
 
-  int? _parseScaleDegree(KeyEvent event) {
-    final char = event.character;
-    if (char != null && char.length == 1) {
-      final code = char.codeUnitAt(0);
-      if (code >= 49 && code <= 55) {
-        return code - 48; // '1'..'7' -> 1..7
-      }
-    }
-    final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.digit1 || key == LogicalKeyboardKey.numpad1) return 1;
-    if (key == LogicalKeyboardKey.digit2 || key == LogicalKeyboardKey.numpad2) return 2;
-    if (key == LogicalKeyboardKey.digit3 || key == LogicalKeyboardKey.numpad3) return 3;
-    if (key == LogicalKeyboardKey.digit4 || key == LogicalKeyboardKey.numpad4) return 4;
-    if (key == LogicalKeyboardKey.digit5 || key == LogicalKeyboardKey.numpad5) return 5;
-    if (key == LogicalKeyboardKey.digit6 || key == LogicalKeyboardKey.numpad6) return 6;
-    if (key == LogicalKeyboardKey.digit7 || key == LogicalKeyboardKey.numpad7) return 7;
-    return null;
-  }
-
-  String _chordForScaleDegree(int degree) {
-    if (widget.notation == NotationMode.alemana) {
-      const scale = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-      return scale[(degree - 1).clamp(0, 6)];
-    } else {
-      const scale = ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Si'];
-      return scale[(degree - 1).clamp(0, 6)];
-    }
-  }
-
   void _applyChord(String chord) {
     _controller.value = TextEditingValue(
       text: chord,
@@ -1527,13 +1420,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
       return KeyEventResult.ignored;
     }
     if (event is KeyDownEvent) {
-      // Reconocer números 1 al 7 como grados de la escala natural de Do (Do, Re, Mi, Fa, Sol, La, Si)
-      final degree = _parseScaleDegree(event);
-      if (degree != null) {
-        _applyChord(_chordForScaleDegree(degree));
-        return KeyEventResult.handled;
-      }
-      // Modificadores armónicos: 0 Mayor, . Menor, / 7ma, + Aumentada, - Disminuida, 8 Sus, 9 Cuarta
+      // Modificadores armónicos: . Menor, / 7ma, + Aumentada, - Disminuida
       final mod = _ChordTools.parseModifierKey(event);
       if (mod != null) {
         final updated = _ChordTools.applyModifier(_controller.text, mod, widget.notation);
@@ -1572,40 +1459,34 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
 
   KeyEventResult _handleTextFieldKeyEvent(FocusNode node, KeyEvent event) {
     if (event is KeyDownEvent) {
-      // Reconocer números 1 al 7 como la escala natural de Do (1=Do, 2=Re, 3=Mi, 4=Fa, 5=Sol, 6=La, 7=Si)
-      final degree = _parseScaleDegree(event);
-      if (degree != null) {
-        final text = _controller.text.trim();
-        final sel = _controller.selection;
-        final isAtEnd = sel.isCollapsed && sel.baseOffset == _controller.text.length;
-
-        if (degree == 7 && text.isNotEmpty && isAtEnd && !text.endsWith('7')) {
-          final appended = '${text}7';
-          _controller.value = TextEditingValue(
-            text: appended,
-            selection: TextSelection.collapsed(offset: appended.length),
-          );
-          _commit();
-          _update();
-          return KeyEventResult.handled;
-        }
-
-        final chord = _chordForScaleDegree(degree);
-        _controller.value = TextEditingValue(
-          text: chord,
-          selection: TextSelection.collapsed(offset: chord.length),
-        );
+      if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        // Flecha derecha: saca de foco de edición, pero permanece el cuadro seleccionado
         _commit();
-        _update();
+        _setSelected();
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        // Flecha abajo: cambia al compás/cuadro siguiente
+        _moveSelection(1);
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        // Flecha arriba: cambia al compás/cuadro anterior
+        _moveSelection(-1);
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.tab ||
+          event.logicalKey == LogicalKeyboardKey.escape) {
+        // Tab o Escape: saca de foco de edición pero mantiene cuadro seleccionado
+        _commit();
+        _setSelected();
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.enter ||
+          event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+        _commit();
+        _moveSelection(1);
         return KeyEventResult.handled;
       }
-
-      // Modificadores armónicos: 0 Mayor, . Menor, / 7ma, + Aumentada, - Disminuida, 8 Sus, 9 Cuarta
-      final mod = _ChordTools.parseModifierKey(event);
-      if (mod != null) {
-        final updated = _ChordTools.applyModifier(_controller.text, mod, widget.notation);
-        _controller.value = TextEditingValue(
-          text: updated,
+    }
+    return KeyEventResult.ignored;
+  }
           selection: TextSelection.collapsed(offset: updated.length),
         );
         _commit();
@@ -1745,9 +1626,6 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                         contentPadding: EdgeInsets.zero,
                         border: InputBorder.none,
                       ),
-                      inputFormatters: [
-                        _ScaleDegreeInputFormatter(notation: widget.notation),
-                      ],
                       onChanged: (_) {
                         _commit();
                       },
@@ -1791,7 +1669,8 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                           const SizedBox(width: 2),
                           _BeatBellowsArrows(
                             bellows: widget.bellows,
-                            onBellowsChanged: widget.onBellowsChanged,
+                            isEnabled: hasChord,
+                            onBellowsChanged: hasChord ? widget.onBellowsChanged : null,
                           ),
                         ],
                       ],
@@ -1808,80 +1687,90 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
 }
 
 /// Flechas de Abre (←) y Cierre (→) a la derecha de la casilla de verificación
-/// para definir el acorde a aplicar según el fuelle.
+/// para definir la dirección del fuelle del acorde.
+/// Solo son válidas/interactivas para tiempos que tengan un acorde registrado.
 class _BeatBellowsArrows extends StatelessWidget {
   final BellowsMode bellows;
+  final bool isEnabled;
   final ValueChanged<BellowsMode>? onBellowsChanged;
 
   const _BeatBellowsArrows({
     required this.bellows,
+    this.isEnabled = true,
     this.onBellowsChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isPull = bellows == BellowsMode.pull;
-    final isPush = bellows == BellowsMode.push;
+    final isPull = isEnabled && bellows == BellowsMode.pull;
+    final isPush = isEnabled && bellows == BellowsMode.push;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Flecha Abre (Pull) - Izquierda Azul
-        Tooltip(
-          message: 'Abre (Fuelle abriendo)',
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => onBellowsChanged?.call(BellowsMode.pull),
-            child: Container(
-              width: 13.5,
-              height: 13.5,
-              decoration: BoxDecoration(
-                color: isPull ? const Color(0xFFEFF6FF) : Colors.transparent,
-                borderRadius: BorderRadius.circular(3),
-                border: Border.all(
-                  color: isPull ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
-                  width: 1,
+    return Opacity(
+      opacity: isEnabled ? 1.0 : 0.30,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Flecha Abre (Pull) - Izquierda Azul
+          Tooltip(
+            message: isEnabled
+                ? 'Abre (Fuelle abriendo)'
+                : 'Asigna un acorde al tiempo para definir el fuelle',
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: isEnabled ? () => onBellowsChanged?.call(BellowsMode.pull) : null,
+              child: Container(
+                width: 13.5,
+                height: 13.5,
+                decoration: BoxDecoration(
+                  color: isPull ? const Color(0xFFEFF6FF) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(
+                    color: isPull ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
+                    width: 1,
+                  ),
                 ),
-              ),
-              child: Center(
-                child: FaIcon(
-                  FontAwesomeIcons.arrowLeft,
-                  size: 7.0,
-                  color: isPull ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 2),
-        // Flecha Cierre (Push) - Derecha Roja
-        Tooltip(
-          message: 'Cierra (Fuelle cerrando)',
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => onBellowsChanged?.call(BellowsMode.push),
-            child: Container(
-              width: 13.5,
-              height: 13.5,
-              decoration: BoxDecoration(
-                color: isPush ? const Color(0xFFFEF2F2) : Colors.transparent,
-                borderRadius: BorderRadius.circular(3),
-                border: Border.all(
-                  color: isPush ? const Color(0xFFEF4444) : const Color(0xFFCBD5E1),
-                  width: 1,
-                ),
-              ),
-              child: Center(
-                child: FaIcon(
-                  FontAwesomeIcons.arrowRight,
-                  size: 7.0,
-                  color: isPush ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                child: Center(
+                  child: FaIcon(
+                    FontAwesomeIcons.arrowLeft,
+                    size: 7.0,
+                    color: isPull ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 2),
+          // Flecha Cierre (Push) - Derecha Roja
+          Tooltip(
+            message: isEnabled
+                ? 'Cierra (Fuelle cerrando)'
+                : 'Asigna un acorde al tiempo para definir el fuelle',
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: isEnabled ? () => onBellowsChanged?.call(BellowsMode.push) : null,
+              child: Container(
+                width: 13.5,
+                height: 13.5,
+                decoration: BoxDecoration(
+                  color: isPush ? const Color(0xFFFEF2F2) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(
+                    color: isPush ? const Color(0xFFEF4444) : const Color(0xFFCBD5E1),
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: FaIcon(
+                    FontAwesomeIcons.arrowRight,
+                    size: 7.0,
+                    color: isPush ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
