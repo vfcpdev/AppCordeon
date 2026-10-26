@@ -35,8 +35,10 @@ void main() {
     notifier.selectBeat(1, 3);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Compás'));
+    await tester.tap(find.byKey(const ValueKey('insert_chord_to_compas_btn')));
     await tester.pumpAndSettle();
+
+    expect(find.text('Sol   menor   Séptima'), findsOneWidget);
 
     final state = container.read(accordionSimulatorProvider);
     expect(state.measures[1].beats[3].chord, 'Solm7');

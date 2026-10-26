@@ -4,9 +4,9 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/tuning.dart';
-import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
 import 'diapason_button_widget.dart';
+import 'tonic_bar_widget.dart';
 import 'tuning_picker_dialog.dart';
 
 class DiapasonWidget extends ConsumerWidget {
@@ -49,14 +49,6 @@ class DiapasonWidget extends ConsumerWidget {
     final freeChordType = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordType));
     final freeChordFourth = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordFourth));
     final notation = ref.watch(accordionSimulatorProvider.select((s) => s.notation));
-
-    final chordLabel = ChordCatalog.symbolFor(
-      root: freeChordRoot,
-      type: freeChordType,
-      extension: freeChordFourth,
-      latin: notation != NotationMode.alemana,
-      display: true,
-    );
 
     final rowList = [
       _RowDef(
@@ -103,46 +95,153 @@ class DiapasonWidget extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Pill de Tonalidad del acordeón seleccionado en el borde superior ──
+          // ── Cabecera del Diapasón: Título y Barra con Botón de Tonalidad a la derecha cubriendo ambas filas ──
           Align(
             alignment: Alignment.center,
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
-                ),
-                borderRadius: BorderRadius.circular(9999),
-                border: Border.all(color: const Color(0xFF38BDF8), width: 1.2),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0284C7).withValues(alpha: 0.40),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+            child: IntrinsicHeight(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const FaIcon(
-                    FontAwesomeIcons.music,
-                    size: 9.5,
-                    color: Colors.white,
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Fila 1: Label cuadrado con Nombre del acordeón y notas
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                          ),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFF38BDF8), width: 1.0),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.25),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          currentTuning.name,
+                          key: ValueKey('diapason_tuning_pill_$accordionNumber'),
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.3,
+                            shadows: [
+                              Shadow(color: Colors.black45, offset: Offset(0, 1), blurRadius: 2),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+
+                      // Fila 2: Barra superior (fuelle + intercambiar hileras)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0xFF475569), Color(0xFF334155)],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.25),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            _BellowsToggle(
+                              bellowsMode: bellowsMode,
+                              onBellowsChanged: onBellowsChanged,
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              width: 1,
+                              height: 24,
+                              color: Colors.white.withValues(alpha: 0.18),
+                            ),
+                            const SizedBox(width: 6),
+                            Tooltip(
+                              message: 'Intercambiar hileras',
+                              child: IconButton(
+                                onPressed: onToggleMirror,
+                                icon: FaIcon(
+                                  FontAwesomeIcons.arrowsRotate,
+                                  size: 13,
+                                  color: isMirror ? Colors.white : Colors.white70,
+                                ),
+                                visualDensity: VisualDensity.compact,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: isMirror
+                                      ? const Color(0xFF0284C7)
+                                      : Colors.white.withValues(alpha: 0.08),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    side: BorderSide(
+                                      color: isMirror
+                                          ? const Color(0xFF38BDF8)
+                                          : Colors.white.withValues(alpha: 0.22),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 5),
-                  Text(
-                    'Tonalidad: ${currentTuning.name}',
-                    key: ValueKey('diapason_tuning_pill_$accordionNumber'),
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 0.4,
-                      shadows: [
-                        Shadow(color: Colors.black45, offset: Offset(0, 1), blurRadius: 2),
-                      ],
+                  const SizedBox(width: 6),
+
+                  // Botón de selección de tonalidad a la derecha, cubriendo ambas filas
+                  Tooltip(
+                    message: 'Seleccionar acordeón / tonalidad',
+                    child: InkWell(
+                      onTap: () => showTuningPickerDialog(
+                        context: context,
+                        currentTuning: currentTuning,
+                        onTuningChanged: onTuningChanged,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        width: 38,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF38BDF8), width: 1.2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0284C7).withValues(alpha: 0.35),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Center(
+                          child: FaIcon(
+                            FontAwesomeIcons.music,
+                            size: 17,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -150,125 +249,44 @@ class DiapasonWidget extends ConsumerWidget {
             ),
           ),
 
-          // ── Barra superior: selector de acordeón + fuelle ──────────────
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF475569), Color(0xFF334155)],
+          const SizedBox(height: 6),
+
+          // ── Nombre del Acorde: fuera de la barra, sobre los botones y a la izquierda ──
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 2,
               ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Column(
-                  mainAxisSize: MainAxisSize.min,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: Text.rich(
+                TextSpan(
                   children: [
-                    Tooltip(
-                      message: 'Seleccionar acordeón',
-                      child: IconButton(
-                        onPressed: () => showTuningPickerDialog(
-                          context: context,
-                          currentTuning: currentTuning,
-                          onTuningChanged: onTuningChanged,
-                        ),
-                        icon: const FaIcon(
-                          FontAwesomeIcons.music,
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                        visualDensity: VisualDensity.compact,
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withValues(alpha: 0.08),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: BorderSide(
-                              color: Colors.white.withValues(alpha: 0.22),
-                            ),
-                          ),
-                        ),
+                    const TextSpan(
+                      text: 'Acorde:   ',
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                        height: 1.0,
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    // Nombre del acorde en la notación seleccionada.
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        chordLabel.isEmpty ? '—' : chordLabel,
-                        key: ValueKey('diapason_chord_label_$accordionNumber'),
-                        style: const TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.black,
-                          height: 1.0,
-                        ),
-                      ),
+                    TonicBarWidget.buildChordNameSpans(
+                      root: freeChordRoot,
+                      type: freeChordType,
+                      extension: freeChordFourth,
+                      latin: notation != NotationMode.alemana,
+                      fontSize: 9.5,
                     ),
                   ],
                 ),
-                const SizedBox(width: 6),
-                Container(
-                  width: 1,
-                  height: 26,
-                  color: Colors.white.withValues(alpha: 0.18),
-                ),
-                const SizedBox(width: 6),
-                _BellowsToggle(
-                  bellowsMode: bellowsMode,
-                  onBellowsChanged: onBellowsChanged,
-                ),
-                const SizedBox(width: 6),
-                Container(
-                  width: 1,
-                  height: 26,
-                  color: Colors.white.withValues(alpha: 0.18),
-                ),
-                const SizedBox(width: 6),
-                Tooltip(
-                  message: 'Intercambiar hileras',
-                  child: IconButton(
-                    onPressed: onToggleMirror,
-                    icon: FaIcon(
-                      FontAwesomeIcons.arrowsRotate,
-                      size: 14,
-                      color: isMirror ? Colors.white : Colors.white70,
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    style: IconButton.styleFrom(
-                      backgroundColor: isMirror
-                          ? const Color(0xFF0284C7)
-                          : Colors.white.withValues(alpha: 0.08),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(
-                          color: isMirror
-                              ? const Color(0xFF38BDF8)
-                              : Colors.white.withValues(alpha: 0.22),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                key: ValueKey('diapason_chord_label_$accordionNumber'),
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -415,7 +433,7 @@ class _BellowsToggle extends StatelessWidget {
             icon: FontAwesomeIcons.arrowsLeftRight,
             mode: BellowsMode.both,
             current: bellowsMode,
-            activeColor: const Color(0xFF818CF8),
+            activeColor: const Color(0xFFEAB308),
             onTap: onBellowsChanged,
             tooltip: 'Ambos (Abrir y Cerrar)',
           ),
@@ -485,7 +503,9 @@ class _BellowsBtn extends StatelessWidget {
           child: FaIcon(
             icon,
             size: 13,
-            color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.45),
+            color: isActive
+                ? (activeColor.computeLuminance() > 0.45 ? const Color(0xFF1E293B) : Colors.white)
+                : Colors.white.withValues(alpha: 0.45),
           ),
         ),
       ),

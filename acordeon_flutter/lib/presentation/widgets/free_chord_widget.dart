@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import '../../core/constants/enums.dart';
-import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
 import 'tonic_bar_widget.dart';
 
@@ -21,31 +19,6 @@ class FreeChordWidget extends ConsumerWidget {
         ? roots[state.freeChordRoot]
         : '—';
 
-    // Celda(s) del Compás que recibirán el acorde generado: todos los tiempos
-    // marcados con el checkbox o, si no hay ninguno, la celda seleccionada.
-    final barIndex = state.selectedBarIndex;
-    final beatIndex = state.selectedBeatIndex;
-    final hasSelectedCell = barIndex != null &&
-        beatIndex != null &&
-        barIndex >= 0 &&
-        barIndex < state.measures.length &&
-        beatIndex >= 0 &&
-        beatIndex < state.measures[barIndex].beats.length;
-    final markedCount = state.markedBeats.length;
-    final targetLabel = markedCount > 0
-        ? '$markedCount tiempo${markedCount == 1 ? '' : 's'} marcado${markedCount == 1 ? '' : 's'}'
-        : (hasSelectedCell
-            ? 'Compás ${barIndex + 1} · Tiempo ${beatIndex + 1}'
-            : 'sin celda seleccionada');
-    final insertSymbol = ChordCatalog.symbolFor(
-      root: state.freeChordRoot,
-      type: state.freeChordType,
-      extension: state.freeChordFourth,
-      latin: state.notation != NotationMode.alemana,
-    );
-    final canInsert =
-        insertSymbol.isNotEmpty && (markedCount > 0 || hasSelectedCell);
-
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -63,194 +36,89 @@ class FreeChordWidget extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cabecera: título, acorde resultante y fuelle
+          // Cabecera: título, botones de reproducción (aumentados 50%) y checkbox Fijo
           Wrap(
             spacing: 8,
             runSpacing: 6,
             crossAxisAlignment: WrapCrossAlignment.center,
             alignment: WrapAlignment.spaceBetween,
             children: [
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  const Text(
-                    'Constructor de Acorde',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF059669),
-                    ),
-                  ),
-                  // Tónica seleccionada (sigla del acorde resultante)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFECFDF5),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFF22C55E)),
-                    ),
-                    child: Text(
-                      '$rootName${_typeSymbol(state.freeChordType)}${_extensionSymbol(state.freeChordFourth, state.freeChordType)}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF065F46),
-                      ),
-                    ),
-                  ),
-
-                  // Fuelle para Acorde Libre (a la derecha del nombre del acorde)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
-                    ),
-                    padding: const EdgeInsets.all(2),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Tooltip(
-                          message: 'Ambos (Abrir y Cerrar)',
-                          child: InkWell(
-                            onTap: () => notifier.setFreeChordBellows(BellowsMode.both),
-                            borderRadius: BorderRadius.circular(4),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
-                              decoration: BoxDecoration(
-                                color: state.freeChordBellows == BellowsMode.both
-                                    ? const Color(0xFF4F46E5)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: FaIcon(
-                                FontAwesomeIcons.arrowsLeftRight,
-                                size: 10,
-                                color: state.freeChordBellows == BellowsMode.both
-                                    ? Colors.white
-                                    : const Color(0xFF4F46E5),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 2),
-                        Tooltip(
-                          message: 'Abre (Fuelle)',
-                          child: InkWell(
-                            onTap: () => notifier.setFreeChordBellows(BellowsMode.pull),
-                            borderRadius: BorderRadius.circular(4),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
-                              decoration: BoxDecoration(
-                                color: state.freeChordBellows == BellowsMode.pull
-                                    ? const Color(0xFF2563EB)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: FaIcon(
-                                FontAwesomeIcons.arrowLeft,
-                                size: 10,
-                                color: state.freeChordBellows == BellowsMode.pull
-                                    ? Colors.white
-                                    : const Color(0xFF2563EB),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 2),
-                        Tooltip(
-                          message: 'Cierra (Fuelle)',
-                          child: InkWell(
-                            onTap: () => notifier.setFreeChordBellows(BellowsMode.push),
-                            borderRadius: BorderRadius.circular(4),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
-                              decoration: BoxDecoration(
-                                color: state.freeChordBellows == BellowsMode.push
-                                    ? const Color(0xFFDC2626)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: FaIcon(
-                                FontAwesomeIcons.arrowRight,
-                                size: 10,
-                                color: state.freeChordBellows == BellowsMode.push
-                                    ? Colors.white
-                                    : const Color(0xFFDC2626),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              const Text(
+                'Acorde',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF059669),
+                ),
               ),
 
-              // Botones de acción: Play Acorde, Play Arpegio
+              // Botones de acción: Play Acorde (+50%), Play Arpegio (+50%) y Checkbox Fijo
               Wrap(
-                spacing: 4,
+                spacing: 5,
                 runSpacing: 4,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  ElevatedButton.icon(
-                    icon: const FaIcon(FontAwesomeIcons.play, size: 9),
-                    label: const Text('Acorde', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0284C7),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      minimumSize: const Size(0, 22),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                    ),
-                    onPressed: notifier.playFreeChord,
-                  ),
-                  ElevatedButton.icon(
-                    icon: const FaIcon(FontAwesomeIcons.music, size: 9),
-                    label: const Text('Arpegio', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF059669),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      minimumSize: const Size(0, 22),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                    ),
-                    onPressed: notifier.arpeggioFreeChord,
-                  ),
-                  // Inserta el acorde generado en la celda seleccionada del Compás.
                   Tooltip(
-                    message: canInsert
-                        ? 'Agregar $insertSymbol a $targetLabel'
-                        : 'Selecciona una tónica y marca tiempos o una celda del Compás',
-                    child: ElevatedButton.icon(
-                      icon: const FaIcon(FontAwesomeIcons.plus, size: 9),
-                      label: const Text('Compás', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                    message: 'Reproducir Acorde',
+                    child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7C3AED),
+                        backgroundColor: const Color(0xFF0284C7),
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor: const Color(0xFFE2E8F0),
-                        disabledForegroundColor: const Color(0xFF94A3B8),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        minimumSize: const Size(0, 22),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: const Size(32, 28),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                       ),
-                      onPressed: canInsert
-                          ? () {
-                              final symbol =
-                                  notifier.insertFreeChordIntoSelectedBeat();
-                              if (symbol == null) return;
-                              ScaffoldMessenger.of(context)
-                                ..hideCurrentSnackBar()
-                                ..showSnackBar(
-                                  SnackBar(
-                                    content: Text('$symbol → $targetLabel'),
-                                    duration: const Duration(milliseconds: 1400),
-                                  ),
-                                );
-                            }
-                          : null,
+                      onPressed: notifier.playFreeChord,
+                      child: const FaIcon(FontAwesomeIcons.play, size: 13),
+                    ),
+                  ),
+                  Tooltip(
+                    message: 'Reproducir Arpegio',
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF059669),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: const Size(32, 28),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      onPressed: notifier.arpeggioFreeChord,
+                      child: const FaIcon(FontAwesomeIcons.music, size: 13),
+                    ),
+                  ),
+                  // Checkbox para mantener el acorde fijo en el acordeón seleccionado
+                  Tooltip(
+                    message: 'Fijar acorde en el acordeón',
+                    child: InkWell(
+                      key: const ValueKey('free_chord_fixed_checkbox'),
+                      onTap: notifier.toggleFreeChordFixed,
+                      borderRadius: BorderRadius.circular(4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: Checkbox(
+                              value: state.isFreeChordFixed,
+                              onChanged: (_) => notifier.toggleFreeChordFixed(),
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              activeColor: const Color(0xFF059669),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          const Text(
+                            'Fijo',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF334155),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -628,45 +496,6 @@ class FreeChordWidget extends ConsumerWidget {
     );
   }
 
-  /// Sigla de la cualidad (M, m, °, +, sus4).
-  static String _typeSymbol(String type) {
-    switch (type) {
-      case 'maj':
-        return '';
-      case 'min':
-        return 'm';
-      case 'dim':
-        return '°';
-      case 'aug':
-        return '+';
-      case 'sus4':
-        return 'sus4';
-      default:
-        return '';
-    }
-  }
-
-  /// Sigla de la extensión (—, 8, 6, add9, 7, maj7, m7, °7).
-  static String _extensionSymbol(String ext, [String type = '']) {
-    switch (ext) {
-      case 'octave':
-        return '8';
-      case 'dom7':
-        return '7';
-      case 'maj7':
-        return 'maj7';
-      case 'maj6':
-        return '6';
-      case 'add9':
-        return 'add9';
-      case 'min7':
-        return type == 'min' ? '7' : 'm7';
-      case 'dim7':
-        return type == 'dim' ? '7' : '°7';
-      default:
-        return '';
-    }
-  }
 
   Widget _buildDegreeChip(String roman, String note, String quality, VoidCallback onTap, {bool isActive = false}) {
     return InkWell(

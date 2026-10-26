@@ -108,8 +108,7 @@ void main() {
         );
 
     // Latina por defecto: Do mayor.
-    expect(label().data, 'Do');
-    expect(label().style?.color, Colors.black);
+    expect(label().textSpan?.toPlainText(), 'Acorde:   Do   Mayor');
 
     final labelBox = tester.widget<Container>(
       find
@@ -121,17 +120,17 @@ void main() {
     );
     expect(
       (labelBox.decoration as BoxDecoration).color,
-      const Color(0xFFF59E0B),
+      Colors.white,
     );
 
     notifier.setFreeChordType('dim');
     notifier.setFreeChordFourth('dim7');
     await tester.pumpAndSettle();
-    expect(label().data, 'Do°7');
+    expect(label().textSpan?.toPlainText(), 'Acorde:   Do   Disminuido   Séptima');
 
     // Al cambiar a notación alemana cambia la tónica, no la cualidad.
     notifier.setNotation(NotationMode.alemana);
     await tester.pumpAndSettle();
-    expect(label().data, 'C°7');
+    expect(label().textSpan?.toPlainText(), 'Acorde:   C   Disminuido   Séptima');
   });
 }
