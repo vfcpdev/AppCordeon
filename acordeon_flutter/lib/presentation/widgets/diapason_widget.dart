@@ -222,25 +222,12 @@ class DiapasonWidget extends ConsumerWidget {
                               border: Border.all(color: const Color(0xFFCBD5E1)),
                             ),
                             child: Text.rich(
-                              TextSpan(
-                                children: [
-                                  const TextSpan(
-                                    text: 'Acorde:   ',
-                                    style: TextStyle(
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.black,
-                                      height: 1.0,
-                                    ),
-                                  ),
-                                  TonicBarWidget.buildChordNameSpans(
-                                    root: freeChordRoot,
-                                    type: freeChordType,
-                                    extension: freeChordFourth,
-                                    latin: notation != NotationMode.alemana,
-                                    fontSize: 9.5,
-                                  ),
-                                ],
+                              TonicBarWidget.buildChordNameSpans(
+                                root: freeChordRoot,
+                                type: freeChordType,
+                                extension: freeChordFourth,
+                                latin: notation != NotationMode.alemana,
+                                fontSize: 9.5,
                               ),
                               key: ValueKey('diapason_chord_label_$accordionNumber'),
                             ),
@@ -361,6 +348,7 @@ class DiapasonWidget extends ConsumerWidget {
     final detectorSelectedButtons = ref.watch(accordionSimulatorProvider.select((s) => s.detectorSelectedButtons));
     final notation = ref.watch(accordionSimulatorProvider.select((s) => s.notation));
     final detectorMode = ref.watch(accordionSimulatorProvider.select((s) => s.detectorMode));
+    final freeChordOctave = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordOctave));
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -376,8 +364,15 @@ class DiapasonWidget extends ConsumerWidget {
               : btn.push;
 
           // `btn.pull`/`btn.push` ya incluyen la transposición de la afinación.
-          final isChordPull = activeChordPitchClasses.contains(btn.pull % 12);
-          final isChordPush = activeChordPitchClasses.contains(btn.push % 12);
+          bool matchesOctave(int midi) {
+            if (freeChordOctave == 'all' || freeChordOctave.isEmpty) return true;
+            // Octava 3: 48 a 59, Octava 4: 60 a 71, Octava 5: 72 a 83
+            final oct = (midi / 12).floor() - 1;
+            return '$oct' == freeChordOctave;
+          }
+
+          final isChordPull = activeChordPitchClasses.contains(btn.pull % 12) && matchesOctave(btn.pull);
+          final isChordPush = activeChordPitchClasses.contains(btn.push % 12) && matchesOctave(btn.push);
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 12.0),

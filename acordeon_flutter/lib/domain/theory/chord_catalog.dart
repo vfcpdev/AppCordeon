@@ -109,4 +109,25 @@ class ChordCatalog {
 
     return '$rootName$typeSymbol$extensionSymbol';
   }
+
+  /// Nombres de las notas que componen el acorde según la notación solicitada.
+  static List<String> noteNamesFor({
+    required int root,
+    required String type,
+    required String extension,
+    bool latin = true,
+  }) {
+    if (root < 0 || root > 11) return const [];
+    final midis = notesFor(root: root, type: type, extension: extension);
+    final names = latin ? latinRootNames : germanRootNames;
+    final result = <String>[];
+    for (final m in midis) {
+      final name = names[m % 12];
+      if (!result.contains(name)) {
+        result.add(name);
+      }
+    }
+    return result;
+  }
 }
+

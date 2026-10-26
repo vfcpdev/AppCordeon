@@ -1128,10 +1128,32 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       state = state.copyWith(isFreeChordFixed: !state.isFreeChordFixed);
   void setFreeChordBellows(BellowsMode m) =>
       state = state.copyWith(freeChordBellows: m);
-  void setFreeChordScaleHarmonicMode(String mode) => state = state.copyWith(
-        freeChordScaleHarmonicMode:
-            state.freeChordScaleHarmonicMode == mode ? '' : mode,
-      );
+  void setFreeChordScaleHarmonicMode(String mode) {
+    if (state.freeChordScaleHarmonicMode == mode) {
+      state = state.copyWith(freeChordScaleHarmonicMode: '');
+      return;
+    }
+    // Si selecciona 'triad', se limpia la 7ma/extensión.
+    // Si selecciona 'seventh', se activa la 7ma según la cualidad si no hay extensión.
+    String updatedFourth = state.freeChordFourth;
+    if (mode == 'triad') {
+      if (['dom7', 'maj7', 'min7', 'dim7'].contains(updatedFourth)) {
+        updatedFourth = '';
+      }
+    } else if (mode == 'seventh') {
+      if (updatedFourth.isEmpty || updatedFourth == 'none' || updatedFourth == 'octave') {
+        updatedFourth = switch (state.freeChordType) {
+          'min' => 'min7',
+          'dim' => 'dim7',
+          _ => 'dom7',
+        };
+      }
+    }
+    state = state.copyWith(
+      freeChordScaleHarmonicMode: mode,
+      freeChordFourth: updatedFourth,
+    );
+  }
 
   void selectFreeChordDegree(int semitones, String quality) {
     final baseRoot = state.freeChordRoot < 0 ? 0 : state.freeChordRoot;
@@ -1152,6 +1174,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     for (final midi in notes) {
       _audioBridge.noteOn(midi);
     }
+    // Activa visualmente el efecto glow en los botones del diapasón
+    _highlightDiapasonButtonsForNotes(notes, const Duration(milliseconds: 900));
+
     Future.delayed(const Duration(milliseconds: 900), () {
       for (final midi in notes) {
         _audioBridge.noteOff(midi);
@@ -1163,16 +1188,61 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final notes = _calculateFreeChordNotes();
     for (final midi in notes) {
       _audioBridge.noteOn(midi);
+      _highlightDiapasonButtonsForNotes([midi], const Duration(milliseconds: 210));
       await Future.delayed(const Duration(milliseconds: 220));
       _audioBridge.noteOff(midi);
     }
   }
 
-  List<int> _calculateFreeChordNotes() => ChordCatalog.notesFor(
-        root: state.freeChordRoot,
-        type: state.freeChordType,
-        extension: state.freeChordFourth,
-      );
+  void _highlightDiapasonButtonsForNotes(List<int> notes, Duration duration) {
+    final matchingButtonIds = <String>{};
+    final targetMidis = notes.toSet();
+    final targetPitchClasses = notes.map((n) => n % 12).toSet();
+    final octFilter = state.freeChordOctave;
+
+    // Busca en ambos acordeones los botones correspondientes
+    for (final trebleData in [state.trebleData1, state.trebleData2]) {
+      for (final row in trebleData.values) {
+        for (final btn in row) {
+          final matchesPull = octFilter == 'all'
+              ? targetPitchClasses.contains(btn.pull % 12)
+              : targetMidis.contains(btn.pull);
+          final matchesPush = octFilter == 'all'
+              ? targetPitchClasses.contains(btn.push % 12)
+              : targetMidis.contains(btn.push);
+
+          if (matchesPull || matchesPush) {
+            matchingButtonIds.add(btn.id);
+          }
+        }
+      }
+    }
+
+    if (matchingButtonIds.isEmpty) return;
+    final next = Set<String>.from(state.activeButtons)..addAll(matchingButtonIds);
+    state = state.copyWith(activeButtons: next);
+
+    Future.delayed(duration, () {
+      final remaining = Set<String>.from(state.activeButtons)..removeAll(matchingButtonIds);
+      state = state.copyWith(activeButtons: remaining);
+    });
+  }
+
+  List<int> _calculateFreeChordNotes() {
+    final oct = state.freeChordOctave;
+    final baseMidi = switch (oct) {
+      '3' => 48,
+      '4' => 60,
+      '5' => 72,
+      _ => 60,
+    };
+    return ChordCatalog.notesFor(
+      root: state.freeChordRoot,
+      type: state.freeChordType,
+      extension: state.freeChordFourth,
+      baseMidi: baseMidi,
+    );
+  }
 
   // Sección 3: Detector de Acordes
   void toggleDetectorMode() {
@@ -1286,6 +1356,8 @@ final activeChordPitchClassesProvider =
   final isPlaying = ref.watch(accordionSimulatorProvider.select((s) => s.isPlayingAudio));
   final playingChordNotes = ref.watch(accordionSimulatorProvider.select((s) => s.playingChordNotes));
 
+  final isFreeChordFixed = ref.watch(accordionSimulatorProvider.select((s) => s.isFreeChordFixed));
+
   final generated = ChordCatalog.notesFor(
     root: freeChordRoot,
     type: freeChordType,
@@ -1306,8 +1378,14 @@ final activeChordPitchClassesProvider =
     }
   }
 
+  // Si isFreeChordFixed es verdadero, el acorde del constructor permanece siempre activo.
+  // Si no está fijo y la canción está sonando con sincronización, la canción toma precedencia.
+  final chordFromConstructor = (isFreeChordFixed || !isPlaying || !syncDiapason)
+      ? generated
+      : const <int>[];
+
   return ChordCatalog.activePitchClasses(
-    generated: generated,
+    generated: chordFromConstructor,
     playing: syncDiapason && isPlaying ? playingChordNotes : const <int>[],
     selected: selectedChordNotes,
   );

@@ -86,6 +86,20 @@ class TonicBarWidget extends ConsumerStatefulWidget {
       color: const Color(0xFFDC2626), // Rojo
       letterSpacing: 0.3,
     );
+    final notesStyle = TextStyle(
+      fontSize: fontSize,
+      fontWeight: FontWeight.w800,
+      color: const Color(0xFF047857), // Verde esmeralda para las notas
+      letterSpacing: 0.2,
+    );
+
+    final notes = ChordCatalog.noteNamesFor(
+      root: root,
+      type: type,
+      extension: extension,
+      latin: latin,
+    );
+    final notesStr = notes.isNotEmpty ? '   (${notes.join(' - ')})' : '';
 
     return TextSpan(
       children: [
@@ -96,6 +110,8 @@ class TonicBarWidget extends ConsumerStatefulWidget {
           const TextSpan(text: '   '), // Espacio entre cualidad y extensión
           TextSpan(text: extStr, style: extensionStyle),
         ],
+        if (notesStr.isNotEmpty)
+          TextSpan(text: notesStr, style: notesStyle),
       ],
     );
   }
@@ -225,12 +241,8 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
     final state = ref.watch(accordionSimulatorProvider);
     final notifier = ref.read(accordionSimulatorProvider.notifier);
 
-    final rootName = state.freeChordRoot >= 0 && state.freeChordRoot < TonicBarWidget.roots.length
-        ? TonicBarWidget.roots[state.freeChordRoot]
-        : '—';
-    final currentChordDisplay = state.freeChordRoot >= 0
-        ? '$rootName${_typeSymbol(state.freeChordType)}${_extensionSymbol(state.freeChordFourth, state.freeChordType)}'
-        : '—';
+    final isLatin = state.notation != NotationMode.alemana;
+    final rootNames = isLatin ? ChordCatalog.latinRootNames : ChordCatalog.germanRootNames;
 
     final barIndex = state.selectedBarIndex;
     final beatIndex = state.selectedBeatIndex;
@@ -340,53 +352,28 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Flexible(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 2.5,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF0284C7),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 2.5,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0284C7),
+                                borderRadius: BorderRadius.circular(2),
                               ),
-                              const SizedBox(width: 3),
-                              const Text(
-                                'Tónica',
-                                style: TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF0284C7),
-                                ),
+                            ),
+                            const SizedBox(width: 3),
+                            const Text(
+                              'Tónica',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0284C7),
                               ),
-                              const SizedBox(width: 3),
-                              // Etiqueta del Acorde a la derecha del título Tónica
-                              Flexible(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFECFDF5),
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(color: const Color(0xFF22C55E)),
-                                  ),
-                                  child: Text(
-                                    currentChordDisplay,
-                                    style: const TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w900,
-                                      color: Color(0xFF065F46),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 3),
                         // Botón desacoplar / acoplar
                         Builder(
                           builder: (btnContext) {
@@ -487,7 +474,7 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 4),
                             child: _buildTonicButton(
-                              rootName: TonicBarWidget.roots[idx],
+                              rootName: rootNames[idx],
                               isActive: isSelected,
                               onTap: () => notifier.setFreeChordRoot(idx),
                             ),
@@ -505,7 +492,7 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 4),
                             child: _buildTonicButton(
-                              rootName: TonicBarWidget.roots[idx],
+                              rootName: rootNames[idx],
                               isActive: isSelected,
                               onTap: () => notifier.setFreeChordRoot(idx),
                             ),
@@ -571,46 +558,6 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
         ),
       ),
     );
-  }
-
-  /// Sigla de la cualidad (M, m, °, +, sus4).
-  static String _typeSymbol(String type) {
-    switch (type) {
-      case 'maj':
-        return '';
-      case 'min':
-        return 'm';
-      case 'dim':
-        return '°';
-      case 'aug':
-        return '+';
-      case 'sus4':
-        return 'sus4';
-      default:
-        return '';
-    }
-  }
-
-  /// Sigla de la extensión (—, 8, 6, add9, 7, maj7, m7, °7).
-  static String _extensionSymbol(String ext, [String type = '']) {
-    switch (ext) {
-      case 'octave':
-        return '8';
-      case 'dom7':
-        return '7';
-      case 'maj7':
-        return 'maj7';
-      case 'maj6':
-        return '6';
-      case 'add9':
-        return 'add9';
-      case 'min7':
-        return type == 'min' ? '7' : 'm7';
-      case 'dim7':
-        return type == 'dim' ? '7' : '°7';
-      default:
-        return '';
-    }
   }
 
   /// Nombre completo del acorde en lenguaje natural (ej. Do Mayor Séptima).

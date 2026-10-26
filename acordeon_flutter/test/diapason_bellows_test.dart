@@ -107,8 +107,8 @@ void main() {
           find.byKey(const ValueKey('diapason_chord_label_1')),
         );
 
-    // Latina por defecto: Do mayor.
-    expect(label().textSpan?.toPlainText(), 'Acorde:   Do   Mayor');
+    // Latina por defecto: Do mayor con notas (Do - Mi - Sol).
+    expect(label().textSpan?.toPlainText(), 'Do   Mayor   (Do - Mi - Sol)');
 
     final labelBox = tester.widget<Container>(
       find
@@ -126,12 +126,12 @@ void main() {
     notifier.setFreeChordType('dim');
     notifier.setFreeChordFourth('dim7');
     await tester.pumpAndSettle();
-    expect(label().textSpan?.toPlainText(), 'Acorde:   Do   Disminuido   Séptima');
+    expect(label().textSpan?.toPlainText(), 'Do   Disminuido   Séptima   (Do - Mi♭ - Fa# - La)');
 
-    // Al cambiar a notación alemana cambia la tónica, no la cualidad.
+    // Al cambiar a notación alemana cambia la tónica y las notas, no la cualidad.
     notifier.setNotation(NotationMode.alemana);
     await tester.pumpAndSettle();
-    expect(label().textSpan?.toPlainText(), 'Acorde:   C   Disminuido   Séptima');
+    expect(label().textSpan?.toPlainText(), 'C   Disminuido   Séptima   (C - Eb - F# - A)');
   });
 
   testWidgets('el botón de tonalidad es funcional y abre el selector de afinación',
@@ -205,12 +205,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Tono ascendente'), findsOneWidget);
-    expect(find.text('Restablecer'), findsOneWidget);
-    expect(find.byKey(const ValueKey('drag_handle_cinco_letras')), findsOneWidget);
+    // Verificamos que se expresen en tonos y semitonos (ej. Base, +1½ T)
+    expect(find.text('Base'), findsOneWidget);
+    expect(find.text('+1½ T'), findsOneWidget);
 
     // Pulsamos "Tono ascendente"
     await tester.tap(find.byKey(const ValueKey('btn_sort_pitch_asc')));
     await tester.pumpAndSettle();
+
+    // Verificamos que Anisada (-7 -> -3½ T) ahora está presente
+    expect(find.text('-3½ T'), findsOneWidget);
 
     // Verificamos que Anisada (-7) ahora está en primera posición
     expect(TuningRegistry.orderedTunings.first.id, 'anisada');
