@@ -48,6 +48,21 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final hasMarks = state.markedBeats.isNotEmpty;
     final effectiveWidth = widget.width ?? (isPrimary ? 104.5 : 82.5);
 
+    // Detectar si el acorde del cuadro seleccionado coincide con el acorde de asignación múltiple
+    final selectedBar = state.selectedBarIndex;
+    final selectedBeat = state.selectedBeatIndex;
+    String? selectedChord;
+    if (selectedBar != null && selectedBeat != null &&
+        selectedBar >= 0 && selectedBar < state.measures.length) {
+      final row = state.measures[selectedBar];
+      if (selectedBeat >= 0 && selectedBeat < row.beats.length) {
+        final c = row.beats[selectedBeat].chord.trim();
+        if (c.isNotEmpty) selectedChord = c;
+      }
+    }
+    final isEditActive = selectedChord != null &&
+        (state.multiBeatChord == null || state.multiBeatChord!.isEmpty || selectedChord == state.multiBeatChord);
+
     return SizedBox(
       width: effectiveWidth,
       child: Column(
@@ -76,93 +91,145 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
           // Minibarra superior: selección masiva de checkboxes y borrado de acordes
           if (isPrimary)
             Container(
-              padding: const EdgeInsets.fromLTRB(4, 2, 4, 2),
+              padding: const EdgeInsets.fromLTRB(4, 3, 4, 3),
               decoration: const BoxDecoration(
                 color: Color(0xFFF8FAFC),
                 border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Botones de Guardar (JSON) e Importar (JSON) — solo ícono para caber en ~95px
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: effectiveWidth > 150 ? effectiveWidth : 150,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Tooltip(
-                        message: 'Guardar compases en JSON',
-                        child: InkWell(
-                          onTap: () async {
-                            final jsonStr = notifier.exportMeasuresToJson();
-                            final storage = ref.read(fileStorageProvider);
-                            final timestamp = DateTime.now().millisecondsSinceEpoch;
-                            await storage.saveFile(
-                              fileName: 'compases_$timestamp.json',
-                              content: jsonStr,
-                            );
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Compases guardados en formato JSON.'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(4),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0284C7),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const FaIcon(
-                              FontAwesomeIcons.download,
-                              size: 9,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 3),
-                      Tooltip(
-                        message: 'Importar compases desde archivo JSON',
-                        child: InkWell(
-                          onTap: () async {
-                            final storage = ref.read(fileStorageProvider);
-                            final content = await storage.pickTextFile(allowedExtensions: ['json']);
-                            if (content != null && content.isNotEmpty) {
-                              final success = notifier.loadMeasuresFromJson(content);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      success
-                                          ? 'Compases restaurados exitosamente desde JSON.'
-                                          : 'Error al importar: archivo JSON no válido.',
-                                    ),
-                                    duration: const Duration(seconds: 2),
-                                  ),
+                      // Botones de Guardar (JSON), Importar (JSON) y Editar — aumentados 50%
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Tooltip(
+                            message: 'Guardar compases en JSON',
+                            child: InkWell(
+                              onTap: () async {
+                                final jsonStr = notifier.exportMeasuresToJson();
+                                final storage = ref.read(fileStorageProvider);
+                                final timestamp = DateTime.now().millisecondsSinceEpoch;
+                                await storage.saveFile(
+                                  fileName: 'compases_$timestamp.json',
+                                  content: jsonStr,
                                 );
-                              }
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(4),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF059669),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const FaIcon(
-                              FontAwesomeIcons.upload,
-                              size: 9,
-                              color: Colors.white,
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Compases guardados en formato JSON.'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(5),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0284C7),
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                child: const FaIcon(
+                                  FontAwesomeIcons.download,
+                                  size: 13.5,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 4),
+                          Tooltip(
+                            message: 'Importar compases desde archivo JSON',
+                            child: InkWell(
+                              onTap: () async {
+                                final storage = ref.read(fileStorageProvider);
+                                final content = await storage.pickTextFile(allowedExtensions: ['json']);
+                                if (content != null && content.isNotEmpty) {
+                                  final success = notifier.loadMeasuresFromJson(content);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          success
+                                              ? 'Compases restaurados exitosamente desde JSON.'
+                                              : 'Error al importar: archivo JSON no válido.',
+                                        ),
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(5),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF059669),
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                child: const FaIcon(
+                                  FontAwesomeIcons.upload,
+                                  size: 13.5,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          // Botón de edición a la derecha de importar compás
+                          Tooltip(
+                            message: isEditActive
+                                ? 'Editar asignación múltiple de $selectedChord'
+                                : 'Selecciona el acorde en el compás para editarlo',
+                            child: InkWell(
+                              key: const ValueKey('edit_multi_beat_chord_btn'),
+                              onTap: isEditActive
+                                  ? () {
+                                      final positions = <String>[];
+                                      for (var m = 0; m < state.measures.length; m++) {
+                                        for (var b = 0; b < state.measures[m].beats.length; b++) {
+                                          if (state.measures[m].beats[b].chord.trim() == selectedChord) {
+                                            positions.add('${m + 1}.${b + 1}');
+                                          }
+                                        }
+                                      }
+                                      notifier.openMultiBeatModalForChord(
+                                        selectedChord!,
+                                        pattern: positions.join(', '),
+                                      );
+                                    }
+                                  : null,
+                              borderRadius: BorderRadius.circular(5),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: isEditActive
+                                      ? const Color(0xFF8B5CF6)
+                                      : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(
+                                    color: isEditActive
+                                        ? const Color(0xFF7C3AED)
+                                        : const Color(0xFFCBD5E1),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: FaIcon(
+                                  FontAwesomeIcons.penToSquare,
+                                  size: 13.5,
+                                  color: isEditActive ? Colors.white : const Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
 
                   // Botones de selección masiva y borrado
                   Row(
