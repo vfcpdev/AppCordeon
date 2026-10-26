@@ -27,11 +27,11 @@ void main() {
     expect(find.text('Exterior'), findsWidgets);
     expect(find.text('Interior'), findsWidgets);
 
-    // Verificar tamaños actuales de los widgets de compás y acordes
+    // Verificar tamaños actuales de los widgets de compás y acordes (ambos compases con estructura completa de 185 px)
     final grids = find.byType(MeasureGridWidget);
     expect(grids, findsNWidgets(2));
     expect(tester.getSize(grids.first).width, 185.0);
-    expect(tester.getSize(grids.last).width, 82.5);
+    expect(tester.getSize(grids.last).width, 185.0);
     expect(tester.getSize(find.byType(FreeChordWidget)).width, 150.0);
   });
 }

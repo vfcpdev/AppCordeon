@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'dart:ui' show Color;
+import 'dart:ui' show Color, Offset;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/audio/analysis/tuning_recommender.dart';
 import '../../core/audio/audio_analyzer.dart';
@@ -398,6 +398,22 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
   void toggleDiapason2() {
     state = state.copyWith(showDiapason2: !state.showDiapason2);
+  }
+
+  void toggleUndockCompas(int accordionNumber) {
+    if (accordionNumber == 1) {
+      state = state.copyWith(isCompas1Undocked: !state.isCompas1Undocked);
+    } else {
+      state = state.copyWith(isCompas2Undocked: !state.isCompas2Undocked);
+    }
+  }
+
+  void setCompasPosition(int accordionNumber, Offset position) {
+    if (accordionNumber == 1) {
+      state = state.copyWith(compas1Position: position);
+    } else {
+      state = state.copyWith(compas2Position: position);
+    }
   }
 
   void setNotation(NotationMode notation) {

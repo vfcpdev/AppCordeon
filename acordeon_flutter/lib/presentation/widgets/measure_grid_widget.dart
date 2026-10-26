@@ -10,11 +10,13 @@ import '../controllers/accordion_controller.dart';
 class MeasureGridWidget extends ConsumerStatefulWidget {
   final int accordionNumber;
   final double? width;
+  final bool isUndocked;
 
   const MeasureGridWidget({
     super.key,
     this.accordionNumber = 1,
     this.width,
+    this.isUndocked = false,
   });
 
   @override
@@ -60,7 +62,10 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final totalBeats = state.measures.length * 4;
     final allMarked = totalBeats > 0 && state.markedBeats.length == totalBeats;
     final hasMarks = state.markedBeats.isNotEmpty;
-    final effectiveWidth = widget.width ?? (isPrimary ? 185.0 : 82.5);
+    final effectiveWidth = widget.width ?? 185.0;
+    final isUndocked = widget.isUndocked || (widget.accordionNumber == 1
+        ? state.isCompas1Undocked
+        : state.isCompas2Undocked);
 
     // Detectar si hay un acorde seleccionado en algún cuadro del compás o en el constructor
     final selectedBar = state.selectedBarIndex;
@@ -117,13 +122,12 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
           // Minibarra superior: selección masiva de checkboxes y borrado de acordes
-          if (isPrimary)
-            Container(
-              padding: const EdgeInsets.fromLTRB(4, 3, 4, 3),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
-                border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-              ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(4, 3, 4, 3),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8FAFC),
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
@@ -360,6 +364,34 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 3),
+                    // Botón de acoplar / desacoplar y hacer movible el Compás
+                    Tooltip(
+                      message: isUndocked
+                          ? 'Acoplar ventana de Compás'
+                          : 'Desacoplar ventana de Compás (mover libremente)',
+                      child: InkWell(
+                        key: ValueKey('undock_compas_${widget.accordionNumber}'),
+                        onTap: () => notifier.toggleUndockCompas(widget.accordionNumber),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Container(
+                          padding: const EdgeInsets.all(3.0),
+                          decoration: BoxDecoration(
+                            color: isUndocked ? const Color(0xFFEFF6FF) : Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: isUndocked ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: FaIcon(
+                            isUndocked ? FontAwesomeIcons.compress : FontAwesomeIcons.arrowUpRightFromSquare,
+                            size: 8.5,
+                            color: isUndocked ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 );
               },
@@ -371,11 +403,9 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Columna Izquierda: Transporte y Seeker de Tiempo (Solo en Diapasón 1)
-                if (isPrimary) ...[
-                  _buildTransportAndSeeker(context, state, notifier),
-                  const SizedBox(width: 4),
-                ],
+                // Columna Izquierda: Transporte y Seeker de Tiempo
+                _buildTransportAndSeeker(context, state, notifier),
+                const SizedBox(width: 4),
 
                 // Columna Central: Cuadrícula de Compases con 4 Tiempos por fila
                 Expanded(
@@ -486,9 +516,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
           ),
 
           // Volumen propio del Compás (pista + acordes marcados)
-          if (isPrimary)
-            Container(
-              padding: const EdgeInsets.fromLTRB(6, 1, 6, 4),
+          Container(
+            padding: const EdgeInsets.fromLTRB(6, 1, 6, 4),
               decoration: const BoxDecoration(
                 border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
               ),
