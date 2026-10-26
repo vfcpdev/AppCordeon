@@ -114,6 +114,11 @@ class AccordionSimulatorState {
   final bool isAnalyzingAudio;
   final String? loadedAudioFileName;
 
+  // Asignación de acorde a múltiples compases (modal movible)
+  final bool showMultiBeatModal;
+  final String multiBeatPattern;
+  final String? multiBeatChord;
+
   const AccordionSimulatorState({
     required this.backgroundColor,
     required this.notation,
@@ -161,6 +166,9 @@ class AccordionSimulatorState {
     this.audioReport,
     this.isAnalyzingAudio = false,
     this.loadedAudioFileName,
+    this.showMultiBeatModal = false,
+    this.multiBeatPattern = '',
+    this.multiBeatChord,
   });
 
   AccordionSimulatorState copyWith({
@@ -211,6 +219,10 @@ class AccordionSimulatorState {
     bool? isAnalyzingAudio,
     String? loadedAudioFileName,
     bool clearAudio = false,
+    bool? showMultiBeatModal,
+    String? multiBeatPattern,
+    String? multiBeatChord,
+    bool clearMultiBeatChord = false,
   }) {
     return AccordionSimulatorState(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -261,6 +273,9 @@ class AccordionSimulatorState {
       audioReport: clearAudio ? null : (audioReport ?? this.audioReport),
       isAnalyzingAudio: isAnalyzingAudio ?? this.isAnalyzingAudio,
       loadedAudioFileName: clearAudio ? null : (loadedAudioFileName ?? this.loadedAudioFileName),
+      showMultiBeatModal: showMultiBeatModal ?? this.showMultiBeatModal,
+      multiBeatPattern: multiBeatPattern ?? this.multiBeatPattern,
+      multiBeatChord: clearMultiBeatChord ? null : (multiBeatChord ?? this.multiBeatChord),
     );
   }
 
@@ -1129,6 +1144,145 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
     updateMeasureBeat(barIndex, beatIndex, symbol);
     return symbol;
+  }
+
+  /// Activa o desactiva la visibilidad del modal movible de asignación múltiple de acorde.
+  void setShowMultiBeatModal(bool show) {
+    if (show && state.multiBeatChord == null) {
+      final symbol = ChordCatalog.symbolFor(
+        root: state.freeChordRoot,
+        type: state.freeChordType,
+        extension: state.freeChordFourth,
+        latin: state.notation != NotationMode.alemana,
+      );
+      state = state.copyWith(showMultiBeatModal: true, multiBeatChord: symbol);
+    } else {
+      state = state.copyWith(showMultiBeatModal: show);
+    }
+  }
+
+  /// Alterna el estado del modal movible para el acorde actual del constructor armónico.
+  void toggleMultiBeatModal() {
+    final willShow = !state.showMultiBeatModal;
+    if (willShow) {
+      final symbol = ChordCatalog.symbolFor(
+        root: state.freeChordRoot,
+        type: state.freeChordType,
+        extension: state.freeChordFourth,
+        latin: state.notation != NotationMode.alemana,
+      );
+      // Recolectar posiciones actuales si ya existen en la cuadrícula
+      final positions = <String>[];
+      for (var m = 0; m < state.measures.length; m++) {
+        for (var b = 0; b < state.measures[m].beats.length; b++) {
+          if (state.measures[m].beats[b].chord.trim() == symbol) {
+            positions.add('${m + 1}.${b + 1}');
+          }
+        }
+      }
+      final pattern = positions.isNotEmpty
+          ? positions.join(', ')
+          : (state.multiBeatChord == symbol ? state.multiBeatPattern : '');
+
+      state = state.copyWith(
+        showMultiBeatModal: true,
+        multiBeatChord: symbol,
+        multiBeatPattern: pattern,
+      );
+    } else {
+      state = state.copyWith(showMultiBeatModal: false);
+    }
+  }
+
+  /// Abre el modal movible enfocado en un acorde específico y precarga sus posiciones.
+  void openMultiBeatModalForChord(String chord, {String? pattern}) {
+    state = state.copyWith(
+      showMultiBeatModal: true,
+      multiBeatChord: chord,
+      multiBeatPattern: pattern ?? state.multiBeatPattern,
+    );
+  }
+
+  /// Aplica el acorde en múltiples compases según el patrón "Compás.Cuadro" (ej: "1.1, 2.3, 5.2").
+  /// Expande automáticamente los compases de la cuadrícula si el patrón requiere compases adicionales.
+  int applyMultiBeatChord({required String chord, required String pattern}) {
+    if (chord.trim().isEmpty) return 0;
+    final positions = parseMultiBeatPositions(pattern);
+    if (positions.isEmpty) return 0;
+
+    var maxBar = state.measures.length;
+    for (final pos in positions) {
+      if (pos.barNumber > maxBar) {
+        maxBar = pos.barNumber;
+      }
+    }
+
+    final updatedMeasures = List<MeasureRow>.from(state.measures);
+    while (updatedMeasures.length < maxBar) {
+      final nextBar = updatedMeasures.length + 1;
+      updatedMeasures.add(
+        MeasureRow(
+          barNumber: nextBar,
+          beats: List.generate(4, (beatIdx) {
+            final timeSec = ((nextBar - 1) * 4 + beatIdx) * 0.5;
+            final mins = (timeSec ~/ 60).toString().padLeft(2, '0');
+            final secs = ((timeSec % 60).toInt()).toString().padLeft(2, '0');
+            return MeasureBeat(
+              barIndex: nextBar - 1,
+              beatIndex: beatIdx,
+              chord: '',
+              timeText: '$mins:$secs',
+            );
+          }),
+        ),
+      );
+    }
+
+    var appliedCount = 0;
+    for (final pos in positions) {
+      final bIdx = pos.barNumber - 1;
+      final tIdx = pos.beatNumber - 1;
+      if (bIdx >= 0 && bIdx < updatedMeasures.length) {
+        final row = updatedMeasures[bIdx];
+        if (tIdx >= 0 && tIdx < row.beats.length) {
+          final beats = List<MeasureBeat>.from(row.beats);
+          beats[tIdx] = beats[tIdx].copyWith(chord: chord.trim());
+          updatedMeasures[bIdx] = MeasureRow(barNumber: row.barNumber, beats: beats);
+          appliedCount++;
+        }
+      }
+    }
+
+    state = state.copyWith(
+      measures: updatedMeasures,
+      multiBeatChord: chord.trim(),
+      multiBeatPattern: pattern,
+      selectedBarIndex: positions.first.barNumber - 1,
+      selectedBeatIndex: positions.first.beatNumber - 1,
+    );
+
+    return appliedCount;
+  }
+
+  /// Parsea tokens en formato "Compás.Cuadro" (1-indexed, ej: "1.1, 2.3, 5.2").
+  static List<({int barNumber, int beatNumber})> parseMultiBeatPositions(String pattern) {
+    final result = <({int barNumber, int beatNumber})>[];
+    if (pattern.trim().isEmpty) return result;
+
+    final tokens = pattern.split(',');
+    for (final rawToken in tokens) {
+      final token = rawToken.trim();
+      if (token.isEmpty) continue;
+      final parts = token.split(RegExp(r'[.:\-]'));
+      if (parts.length >= 2) {
+        final bar = int.tryParse(parts[0].trim());
+        final beat = int.tryParse(parts[1].trim());
+        if (bar != null && bar >= 1 && beat != null && beat >= 1 && beat <= 4) {
+          result.add((barNumber: bar, beatNumber: beat));
+        }
+      }
+    }
+    return result;
   }
 
   /// Exporta los compases actuales a formato JSON (incluye 4 secciones por compás con sus acordes).
