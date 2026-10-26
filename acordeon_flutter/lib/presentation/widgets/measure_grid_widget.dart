@@ -260,9 +260,11 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
             ),
+          ),
+        ),
           // Cabecera: Título "Compás" + Control de BPM editable con Subir / Bajar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
