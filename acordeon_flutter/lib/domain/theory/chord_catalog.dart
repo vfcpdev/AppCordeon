@@ -1,3 +1,5 @@
+import '../../core/constants/enums.dart';
+
 /// Catálogo de intervalos de acordes (Open/Closed: añadir un tipo = añadir una entrada).
 class ChordCatalog {
   ChordCatalog._();
@@ -135,11 +137,70 @@ class ChordCatalog {
   }
 
   static const Map<String, int> rootPitchClasses = {
-    'Do#': 1, 'Reb': 1, 'Re#': 3, 'Mib': 3, 'Fa#': 6, 'Solb': 6, 'Sol#': 8, 'Lab': 8, 'La#': 10, 'Sib': 10,
+    'Do#': 1, 'Reb': 1, 'Re♭': 1, 'Re#': 3, 'Mib': 3, 'Mi♭': 3, 'Fa#': 6, 'Solb': 6, 'Sol♭': 6, 'Sol#': 8, 'Lab': 8, 'La♭': 8, 'La#': 10, 'Sib': 10, 'Si♭': 10,
     'Do': 0, 'Re': 2, 'Mi': 4, 'Fa': 5, 'Sol': 7, 'La': 9, 'Si': 11,
-    'C#': 1, 'Db': 1, 'D#': 3, 'Eb': 3, 'F#': 6, 'Gb': 6, 'G#': 8, 'Ab': 8, 'A#': 10, 'Bb': 10,
+    'C#': 1, 'Db': 1, 'D♭': 1, 'D#': 3, 'Eb': 3, 'E♭': 3, 'F#': 6, 'Gb': 6, 'G♭': 6, 'G#': 8, 'Ab': 8, 'A♭': 8, 'A#': 10, 'Bb': 10, 'B♭': 10,
     'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
   };
+
+  /// Convierte el símbolo de un acorde a la notación especificada (latina o alemana),
+  /// preservando el tipo y las extensiones armónicas (p. ej. 'Do7' <-> 'C7', 'Solm' <-> 'Gm').
+  static String formatChordForNotation(String chord, NotationMode notation) {
+    final trimmed = chord.trim();
+    if (trimmed.isEmpty || trimmed == '-') return trimmed;
+
+    String? matchedRoot;
+    int? pitchClass;
+
+    final sortedRoots = rootPitchClasses.keys.toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+
+    for (final r in sortedRoots) {
+      if (trimmed.startsWith(r)) {
+        matchedRoot = r;
+        pitchClass = rootPitchClasses[r];
+        break;
+      }
+    }
+
+    if (matchedRoot == null || pitchClass == null) {
+      return trimmed;
+    }
+
+    final rest = trimmed.substring(matchedRoot.length);
+    final bool isSharp = matchedRoot.contains('#');
+    String targetRootName;
+
+    if (notation == NotationMode.alemana) {
+      if (isSharp) {
+        targetRootName = switch (pitchClass) {
+          1 => 'C#',
+          3 => 'D#',
+          6 => 'F#',
+          8 => 'G#',
+          10 => 'A#',
+          _ => germanRootNames[pitchClass],
+        };
+      } else {
+        targetRootName = germanRootNames[pitchClass];
+      }
+    } else {
+      if (isSharp) {
+        targetRootName = switch (pitchClass) {
+          1 => 'Do#',
+          3 => 'Re#',
+          6 => 'Fa#',
+          8 => 'Sol#',
+          10 => 'La#',
+          _ => latinRootNames[pitchClass],
+        };
+      } else {
+        targetRootName = latinRootNames[pitchClass];
+      }
+    }
+
+    return '$targetRootName$rest';
+  }
 
   /// Extrae las clases de altura (0..11) a partir de una cadena de acorde (p. ej. 'Do', 'Sol7', 'Am', etc.)
   static Set<int> pitchClassesForChordSymbol(String chord) {

@@ -383,7 +383,24 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void setNotation(NotationMode notation) {
-    state = state.copyWith(notation: notation);
+    if (state.notation == notation) return;
+
+    final convertedMeasures = state.measures.map((row) {
+      final updatedBeats = row.beats.map((beat) {
+        if (beat.chord.trim().isEmpty) return beat;
+        final converted = ChordCatalog.formatChordForNotation(beat.chord, notation);
+        return beat.copyWith(chord: converted);
+      }).toList();
+      return MeasureRow(barNumber: row.barNumber, beats: updatedBeats);
+    }).toList();
+
+    state = state.copyWith(
+      notation: notation,
+      measures: convertedMeasures,
+      multiBeatChord: state.multiBeatChord != null && state.multiBeatChord!.isNotEmpty
+          ? ChordCatalog.formatChordForNotation(state.multiBeatChord!, notation)
+          : state.multiBeatChord,
+    );
   }
 
   void setBackgroundColor(Color color) {

@@ -71,7 +71,7 @@ class HomeScreen extends ConsumerWidget {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: const [
-                                      MeasureGridWidget(width: 165),
+                                      MeasureGridWidget(width: 185),
                                       SizedBox(width: 6),
                                       SizedBox(
                                         width: 150,

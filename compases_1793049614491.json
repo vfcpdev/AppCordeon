@@ -1,0 +1,274 @@
+{
+  "version": 1,
+  "app": "AppCordeon",
+  "createdAt": "2026-10-26T16:20:14.486",
+  "timeSignature": "4/4",
+  "totalMeasures": 8,
+  "tuning": "Cinco Letras (Bb - Eb - Ab)",
+  "measures": [
+    {
+      "barNumber": 1,
+      "beats": [
+        {
+          "beatIndex": 0,
+          "chord": "Domaj7",
+          "timeText": "00:00",
+          "isContinue": false,
+          "bellows": "pull"
+        },
+        {
+          "beatIndex": 1,
+          "chord": "",
+          "timeText": "00:00",
+          "isContinue": true,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 2,
+          "chord": "",
+          "timeText": "00:01",
+          "isContinue": true,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 3,
+          "chord": "",
+          "timeText": "00:01",
+          "isContinue": true,
+          "bellows": "both"
+        }
+      ]
+    },
+    {
+      "barNumber": 2,
+      "beats": [
+        {
+          "beatIndex": 0,
+          "chord": "",
+          "timeText": "00:02",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 1,
+          "chord": "Cmaj7",
+          "timeText": "00:02",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 2,
+          "chord": "",
+          "timeText": "00:03",
+          "isContinue": false,
+          "bellows": "pull"
+        },
+        {
+          "beatIndex": 3,
+          "chord": "",
+          "timeText": "00:03",
+          "isContinue": false,
+          "bellows": "both"
+        }
+      ]
+    },
+    {
+      "barNumber": 3,
+      "beats": [
+        {
+          "beatIndex": 0,
+          "chord": "Bmaj7",
+          "timeText": "00:04",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 1,
+          "chord": "",
+          "timeText": "00:04",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 2,
+          "chord": "",
+          "timeText": "00:05",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 3,
+          "chord": "",
+          "timeText": "00:05",
+          "isContinue": false,
+          "bellows": "pull"
+        }
+      ]
+    },
+    {
+      "barNumber": 4,
+      "beats": [
+        {
+          "beatIndex": 0,
+          "chord": "",
+          "timeText": "00:06",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 1,
+          "chord": "",
+          "timeText": "00:06",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 2,
+          "chord": "",
+          "timeText": "00:07",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 3,
+          "chord": "",
+          "timeText": "00:07",
+          "isContinue": false,
+          "bellows": "both"
+        }
+      ]
+    },
+    {
+      "barNumber": 5,
+      "beats": [
+        {
+          "beatIndex": 0,
+          "chord": "",
+          "timeText": "00:08",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 1,
+          "chord": "",
+          "timeText": "00:08",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 2,
+          "chord": "",
+          "timeText": "00:09",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 3,
+          "chord": "",
+          "timeText": "00:09",
+          "isContinue": false,
+          "bellows": "both"
+        }
+      ]
+    },
+    {
+      "barNumber": 6,
+      "beats": [
+        {
+          "beatIndex": 0,
+          "chord": "",
+          "timeText": "00:10",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 1,
+          "chord": "",
+          "timeText": "00:10",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 2,
+          "chord": "",
+          "timeText": "00:11",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 3,
+          "chord": "",
+          "timeText": "00:11",
+          "isContinue": false,
+          "bellows": "both"
+        }
+      ]
+    },
+    {
+      "barNumber": 7,
+      "beats": [
+        {
+          "beatIndex": 0,
+          "chord": "",
+          "timeText": "00:12",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 1,
+          "chord": "",
+          "timeText": "00:12",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 2,
+          "chord": "",
+          "timeText": "00:13",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 3,
+          "chord": "",
+          "timeText": "00:13",
+          "isContinue": false,
+          "bellows": "both"
+        }
+      ]
+    },
+    {
+      "barNumber": 8,
+      "beats": [
+        {
+          "beatIndex": 0,
+          "chord": "",
+          "timeText": "00:14",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 1,
+          "chord": "",
+          "timeText": "00:14",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 2,
+          "chord": "",
+          "timeText": "00:15",
+          "isContinue": false,
+          "bellows": "both"
+        },
+        {
+          "beatIndex": 3,
+          "chord": "",
+          "timeText": "00:15",
+          "isContinue": false,
+          "bellows": "both"
+        }
+      ]
+    }
+  ]
+}

@@ -199,8 +199,8 @@ class _AccordionButton3DPainter extends CustomPainter {
         ],
         stops: const [0.0, 0.55, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
-    } else if (buttonType != null && bellowsMode == BellowsMode.pull) {
-      // Bajo sincronizado con el fuelle: Abre (pull) en azul.
+    } else if (buttonType != null && bellowsMode == BellowsMode.pull && isChordPull) {
+      // Bajo sincronizado con el fuelle: Abre (pull) en azul solo si coincide con el acorde
       bodyPaint.shader = RadialGradient(
         center: const Alignment(-0.40, -0.40),
         radius: 0.88,
@@ -211,8 +211,8 @@ class _AccordionButton3DPainter extends CustomPainter {
         ],
         stops: const [0.0, 0.58, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
-    } else if (buttonType != null && bellowsMode == BellowsMode.push) {
-      // Bajo sincronizado con el fuelle: Cierra (push) en rojo.
+    } else if (buttonType != null && bellowsMode == BellowsMode.push && isChordPush) {
+      // Bajo sincronizado con el fuelle: Cierra (push) en rojo solo si coincide con el acorde
       bodyPaint.shader = RadialGradient(
         center: const Alignment(-0.40, -0.40),
         radius: 0.88,
@@ -258,7 +258,7 @@ class _AccordionButton3DPainter extends CustomPainter {
     final bool bothSplit = !isPressed &&
         !isDetectorSelected &&
         !isSelectedForRhythm &&
-        ((!isTreble && !chordTint && bellowsMode == BellowsMode.both) ||
+        ((!isTreble && !chordTint && bellowsMode == BellowsMode.both && (isChordPull || isChordPush)) ||
             chordTintBoth);
 
     if (chordTint || bothSplit) {
@@ -287,10 +287,9 @@ class _AccordionButton3DPainter extends CustomPainter {
         ).createShader(Rect.fromCircle(center: center, radius: radius));
 
       if (bothSplit) {
-        // En agudos: solo la mitad que pertenezca al acorde se pinta; la otra conserva el nácar blanco.
-        // En bajos (buttonType != null): siempre es split azul/rojo.
-        final paintPullHalf = !isTreble || isChordPull;
-        final paintPushHalf = !isTreble || isChordPush;
+        // En agudos y bajos: solo la mitad que pertenezca al acorde se pinta; la otra conserva el nácar blanco.
+        final paintPullHalf = isChordPull;
+        final paintPushHalf = isChordPush;
 
         // Primero dibuja la base perlada por defecto
         canvas.drawCircle(center, radius, bodyPaint);

@@ -63,6 +63,8 @@ class BassPanelWidget extends ConsumerWidget {
       chords[5], funds[5],
     ];
 
+    final activeChordPitchClasses = ref.watch(activeChordPitchClassesProvider(accordionNumber));
+
     return Container(
       margin: const EdgeInsets.only(right: 8),
       decoration: BoxDecoration(
@@ -142,6 +144,7 @@ class BassPanelWidget extends ConsumerWidget {
                     buttons: exteriorButtons,
                     state: state,
                     notifier: notifier,
+                    activeChordPitchClasses: activeChordPitchClasses,
                   ),
                   // Espacio suficiente para los números de la columna interior.
                   const SizedBox(width: 18.0),
@@ -150,6 +153,7 @@ class BassPanelWidget extends ConsumerWidget {
                     buttons: interiorButtons,
                     state: state,
                     notifier: notifier,
+                    activeChordPitchClasses: activeChordPitchClasses,
                   ),
                 ],
               ),
@@ -165,6 +169,7 @@ class BassPanelWidget extends ConsumerWidget {
     required List<BassButtonModel> buttons,
     required AccordionSimulatorState state,
     required AccordionSimulatorNotifier notifier,
+    required Set<int> activeChordPitchClasses,
   }) {
     final isPrimary = accordionNumber == 1;
     final currentTuning = isPrimary ? state.tuning1 : state.tuning2;
@@ -224,6 +229,15 @@ class BassPanelWidget extends ConsumerWidget {
               ? pullMidi
               : pushMidi;
 
+          final isChordPull = activeChordPitchClasses.isNotEmpty && (
+            btn.pullNotes.any((n) => activeChordPitchClasses.contains(n % 12)) ||
+            activeChordPitchClasses.contains(pullMidi % 12)
+          );
+          final isChordPush = activeChordPitchClasses.isNotEmpty && (
+            btn.pushNotes.any((n) => activeChordPitchClasses.contains(n % 12)) ||
+            activeChordPitchClasses.contains(pushMidi % 12)
+          );
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 6.5),
             child: Stack(
@@ -253,6 +267,8 @@ class BassPanelWidget extends ConsumerWidget {
                   isPressed: isPressed,
                   bellowsMode: currentBellows,
                   buttonType: btn.type,
+                  isChordPull: isChordPull,
+                  isChordPush: isChordPush,
                   onPointerDown: () => notifier.pressButton(btn.id, midiToPlay),
                   onPointerUp: () => notifier.releaseButton(btn.id, midiToPlay),
                   child: _buildBassButtonLabel(pushName, pullName, currentBellows),

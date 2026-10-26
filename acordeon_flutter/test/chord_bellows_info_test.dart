@@ -26,6 +26,40 @@ void main() {
       expect(amPcs.length, 3);
     });
 
+    test('ChordCatalog.maxChordName es la cadena de texto más grande generable (12 caracteres)', () {
+      expect(ChordCatalog.maxChordName, 'Sol#sus4maj7');
+      expect(ChordCatalog.maxChordName.length, 12);
+
+      // Generado directamente por symbolFor
+      final generated = ChordCatalog.symbolFor(
+        root: 8, // Sol#
+        type: 'sus4',
+        extension: 'maj7',
+        latin: true,
+      );
+      expect(generated, 'Sol#sus4maj7');
+
+      // Comprobar exhaustivamente todas las combinaciones posibles en ChordCatalog
+      var longestFound = '';
+      for (var r = 0; r < 12; r++) {
+        for (final t in ['', 'min', 'dim', 'aug', 'sus4']) {
+          for (final ext in ['', 'octave', 'dom7', 'maj7', 'maj6', 'add9', 'min7', 'dim7']) {
+            final latinSym = ChordCatalog.symbolFor(root: r, type: t, extension: ext, latin: true);
+            if (latinSym.length > longestFound.length) {
+              longestFound = latinSym;
+            }
+            final germanSym = ChordCatalog.symbolFor(root: r, type: t, extension: ext, latin: false);
+            if (germanSym.length > longestFound.length) {
+              longestFound = germanSym;
+            }
+          }
+        }
+      }
+
+      expect(longestFound.length, 12);
+      expect(longestFound, 'Sol#sus4maj7');
+    });
+
     test('MeasureJsonSerializer preserva la propiedad bellows de MeasureBeat', () {
       final rows = [
         MeasureRow(

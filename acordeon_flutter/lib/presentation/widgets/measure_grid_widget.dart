@@ -36,6 +36,20 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     super.dispose();
   }
 
+  void _scrollToBar(int barIndex) {
+    if (_compasScrollController.hasClients) {
+      final target = (barIndex * 92.0).clamp(
+        0.0,
+        _compasScrollController.position.maxScrollExtent,
+      );
+      _compasScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(accordionSimulatorProvider);
@@ -46,7 +60,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final totalBeats = state.measures.length * 4;
     final allMarked = totalBeats > 0 && state.markedBeats.length == totalBeats;
     final hasMarks = state.markedBeats.isNotEmpty;
-    final effectiveWidth = widget.width ?? (isPrimary ? 115.0 : 82.5);
+    final effectiveWidth = widget.width ?? (isPrimary ? 185.0 : 82.5);
 
     // Detectar si hay un acorde seleccionado en algún cuadro del compás o en el constructor
     final selectedBar = state.selectedBarIndex;
@@ -436,6 +450,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                         bellows: beat.bellows,
                                         isCurrentPlayhead: isCurrentPlayhead,
                                         isMarked: notifier.isBeatMarked(mIdx, beatIdx),
+                                        isSelected: state.selectedBarIndex == mIdx && state.selectedBeatIndex == beatIdx,
                                         hasBottomBorder: beatIdx < measure.beats.length - 1,
                                         notation: state.notation,
                                         onChanged: (newChord) {
@@ -443,6 +458,10 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                         },
                                         onSelected: () {
                                           notifier.selectBeat(mIdx, beatIdx);
+                                        },
+                                        onNavigate: (bar, beat) {
+                                          notifier.selectBeat(bar, beat);
+                                          _scrollToBar(bar);
                                         },
                                         onToggleMark: () {
                                           notifier.toggleBeatMark(mIdx, beatIdx);
@@ -1275,10 +1294,12 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final BellowsMode bellows;
   final bool isCurrentPlayhead;
   final bool isMarked;
+  final bool isSelected;
   final bool hasBottomBorder;
   final NotationMode notation;
   final ValueChanged<String> onChanged;
   final VoidCallback? onSelected;
+  final void Function(int bar, int beat)? onNavigate;
   final VoidCallback? onToggleMark;
   final ValueChanged<BellowsMode>? onBellowsChanged;
 
@@ -1292,10 +1313,12 @@ class _InlineBeatChordEditor extends StatefulWidget {
     this.bellows = BellowsMode.both,
     required this.isCurrentPlayhead,
     required this.isMarked,
+    this.isSelected = false,
     required this.hasBottomBorder,
     this.notation = NotationMode.latina,
     required this.onChanged,
     this.onSelected,
+    this.onNavigate,
     this.onToggleMark,
     this.onBellowsChanged,
   });
@@ -1321,15 +1344,15 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
   bool _isEditing = false;
 
   String get _nodeKey => '${widget.measureIndex}_${widget.beatIndex}';
-  bool get _isSelected => _selectedKey == _nodeKey;
+  bool get _isSelected => _selectedKey == _nodeKey || widget.isSelected;
   bool get _isCellHighlighted => _isSelected && !_isEditing;
-
 
   @override
   void initState() {
     super.initState();
     _registry[_nodeKey] = this;
-    _controller = TextEditingController(text: widget.chord);
+    final initialChord = ChordCatalog.formatChordForNotation(widget.chord, widget.notation);
+    _controller = TextEditingController(text: initialChord);
 
     _cellFocusNode = FocusNode(debugLabel: 'beat_cell_$_nodeKey');
     _cellFocusNode.onKeyEvent = _handleCellKeyEvent;
@@ -1370,7 +1393,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
       }
     });
 
-    if (_selectedKey == _nodeKey) {
+    if (_selectedKey == _nodeKey || widget.isSelected) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _setSelected();
       });
@@ -1388,11 +1411,15 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
       _registry.remove('${oldWidget.measureIndex}_${oldWidget.beatIndex}');
       _registry[_nodeKey] = this;
     }
-    if (oldWidget.chord != widget.chord && !_isEditing) {
+    final formattedChord = ChordCatalog.formatChordForNotation(widget.chord, widget.notation);
+    if ((oldWidget.chord != widget.chord || oldWidget.notation != widget.notation) && !_isEditing) {
       _controller.value = TextEditingValue(
-        text: widget.chord,
+        text: formattedChord,
         selection: const TextSelection.collapsed(offset: 0),
       );
+    }
+    if (widget.isSelected && !oldWidget.isSelected && !_isEditing) {
+      _cellFocusNode.requestFocus();
     }
   }
 
@@ -1410,8 +1437,9 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
 
   void _commit() {
     final trimmed = _controller.text.trim();
-    if (trimmed != widget.chord) {
-      widget.onChanged(trimmed);
+    final formatted = ChordCatalog.formatChordForNotation(trimmed, widget.notation);
+    if (formatted != widget.chord) {
+      widget.onChanged(formatted);
     }
   }
 
@@ -1431,6 +1459,9 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
       if (oldKey != null && oldKey != targetKey) {
         _registry[oldKey]?._setIdle();
       }
+
+      widget.onNavigate?.call(nextM, nextB);
+      widget.onSelected?.call();
 
       final targetState = _registry[targetKey];
       if (targetState != null) {
@@ -1484,11 +1515,12 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
   }
 
   void _applyChord(String chord) {
+    final formatted = ChordCatalog.formatChordForNotation(chord, widget.notation);
     _controller.value = TextEditingValue(
-      text: chord,
-      selection: TextSelection.collapsed(offset: chord.length),
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
-    widget.onChanged(chord);
+    widget.onChanged(formatted);
     if (mounted) setState(() {});
   }
 
@@ -1514,18 +1546,22 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
         _activateEdit();
         return KeyEventResult.handled;
       } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-        // Flecha derecha: saca de foco / permanece el cuadro seleccionado
+        // Flecha derecha: permanece el cuadro seleccionado con su foco activo
         return KeyEventResult.handled;
       } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        // Flecha abajo: cambia al compás/cuadro siguiente
+        // Flecha abajo: navega al compás/cuadro siguiente
         _moveSelection(1);
         return KeyEventResult.handled;
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        // Flecha arriba: cambia al compás/cuadro anterior
+        // Flecha arriba: sube al compás/cuadro anterior
         _moveSelection(-1);
         return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.tab ||
-          event.logicalKey == LogicalKeyboardKey.enter ||
+      } else if (event.logicalKey == LogicalKeyboardKey.tab) {
+        // Tab / Shift+Tab para navegar adelante / atrás
+        final isShift = HardwareKeyboard.instance.isShiftPressed;
+        _moveSelection(isShift ? -1 : 1);
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.enter ||
           event.logicalKey == LogicalKeyboardKey.numpadEnter) {
         _activateEdit();
         return KeyEventResult.handled;
@@ -1542,16 +1578,21 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
         _setSelected();
         return KeyEventResult.handled;
       } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        // Flecha abajo: cambia al compás/cuadro siguiente
+        // Flecha abajo: sube/baja y cambia al compás/cuadro siguiente
         _moveSelection(1);
         return KeyEventResult.handled;
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        // Flecha arriba: cambia al compás/cuadro anterior
+        // Flecha arriba: sube al compás/cuadro anterior
         _moveSelection(-1);
         return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.tab ||
-          event.logicalKey == LogicalKeyboardKey.escape) {
-        // Tab o Escape: saca de foco de edición pero mantiene cuadro seleccionado
+      } else if (event.logicalKey == LogicalKeyboardKey.tab) {
+        // Tab / Shift+Tab para navegar adelante / atrás
+        final isShift = HardwareKeyboard.instance.isShiftPressed;
+        _commit();
+        _moveSelection(isShift ? -1 : 1);
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+        // Escape: saca de foco de edición pero mantiene cuadro seleccionado
         _commit();
         _setSelected();
         return KeyEventResult.handled;
@@ -1632,14 +1673,13 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               // Con la tarjeta de Compás estrecha, el tiempo no cabe junto al
-              // acorde y al checkbox: se oculta para dar prioridad total al nombre completo del acorde.
+              // Con la tarjeta de Compás, dar prioridad al cuadro de texto de acorde
               final showArrows = constraints.maxWidth >= 65;
-              final showTime = constraints.maxWidth >= 120;
-              final isLongChord = hasChord && widget.chord.length > 5;
+              final showTime = constraints.maxWidth >= 155;
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Cuadro de texto interactivo con foco directo y visualización completa del acorde
+                  // Cuadro de texto interactivo con foco directo y tamaño de texto aumentado
                   Expanded(
                     child: Tooltip(
                       message: hasChord ? 'Acorde: ${widget.chord}' : '',
@@ -1650,11 +1690,11 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                         readOnly: !_isEditing,
                         textAlignVertical: TextAlignVertical.center,
                         style: TextStyle(
-                          fontSize: isLongChord ? 7.8 : 8.8,
-                          letterSpacing: isLongChord ? -0.3 : -0.1,
+                          fontSize: 10.0,
+                          letterSpacing: -0.2,
                           fontWeight: (isFocusedOrSelected || hasChord)
                               ? FontWeight.w900
-                              : FontWeight.w500,
+                              : FontWeight.w600,
                           color: isPlaying
                               ? const Color(0xFFB45309)
                               : (isFocusedOrSelected
@@ -1667,7 +1707,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                           isDense: true,
                           hintText: '-',
                           hintStyle: TextStyle(
-                            fontSize: 8.5,
+                            fontSize: 10.0,
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF94A3B8),
                           ),
@@ -1684,46 +1724,50 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                       ),
                     ),
                   ),
-                  if (showTime) ...[
-                    const SizedBox(width: 2),
-                    Text(
-                      widget.timeText,
-                      style: TextStyle(
-                        fontSize: 7.5,
-                        fontWeight: isCellSelected
-                            ? FontWeight.w800
-                            : FontWeight.w600,
-                        color: isCellSelected
-                            ? const Color(0xFF1D4ED8)
-                            : const Color(0xFF64748B),
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ],
-                  const SizedBox(width: 2),
-                  // Checkbox para marcar el tiempo y flechas Abre/Cierre a su derecha
-                  Padding(
-                    padding: const EdgeInsets.only(right: 2.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _BeatMarkCheckbox(
-                          key: ValueKey(
-                            'beat_checkbox_${widget.measureIndex}_${widget.beatIndex}',
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (showTime) ...[
+                        Text(
+                          widget.timeText,
+                          style: TextStyle(
+                            fontSize: 7.5,
+                            fontWeight: isCellSelected
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                            color: isCellSelected
+                                ? const Color(0xFF1D4ED8)
+                                : const Color(0xFF64748B),
+                            fontFamily: 'monospace',
                           ),
-                          isChecked: isMarked,
-                          onTap: widget.onToggleMark,
                         ),
-                        if (showArrows) ...[
-                          const SizedBox(width: 2),
-                          _BeatBellowsArrows(
-                            bellows: widget.bellows,
-                            isEnabled: hasChord,
-                            onBellowsChanged: hasChord ? widget.onBellowsChanged : null,
-                          ),
-                        ],
+                        const SizedBox(width: 3),
                       ],
-                    ),
+                      // Checkbox para marcar el tiempo y flechas Abre/Cierre a su derecha
+                      Padding(
+                        padding: const EdgeInsets.only(right: 2.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _BeatMarkCheckbox(
+                              key: ValueKey(
+                                'beat_checkbox_${widget.measureIndex}_${widget.beatIndex}',
+                              ),
+                              isChecked: isMarked,
+                              onTap: widget.onToggleMark,
+                            ),
+                            if (showArrows) ...[
+                              const SizedBox(width: 2),
+                              _BeatBellowsArrows(
+                                bellows: widget.bellows,
+                                isEnabled: hasChord,
+                                onBellowsChanged: hasChord ? widget.onBellowsChanged : null,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               );
