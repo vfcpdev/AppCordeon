@@ -65,6 +65,7 @@ class HomeScreen extends ConsumerWidget {
                                         accordionNumber: 1,
                                         currentTuning: state.tuning1,
                                         onTuningChanged: (t) => t != null ? notifier.setTuning1(t) : null,
+                                        state: state,
                                       ),
                                       const SizedBox(width: 6),
 
@@ -93,6 +94,7 @@ class HomeScreen extends ConsumerWidget {
                                         accordionNumber: 2,
                                         currentTuning: state.tuning2,
                                         onTuningChanged: (t) => t != null ? notifier.setTuning2(t) : null,
+                                        state: state,
                                       ),
                                       const SizedBox(width: 6),
 
@@ -168,6 +170,7 @@ class HomeScreen extends ConsumerWidget {
     required int accordionNumber,
     required dynamic currentTuning,
     required dynamic onTuningChanged,
+    required AccordionSimulatorState state,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -186,14 +189,14 @@ class HomeScreen extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cuerpo: Bajos (solo Diapasón 1) + Diapasón 10-11-10
+          // Cuerpo: Bajos (A1 o A2 según selección) + Diapasón 10-11-10
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, 6, 6, 6),
+            padding: const EdgeInsets.all(6),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (accordionNumber == 1)
+                if (accordionNumber == 1 || (!state.isBass2Collapsed && accordionNumber == 2))
                   BassPanelWidget(accordionNumber: accordionNumber),
                 DiapasonWidget(
                   accordionNumber: accordionNumber,

@@ -33,7 +33,7 @@ class AcordeonEngineBridge implements AudioEngine {
   }
 
   void _ensureSynth() {
-    if (_synth == null && kIsWeb) {
+    if (_synth == null) {
       _guard('ensureSynth', () {
         _synth = createWebAudioSynth();
         _synth?.init();

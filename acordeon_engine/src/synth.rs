@@ -61,17 +61,30 @@ impl AccordionSynth {
     }
 
     /// Rellena el buffer estéreo o mono PCM intercalado
-    pub fn process_buffer(&mut self, out_buffer: &mut [f32]) {
-        for sample in out_buffer.iter_mut() {
+    pub fn process_interleaved(&mut self, out_buffer: &mut [f32], channels: usize) {
+        if channels == 0 || out_buffer.is_empty() {
+            return;
+        }
+
+        let num_frames = out_buffer.len() / channels;
+        for frame in 0..num_frames {
             let mut sum = 0.0;
             for v in &mut self.voices {
                 if v.is_active {
                     sum += v.next_sample();
                 }
             }
-            // Soft clipping para evitar distorsión dura
-            let out = (sum * self.master_volume * 0.4).tanh();
-            *sample = out;
+            // Soft clipping suave para emular la saturación de caja armónica de madera
+            let out = (sum * self.master_volume * 0.45).tanh();
+
+            for ch in 0..channels {
+                out_buffer[frame * channels + ch] = out;
+            }
         }
+    }
+
+    /// Rellena el buffer mono PCM directo
+    pub fn process_buffer(&mut self, out_buffer: &mut [f32]) {
+        self.process_interleaved(out_buffer, 1);
     }
 }

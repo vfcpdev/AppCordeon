@@ -1,3 +1,4 @@
+s
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' show Color, Offset;
@@ -1637,6 +1638,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     state = state.copyWith(activeButtons: next);
 
     Future.delayed(duration, () {
+      if (!ref.mounted) return;
       final remaining = Set<String>.from(state.activeButtons)..removeAll(matchingButtonIds);
       state = state.copyWith(activeButtons: remaining);
     });

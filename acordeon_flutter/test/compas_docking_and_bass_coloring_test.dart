@@ -297,4 +297,45 @@ void main() {
     await tester.pumpAndSettle();
     expect(container.read(accordionSimulatorProvider).bellows1, BellowsMode.push);
   });
+
+  testWidgets('El panel de bajos muestra el título "Bajos" y checkboxes A1 y A2 para alternar visibilidad',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: AcordeonApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 1. Título 'Bajos' en la cabecera
+    expect(find.text('Bajos'), findsWidgets);
+
+    // 2. Checkboxes con abreviaturas 'A1' y 'A2'
+    expect(find.text('A1'), findsWidgets);
+    expect(find.text('A2'), findsWidgets);
+
+    // Inicialmente solo Acordeón 1 tiene BassPanelWidget visible
+    expect(find.byType(BassPanelWidget), findsOneWidget);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(BassPanelWidget)),
+    );
+    final notifier = container.read(accordionSimulatorProvider.notifier);
+
+    // 3. Activar bajos de A2
+    notifier.toggleBass2();
+    await tester.pumpAndSettle();
+
+    // Ahora hay dos paneles de bajos (A1 y A2)
+    expect(find.byType(BassPanelWidget), findsNWidgets(2));
+
+    // 4. Desactivar bajos de A2
+    notifier.toggleBass2();
+    await tester.pumpAndSettle();
+    expect(find.byType(BassPanelWidget), findsOneWidget);
+  });
 }
