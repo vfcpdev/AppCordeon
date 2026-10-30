@@ -22,11 +22,27 @@ class BassPanelWidget extends ConsumerWidget {
     final state = ref.watch(accordionSimulatorProvider);
     final notifier = ref.read(accordionSimulatorProvider.notifier);
     final isPrimary = accordionNumber == 1;
-    final isVisible = isPrimary ? !state.isBass1Collapsed : !state.isBass2Collapsed;
+    final isCollapsed = isPrimary ? state.isBass1Collapsed : state.isBass2Collapsed;
 
-    // Si no es el acordeón 1 y sus bajos están ocultos, no renderizamos nada
-    if (!isPrimary && !isVisible) {
-      return const SizedBox.shrink();
+    if (isCollapsed) {
+      return Container(
+        margin: const EdgeInsets.only(right: 12),
+        child: ElevatedButton.icon(
+          onPressed: () {
+            if (isPrimary) {
+              notifier.toggleBass1();
+            } else {
+              notifier.toggleBass2();
+            }
+          },
+          icon: const FaIcon(FontAwesomeIcons.drum, size: 14),
+          label: Text('Bajos A$accordionNumber'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFE2E8F0),
+            foregroundColor: const Color(0xFF0F172A),
+          ),
+        ),
+      );
     }
 
     final basses = isPrimary ? state.bassData1 : state.bassData2;
@@ -52,148 +68,98 @@ class BassPanelWidget extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(right: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF334155)),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFCBD5E1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.30),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: IntrinsicWidth(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Cabecera del panel de bajos (con el ancho total del diapasón)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F172A),
-                borderRadius: BorderRadius.vertical(
-                  top: const Radius.circular(9),
-                  bottom: isVisible ? Radius.zero : const Radius.circular(9),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Cabecera del panel de bajos
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE2E8F0),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(13),
+                topRight: Radius.circular(13),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const FaIcon(FontAwesomeIcons.drum, size: 12, color: Color(0xFF0284C7)),
+                const SizedBox(width: 4),
+                Text(
+                  'Bajos A$accordionNumber (12)',
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                  ),
                 ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    if (isPrimary) {
+                      notifier.toggleBass1();
+                    } else {
+                      notifier.toggleBass2();
+                    }
+                  },
+                  child: const Icon(Icons.close, size: 14, color: Color(0xFF64748B)),
+                ),
+              ],
+            ),
+          ),
+
+          // Cuerpo: Tablero de bajos
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2.2, 4.4, 6.5, 4.4),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(19.6, 8.7, 6.5, 8.7),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 10,
+                  ),
+                ],
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      FaIcon(FontAwesomeIcons.drum, size: 11, color: Color(0xFF38BDF8)),
-                      SizedBox(width: 5),
-                      Text(
-                        'Bajos',
-                        style: TextStyle(
-                          fontSize: 11.0,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ],
+                  _buildBassColumn(
+                    title: 'Exterior',
+                    buttons: exteriorButtons,
+                    state: state,
+                    notifier: notifier,
+                    activeChordPitchClasses: activeChordPitchClasses,
                   ),
-                  const SizedBox(width: 8),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildBassCheckbox(
-                        label: 'A1',
-                        value: !state.isBass1Collapsed,
-                        onTap: notifier.toggleBass1,
-                      ),
-                      const SizedBox(width: 4),
-                      _buildBassCheckbox(
-                        label: 'A2',
-                        value: !state.isBass2Collapsed,
-                        onTap: notifier.toggleBass2,
-                      ),
-                    ],
+                  // Espacio suficiente para los números de la columna interior.
+                  const SizedBox(width: 18.0),
+                  _buildBassColumn(
+                    title: 'Interior',
+                    buttons: interiorButtons,
+                    state: state,
+                    notifier: notifier,
+                    activeChordPitchClasses: activeChordPitchClasses,
                   ),
                 ],
               ),
             ),
-
-            if (isVisible) ...[
-              // Línea separadora sutil
-              Container(height: 1, color: const Color(0xFF334155)),
-
-              // Cuerpo: Tablero de botones de bajos
-              Padding(
-                padding: const EdgeInsets.fromLTRB(19.6, 8.7, 6.5, 8.7),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildBassColumn(
-                      title: 'Exterior',
-                      buttons: exteriorButtons,
-                      state: state,
-                      notifier: notifier,
-                      activeChordPitchClasses: activeChordPitchClasses,
-                    ),
-                    // Espacio suficiente para los números de la columna interior.
-                    const SizedBox(width: 18.0),
-                    _buildBassColumn(
-                      title: 'Interior',
-                      buttons: interiorButtons,
-                      state: state,
-                      notifier: notifier,
-                      activeChordPitchClasses: activeChordPitchClasses,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBassCheckbox({
-    required String label,
-    required bool value,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(4),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: Checkbox(
-                value: value,
-                onChanged: (_) => onTap(),
-                activeColor: const Color(0xFF0284C7),
-                checkColor: Colors.white,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                side: const BorderSide(color: Color(0xFF94A3B8), width: 1.2),
-              ),
-            ),
-            const SizedBox(width: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                color: value ? const Color(0xFF38BDF8) : const Color(0xFF94A3B8),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
