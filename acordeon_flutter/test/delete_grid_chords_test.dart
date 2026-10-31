@@ -35,6 +35,7 @@ void main() {
       notifier.updateMeasureBeat(0, 0, 'Do');
       notifier.updateMeasureBeat(0, 1, 'Sol');
       notifier.toggleBeatMark(0, 0);
+      await tester.pumpAndSettle();
 
       // Presionar el botón de borrar con la casilla masiva desmarcada
       await tester.tap(find.byKey(const ValueKey('delete_grid_chords_btn')));
