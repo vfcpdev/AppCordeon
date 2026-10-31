@@ -378,9 +378,12 @@ class ChordDetectorWidget extends ConsumerWidget {
                           ),
                           TextSpan(
                             text: chord.pitchClasses
-                                .map((pc) => notation == NotationMode.alemana
-                                    ? ChordCatalog.germanRootNames[pc]
-                                    : ChordCatalog.latinRootNames[pc])
+                                .map((pc) {
+                                  final normPc = ((pc % 12) + 12) % 12;
+                                  return notation == NotationMode.alemana
+                                      ? ChordCatalog.germanRootNames[normPc]
+                                      : ChordCatalog.latinRootNames[normPc];
+                                })
                                 .join(' - '),
                             style: const TextStyle(
                               fontSize: 8.0,

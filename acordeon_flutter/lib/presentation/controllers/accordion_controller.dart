@@ -122,7 +122,8 @@ class AccordionSimulatorState {
 
   // Asignación de acorde a múltiples compases (modal movible)
   final bool showMultiBeatModal;
-  final String multiBeatPattern;
+  final String? _multiBeatPattern;
+  String get multiBeatPattern => _multiBeatPattern ?? '';
   final String? multiBeatChord;
 
   // Cuadro de compás acoplable/desacoplable y movible
@@ -153,7 +154,8 @@ class AccordionSimulatorState {
   Offset get chordDetectorPosition => _chordDetectorPosition ?? const Offset(390, 150);
 
   // Bajo alterado / Slash chord en constructor libre
-  final String freeChordBass;
+  final String? _freeChordBass;
+  String get freeChordBass => _freeChordBass ?? '';
 
   /// Acorde activo en el Compás actual (o el más reciente dentro del compás/tiempo).
   String get activeCompasChord {
@@ -242,9 +244,9 @@ class AccordionSimulatorState {
     this.isAnalyzingAudio = false,
     this.loadedAudioFileName,
     this.showMultiBeatModal = false,
-    this.multiBeatPattern = '',
+    String? multiBeatPattern,
     this.multiBeatChord,
-    this.freeChordBass = '',
+    String? freeChordBass,
     bool? isCompas1Undocked,
     Offset? compas1Position,
     bool? isCompas2Undocked,
@@ -255,6 +257,8 @@ class AccordionSimulatorState {
     Offset? chordDetectorPosition,
   })  : _markedBeats = markedBeats ?? const {},
         _yellowDecisionBeats = yellowDecisionBeats ?? const {},
+        _multiBeatPattern = multiBeatPattern ?? '',
+        _freeChordBass = freeChordBass ?? '',
         _isCompas1Undocked = isCompas1Undocked ?? false,
         _compas1Position = compas1Position ?? const Offset(220, 70),
         _isCompas2Undocked = isCompas2Undocked ?? false,
