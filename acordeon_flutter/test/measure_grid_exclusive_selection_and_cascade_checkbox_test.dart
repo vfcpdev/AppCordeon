@@ -1,142 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:acordeon_flutter/core/constants/enums.dart';
 import 'package:acordeon_flutter/core/di/providers.dart';
 import 'package:acordeon_flutter/domain/commands/accordion_commands.dart';
-import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
 void main() {
-  group('CascadeMarkBeatsCommand - Triplas de Hoare y Comportamiento Formal', () {
-    test('{P} Precondiciones: lanza excepción ante parámetros fuera de rango o sin compases', () {
-      expect(
-        () => CascadeMarkBeatsCommand(
-          currentMarkedBeats: {},
-          barIndex: 0,
-          beatIndex: 0,
-          totalMeasures: 0,
-        ).assertPreconditions(),
-        throwsA(isA<PreconditionViolationException>()),
-      );
+  group('ToggleBellowsCommand - Triplas de Hoare y Desacoplamiento de Teclado', () {
+    test('{P} y {Q}: Alterna de push a pull y viceversa de forma determinista', () {
+      const cmdPush = ToggleBellowsCommand(currentMode: BellowsMode.push);
+      expect(cmdPush.canExecute(), isTrue);
+      expect(cmdPush.execute(), equals(BellowsMode.pull));
 
-      expect(
-        () => CascadeMarkBeatsCommand(
-          currentMarkedBeats: {},
-          barIndex: 5,
-          beatIndex: 0,
-          totalMeasures: 4,
-        ).assertPreconditions(),
-        throwsA(isA<PreconditionViolationException>()),
-      );
+      const cmdPull = ToggleBellowsCommand(currentMode: BellowsMode.pull);
+      expect(cmdPull.canExecute(), isTrue);
+      expect(cmdPull.execute(), equals(BellowsMode.push));
 
-      expect(
-        () => CascadeMarkBeatsCommand(
-          currentMarkedBeats: {},
-          barIndex: 1,
-          beatIndex: 4,
-          totalMeasures: 4,
-        ).assertPreconditions(),
-        throwsA(isA<PreconditionViolationException>()),
-      );
-    });
-
-    test('{Q} y {I}: Seleccionar checkbox mantiene selección previa y marca todos los siguientes', () {
-      // Estado inicial con tiempos 1 y 2 marcados previamente
-      final initialMarks = {1, 2};
-      const barIndex = 1;
-      const beatIndex = 1; // targetKey = 1 * 4 + 1 = 5
-      const totalMeasures = 3; // totalBeats = 12 (0 a 11)
-
-      final command = CascadeMarkBeatsCommand(
-        currentMarkedBeats: initialMarks,
-        barIndex: barIndex,
-        beatIndex: beatIndex,
-        totalMeasures: totalMeasures,
-      );
-
-      expect(command.canExecute(), isTrue);
-      final result = command.execute();
-
-      // Mantiene la selección previa {1, 2}
-      expect(result.contains(1), isTrue);
-      expect(result.contains(2), isTrue);
-
-      // Los tiempos entre 0 y 4 que no estaban marcados siguen sin marcar {I}
-      expect(result.contains(0), isFalse);
-      expect(result.contains(3), isFalse);
-      expect(result.contains(4), isFalse);
-
-      // Marca todos los siguientes desde 5 hasta 11 {Q}
-      for (var i = 5; i < 12; i++) {
-        expect(result.contains(i), isTrue, reason: 'El pulso $i debe estar marcado.');
-      }
-    });
-
-    test('{Q} y {I}: Desmarcar checkbox desmarca desde ese tiempo en adelante, manteniendo anteriores', () {
-      // Estado con pulsos 0, 1, 4, 5, 6, 7, 8, 9, 10, 11 marcados
-      final initialMarks = {0, 1, 4, 5, 6, 7, 8, 9, 10, 11};
-      const barIndex = 2;
-      const beatIndex = 0; // targetKey = 2 * 4 + 0 = 8
-      const totalMeasures = 3; // totalBeats = 12
-
-      final command = CascadeMarkBeatsCommand(
-        currentMarkedBeats: initialMarks,
-        barIndex: barIndex,
-        beatIndex: beatIndex,
-        totalMeasures: totalMeasures,
-      );
-
-      final result = command.execute();
-
-      // Mantiene selección previa intacta < 8
-      expect(result.contains(0), isTrue);
-      expect(result.contains(1), isTrue);
-      expect(result.contains(4), isTrue);
-      expect(result.contains(5), isTrue);
-      expect(result.contains(6), isTrue);
-      expect(result.contains(7), isTrue);
-
-      // Desmarca desde 8 hasta 11
-      for (var i = 8; i < 12; i++) {
-        expect(result.contains(i), isFalse, reason: 'El pulso $i debe quedar desmarcado.');
-      }
-    });
-  });
-
-  group('AccordionSimulatorNotifier - Cascada en Checkbox', () {
-    test('toggleBeatMarkWithCascade aplica selección en cascada y preserva anteriores', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final notifier = container.read(accordionSimulatorProvider.notifier);
-
-      // El estado inicial ya cuenta con 8 compases (32 pulsos: 0..31)
-      expect(container.read(accordionSimulatorProvider).measures.length, equals(8));
-
-      // Marcar individualmente el pulso 0
-      notifier.toggleBeatMark(0, 0);
-      expect(container.read(accordionSimulatorProvider).markedBeats, equals({0}));
-
-      // Ahora seleccionar con checkbox el pulso en compás 1, beat 0 (clave lineal = 4)
-      notifier.toggleBeatMarkWithCascade(1, 0);
-
-      // Debe mantener el pulso 0 y marcar desde 4 hasta 31
-      final marks = container.read(accordionSimulatorProvider).markedBeats;
-      expect(marks.contains(0), isTrue);
-      expect(marks.contains(1), isFalse);
-      expect(marks.contains(2), isFalse);
-      expect(marks.contains(3), isFalse);
-      for (var i = 4; i < 32; i++) {
-        expect(marks.contains(i), isTrue, reason: 'El pulso $i debe estar marcado.');
-      }
-
-      // Desmarcar desde compás 1, beat 2 (clave lineal = 6)
-      notifier.toggleBeatMarkWithCascade(1, 2);
-      final marksAfter = container.read(accordionSimulatorProvider).markedBeats;
-      expect(marksAfter.contains(0), isTrue);
-      expect(marksAfter.contains(4), isTrue);
-      expect(marksAfter.contains(5), isTrue);
-      expect(marksAfter.contains(6), isFalse);
-      expect(marksAfter.contains(7), isFalse);
+      const cmdBoth = ToggleBellowsCommand(currentMode: BellowsMode.both);
+      expect(cmdBoth.execute(), equals(BellowsMode.push));
     });
   });
 
@@ -198,3 +80,4 @@ void main() {
     });
   });
 }
+

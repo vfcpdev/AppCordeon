@@ -684,7 +684,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                     _scrollToBar(bar);
                                   },
                                   onToggleMark: () {
-                                    notifier.toggleBeatMarkWithCascade(mIdx, beatIdx);
+                                    notifier.toggleBeatMark(mIdx, beatIdx);
                                   },
                                   onBellowsChanged: (bellows) {
                                     notifier.setBeatBellows(mIdx, beatIdx, bellows);
