@@ -684,7 +684,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                     _scrollToBar(bar);
                                   },
                                   onToggleMark: () {
-                                    notifier.toggleBeatMark(mIdx, beatIdx);
+                                    notifier.toggleBeatMarkWithCascade(mIdx, beatIdx);
                                   },
                                   onBellowsChanged: (bellows) {
                                     notifier.setBeatBellows(mIdx, beatIdx, bellows);
@@ -1472,8 +1472,19 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
   bool _isEditing = false;
 
   String get _nodeKey => '${widget.measureIndex}_${widget.beatIndex}';
-  bool get _isSelected => _selectedKey == _nodeKey || widget.isSelected;
+  bool get _isSelected =>
+      _selectedKey != null ? (_selectedKey == _nodeKey) : widget.isSelected;
   bool get _isCellHighlighted => _isSelected && !_isEditing;
+
+  /// Deselecciona de forma exclusiva todos los demás cuadros y textboxes del acordeón.
+  /// Garantiza que al seleccionar un textbox u otro cuadro, el anterior quede totalmente deseleccionado.
+  void _deselectOtherCells() {
+    for (final entry in _registry.entries) {
+      if (entry.key != _nodeKey) {
+        entry.value._setIdle();
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -1491,14 +1502,21 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     _focusNode.addListener(() {
       final hasFocus = _focusNode.hasFocus;
       if (hasFocus) {
+        _selectedKey = _nodeKey;
+        _deselectOtherCells();
+        widget.onSelected?.call();
         if (!_isEditing) {
           _isEditing = true;
-          _selectedKey = _nodeKey;
-          _update();
+          _controller.selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: _controller.text.length,
+          );
         }
+        _update();
       } else {
         if (_isEditing) {
           _isEditing = false;
+          _controller.selection = const TextSelection.collapsed(offset: -1);
           _commit();
           _update();
         }
@@ -1508,11 +1526,8 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     _cellFocusNode.addListener(() {
       if (_cellFocusNode.hasFocus) {
         if (_selectedKey != _nodeKey) {
-          final oldKey = _selectedKey;
           _selectedKey = _nodeKey;
-          if (oldKey != null) {
-            _registry[oldKey]?._setIdle();
-          }
+          _deselectOtherCells();
           _update();
         }
         widget.onSelected?.call();
@@ -1543,11 +1558,17 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     if ((oldWidget.chord != widget.chord || oldWidget.notation != widget.notation) && !_isEditing) {
       _controller.value = TextEditingValue(
         text: formattedChord,
-        selection: const TextSelection.collapsed(offset: 0),
+        selection: const TextSelection.collapsed(offset: -1),
       );
     }
     if (widget.isSelected && !oldWidget.isSelected && !_isEditing) {
+      _selectedKey = _nodeKey;
       _cellFocusNode.requestFocus();
+    } else if (!widget.isSelected && oldWidget.isSelected) {
+      if (_selectedKey == _nodeKey) {
+        _selectedKey = null;
+      }
+      _setIdle();
     }
   }
 
@@ -1582,11 +1603,8 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
       final nextB = nextIndex % 4;
       final targetKey = '${nextM}_$nextB';
 
-      final oldKey = _selectedKey;
       _selectedKey = targetKey;
-      if (oldKey != null && oldKey != targetKey) {
-        _registry[oldKey]?._setIdle();
-      }
+      _deselectOtherCells();
 
       widget.onNavigate?.call(nextM, nextB);
       widget.onSelected?.call();
@@ -1600,8 +1618,13 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
 
   void _setSelected() {
     _commit();
+    _selectedKey = _nodeKey;
+    _deselectOtherCells();
     _isEditing = false;
-    _focusNode.unfocus();
+    _controller.selection = const TextSelection.collapsed(offset: -1);
+    if (_focusNode.hasFocus) {
+      _focusNode.unfocus();
+    }
     _cellFocusNode.requestFocus();
     widget.onSelected?.call();
     if (mounted) {
@@ -1616,15 +1639,19 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
 
   void _setIdle() {
     _isEditing = false;
+    _controller.selection = const TextSelection.collapsed(offset: -1);
+    if (_focusNode.hasFocus) {
+      _focusNode.unfocus();
+    }
+    if (_cellFocusNode.hasFocus) {
+      _cellFocusNode.unfocus();
+    }
     if (mounted) setState(() {});
   }
 
   void _activateEdit() {
-    final oldKey = _selectedKey;
     _selectedKey = _nodeKey;
-    if (oldKey != null && oldKey != _nodeKey) {
-      _registry[oldKey]?._setIdle();
-    }
+    _deselectOtherCells();
     widget.onSelected?.call();
     _isEditing = true;
     _focusNode.requestFocus();
@@ -1833,6 +1860,11 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                         focusNode: _focusNode,
                         readOnly: !_isEditing,
                         textAlignVertical: TextAlignVertical.center,
+                        onTap: () {
+                          if (!_isEditing) {
+                            _activateEdit();
+                          }
+                        },
                         style: TextStyle(
                           fontSize: 10.0,
                           letterSpacing: -0.2,

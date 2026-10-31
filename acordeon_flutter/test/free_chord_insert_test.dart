@@ -106,11 +106,16 @@ void main() {
 
     expect(container.read(accordionSimulatorProvider).markedBeats, isEmpty);
 
+    // Al seleccionar el checkbox (0, 0), mantiene selección previa y marca todos los siguientes en cascada
     await tester.tap(find.byKey(const ValueKey('beat_checkbox_0_0')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('beat_checkbox_1_2')));
-    await tester.pumpAndSettle();
 
+    final totalBeats =
+        container.read(accordionSimulatorProvider).measures.length * 4;
+    expect(
+      container.read(accordionSimulatorProvider).markedBeats.length,
+      equals(totalBeats),
+    );
     expect(
       container.read(accordionSimulatorProvider).markedBeats,
       containsAll(<int>[
@@ -125,7 +130,7 @@ void main() {
     );
     expect(firstBeatField.focusNode?.hasFocus, isFalse);
 
-    // Segundo toque: se desmarca sin abrir la edición del acorde.
+    // Segundo toque en el checkbox inicial: se desmarca desde ese tiempo en adelante
     await tester.tap(find.byKey(const ValueKey('beat_checkbox_0_0')));
     await tester.pumpAndSettle();
     expect(

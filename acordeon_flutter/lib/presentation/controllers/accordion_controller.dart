@@ -1831,6 +1831,25 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     state = state.copyWith(markedBeats: next);
   }
 
+  /// Conmuta la marca de un tiempo mediante selección por Checkbox en cascada:
+  /// - Mantiene la selección previa intacta ("mantener la selección").
+  /// - Si el tiempo no estaba marcado, marca este tiempo y todos los siguientes hasta el final de la cuadrícula.
+  /// - Si ya estaba marcado, desmarca este tiempo y los siguientes, preservando los anteriores.
+  ///
+  /// Formalizado con Triplas de Hoare ({P} C {Q}) y ejecutado mediante [CascadeMarkBeatsCommand].
+  void toggleBeatMarkWithCascade(int barIndex, int beatIndex) {
+    if (state.measures.isEmpty) return;
+    final command = CascadeMarkBeatsCommand(
+      currentMarkedBeats: state.markedBeats,
+      barIndex: barIndex,
+      beatIndex: beatIndex,
+      totalMeasures: state.measures.length,
+    );
+    if (!command.canExecute()) return;
+    final nextMarks = command.execute();
+    state = state.copyWith(markedBeats: nextMarks);
+  }
+
   void clearBeatMarks() => state = state.copyWith(markedBeats: const {});
 
   /// Marca o desmarca todos los tiempos de la cuadrícula. Si todos los

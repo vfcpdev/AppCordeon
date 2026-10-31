@@ -1135,3 +1135,131 @@ class SyncBeatToAudioCommand implements AccordionCommand<double> {
     return (delta * 1000.0).roundToDouble() / 1000.0;
   }
 }
+
+/// Comando para conmutar la selección de tiempos mediante Checkbox en cascada.
+///
+/// Principios aplicados:
+/// - Single Responsibility Principle (SRP): Encapsula exclusivamente la lógica de marcación
+///   en cascada hacia adelante preservando las selecciones previas ("mantener la selección").
+/// - Enfoque formal con Triplas de Hoare:
+///   - Precondición {P}:
+///     - `barIndex >= 0 && barIndex < totalMeasures`
+///     - `beatIndex >= 0 && beatIndex < 4`
+///     - `totalMeasures > 0`
+///   - Ejecución {C}:
+///     Sea $k = \text{barIndex} \times 4 + \text{beatIndex}$ y $N = \text{totalMeasures} \times 4$.
+///     Si $k \notin \text{currentMarkedBeats}$ (se está seleccionando):
+///       $\text{result} = \text{currentMarkedBeats} \cup \{ i \in \mathbb{N} \mid k \le i < N \}$
+///     Si $k \in \text{currentMarkedBeats}$ (se está desmarcando):
+///       $\text{result} = \text{currentMarkedBeats} \setminus \{ i \in \mathbb{N} \mid k \le i < N \}$
+///   - Poscondición {Q}:
+///     Si $k \notin \text{currentMarkedBeats}$:
+///       - $\forall m \in \text{currentMarkedBeats}: m \in \text{result}$ (preserva todas las selecciones previas)
+///       - $\forall i \in [k, N - 1]: i \in \text{result}$ (marca todos los tiempos siguientes)
+///       - $\forall j < k: (j \in \text{result} \iff j \in \text{currentMarkedBeats})$
+///     Si $k \in \text{currentMarkedBeats}$:
+///       - $\forall i \in [k, N - 1]: i \notin \text{result}$
+///       - $\forall j < k: (j \in \text{result} \iff j \in \text{currentMarkedBeats})$
+///   - Invariante {I}:
+///     $\forall j < k: (j \in \text{result} \iff j \in \text{currentMarkedBeats})$.
+class CascadeMarkBeatsCommand implements AccordionCommand<Set<int>> {
+  @override
+  String get commandName => 'CascadeMarkBeatsCommand';
+
+  final Set<int> currentMarkedBeats;
+  final int barIndex;
+  final int beatIndex;
+  final int totalMeasures;
+
+  const CascadeMarkBeatsCommand({
+    required this.currentMarkedBeats,
+    required this.barIndex,
+    required this.beatIndex,
+    required this.totalMeasures,
+  });
+
+  int get targetKey => barIndex * 4 + beatIndex;
+  int get totalBeats => totalMeasures * 4;
+
+  @override
+  bool canExecute() {
+    return totalMeasures > 0 &&
+        barIndex >= 0 &&
+        barIndex < totalMeasures &&
+        beatIndex >= 0 &&
+        beatIndex < 4;
+  }
+
+  @override
+  void assertPreconditions() {
+    if (totalMeasures <= 0) {
+      throw const PreconditionViolationException(
+        'CascadeMarkBeatsCommand',
+        'La cuadrícula debe tener al menos un compás.',
+      );
+    }
+    if (barIndex < 0 || barIndex >= totalMeasures) {
+      throw PreconditionViolationException(
+        'CascadeMarkBeatsCommand',
+        'barIndex ($barIndex) fuera de rango [0, ${totalMeasures - 1}].',
+      );
+    }
+    if (beatIndex < 0 || beatIndex >= 4) {
+      throw PreconditionViolationException(
+        'CascadeMarkBeatsCommand',
+        'beatIndex ($beatIndex) fuera de rango [0, 3].',
+      );
+    }
+  }
+
+  @override
+  Set<int> execute() {
+    assertPreconditions();
+    final k = targetKey;
+    final N = totalBeats;
+    final isCurrentlyMarked = currentMarkedBeats.contains(k);
+    final result = Set<int>.from(currentMarkedBeats);
+
+    if (!isCurrentlyMarked) {
+      // Se selecciona el checkbox: mantener selección previa y marcar todos los siguientes
+      for (var i = k; i < N; i++) {
+        result.add(i);
+      }
+    } else {
+      // Se desmarca el checkbox: desmarcar este tiempo y los siguientes, preservando los anteriores
+      for (var i = k; i < N; i++) {
+        result.remove(i);
+      }
+    }
+
+    assertPostconditions(result, isCurrentlyMarked);
+    return result;
+  }
+
+  void assertPostconditions(Set<int> result, bool wasMarked) {
+    final k = targetKey;
+    final N = totalBeats;
+    if (!wasMarked) {
+      // Poscondición {Q}: todas las marcas previas se conservan
+      assert(currentMarkedBeats.every((m) => result.contains(m)),
+          'Violación {Q}: No se mantuvieron las selecciones previas.');
+      // Poscondición {Q}: todos los siguientes desde k hasta N - 1 están marcados
+      for (var i = k; i < N; i++) {
+        assert(result.contains(i),
+            'Violación {Q}: El pulso $i posterior a $k no fue marcado.');
+      }
+    } else {
+      // Poscondición {Q}: ninguno de k a N - 1 permanece marcado
+      for (var i = k; i < N; i++) {
+        assert(!result.contains(i),
+            'Violación {Q}: El pulso $i posterior a $k no fue desmarcado.');
+      }
+    }
+    // Invariante {I}: pulsos anteriores a k no cambiaron su estado
+    for (var j = 0; j < k; j++) {
+      assert(result.contains(j) == currentMarkedBeats.contains(j),
+          'Violación {I}: El pulso anterior $j fue alterado indebidamente.');
+    }
+  }
+}
+
