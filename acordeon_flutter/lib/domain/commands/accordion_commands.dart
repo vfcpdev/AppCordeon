@@ -485,3 +485,154 @@ class TransferDetectedChordCommand implements AccordionCommand<TransferredChordP
     );
   }
 }
+
+/// Resultado de la ejecución de [MarkLiveChordChangeCommand].
+class LiveMarkerResult {
+  final int targetBar;
+  final int targetBeat;
+  final List<MeasureRow> updatedMeasures;
+  final Set<int> updatedMarkedBeats;
+  final String? assignedChord;
+
+  const LiveMarkerResult({
+    required this.targetBar,
+    required this.targetBeat,
+    required this.updatedMeasures,
+    required this.updatedMarkedBeats,
+    this.assignedChord,
+  });
+}
+
+/// Comando para marcar en vivo el cambio de acorde en el compás y tiempo exacto
+/// de reproducción según el slider / transporte de audio (Barra Espaciadora).
+/// {P}: bpm in [30, 300], currentAudioTime >= 0, measures no vacío.
+/// {Q}: targetBar y targetBeat corresponden a floor(currentAudioTime / beatDuration),
+///      (targetBar * 4 + targetBeat) in updatedMarkedBeats.
+class MarkLiveChordChangeCommand implements AccordionCommand<LiveMarkerResult> {
+  @override
+  String get commandName => 'MarkLiveChordChangeCommand';
+
+  final double currentAudioTime;
+  final double bpm;
+  final List<MeasureRow> measures;
+  final Set<int> markedBeats;
+  final String? activeChord;
+
+  const MarkLiveChordChangeCommand({
+    required this.currentAudioTime,
+    required this.bpm,
+    required this.measures,
+    required this.markedBeats,
+    this.activeChord,
+  });
+
+  @override
+  bool canExecute() => bpm > 0 && currentAudioTime >= 0 && measures.isNotEmpty;
+
+  @override
+  void assertPreconditions() {
+    if (bpm <= 0) {
+      throw const PreconditionViolationException(
+        'MarkLiveChordChangeCommand',
+        'El BPM debe ser estrictamente positivo.',
+      );
+    }
+    if (currentAudioTime < 0) {
+      throw const PreconditionViolationException(
+        'MarkLiveChordChangeCommand',
+        'El tiempo actual de audio no puede ser negativo.',
+      );
+    }
+    if (measures.isEmpty) {
+      throw const PreconditionViolationException(
+        'MarkLiveChordChangeCommand',
+        'La lista de compases no puede estar vacía.',
+      );
+    }
+  }
+
+  @override
+  LiveMarkerResult execute() {
+    assertPreconditions();
+
+    final beatDuration = 60.0 / bpm;
+    final totalBeats = (currentAudioTime / beatDuration).floor();
+    final targetBar = (totalBeats ~/ 4).clamp(0, measures.length - 1);
+    final targetBeat = (totalBeats % 4).clamp(0, 3);
+    final targetKey = targetBar * 4 + targetBeat;
+
+    final updatedMeasures = List<MeasureRow>.from(measures);
+    final row = updatedMeasures[targetBar];
+    final beats = List<MeasureBeat>.from(row.beats);
+
+    final chordToAssign = (activeChord != null && activeChord!.trim().isNotEmpty)
+        ? activeChord!.trim()
+        : beats[targetBeat].chord;
+
+    beats[targetBeat] = beats[targetBeat].copyWith(chord: chordToAssign);
+    updatedMeasures[targetBar] = MeasureRow(barNumber: row.barNumber, beats: beats);
+
+    final updatedMarked = Set<int>.from(markedBeats)..add(targetKey);
+
+    return LiveMarkerResult(
+      targetBar: targetBar,
+      targetBeat: targetBeat,
+      updatedMeasures: updatedMeasures,
+      updatedMarkedBeats: updatedMarked,
+      assignedChord: chordToAssign,
+    );
+  }
+}
+
+/// Comando para reproducir el click acústico del metrónomo sincronizado al compás.
+/// {P}: beatIndex >= 0, volume in [0.0, 1.0].
+/// {Q}: Pulso acústico emitido con acento en beat 0 (MIDI 84, C6) y pulsos secundarios en beats 1..3 (MIDI 76, E5).
+class PlayMetronomeTickCommand implements AccordionCommand<int> {
+  @override
+  String get commandName => 'PlayMetronomeTickCommand';
+
+  final void Function(int midiNote, {double velocity}) onNoteOn;
+  final void Function(int midiNote) onNoteOff;
+  final int beatIndex;
+  final double volume;
+
+  const PlayMetronomeTickCommand({
+    required this.onNoteOn,
+    required this.onNoteOff,
+    required this.beatIndex,
+    this.volume = 0.8,
+  });
+
+  @override
+  bool canExecute() => beatIndex >= 0 && volume >= 0.0;
+
+  @override
+  void assertPreconditions() {
+    if (beatIndex < 0) {
+      throw const PreconditionViolationException(
+        'PlayMetronomeTickCommand',
+        'El índice de tiempo no puede ser negativo.',
+      );
+    }
+  }
+
+  @override
+  int execute() {
+    assertPreconditions();
+
+    final isDownbeat = (beatIndex % 4) == 0;
+    // Beat 0: C6 (84) más brillante y acentuado; Beats 1, 2, 3: E5 (76)
+    final midiNote = isDownbeat ? 84 : 76;
+    final velocity = (isDownbeat ? 0.95 : 0.65) * volume.clamp(0.0, 1.0);
+
+    onNoteOn(midiNote, velocity: velocity);
+
+    // Click percusivo ultra-breve (35 ms)
+    Future.delayed(const Duration(milliseconds: 35), () {
+      onNoteOff(midiNote);
+    });
+
+    return midiNote;
+  }
+}
+

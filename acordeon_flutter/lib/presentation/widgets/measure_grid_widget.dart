@@ -173,32 +173,162 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: effectiveWidth,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFCBD5E1)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+          Focus(
+            autofocus: false,
+            onKeyEvent: (node, event) {
+              if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.space) {
+                final isAnyEditing = FocusManager.instance.primaryFocus?.context?.widget is EditableText;
+                if (!isAnyEditing) {
+                  final res = notifier.markLiveChordChange();
+                  if (res != null) {
+                    return KeyEventResult.handled;
+                  }
+                }
+              }
+              return KeyEventResult.ignored;
+            },
+            child: Container(
+              width: effectiveWidth,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-          // Minibarra superior: selección masiva de checkboxes y borrado de acordes
-          Container(
-            padding: const EdgeInsets.fromLTRB(4, 3, 4, 3),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF8FAFC),
-              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-            ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 1. Cabecera superior: Título "Compás" (sobre los botones, homólogo a Acorde)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isPrimary ? const Color(0xFFF8FAFC) : const Color(0xFFECFDF5),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isPrimary ? const Color(0xFFE2E8F0) : const Color(0xFFA7F3D0),
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            FaIcon(
+                              isPrimary ? FontAwesomeIcons.music : FontAwesomeIcons.link,
+                              size: 10,
+                              color: isPrimary ? const Color(0xFF0284C7) : const Color(0xFF059669),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              isPrimary ? 'Compás' : 'Compás A2',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w900,
+                                color: isPrimary ? const Color(0xFF0F172A) : const Color(0xFF059669),
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                        // Botón de acoplar / desacoplar y hacer movible el Compás
+                        Tooltip(
+                          message: isUndocked
+                              ? 'Acoplar ventana de Compás'
+                              : 'Desacoplar ventana de Compás (mover libremente)',
+                          child: InkWell(
+                            key: ValueKey('undock_compas_${widget.accordionNumber}'),
+                            onTap: () => notifier.toggleUndockCompas(widget.accordionNumber),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.all(3.0),
+                              decoration: BoxDecoration(
+                                color: isUndocked ? const Color(0xFFEFF6FF) : Colors.white,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: isUndocked ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: FaIcon(
+                                isUndocked ? FontAwesomeIcons.compress : FontAwesomeIcons.arrowUpRightFromSquare,
+                                size: 8.5,
+                                color: isUndocked ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 2. Fila de controles rítmicos: BPM + Metrónomo + Marcador Espacio + Acordes Completos
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isPrimary ? const Color(0xFFF1F5F9) : const Color(0xFFD1FAE5),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isPrimary ? const Color(0xFFE2E8F0) : const Color(0xFFA7F3D0),
+                        ),
+                      ),
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final compactBpm = constraints.maxWidth < 130;
+                        return FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _BpmInputControl(
+                                bpm: bpm,
+                                compact: compactBpm,
+                                onChanged: (newVal) => notifier.updateAudioBpm(newVal),
+                              ),
+                              const SizedBox(width: 3),
+                              _MetronomeButton(
+                                accordionNumber: widget.accordionNumber,
+                                isActive: state.isMetronomeActive,
+                                onTap: notifier.toggleMetronome,
+                              ),
+                              const SizedBox(width: 3),
+                              _LiveMarkerButton(
+                                accordionNumber: widget.accordionNumber,
+                                isActive: state.isLiveChordMarkerActive,
+                                isPlaying: state.isPlayingAudio,
+                                onTap: notifier.toggleLiveChordMarker,
+                              ),
+                              const SizedBox(width: 3),
+                              _CompleteChordsButton(
+                                accordionNumber: widget.accordionNumber,
+                                hasYellowDecisions: state.yellowDecisionBeats.isNotEmpty,
+                                yellowDecisionsCount: state.yellowDecisionBeats.length,
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // 3. Minibarra superior: selección masiva de checkboxes y borrado de acordes
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(4, 3, 4, 3),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF8FAFC),
+                      border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                    ),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
@@ -370,109 +500,6 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
             ),
           ),
         ),
-          // Cabecera: Título "Compás" + Control de BPM editable con Subir / Bajar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-            decoration: BoxDecoration(
-              color: isPrimary ? const Color(0xFFF1F5F9) : const Color(0xFFD1FAE5),
-              border: Border(bottom: BorderSide(color: isPrimary ? const Color(0xFFE2E8F0) : const Color(0xFFA7F3D0))),
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                // En la tarjeta estrecha el título no cabe junto al BPM.
-                final showTitle = constraints.maxWidth >= 80;
-                final compactBpm = constraints.maxWidth < 120;
-                return Row(
-                  children: [
-                    if (showTitle) ...[
-                      Expanded(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            FaIcon(
-                              isPrimary
-                                  ? FontAwesomeIcons.music
-                                  : FontAwesomeIcons.link,
-                              size: 8,
-                              color: isPrimary
-                                  ? const Color(0xFF0284C7)
-                                  : const Color(0xFF059669),
-                            ),
-                            const SizedBox(width: 3),
-                            Flexible(
-                              child: Text(
-                                isPrimary ? 'Compás' : 'Compás A2',
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 9.0,
-                                  fontWeight: FontWeight.w900,
-                                  color: isPrimary
-                                      ? const Color(0xFF0F172A)
-                                      : const Color(0xFF059669),
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                    ],
-                    // Control de BPM editable con botones subir/bajar
-                    Align(
-                      alignment: showTitle
-                          ? Alignment.centerRight
-                          : Alignment.center,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: _BpmInputControl(
-                          bpm: bpm,
-                          compact: compactBpm,
-                          onChanged: (newVal) =>
-                              notifier.updateAudioBpm(newVal),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 3),
-                    // Botón y opciones de Acordes Completos a la derecha del BPM de compás
-                    _CompleteChordsButton(
-                      accordionNumber: widget.accordionNumber,
-                      hasYellowDecisions: state.yellowDecisionBeats.isNotEmpty,
-                      yellowDecisionsCount: state.yellowDecisionBeats.length,
-                    ),
-                    const SizedBox(width: 3),
-                    // Botón de acoplar / desacoplar y hacer movible el Compás
-                    Tooltip(
-                      message: isUndocked
-                          ? 'Acoplar ventana de Compás'
-                          : 'Desacoplar ventana de Compás (mover libremente)',
-                      child: InkWell(
-                        key: ValueKey('undock_compas_${widget.accordionNumber}'),
-                        onTap: () => notifier.toggleUndockCompas(widget.accordionNumber),
-                        borderRadius: BorderRadius.circular(4),
-                        child: Container(
-                          padding: const EdgeInsets.all(3.0),
-                          decoration: BoxDecoration(
-                            color: isUndocked ? const Color(0xFFEFF6FF) : Colors.white,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: isUndocked ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: FaIcon(
-                            isUndocked ? FontAwesomeIcons.compress : FontAwesomeIcons.arrowUpRightFromSquare,
-                            size: 8.5,
-                            color: isUndocked ? const Color(0xFF2563EB) : const Color(0xFF64748B),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
 
           if (state.yellowDecisionBeats.isNotEmpty)
             Container(
@@ -637,6 +664,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                   onBellowsChanged: (bellows) {
                                     notifier.setBeatBellows(mIdx, beatIdx, bellows);
                                   },
+                                  onLiveMarker: () => notifier.markLiveChordChange(),
                                 );
                               }).toList(),
                             ),
@@ -707,6 +735,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         ],
       ),
     ),
+  ),
     const SizedBox(height: 6),
 
     // Sección de Información debajo de la ventana de Compás:
@@ -1373,6 +1402,7 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final void Function(int bar, int beat)? onNavigate;
   final VoidCallback? onToggleMark;
   final ValueChanged<BellowsMode>? onBellowsChanged;
+  final VoidCallback? onLiveMarker;
 
   const _InlineBeatChordEditor({
     required this.accordionId,
@@ -1393,6 +1423,7 @@ class _InlineBeatChordEditor extends StatefulWidget {
     this.onNavigate,
     this.onToggleMark,
     this.onBellowsChanged,
+    this.onLiveMarker,
   });
 
   @override
@@ -1606,6 +1637,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
       if (mod != null) {
         final updated = _ChordTools.applyModifier(_controller.text, mod, widget.notation);
         _applyChord(updated);
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.space) {
+        widget.onLiveMarker?.call();
         return KeyEventResult.handled;
       }
       if (event.logicalKey == LogicalKeyboardKey.backspace ||
@@ -2378,6 +2413,125 @@ class _CompleteChordsButton extends ConsumerWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Botón del metrónomo para activar/desactivar el click rítmico sincronizado al compás.
+class _MetronomeButton extends StatelessWidget {
+  final int accordionNumber;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _MetronomeButton({
+    required this.accordionNumber,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: isActive
+          ? 'Metrónomo Activo (Click encendido)'
+          : 'Activar Metrónomo (Click sincronizado con compás)',
+      child: InkWell(
+        key: ValueKey('metronome_toggle_btn_$accordionNumber'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFF10B981) : const Color(0xFFE2E8F0),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: isActive ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
+              width: 0.9,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FaIcon(
+                FontAwesomeIcons.stopwatch,
+                size: 9.5,
+                color: isActive ? Colors.white : const Color(0xFF64748B),
+              ),
+              const SizedBox(width: 3),
+              Text(
+                'Click',
+                style: TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w800,
+                  color: isActive ? Colors.white : const Color(0xFF475569),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Botón del marcador en vivo que indica y activa la captura de acordes con la Barra Espaciadora.
+class _LiveMarkerButton extends StatelessWidget {
+  final int accordionNumber;
+  final bool isActive;
+  final bool isPlaying;
+  final VoidCallback onTap;
+
+  const _LiveMarkerButton({
+    required this.accordionNumber,
+    required this.isActive,
+    required this.isPlaying,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final activeBg = isPlaying ? const Color(0xFFF59E0B) : const Color(0xFF8B5CF6);
+    final activeBorder = isPlaying ? const Color(0xFFD97706) : const Color(0xFF7C3AED);
+
+    return Tooltip(
+      message: isActive
+          ? 'Marcador en Vivo Activo: Presiona [Espacio] para marcar el acorde en el tiempo del slider'
+          : 'Activar Marcador en Vivo [Espacio] sincronizado con la reproducción',
+      child: InkWell(
+        key: ValueKey('live_chord_marker_btn_$accordionNumber'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+          decoration: BoxDecoration(
+            color: isActive ? activeBg : const Color(0xFFE2E8F0),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: isActive ? activeBorder : const Color(0xFFCBD5E1),
+              width: 0.9,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FaIcon(
+                FontAwesomeIcons.bookmark,
+                size: 9.0,
+                color: isActive ? Colors.white : const Color(0xFF64748B),
+              ),
+              const SizedBox(width: 3),
+              Text(
+                'Espacio',
+                style: TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w800,
+                  color: isActive ? Colors.white : const Color(0xFF475569),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

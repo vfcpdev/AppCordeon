@@ -110,3 +110,4 @@ class GridHistoryManager {
     _redoStack.clear();
   }
 }
+

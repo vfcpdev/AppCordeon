@@ -159,6 +159,16 @@ class AccordionSimulatorState {
   final String? _freeChordBass;
   String get freeChordBass => _freeChordBass ?? '';
 
+  // Metrónomo y Marcación en Vivo con Barra Espaciadora
+  final bool? _isMetronomeActive;
+  bool get isMetronomeActive => _isMetronomeActive ?? false;
+
+  final double? _metronomeVolume;
+  double get metronomeVolume => _metronomeVolume ?? 0.8;
+
+  final bool? _isLiveChordMarkerActive;
+  bool get isLiveChordMarkerActive => _isLiveChordMarkerActive ?? false;
+
   /// Acorde activo en el Compás actual (o el más reciente dentro del compás/tiempo).
   String get activeCompasChord {
     if (selectedBarIndex == null || selectedBarIndex! < 0 || selectedBarIndex! >= measures.length) {
@@ -257,6 +267,9 @@ class AccordionSimulatorState {
     Offset? songBarPosition,
     bool? isChordDetectorUndocked,
     Offset? chordDetectorPosition,
+    bool? isMetronomeActive,
+    double? metronomeVolume,
+    bool? isLiveChordMarkerActive,
   })  : _markedBeats = markedBeats ?? const {},
         _yellowDecisionBeats = yellowDecisionBeats ?? const {},
         _multiBeatPattern = multiBeatPattern ?? '',
@@ -268,7 +281,10 @@ class AccordionSimulatorState {
         _isSongBarUndocked = isSongBarUndocked ?? false,
         _songBarPosition = songBarPosition ?? const Offset(20, 50),
         _isChordDetectorUndocked = isChordDetectorUndocked ?? false,
-        _chordDetectorPosition = chordDetectorPosition ?? const Offset(390, 150);
+        _chordDetectorPosition = chordDetectorPosition ?? const Offset(390, 150),
+        _isMetronomeActive = isMetronomeActive ?? false,
+        _metronomeVolume = metronomeVolume ?? 0.8,
+        _isLiveChordMarkerActive = isLiveChordMarkerActive ?? false;
 
   AccordionSimulatorState copyWith({
     Color? backgroundColor,
@@ -332,6 +348,9 @@ class AccordionSimulatorState {
     bool? isChordDetectorUndocked,
     Offset? chordDetectorPosition,
     String? freeChordBass,
+    bool? isMetronomeActive,
+    double? metronomeVolume,
+    bool? isLiveChordMarkerActive,
   }) {
     return AccordionSimulatorState(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -397,6 +416,10 @@ class AccordionSimulatorState {
           isChordDetectorUndocked ?? this.isChordDetectorUndocked,
       chordDetectorPosition:
           chordDetectorPosition ?? this.chordDetectorPosition,
+      isMetronomeActive: isMetronomeActive ?? this.isMetronomeActive,
+      metronomeVolume: metronomeVolume ?? this.metronomeVolume,
+      isLiveChordMarkerActive:
+          isLiveChordMarkerActive ?? this.isLiveChordMarkerActive,
     );
   }
 
@@ -461,7 +484,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     _fileLoader = ref.read(audioFileLoaderProvider);
     _audioPlayer = ref.read(audioFilePlayerProvider);
     _demoGenerator = ref.read(demoTrackGeneratorProvider);
-    ref.onDispose(() => _playbackTimer?.cancel());
+    ref.onDispose(() {
+      _playbackTimer?.cancel();
+      _standaloneMetronomeTimer?.cancel();
+    });
 
     // Generar compases iniciales por defecto (8 compases con 4 tiempos)
     final initialMeasures = List.generate(8, (bIdx) {
@@ -1188,9 +1214,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         _audioBridge.noteOff(n);
       }
       _currentBeatNotes = [];
+      _audioBridge.noteOff(84);
+      _audioBridge.noteOff(76);
       return;
     }
 
+    _stopStandaloneMetronome();
     state = state.copyWith(isPlayingAudio: true);
     _lastPlayedBar = null;
     _lastPlayedBeat = null;
@@ -1257,6 +1286,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         _lastPlayedBar = currentBar;
         _lastPlayedBeat = currentBeat;
         _playBeatChord(currentBar, currentBeat);
+        if (state.isMetronomeActive) {
+          playMetronomeTick(currentBeat);
+        }
       }
     });
   }
@@ -1265,6 +1297,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     _playbackTimer?.cancel();
     _audioPlayer.stop();
     _currentBeatNotes = [];
+    _audioBridge.noteOff(84);
+    _audioBridge.noteOff(76);
     state = state.copyWith(
       isPlayingAudio: false,
       currentAudioTime: 0.0,
@@ -1273,6 +1307,109 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       playingChordNotes: const {},
     );
     _audioBridge.allNotesOff();
+  }
+
+  Timer? _standaloneMetronomeTimer;
+  int _standaloneBeat = 0;
+
+  /// Alterna el estado del metrónomo (click rítmico de compás).
+  void toggleMetronome() {
+    final nextActive = !state.isMetronomeActive;
+    state = state.copyWith(isMetronomeActive: nextActive);
+    if (!state.isPlayingAudio) {
+      if (nextActive) {
+        _startStandaloneMetronome();
+      } else {
+        _stopStandaloneMetronome();
+      }
+    }
+  }
+
+  /// Ajusta el volumen del click del metrónomo [0.0, 1.0].
+  void setMetronomeVolume(double vol) {
+    state = state.copyWith(metronomeVolume: vol.clamp(0.0, 1.0));
+  }
+
+  /// Alterna el modo de marcación de acordes en vivo con barra espaciadora.
+  void toggleLiveChordMarker() {
+    state = state.copyWith(isLiveChordMarkerActive: !state.isLiveChordMarkerActive);
+  }
+
+  /// Ejecuta un click de metrónomo (acento en beat 0, secundario en beats 1..3).
+  void playMetronomeTick(int beatIndex) {
+    PlayMetronomeTickCommand(
+      onNoteOn: (note, {velocity = 0.8}) => _audioBridge.noteOn(note, velocity: velocity),
+      onNoteOff: (note) => _audioBridge.noteOff(note),
+      beatIndex: beatIndex,
+      volume: state.metronomeVolume,
+    ).execute();
+  }
+
+  void _startStandaloneMetronome() {
+    _standaloneMetronomeTimer?.cancel();
+    final bpm = state.audioReport?.bpm ?? 120.0;
+    final intervalMs = ((60.0 / bpm) * 1000).toInt().clamp(100, 3000);
+    _standaloneBeat = 0;
+    playMetronomeTick(_standaloneBeat);
+
+    _standaloneMetronomeTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
+      if (!state.isMetronomeActive || state.isPlayingAudio) {
+        timer.cancel();
+        return;
+      }
+      _standaloneBeat = (_standaloneBeat + 1) % 4;
+      playMetronomeTick(_standaloneBeat);
+    });
+  }
+
+  void _stopStandaloneMetronome() {
+    _standaloneMetronomeTimer?.cancel();
+    _standaloneMetronomeTimer = null;
+    _audioBridge.noteOff(84);
+    _audioBridge.noteOff(76);
+  }
+
+  /// Marca en vivo el cambio de acorde en el compás y tiempo exacto según el slider de audio.
+  /// Se ejecuta al presionar la Barra Espaciadora durante la reproducción (Command Pattern + Hoare Triples).
+  LiveMarkerResult? markLiveChordChange() {
+    final bpm = state.audioReport?.bpm.toDouble() ?? 120.0;
+    final constructorChord = ChordCatalog.symbolFor(
+      root: state.freeChordRoot,
+      type: state.freeChordType,
+      extension: state.freeChordFourth,
+      bass: state.freeChordBass,
+      latin: state.notation != NotationMode.alemana,
+    );
+    final activeChord = constructorChord.isNotEmpty
+        ? constructorChord
+        : state.detectedChord?.formattedSymbol(state.notation);
+
+    final command = MarkLiveChordChangeCommand(
+      currentAudioTime: state.currentAudioTime,
+      bpm: bpm,
+      measures: state.measures,
+      markedBeats: state.markedBeats,
+      activeChord: activeChord,
+    );
+
+    if (!command.canExecute()) return null;
+
+    _gridHistory.saveSnapshot(
+      measures: state.measures,
+      markedBeats: state.markedBeats,
+      yellowDecisionBeats: state.yellowDecisionBeats,
+    );
+
+    final result = command.execute();
+
+    state = state.copyWith(
+      measures: result.updatedMeasures,
+      markedBeats: result.updatedMarkedBeats,
+      selectedBarIndex: result.targetBar,
+      selectedBeatIndex: result.targetBeat,
+    );
+
+    return result;
   }
 
   /// Retrocede al compás anterior y sincroniza la posición del audio y de la cuadrícula.
