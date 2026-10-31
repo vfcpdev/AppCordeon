@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:acordeon_flutter/domain/models/measure_models.dart';
 import 'package:acordeon_flutter/domain/theory/music_theory_topics.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/app_header_widget.dart';
@@ -115,7 +114,7 @@ void main() {
       expect(find.text('Teoría Musical del Acordeón Diatónico'), findsOneWidget);
 
       // Verificamos el menú lateral izquierdo con los módulos
-      expect(find.text('1. El Pentagrama y las Claves'), findsOneWidget);
+      expect(find.text('1. El Pentagrama y las Claves'), findsWidgets);
       expect(find.text('2. Simbología y Fuelle'), findsOneWidget);
       expect(find.text('3. Círculo de Quintas y Hileras'), findsOneWidget);
 

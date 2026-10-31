@@ -8,7 +8,7 @@ class MusicTheoryTopic {
   final String subtitle;
   final String level; // 'Básico', 'Intermedio', 'Avanzado'
   final Color levelColor;
-  final IconData icon;
+  final FaIconData icon;
   final List<TheorySectionItem> sections;
 
   const MusicTheoryTopic({

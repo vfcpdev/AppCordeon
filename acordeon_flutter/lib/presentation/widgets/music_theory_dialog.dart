@@ -138,7 +138,7 @@ class _MusicTheoryDialogState extends State<MusicTheoryDialog> {
                           child: ListView.separated(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             itemCount: MusicTheoryCatalog.topics.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 3),
+                            separatorBuilder: (context, index) => const SizedBox(height: 3),
                             itemBuilder: (context, index) {
                               final topic = MusicTheoryCatalog.topics[index];
                               final isSelected = index == _selectedTopicIndex;

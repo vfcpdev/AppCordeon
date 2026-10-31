@@ -54,6 +54,8 @@ void main() {
 
     final st = container.read(accordionSimulatorProvider);
     final pcs = container.read(activeChordPitchClassesProvider(1));
+    expect(st.freeChordRoot, equals(2));
+    expect(pcs, isNotEmpty);
     final buttons3D = tester.widgetList<AccordionButton3D>(
       find.descendant(
         of: find.byType(BassPanelWidget),
