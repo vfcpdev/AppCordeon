@@ -170,7 +170,7 @@ void main() {
         barIndex: 0,
         beatIndex: 1,
         notation: NotationMode.latina,
-        trebleData: AccordionData.baseCincoLetrasTrebleTransposed,
+        trebleData: AccordionData.getTransposedTreble(0),
         onUpdateBeat: (bar, beat, chord) {
           updatedChord = chord;
         },
