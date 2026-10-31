@@ -35,6 +35,30 @@ class DetectedChordSegment {
     );
   }
 
+  DetectedChordSegment copyWith({
+    double? startTime,
+    double? endTime,
+    int? rootMod,
+    String? quality,
+    String? chordName,
+    String? chordSymbol,
+    List<int>? noteMods,
+    List<int>? playbackMidis,
+    double? confidence,
+  }) {
+    return DetectedChordSegment(
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      rootMod: rootMod ?? this.rootMod,
+      quality: quality ?? this.quality,
+      chordName: chordName ?? this.chordName,
+      chordSymbol: chordSymbol ?? this.chordSymbol,
+      noteMods: noteMods ?? this.noteMods,
+      playbackMidis: playbackMidis ?? this.playbackMidis,
+      confidence: confidence ?? this.confidence,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'startTime': startTime,
     'endTime': endTime,

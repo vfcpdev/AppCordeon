@@ -54,8 +54,11 @@ class _EditAudioKeyBpmDialogState extends ConsumerState<EditAudioKeyBpmDialog> {
     final notifier = ref.read(accordionSimulatorProvider.notifier);
     final parsedBpm = int.tryParse(_bpmController.text.trim()) ?? widget.report.bpm;
 
-    notifier.updateAudioKey(_selectedRootMod, _selectedMode);
-    notifier.updateAudioBpm(parsedBpm);
+    notifier.updateAudioKeyAndBpm(
+      rootMod: _selectedRootMod,
+      mode: _selectedMode,
+      bpm: parsedBpm,
+    );
 
     Navigator.of(context).pop();
 

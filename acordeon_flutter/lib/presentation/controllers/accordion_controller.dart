@@ -610,39 +610,17 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   void updateAudioKey(int rootMod, String mode) {
     final report = state.audioReport;
     if (report == null) return;
-
-    const noteNamesLat = [
-      'Do', 'Do♯', 'Re', 'Mi♭', 'Mi', 'Fa', 'Fa♯', 'Sol', 'Sol♯', 'La', 'Si♭', 'Si'
-    ];
-    const noteNamesAle = [
-      'C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'
-    ];
-
-    final isMajor = mode.toLowerCase() == 'major';
-    final keyNameLat = '${noteNamesLat[rootMod % 12]} ${isMajor ? 'Mayor' : 'Menor'}';
-    final keyNameAle = '${noteNamesAle[rootMod % 12]} ${isMajor ? 'Major' : 'Minor'}';
-
-    final (recName, recOffset, recRow) = const TuningRecommender().recommend(rootMod % 12);
-
-    final updatedKey = report.mainKey.copyWith(
-      rootMod: rootMod % 12,
+    updateAudioKeyAndBpm(
+      rootMod: rootMod,
       mode: mode,
-      keyNameLat: keyNameLat,
-      keyNameAle: keyNameAle,
-      recommendedTuning: recName,
-      recommendedOffset: recOffset,
-      recommendedRow: recRow,
+      bpm: report.bpm,
     );
-
-    final updatedReport = report.copyWith(mainKey: updatedKey);
-    state = state.copyWith(audioReport: updatedReport);
-    applyDetectedTuning(updatedKey);
   }
 
   void updateAudioBpm(int newBpm) {
-    final clampedBpm = newBpm.clamp(30, 300);
     final report = state.audioReport;
     if (report == null) {
+      final clampedBpm = newBpm.clamp(30, 300);
       const defaultKey = KeyDetectionResult(
         rootMod: 0,
         mode: 'major',
@@ -661,10 +639,152 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
           chords: const [],
         ),
       );
-    } else {
-      final updatedReport = report.copyWith(bpm: clampedBpm);
-      state = state.copyWith(audioReport: updatedReport);
+      generateMeasuresForAudio(durationSeconds: 16.0, bpm: clampedBpm);
+      return;
     }
+    updateAudioKeyAndBpm(
+      rootMod: report.mainKey.rootMod,
+      mode: report.mainKey.mode,
+      bpm: newBpm,
+    );
+  }
+
+  /// Actualiza la tonalidad principal y el BPM de forma conjunta y atómica,
+  /// recalculando de forma efectiva los acordes en el reporte y en la cuadrícula de compases.
+  void updateAudioKeyAndBpm({
+    required int rootMod,
+    required String mode,
+    required int bpm,
+  }) {
+    final report = state.audioReport;
+    if (report == null) return;
+
+    final clampedBpm = bpm.clamp(30, 300);
+    final oldRootMod = report.mainKey.rootMod;
+    final semitoneOffset = ((rootMod % 12) - (oldRootMod % 12) + 12) % 12;
+
+    const noteNamesLat = [
+      'Do', 'Do♯', 'Re', 'Mi♭', 'Mi', 'Fa', 'Fa♯', 'Sol', 'Sol♯', 'La', 'Si♭', 'Si'
+    ];
+    const noteNamesAle = [
+      'C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'
+    ];
+
+    final isMajor = mode.toLowerCase() == 'major';
+    final keyNameLat = '${noteNamesLat[rootMod % 12]} ${isMajor ? 'Mayor' : 'Menor'}';
+    final keyNameAle = '${noteNamesAle[rootMod % 12]} ${isMajor ? 'Major' : 'Minor'}';
+
+    final (recName, recOffset, recRow) = const TuningRecommender().recommend(rootMod % 12);
+    final preferFlats = TuningRegistry.usesFlats(recOffset);
+
+    final updatedKey = report.mainKey.copyWith(
+      rootMod: rootMod % 12,
+      mode: mode,
+      keyNameLat: keyNameLat,
+      keyNameAle: keyNameAle,
+      recommendedTuning: recName,
+      recommendedOffset: recOffset,
+      recommendedRow: recRow,
+    );
+
+    // 1. Recalcular y transponer acordes del timeline
+    final updatedChords = (semitoneOffset == 0 && report.mainKey.mode == mode)
+        ? report.chords
+        : report.chords.map((ch) {
+            final newSymbol = ChordCatalog.transposeChordSymbol(
+              ch.chordSymbol,
+              semitoneOffset,
+              preferFlats: preferFlats,
+            );
+            final newName = ChordCatalog.transposeChordName(
+              ch.chordName,
+              semitoneOffset,
+              preferFlats: preferFlats,
+            );
+            final newRootMod = ((ch.rootMod + semitoneOffset) % 12 + 12) % 12;
+            return ch.copyWith(
+              rootMod: newRootMod,
+              chordSymbol: newSymbol,
+              chordName: newName,
+            );
+          }).toList();
+
+    final updatedReport = report.copyWith(
+      bpm: clampedBpm,
+      mainKey: updatedKey,
+      chords: updatedChords,
+    );
+
+    // 2. Comprobar si los compases ya tenían acordes cargados
+    final bool hasLoadedChords = state.measures.any(
+      (m) => m.beats.any((b) => b.chord.trim().isNotEmpty),
+    );
+
+    final secondsPerBeat = 60.0 / clampedBpm;
+    final totalBeats = (report.duration / secondsPerBeat).ceil();
+    final totalBars = ((totalBeats + 3) ~/ 4).clamp(8, 500);
+
+    final List<MeasureRow> newMeasures;
+    if (hasLoadedChords && updatedChords.isNotEmpty) {
+      newMeasures = List.generate(totalBars, (barIdx) {
+        return MeasureRow(
+          barNumber: barIdx + 1,
+          beats: List.generate(4, (beatIdx) {
+            final beatTime = (barIdx * 4 + beatIdx) * secondsPerBeat;
+            final mins = (beatTime ~/ 60).toString().padLeft(2, '0');
+            final secs = ((beatTime % 60).toInt()).toString().padLeft(2, '0');
+            final ch = _findChordForTime(updatedChords, beatTime);
+            return MeasureBeat(
+              barIndex: barIdx,
+              beatIndex: beatIdx,
+              chord: ch,
+              timeText: '$mins:$secs',
+            );
+          }),
+        );
+      });
+    } else if (clampedBpm != report.bpm) {
+      newMeasures = List.generate(totalBars, (barIdx) {
+        return MeasureRow(
+          barNumber: barIdx + 1,
+          beats: List.generate(4, (beatIdx) {
+            final beatTime = (barIdx * 4 + beatIdx) * secondsPerBeat;
+            final mins = (beatTime ~/ 60).toString().padLeft(2, '0');
+            final secs = ((beatTime % 60).toInt()).toString().padLeft(2, '0');
+            return MeasureBeat(
+              barIndex: barIdx,
+              beatIndex: beatIdx,
+              chord: '',
+              timeText: '$mins:$secs',
+            );
+          }),
+        );
+      });
+    } else if (hasLoadedChords && semitoneOffset != 0) {
+      newMeasures = state.measures.map((m) {
+        return MeasureRow(
+          barNumber: m.barNumber,
+          beats: m.beats.map((b) {
+            if (b.chord.trim().isEmpty) return b;
+            final transposed = ChordCatalog.transposeChordSymbol(
+              b.chord,
+              semitoneOffset,
+              preferFlats: preferFlats,
+            );
+            return b.copyWith(chord: transposed);
+          }).toList(),
+        );
+      }).toList();
+    } else {
+      newMeasures = state.measures;
+    }
+
+    state = state.copyWith(
+      audioReport: updatedReport,
+      measures: newMeasures,
+    );
+
+    applyDetectedTuning(updatedKey);
   }
 
   void applyDetectedTuning(KeyDetectionResult keyResult) {
@@ -709,26 +829,60 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     );
   }
 
-  /// Aplica los acordes detectados a los compases existentes (por decisión posterior del usuario).
+  /// Aplica los acordes detectados a los compases existentes posicionándolos en el tiempo exacto.
   void applyChordsToMeasures(List<DetectedChordSegment> chords) {
-    if (chords.isEmpty || state.measures.isEmpty) return;
+    if (chords.isEmpty) return;
 
-    final updatedMeasures = <MeasureRow>[];
-    int chordIdx = 0;
+    final report = state.audioReport;
+    final effectiveBpm = (report?.bpm ?? 120).clamp(30, 300);
+    final secondsPerBeat = 60.0 / effectiveBpm;
 
-    for (final measure in state.measures) {
-      final beats = <MeasureBeat>[];
-      for (final beat in measure.beats) {
-        final ch = chords[chordIdx % chords.length].chordSymbol;
-        beats.add(beat.copyWith(chord: ch));
-        if (beat.beatIndex % 2 == 1) {
-          chordIdx++;
-        }
-      }
-      updatedMeasures.add(MeasureRow(barNumber: measure.barNumber, beats: beats));
-    }
+    final duration = report?.duration ?? chords.last.endTime;
+    final totalBeats = (duration / secondsPerBeat).ceil();
+    final totalBars = ((totalBeats + 3) ~/ 4).clamp(8, 500);
+
+    final updatedMeasures = List.generate(totalBars, (barIdx) {
+      final beats = List.generate(4, (beatIdx) {
+        final beatTime = (barIdx * 4 + beatIdx) * secondsPerBeat;
+        final mins = (beatTime ~/ 60).toString().padLeft(2, '0');
+        final secs = ((beatTime % 60).toInt()).toString().padLeft(2, '0');
+        final ch = _findChordForTime(chords, beatTime);
+
+        return MeasureBeat(
+          barIndex: barIdx,
+          beatIndex: beatIdx,
+          chord: ch,
+          timeText: '$mins:$secs',
+          isContinue: false,
+        );
+      });
+      return MeasureRow(barNumber: barIdx + 1, beats: beats);
+    });
 
     state = state.copyWith(measures: updatedMeasures);
+  }
+
+  /// Busca el acorde activo en una posición de tiempo en segundos.
+  String _findChordForTime(List<DetectedChordSegment> chords, double timeSeconds) {
+    if (chords.isEmpty) return '';
+    int low = 0;
+    int high = chords.length - 1;
+    while (low <= high) {
+      final mid = (low + high) ~/ 2;
+      final seg = chords[mid];
+      if (seg.startTime <= timeSeconds && timeSeconds < seg.endTime) {
+        return seg.chordSymbol;
+      } else if (timeSeconds < seg.startTime) {
+        high = mid - 1;
+      } else {
+        low = mid + 1;
+      }
+    }
+    if (low >= chords.length) return chords.last.chordSymbol;
+    if (high < 0) return chords.first.chordSymbol;
+    final diffLow = (chords[low].startTime - timeSeconds).abs();
+    final diffHigh = (timeSeconds - chords[high].endTime).abs();
+    return diffLow < diffHigh ? chords[low].chordSymbol : chords[high].chordSymbol;
   }
 
   // Controles Diapasón 1

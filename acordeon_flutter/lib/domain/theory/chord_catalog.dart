@@ -203,6 +203,148 @@ class ChordCatalog {
     return '$targetRootName$rest';
   }
 
+  /// Transpone el símbolo de un acorde por una cantidad de semitonos (semitoneOffset).
+  /// Soporta tanto notación alemana (p. ej. 'Bm' -> 'Cm') como latina ('Si Menor' -> 'Do Menor'),
+  /// acordes con bajo invertido (slash chords 'C/E' -> 'D/F#') y extensiones.
+  static String transposeChordSymbol(
+    String chord,
+    int semitoneOffset, {
+    bool preferFlats = false,
+  }) {
+    final trimmed = chord.trim();
+    if (trimmed.isEmpty || trimmed == '-') return trimmed;
+    if (semitoneOffset % 12 == 0) return trimmed;
+
+    // Acordes con bajo invertido (ej: C/E)
+    if (trimmed.contains('/')) {
+      final parts = trimmed.split('/');
+      if (parts.length == 2) {
+        final main = transposeChordSymbol(parts[0], semitoneOffset, preferFlats: preferFlats);
+        final bass = transposeChordSymbol(parts[1], semitoneOffset, preferFlats: preferFlats);
+        return '$main/$bass';
+      }
+    }
+
+    String? matchedRoot;
+    int? pitchClass;
+
+    final sortedRoots = rootPitchClasses.keys.toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+
+    for (final r in sortedRoots) {
+      if (trimmed.startsWith(r)) {
+        matchedRoot = r;
+        pitchClass = rootPitchClasses[r];
+        break;
+      }
+    }
+
+    if (matchedRoot == null || pitchClass == null) {
+      return trimmed;
+    }
+
+    final rest = trimmed.substring(matchedRoot.length);
+    final isLatin = matchedRoot.startsWith('Do') ||
+        matchedRoot.startsWith('Re') ||
+        matchedRoot.startsWith('Mi') ||
+        matchedRoot.startsWith('Fa') ||
+        matchedRoot.startsWith('Sol') ||
+        matchedRoot.startsWith('La') ||
+        matchedRoot.startsWith('Si');
+
+    final newPitchClass = ((pitchClass + semitoneOffset) % 12 + 12) % 12;
+
+    final String newRootName;
+    if (isLatin) {
+      if (preferFlats) {
+        newRootName = const [
+          'Do', 'Re♭', 'Re', 'Mi♭', 'Mi', 'Fa', 'Sol♭', 'Sol', 'La♭', 'La', 'Si♭', 'Si'
+        ][newPitchClass];
+      } else {
+        newRootName = const [
+          'Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'
+        ][newPitchClass];
+      }
+    } else {
+      if (preferFlats) {
+        newRootName = const [
+          'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'
+        ][newPitchClass];
+      } else {
+        newRootName = const [
+          'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
+        ][newPitchClass];
+      }
+    }
+
+    return '$newRootName$rest';
+  }
+
+  /// Transpone la descripción textual de un acorde (ej: 'Si Menor' -> 'Do Menor', 'Mi Sus4' -> 'Fa Sus4').
+  static String transposeChordName(
+    String name,
+    int semitoneOffset, {
+    bool preferFlats = false,
+  }) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return trimmed;
+    if (semitoneOffset % 12 == 0) return trimmed;
+
+    final sortedRoots = rootPitchClasses.keys.toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+
+    String? matchedRoot;
+    int? pitchClass;
+
+    for (final r in sortedRoots) {
+      if (trimmed.startsWith(r)) {
+        matchedRoot = r;
+        pitchClass = rootPitchClasses[r];
+        break;
+      }
+    }
+
+    if (matchedRoot == null || pitchClass == null) {
+      return trimmed;
+    }
+
+    final rest = trimmed.substring(matchedRoot.length);
+    final isLatin = matchedRoot.startsWith('Do') ||
+        matchedRoot.startsWith('Re') ||
+        matchedRoot.startsWith('Mi') ||
+        matchedRoot.startsWith('Fa') ||
+        matchedRoot.startsWith('Sol') ||
+        matchedRoot.startsWith('La') ||
+        matchedRoot.startsWith('Si');
+
+    final newPitchClass = ((pitchClass + semitoneOffset) % 12 + 12) % 12;
+
+    final String newRootName;
+    if (isLatin) {
+      if (preferFlats) {
+        newRootName = const [
+          'Do', 'Re♭', 'Re', 'Mi♭', 'Mi', 'Fa', 'Sol♭', 'Sol', 'La♭', 'La', 'Si♭', 'Si'
+        ][newPitchClass];
+      } else {
+        newRootName = const [
+          'Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'
+        ][newPitchClass];
+      }
+    } else {
+      if (preferFlats) {
+        newRootName = const [
+          'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'
+        ][newPitchClass];
+      } else {
+        newRootName = const [
+          'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
+        ][newPitchClass];
+      }
+    }
+
+    return '$newRootName$rest';
+  }
+
   /// Extrae las clases de altura (0..11) a partir de una cadena de acorde (p. ej. 'Do', 'Sol7', 'Am', etc.)
   static Set<int> pitchClassesForChordSymbol(String chord) {
     final trimmed = chord.trim();
