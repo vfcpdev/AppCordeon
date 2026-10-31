@@ -491,33 +491,52 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                         ],
                       ),
 
-                  // Botones de selección masiva y borrado
+                  // Botón de borrado, casilla de selección masiva contigua y desmarcado.
+                  // Si la casilla está marcada, borrar elimina todos los acordes;
+                  // en caso contrario, solo los de las casillas marcadas.
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (hasMarks) ...[
                         _DeleteAllChordsButton(
+                          tooltip: allMarked
+                              ? 'Borrar todos los acordes (casilla marcada)'
+                              : 'Borrar acordes de las casillas marcadas',
                           onTap: () {
-                            notifier.deleteAllGridChords();
+                            final deleted = allMarked
+                                ? notifier.deleteAllGridChords()
+                                : notifier.deleteMarkedGridChords();
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Acordes borrados de la cuadrícula.'),
-                                duration: Duration(seconds: 2),
+                              SnackBar(
+                                content: Text(
+                                  allMarked
+                                      ? (deleted > 0
+                                          ? 'Acordes borrados de la cuadrícula.'
+                                          : 'La cuadrícula ya está vacía.')
+                                      : (deleted > 0
+                                          ? 'Se borraron $deleted acordes de las casillas marcadas.'
+                                          : 'No hay casillas marcadas para borrar.'),
+                                ),
+                                duration: const Duration(seconds: 2),
                               ),
                             );
                           },
                         ),
                         const SizedBox(width: 3),
+                      ],
+                      // Casilla al lado del botón borrar: marcada => borrar todo
+                      _SelectAllBeatsButton(
+                        key: const ValueKey('select_all_beats_btn'),
+                        allMarked: allMarked,
+                        onTap: notifier.toggleAllBeatMarks,
+                      ),
+                      if (hasMarks) ...[
+                        const SizedBox(width: 3),
                         // Desmarcar todas las casillas seleccionadas
                         _ClearMarksButton(
                           onTap: notifier.clearBeatMarks,
                         ),
-                        const SizedBox(width: 3),
                       ],
-                      _SelectAllBeatsButton(
-                        allMarked: allMarked,
-                        onTap: notifier.toggleAllBeatMarks,
-                      ),
                     ],
                   ),
                 ],
@@ -2103,6 +2122,7 @@ class _SelectAllBeatsButton extends StatelessWidget {
   final VoidCallback onTap;
 
   const _SelectAllBeatsButton({
+    super.key,
     required this.allMarked,
     required this.onTap,
   });
@@ -2146,17 +2166,21 @@ class _SelectAllBeatsButton extends StatelessWidget {
   }
 }
 
-/// Botón cuadrado rojo con icono de basura de la minibarra: borra todos los
-/// acordes registrados en la cuadrícula del Compás.
+/// Botón cuadrado rojo con icono de basura de la minibarra: borra los acordes
+/// según el estado de la casilla de selección masiva contigua. Si la casilla
+/// está marcada borra todos los acordes de la cuadrícula; en caso contrario
+/// solo borra los acordes de las casillas marcadas directamente.
 class _DeleteAllChordsButton extends StatelessWidget {
   final VoidCallback onTap;
+  final String tooltip;
 
-  const _DeleteAllChordsButton({required this.onTap});
+  const _DeleteAllChordsButton({required this.onTap, this.tooltip = 'Borrar acordes'});
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: 'Borrar todos los acordes',
+      key: const ValueKey('delete_grid_chords_btn'),
+      message: tooltip,
       child: GestureDetector(
         onTapDown: (_) => onTap(),
         behavior: HitTestBehavior.opaque,

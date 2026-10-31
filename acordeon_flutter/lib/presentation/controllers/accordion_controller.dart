@@ -1847,11 +1847,51 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
   }
 
-  /// Borra todos los acordes registrados en la cuadrícula y desmarca
-  /// todos los checkboxes.
-  void deleteAllGridChords() {
-    clearAllGridChords();
-    clearBeatMarks();
+  /// Borra los acordes de la cuadrícula aplicando [DeleteGridChordsCommand]
+  /// (Triplas de Hoare {P} C {Q}).
+  ///
+  /// - Casilla de selección masiva marcada (`deleteAll == true`): limpia todos
+  ///   los acordes de la cuadrícula y desmarca todas las casillas
+  ///   {Q: forall k in [0, N): chord(k) == '' && markedBeats == {}}.
+  /// - Casilla desactivada: borra únicamente los acordes de las casillas
+  ///   marcadas directamente
+  ///   {Q: chord vacía solo para k in markedBeats; el resto permanece intacto}.
+  /// Devuelve la cantidad de acordes borrados (0 si no hay nada que borrar).
+  int deleteGridChords({required bool deleteAll}) {
+    final targets = deleteAll
+        ? {
+            // Casilla masiva activa: targets = todas las posiciones válidas,
+            // más cualquier marca residual fuera de rango (la desmarca igual).
+            for (var i = 0; i < state.measures.length * 4; i++) i,
+            ...state.markedBeats,
+          }
+        : // Casilla desactivada: targets = solo las casillas marcadas a mano.
+          Set<int>.from(state.markedBeats);
+    return _deleteGridChordsAt(targets);
+  }
+
+  /// Atajo para el borrado total (retrocompatible con código y pruebas existentes).
+  int deleteAllGridChords() => deleteGridChords(deleteAll: true);
+
+  /// Borra los acordes únicamente de las casillas actualmente marcadas.
+  int deleteMarkedGridChords() => deleteGridChords(deleteAll: false);
+
+  /// Núcleo atómico de borrado: crea, verifica {P}, ejecuta {C} y publica
+  /// {Q} del comando sin conocer la estrategia de selección de las claves.
+  int _deleteGridChordsAt(Set<int> targetKeys) {
+    if (targetKeys.isEmpty) return 0;
+    final command = DeleteGridChordsCommand(
+      currentMeasures: state.measures,
+      currentMarkedBeats: state.markedBeats,
+      targetKeys: targetKeys,
+    );
+    if (!command.canExecute()) return 0;
+    final result = command.execute();
+    state = state.copyWith(
+      measures: result.updatedMeasures,
+      markedBeats: result.updatedMarkedBeats,
+    );
+    return result.deletedCount;
   }
 
   void setBeatChord(int barIdx, int beatIdx, String chord) {

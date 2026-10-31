@@ -1180,4 +1180,145 @@ class ToggleBellowsCommand implements AccordionCommand<BellowsMode> {
   }
 }
 
+/// Resultado atómico de la ejecución de [DeleteGridChordsCommand].
+class GridChordsDeletionResult {
+  final List<MeasureRow> updatedMeasures;
+  final Set<int> updatedMarkedBeats;
+  final int deletedCount;
+
+  const GridChordsDeletionResult({
+    required this.updatedMeasures,
+    required this.updatedMarkedBeats,
+    required this.deletedCount,
+  });
+}
+
+/// Comando para borrar los acordes registrados en posiciones específicas de la
+/// cuadrícula del Compás, desmarcando únicamente las casillas afectadas.
+///
+/// Principios aplicados:
+/// - Single Responsibility Principle (SRP): Encapsula exclusivamente el borrado
+///   de acordes y la desmarcación de las casillas objetivo; no decide cuáles
+///   posiciones son "todas" ni "las marcadas" (eso lo resuelve el controlador).
+/// - Open/Closed Principle (OCP) + Bajo Acoplamiento: El alcance del borrado viaja
+///   mediante [targetKeys] (desacoplado), de modo que agregar nuevos modos de
+///   selección no exige modificar este comando.
+/// - Enfoque formal con Triplas de Hoare:
+///   - Precondición {P}:
+///     - `currentMeasures.isNotEmpty || targetKeys.isEmpty`
+///     - `targetKeys.every((k) => k >= 0)` (clave plano `barIndex * 4 + beatIndex`)
+///   - Ejecución {C}:
+///       Sea $V = \{k \in targetKeys \mid 0 \le k < len(currentMeasures) * 4\}$.
+///       Para cada $k \in V$ con posición $(\lfloor k/4 \rfloor, k \bmod 4)$:
+///         `chord := ''`. Las claves fuera de rango se ignoran (no-op seguro).
+///       `updatedMarkedBeats = currentMarkedBeats \ V`.
+///   - Poscondición {Q}:
+///       - `forall k in V: updatedMeasures[bar(k)][beat(k)].chord == ''`
+///       - `forall k not in V: updatedMeasures[f(k)].chord == currentMeasures[f(k)].chord` (Invariante {I})
+///       - `updatedMarkedBeats = currentMarkedBeats \ V`
+///       - `deletedCount == |{k in V : chord original no vacío}|`
+///   - Invariante {I}: Toda celda fuera de [targetKeys] permanece intacta;
+///     el fuelle (bellows) y el resto de campos de cada tiempo no se modifican.
+class DeleteGridChordsCommand implements AccordionCommand<GridChordsDeletionResult> {
+  @override
+  String get commandName => 'DeleteGridChordsCommand';
+
+  final List<MeasureRow> currentMeasures;
+  final Set<int> currentMarkedBeats;
+  final Set<int> targetKeys;
+
+  int get totalBeats => currentMeasures.length * 4;
+
+  const DeleteGridChordsCommand({
+    required this.currentMeasures,
+    required this.currentMarkedBeats,
+    required this.targetKeys,
+  });
+
+  @override
+  bool canExecute() {
+    return (currentMeasures.isNotEmpty || targetKeys.isEmpty) && targetKeys.every((k) => k >= 0);
+  }
+
+  @override
+  void assertPreconditions() {
+    if (currentMeasures.isEmpty && targetKeys.isNotEmpty) {
+      throw const PreconditionViolationException(
+        'DeleteGridChordsCommand',
+        'La cuadrícula no puede estar vacía cuando hay claves objetivo.',
+      );
+    }
+    final invalid = targetKeys.where((k) => k < 0).toList();
+    if (invalid.isNotEmpty) {
+      throw PreconditionViolationException(
+        'DeleteGridChordsCommand',
+        'Claves objetivo negativas detectadas: $invalid.',
+      );
+    }
+  }
+
+  @override
+  GridChordsDeletionResult execute() {
+    assertPreconditions();
+
+    var deletedCount = 0;
+    final updatedMeasures = List<MeasureRow>.from(currentMeasures);
+
+    for (final key in targetKeys) {
+      if (key < 0 || key >= totalBeats) continue; // No-op seguro fuera de rango
+      final barIdx = key ~/ 4;
+      final beatIdx = key % 4;
+      final row = updatedMeasures[barIdx];
+      final beats = List<MeasureBeat>.from(row.beats);
+      final original = beats[beatIdx];
+      if (original.chord.trim().isNotEmpty) deletedCount++;
+      beats[beatIdx] = original.copyWith(chord: '');
+      updatedMeasures[barIdx] = MeasureRow(barNumber: row.barNumber, beats: beats);
+    }
+
+    final updatedMarked = Set<int>.from(currentMarkedBeats);
+    updatedMarked.removeAll(
+      targetKeys.where((k) => k >= 0 && k < totalBeats),
+    );
+
+    assertPostconditions(updatedMeasures, updatedMarked, deletedCount);
+    return GridChordsDeletionResult(
+      updatedMeasures: updatedMeasures,
+      updatedMarkedBeats: updatedMarked,
+      deletedCount: deletedCount,
+    );
+  }
+
+  void assertPostconditions(
+    List<MeasureRow> updatedMeasures,
+    Set<int> updatedMarked,
+    int deletedCount,
+  ) {
+    final validTargets = targetKeys.where((k) => k >= 0 && k < totalBeats);
+    // Poscondición {Q}: toda celda objetivo queda sin acorde
+    for (final key in validTargets) {
+      assert(
+        updatedMeasures[key ~/ 4].beats[key % 4].chord.trim().isEmpty,
+        'Violación {Q}: El pulso $key conserva un acorde tras el borrado.',
+      );
+    }
+    // Poscondición {Q}: las casillas objetivo quedan desmarcadas
+    assert(
+      updatedMarked.where(validTargets.contains).isEmpty,
+      'Violación {Q}: Una casilla objetivo permaneció marcada.',
+    );
+    // Invariante {I}: toda celda fuera de targetKeys conserva su acorde
+    for (var k = 0; k < totalBeats; k++) {
+      if (!validTargets.contains(k)) {
+        assert(
+          updatedMeasures[k ~/ 4].beats[k % 4].chord == currentMeasures[k ~/ 4].beats[k % 4].chord,
+          'Violación {I}: El pulso $k fue alterado indebidamente.',
+        );
+      }
+    }
+    assert(deletedCount >= 0 && deletedCount <= validTargets.length,
+        'Violación {Q}: deletedCount $deletedCount fuera de rango.');
+  }
+}
+
 

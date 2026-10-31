@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:acordeon_flutter/core/constants/enums.dart';
 import 'package:acordeon_flutter/domain/commands/accordion_commands.dart';
 import 'package:acordeon_flutter/domain/memento/grid_memento.dart';
+import 'package:acordeon_flutter/domain/models/measure_models.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 
 void main() {
@@ -260,6 +261,95 @@ void main() {
       // 4. Rehacer el cambio de 'Sol'
       notifier.redoGrid();
       expect(container.read(accordionSimulatorProvider).measures[0].beats[2].chord, equals('Sol'));
+    });
+  });
+
+  group('DeleteGridChordsCommand - Triplas de Hoare {P} C {Q} para el borrado de la cuadrícula', () {
+    List<MeasureRow> buildGrid() => [
+      MeasureRow(
+        barNumber: 1,
+        beats: List.generate(4, (i) => MeasureBeat(barIndex: 0, beatIndex: i, chord: 'Do', timeText: '0:00')),
+      ),
+      MeasureRow(
+        barNumber: 2,
+        beats: List.generate(4, (i) => MeasureBeat(barIndex: 1, beatIndex: i, chord: 'Sol', timeText: '0:02')),
+      ),
+    ];
+
+    test('{P} rechaza claves objetivo con cuadrícula vacía', () {
+      const command = DeleteGridChordsCommand(
+        currentMeasures: [],
+        currentMarkedBeats: {},
+        targetKeys: {0},
+      );
+
+      expect(command.canExecute(), isFalse);
+      expect(() => command.execute(), throwsA(isA<PreconditionViolationException>()));
+    });
+
+    test('{P} rechaza claves objetivo negativas', () {
+      final command = DeleteGridChordsCommand(
+        currentMeasures: buildGrid(),
+        currentMarkedBeats: {},
+        targetKeys: {-1},
+      );
+
+      expect(command.canExecute(), isFalse);
+      expect(() => command.execute(), throwsA(isA<PreconditionViolationException>()));
+    });
+
+    test('{P} C {Q}: borra únicamente las casillas objetivo y las desmarca', () {
+      final measures = buildGrid();
+      const mark0And5 = {0, 5};
+      final command = DeleteGridChordsCommand(
+        currentMeasures: measures,
+        currentMarkedBeats: mark0And5,
+        targetKeys: mark0And5,
+      );
+
+      expect(command.canExecute(), isTrue);
+      final result = command.execute();
+
+      // {Q}: las dos casillas objetivo quedan sin acorde
+      expect(result.updatedMeasures[0].beats[0].chord, isEmpty);
+      expect(result.updatedMeasures[1].beats[1].chord, isEmpty);
+      // {Q} + Invariante {I}: las demás casillas conservan su acorde
+      expect(result.updatedMeasures[0].beats[1].chord, equals('Do'));
+      expect(result.updatedMeasures[1].beats[0].chord, equals('Sol'));
+      // {Q}: las casillas objetivo quedan desmarcadas
+      expect(result.updatedMarkedBeats, isEmpty);
+      expect(result.deletedCount, equals(2));
+    });
+
+    test('Invariante {I}: el borrado total por casilla masiva deja todo vacío y sin marcas', () {
+      final command = DeleteGridChordsCommand(
+        currentMeasures: buildGrid(),
+        currentMarkedBeats: const {1, 2},
+        targetKeys: {for (var i = 0; i < 8; i++) i},
+      );
+
+      final result = command.execute();
+      for (final row in result.updatedMeasures) {
+        for (final beat in row.beats) {
+          expect(beat.chord, isEmpty);
+        }
+      }
+      expect(result.updatedMarkedBeats, isEmpty);
+      expect(result.deletedCount, equals(8));
+    });
+
+    test('Claves fuera de rango se ignoran con no-op seguro', () {
+      final command = DeleteGridChordsCommand(
+        currentMeasures: buildGrid(),
+        currentMarkedBeats: const {3},
+        targetKeys: const {99, 3},
+      );
+
+      final result = command.execute();
+      expect(result.updatedMeasures[0].beats[3].chord, isEmpty);
+      expect(result.updatedMeasures[0].beats[2].chord, equals('Do'));
+      expect(result.updatedMarkedBeats, isEmpty);
+      expect(result.deletedCount, equals(1));
     });
   });
 }
