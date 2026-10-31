@@ -11,6 +11,7 @@ import '../../core/audio/demo_track_generator.dart';
 import '../../core/constants/enums.dart';
 import '../../core/di/providers.dart';
 import '../../domain/commands/accordion_commands.dart';
+import '../../domain/memento/grid_memento.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/audio_analysis_models.dart';
 import '../../domain/models/measure_json_serializer.dart';
@@ -418,6 +419,40 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   late AudioFileLoader _fileLoader;
   late AudioFilePlayer _audioPlayer;
   late DemoTrackGenerator _demoGenerator;
+  final GridHistoryManager _gridHistory = GridHistoryManager();
+
+  bool get canUndoGrid => _gridHistory.canUndo;
+  bool get canRedoGrid => _gridHistory.canRedo;
+
+  void undoGrid() {
+    final memento = _gridHistory.undo(
+      currentMeasures: state.measures,
+      currentMarkedBeats: state.markedBeats,
+      currentYellowDecisionBeats: state.yellowDecisionBeats,
+    );
+    if (memento != null) {
+      state = state.copyWith(
+        measures: memento.measures,
+        markedBeats: memento.markedBeats,
+        yellowDecisionBeats: memento.yellowDecisionBeats,
+      );
+    }
+  }
+
+  void redoGrid() {
+    final memento = _gridHistory.redo(
+      currentMeasures: state.measures,
+      currentMarkedBeats: state.markedBeats,
+      currentYellowDecisionBeats: state.yellowDecisionBeats,
+    );
+    if (memento != null) {
+      state = state.copyWith(
+        measures: memento.measures,
+        markedBeats: memento.markedBeats,
+        yellowDecisionBeats: memento.yellowDecisionBeats,
+      );
+    }
+  }
 
   @override
   AccordionSimulatorState build() {
@@ -1617,31 +1652,29 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   /// Aplica la decisión de fuelle (Abre o Cierra) a todos los acordes resaltados en amarillo
-  /// y limpia el resaltado de decisión.
+  /// y limpia el resaltado de decisión (Command Pattern + Memento).
   int applyYellowDecision(BellowsMode mode, [Set<int>? specificKeys]) {
     final targets = specificKeys ?? state.yellowDecisionBeats;
     if (targets.isEmpty) return 0;
 
-    int applied = 0;
-    final updatedMeasures = state.measures.map((measure) {
-      final updatedBeats = measure.beats.map((beat) {
-        final key = beat.barIndex * 4 + beat.beatIndex;
-        if (targets.contains(key)) {
-          applied++;
-          return beat.copyWith(bellows: mode);
-        }
-        return beat;
-      }).toList();
-      return MeasureRow(barNumber: measure.barNumber, beats: updatedBeats);
-    }).toList();
+    _gridHistory.saveSnapshot(
+      measures: state.measures,
+      markedBeats: state.markedBeats,
+      yellowDecisionBeats: state.yellowDecisionBeats,
+    );
 
-    final remainingYellow = Set<int>.from(state.yellowDecisionBeats)..removeAll(targets);
+    final result = ApplyYellowDecisionCommand(
+      measures: state.measures,
+      yellowDecisionBeats: state.yellowDecisionBeats,
+      mode: mode,
+      specificTargets: specificKeys,
+    ).execute();
 
     state = state.copyWith(
-      measures: updatedMeasures,
-      yellowDecisionBeats: remainingYellow,
+      measures: result.updatedMeasures,
+      yellowDecisionBeats: result.remainingYellowBeats,
     );
-    return applied;
+    return result.appliedCount;
   }
 
   /// Limpia las marcas amarillas de decisión de fuelle.
@@ -1784,82 +1817,31 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final positions = parseMultiBeatPositions(pattern);
     if (positions.isEmpty) return 0;
 
-    var maxBar = state.measures.length;
-    for (final pos in positions) {
-      if (pos.barNumber > maxBar) {
-        maxBar = pos.barNumber;
-      }
-    }
+    _gridHistory.saveSnapshot(
+      measures: state.measures,
+      markedBeats: state.markedBeats,
+      yellowDecisionBeats: state.yellowDecisionBeats,
+    );
 
-    final updatedMeasures = List<MeasureRow>.from(state.measures);
-    while (updatedMeasures.length < maxBar) {
-      final nextBar = updatedMeasures.length + 1;
-      updatedMeasures.add(
-        MeasureRow(
-          barNumber: nextBar,
-          beats: List.generate(4, (beatIdx) {
-            final timeSec = ((nextBar - 1) * 4 + beatIdx) * 0.5;
-            final mins = (timeSec ~/ 60).toString().padLeft(2, '0');
-            final secs = ((timeSec % 60).toInt()).toString().padLeft(2, '0');
-            return MeasureBeat(
-              barIndex: nextBar - 1,
-              beatIndex: beatIdx,
-              chord: '',
-              timeText: '$mins:$secs',
-            );
-          }),
-        ),
-      );
-    }
-
-    final trimmedChord = chord.trim();
-
-    // En modo edición (replaceExisting), remover asignaciones previas de este acorde
-    // para que la nueva cadena de texto sea la definición exacta
-    if (replaceExisting) {
-      for (var m = 0; m < updatedMeasures.length; m++) {
-        final row = updatedMeasures[m];
-        var modified = false;
-        final newBeats = List<MeasureBeat>.from(row.beats);
-        for (var b = 0; b < newBeats.length; b++) {
-          if (newBeats[b].chord.trim() == trimmedChord) {
-            newBeats[b] = newBeats[b].copyWith(chord: '');
-            modified = true;
-          }
-        }
-        if (modified) {
-          updatedMeasures[m] = MeasureRow(barNumber: row.barNumber, beats: newBeats);
-        }
-      }
-    }
-
-    var appliedCount = 0;
-    final newMarkedBeats = <int>{};
-    for (final pos in positions) {
-      final bIdx = pos.barNumber - 1;
-      final tIdx = pos.beatNumber - 1;
-      if (bIdx >= 0 && bIdx < updatedMeasures.length) {
-        final row = updatedMeasures[bIdx];
-        if (tIdx >= 0 && tIdx < row.beats.length) {
-          final beats = List<MeasureBeat>.from(row.beats);
-          beats[tIdx] = beats[tIdx].copyWith(chord: trimmedChord);
-          updatedMeasures[bIdx] = MeasureRow(barNumber: row.barNumber, beats: beats);
-          newMarkedBeats.add(beatKey(bIdx, tIdx));
-          appliedCount++;
-        }
-      }
-    }
+    final command = ApplyMultiBeatChordCommand(
+      chord: chord,
+      pattern: pattern,
+      currentMeasures: state.measures,
+      replaceExisting: replaceExisting,
+    );
+    final result = command.execute();
+    if (result.appliedCount == 0) return 0;
 
     state = state.copyWith(
-      measures: updatedMeasures,
-      multiBeatChord: trimmedChord,
+      measures: result.updatedMeasures,
+      multiBeatChord: chord.trim(),
       multiBeatPattern: pattern,
-      markedBeats: newMarkedBeats,
+      markedBeats: result.markedBeats,
       selectedBarIndex: positions.first.barNumber - 1,
       selectedBeatIndex: positions.first.beatNumber - 1,
     );
 
-    return appliedCount;
+    return result.appliedCount;
   }
 
   /// Parsea tokens en formato "Compás.Cuadro" (1-indexed, ej: "1.1, 2.3, 5.2").
@@ -2157,23 +2139,29 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
   /// Limpia completamente el diapasón dejando 0 botones presionados o resaltados (Command Pattern).
   void clearDiapason() {
-    ClearDiapasonCommand(({
-      required freeChordRoot,
-      required isFreeChordFixed,
-      required activeButtons,
-      required detectorSelectedButtons,
-      required detectedChord,
-      required playingChordNotes,
-    }) {
-      state = state.copyWith(
-        freeChordRoot: freeChordRoot,
-        isFreeChordFixed: isFreeChordFixed,
-        activeButtons: activeButtons,
-        detectorSelectedButtons: detectorSelectedButtons,
-        detectedChord: detectedChord,
-        playingChordNotes: playingChordNotes,
-      );
-    }).execute();
+    ClearDiapasonCommand(
+      ({
+        required freeChordRoot,
+        required isFreeChordFixed,
+        required activeButtons,
+        required detectorSelectedButtons,
+        required detectedChord,
+        required playingChordNotes,
+      }) {
+        state = state.copyWith(
+          freeChordRoot: freeChordRoot,
+          isFreeChordFixed: isFreeChordFixed,
+          activeButtons: activeButtons,
+          detectorSelectedButtons: detectorSelectedButtons,
+          detectedChord: detectedChord,
+          playingChordNotes: playingChordNotes,
+        );
+      },
+      onCancelAudioPlayback: () {
+        _currentBeatNotes = [];
+        _audioBridge.allNotesOff();
+      },
+    ).execute();
   }
 
   void playDetectorChord() {
@@ -2246,56 +2234,15 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
   /// Transfiere de forma persistente y armónicamente completa el acorde detectado al Constructor Libre.
   void transferDetectedChordToConstructor() {
-    final chord = state.detectedChord;
-    if (chord == null) return;
-
-    final root = chord.rootPitchClass;
-    String type = 'maj';
-    String fourth = 'none';
-
-    final sym = chord.chordSymbol.toLowerCase();
-    final f = chord.formula;
-
-    if (f.contains('♭3') && f.contains('♭5')) {
-      type = 'dim';
-    } else if (f.contains('♯5')) {
-      type = 'aug';
-    } else if (f.contains('4') && f.contains('5') && !f.contains('3')) {
-      type = 'sus4';
-    } else if (f.contains('♭3') || (sym.contains('m') && !sym.contains('maj'))) {
-      type = 'min';
-    }
-
-    if (sym.contains('maj7')) {
-      fourth = 'maj7';
-    } else if (sym.contains('7') || sym.contains('dom7')) {
-      fourth = 'dom7';
-    } else if (sym.contains('add9')) {
-      fourth = 'add9';
-    } else if (sym.contains('6')) {
-      fourth = 'maj6';
-    }
-
-    String bass = '';
-    if (chord.bassPitchClass != chord.rootPitchClass) {
-      final interval = (chord.bassPitchClass - chord.rootPitchClass + 12) % 12;
-      if (interval == 3 || interval == 4) {
-        bass = '3';
-      } else if (interval == 6 || interval == 7 || interval == 8) {
-        bass = '5';
-      } else if (interval == 10 || interval == 11) {
-        bass = '7';
-      } else {
-        bass = chord.bass;
-      }
-    }
+    final params = TransferDetectedChordCommand(state.detectedChord).execute();
+    if (params == null) return;
 
     state = state.copyWith(
-      freeChordRoot: root,
-      freeChordType: type,
-      freeChordFourth: fourth,
-      freeChordBass: bass,
-      isFreeChordFixed: true,
+      freeChordRoot: params.root,
+      freeChordType: params.type,
+      freeChordFourth: params.fourth,
+      freeChordBass: params.bass,
+      isFreeChordFixed: params.isFixed,
     );
   }
 

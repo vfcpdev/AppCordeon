@@ -3,13 +3,40 @@ import '../models/accordion_data.dart';
 import '../models/measure_models.dart';
 import '../theory/chord_detector_engine.dart';
 
-/// Contrato base para comandos ejecutables en el simulador (Command Pattern + SRP).
+/// Excepción lanzada cuando una precondición formal {P} no se satisface.
+class PreconditionViolationException implements Exception {
+  final String actionName;
+  final String reason;
+
+  const PreconditionViolationException(this.actionName, this.reason);
+
+  @override
+  String toString() => 'Violación de Precondición {P} en [$actionName]: $reason';
+}
+
+/// Contrato base para comandos ejecutables en el simulador (Command Pattern + SRP + Hoare Triples).
+/// Soporta verificación formal de Precondición {P}, Ejecución {C} y Poscondición {Q}.
 abstract class AccordionCommand<T> {
+  String get commandName => runtimeType.toString();
+
+  /// Comprueba si se satisfacen las precondiciones {P}. Devuelve true si es seguro ejecutar.
+  bool canExecute() => true;
+
+  /// Valida formalmente la precondición {P}. Lanza [PreconditionViolationException] si es inválida.
+  void assertPreconditions() {}
+
+  /// Ejecuta el comando {C}.
   T execute();
 }
 
 /// Comando para limpiar completamente el diapasón dejando 0 botones presionados o resaltados.
+/// {P}: True.
+/// {Q}: freeChordRoot == -1, activeButtons == {}, detectorSelectedButtons == [],
+///      detectedChord == null, playingChordNotes == {}.
 class ClearDiapasonCommand implements AccordionCommand<void> {
+  @override
+  String get commandName => 'ClearDiapasonCommand';
+
   final void Function({
     required int freeChordRoot,
     required bool isFreeChordFixed,
@@ -19,10 +46,23 @@ class ClearDiapasonCommand implements AccordionCommand<void> {
     required Set<int> playingChordNotes,
   }) stateUpdater;
 
-  const ClearDiapasonCommand(this.stateUpdater);
+  /// Callback opcional para cancelar notas de audio residuales y asegurar {Q}.
+  final void Function()? onCancelAudioPlayback;
+
+  const ClearDiapasonCommand(this.stateUpdater, {this.onCancelAudioPlayback});
+
+  @override
+  bool canExecute() => true;
+
+  @override
+  void assertPreconditions() {
+    // P1: Siempre ejecutable
+  }
 
   @override
   void execute() {
+    assertPreconditions();
+    onCancelAudioPlayback?.call();
     stateUpdater(
       freeChordRoot: -1,
       isFreeChordFixed: false,
@@ -35,7 +75,12 @@ class ClearDiapasonCommand implements AccordionCommand<void> {
 }
 
 /// Comando para asignar un acorde detectado a una celda de compás con fuelle óptimo.
+/// {P}: chord != null, 0 <= barIndex, 0 <= beatIndex, trebleData no vacío.
+/// {Q}: beat.chord == formattedSymbol, bellows in {push, pull}.
 class AssignDetectedChordCommand implements AccordionCommand<bool> {
+  @override
+  String get commandName => 'AssignDetectedChordCommand';
+
   final DetectedChordModel? chord;
   final int barIndex;
   final int beatIndex;
@@ -55,7 +100,23 @@ class AssignDetectedChordCommand implements AccordionCommand<bool> {
   });
 
   @override
+  bool canExecute() {
+    return chord != null && barIndex >= 0 && beatIndex >= 0 && trebleData.isNotEmpty;
+  }
+
+  @override
+  void assertPreconditions() {
+    if (barIndex < 0 || beatIndex < 0) {
+      throw PreconditionViolationException(
+        commandName,
+        'Índices de compás ($barIndex) o tiempo ($beatIndex) no pueden ser negativos.',
+      );
+    }
+  }
+
+  @override
   bool execute() {
+    assertPreconditions();
     if (chord == null) return false;
 
     final symbol = chord!.formattedSymbol(notation);
@@ -75,5 +136,352 @@ class AssignDetectedChordCommand implements AccordionCommand<bool> {
     }
 
     return true;
+  }
+}
+
+/// Resultado atómico de la ejecución de [ApplyMultiBeatChordCommand].
+class MultiBeatCommandResult {
+  final List<MeasureRow> updatedMeasures;
+  final Set<int> markedBeats;
+  final int appliedCount;
+
+  const MultiBeatCommandResult({
+    required this.updatedMeasures,
+    required this.markedBeats,
+    required this.appliedCount,
+  });
+
+  static const empty = MultiBeatCommandResult(
+    updatedMeasures: [],
+    markedBeats: {},
+    appliedCount: 0,
+  );
+}
+
+/// Comando para asignar un acorde en múltiples tiempos/compases mediante un patrón.
+/// {P}: chord.isNotEmpty, pattern parseable a posiciones válidas, barNumber <= maxAllowedMeasures.
+/// {Q}: cada posición en pattern contiene chord, markedBeats incluye todas las posiciones.
+class ApplyMultiBeatChordCommand implements AccordionCommand<MultiBeatCommandResult> {
+  @override
+  String get commandName => 'ApplyMultiBeatChordCommand';
+
+  static const int defaultMaxAllowedMeasures = 128;
+
+  final String chord;
+  final String pattern;
+  final bool replaceExisting;
+  final List<MeasureRow> currentMeasures;
+  final int maxAllowedMeasures;
+
+  const ApplyMultiBeatChordCommand({
+    required this.chord,
+    required this.pattern,
+    required this.currentMeasures,
+    this.replaceExisting = true,
+    this.maxAllowedMeasures = defaultMaxAllowedMeasures,
+  });
+
+  @override
+  bool canExecute() {
+    if (chord.trim().isEmpty || pattern.trim().isEmpty) return false;
+    final positions = parsePositions(pattern);
+    return positions.isNotEmpty && positions.every((p) => p.bar <= maxAllowedMeasures);
+  }
+
+  @override
+  void assertPreconditions() {
+    final positions = parsePositions(pattern);
+    for (final pos in positions) {
+      if (pos.bar > maxAllowedMeasures) {
+        throw PreconditionViolationException(
+          commandName,
+          'El compás ${pos.bar} excede la cota máxima permitida ($maxAllowedMeasures).',
+        );
+      }
+      if (pos.bar < 1 || pos.beat < 1 || pos.beat > 4) {
+        throw PreconditionViolationException(
+          commandName,
+          'Posición inválida (${pos.bar}.${pos.beat}). Rango válido: 1..$maxAllowedMeasures compás, 1..4 tiempo.',
+        );
+      }
+    }
+  }
+
+  @override
+  MultiBeatCommandResult execute() {
+    final trimmedChord = chord.trim();
+    if (trimmedChord.isEmpty) return MultiBeatCommandResult.empty;
+
+    final positions = parsePositions(pattern);
+    if (positions.isEmpty) return MultiBeatCommandResult.empty;
+
+    assertPreconditions();
+
+    var maxBar = currentMeasures.length;
+    for (final pos in positions) {
+      if (pos.bar > maxBar) {
+        maxBar = pos.bar;
+      }
+    }
+
+    // Expansión segura y acotada de compases
+    final updatedMeasures = List<MeasureRow>.from(currentMeasures);
+    while (updatedMeasures.length < maxBar) {
+      final nextBar = updatedMeasures.length + 1;
+      updatedMeasures.add(
+        MeasureRow(
+          barNumber: nextBar,
+          beats: List.generate(4, (beatIdx) {
+            final timeSec = ((nextBar - 1) * 4 + beatIdx) * 0.5;
+            final mins = (timeSec ~/ 60).toString().padLeft(2, '0');
+            final secs = ((timeSec % 60).toInt()).toString().padLeft(2, '0');
+            return MeasureBeat(
+              barIndex: nextBar - 1,
+              beatIndex: beatIdx,
+              chord: '',
+              timeText: '$mins:$secs',
+            );
+          }),
+        ),
+      );
+    }
+
+    // Limpieza de ocurrencias previas si replaceExisting está activo
+    if (replaceExisting) {
+      for (var m = 0; m < updatedMeasures.length; m++) {
+        final row = updatedMeasures[m];
+        var modified = false;
+        final newBeats = List<MeasureBeat>.from(row.beats);
+        for (var b = 0; b < newBeats.length; b++) {
+          if (newBeats[b].chord.trim() == trimmedChord) {
+            newBeats[b] = newBeats[b].copyWith(chord: '');
+            modified = true;
+          }
+        }
+        if (modified) {
+          updatedMeasures[m] = MeasureRow(barNumber: row.barNumber, beats: newBeats);
+        }
+      }
+    }
+
+    // Asignación de acordes en las posiciones especificadas
+    var appliedCount = 0;
+    final newMarkedBeats = <int>{};
+    for (final pos in positions) {
+      final bIdx = pos.bar - 1;
+      final tIdx = pos.beat - 1;
+      if (bIdx >= 0 && bIdx < updatedMeasures.length) {
+        final row = updatedMeasures[bIdx];
+        if (tIdx >= 0 && tIdx < row.beats.length) {
+          final beats = List<MeasureBeat>.from(row.beats);
+          beats[tIdx] = beats[tIdx].copyWith(chord: trimmedChord);
+          updatedMeasures[bIdx] = MeasureRow(barNumber: row.barNumber, beats: beats);
+          newMarkedBeats.add(bIdx * 4 + tIdx);
+          appliedCount++;
+        }
+      }
+    }
+
+    return MultiBeatCommandResult(
+      updatedMeasures: updatedMeasures,
+      markedBeats: newMarkedBeats,
+      appliedCount: appliedCount,
+    );
+  }
+
+  /// Parsea la cadena de texto de posiciones "Compas.Tiempo, ..." a tuplas numéricas.
+  static List<({int bar, int beat})> parsePositions(String pattern) {
+    final result = <({int bar, int beat})>[];
+    if (pattern.trim().isEmpty) return result;
+
+    final tokens = pattern.split(',');
+    for (final rawToken in tokens) {
+      final token = rawToken.trim();
+      if (token.isEmpty) continue;
+      final parts = token.split(RegExp(r'[.:\-]'));
+      if (parts.length >= 2) {
+        final bar = int.tryParse(parts[0].trim());
+        final beat = int.tryParse(parts[1].trim());
+        if (bar != null && beat != null) {
+          result.add((bar: bar, beat: beat));
+        }
+      }
+    }
+    return result;
+  }
+}
+
+/// Resultado atómico de [ApplyYellowDecisionCommand].
+class YellowDecisionResult {
+  final List<MeasureRow> updatedMeasures;
+  final Set<int> remainingYellowBeats;
+  final int appliedCount;
+
+  const YellowDecisionResult({
+    required this.updatedMeasures,
+    required this.remainingYellowBeats,
+    required this.appliedCount,
+  });
+}
+
+/// Comando para resolver y aplicar una decisión de fuelle sobre acordes ambiguos marcados en amarillo.
+/// {P}: targetKeys no vacío, mode in {push, pull}.
+/// {Q}: cada beat en targetKeys tiene fuelle == mode, remainingYellowBeats == yellowDecisionBeats \ targetKeys.
+class ApplyYellowDecisionCommand implements AccordionCommand<YellowDecisionResult> {
+  @override
+  String get commandName => 'ApplyYellowDecisionCommand';
+
+  final List<MeasureRow> measures;
+  final Set<int> yellowDecisionBeats;
+  final Set<int>? specificTargets;
+  final BellowsMode mode;
+
+  const ApplyYellowDecisionCommand({
+    required this.measures,
+    required this.yellowDecisionBeats,
+    required this.mode,
+    this.specificTargets,
+  });
+
+  @override
+  bool canExecute() {
+    final targets = specificTargets ?? yellowDecisionBeats;
+    return targets.isNotEmpty;
+  }
+
+  @override
+  void assertPreconditions() {
+    final targets = specificTargets ?? yellowDecisionBeats;
+    if (targets.isEmpty) {
+      throw PreconditionViolationException(
+        commandName,
+        'No hay tiempos seleccionados para aplicar la decisión de fuelle.',
+      );
+    }
+  }
+
+  @override
+  YellowDecisionResult execute() {
+    assertPreconditions();
+    final targets = specificTargets ?? yellowDecisionBeats;
+
+    var applied = 0;
+    final updatedMeasures = measures.map((measure) {
+      final updatedBeats = measure.beats.map((beat) {
+        final key = beat.barIndex * 4 + beat.beatIndex;
+        if (targets.contains(key)) {
+          applied++;
+          return beat.copyWith(bellows: mode);
+        }
+        return beat;
+      }).toList();
+      return MeasureRow(barNumber: measure.barNumber, beats: updatedBeats);
+    }).toList();
+
+    final remainingYellow = Set<int>.from(yellowDecisionBeats)..removeAll(targets);
+
+    return YellowDecisionResult(
+      updatedMeasures: updatedMeasures,
+      remainingYellowBeats: remainingYellow,
+      appliedCount: applied,
+    );
+  }
+}
+
+/// Parámetros armónicos transferidos desde un acorde detectado.
+class TransferredChordParams {
+  final int root;
+  final String type;
+  final String fourth;
+  final String bass;
+  final bool isFixed;
+
+  const TransferredChordParams({
+    required this.root,
+    required this.type,
+    required this.fourth,
+    required this.bass,
+    this.isFixed = true,
+  });
+}
+
+/// Comando para transferir de manera fuertemente tipada y completa las propiedades armónicas
+/// de un acorde detectado al constructor libre.
+/// {P}: chord != null.
+/// {Q}: TransferredChordParams con root, type, fourth y bass coherentes con la estructura del acorde.
+class TransferDetectedChordCommand implements AccordionCommand<TransferredChordParams?> {
+  @override
+  String get commandName => 'TransferDetectedChordCommand';
+
+  final DetectedChordModel? chord;
+
+  const TransferDetectedChordCommand(this.chord);
+
+  @override
+  bool canExecute() => chord != null;
+
+  @override
+  void assertPreconditions() {
+    if (chord == null) {
+      throw const PreconditionViolationException(
+        'TransferDetectedChordCommand',
+        'El acorde detectado es nulo.',
+      );
+    }
+  }
+
+  @override
+  TransferredChordParams? execute() {
+    if (chord == null) return null;
+    assertPreconditions();
+
+    final root = chord!.rootPitchClass;
+    var type = 'maj';
+    var fourth = 'none';
+
+    final sym = chord!.chordSymbol.toLowerCase();
+    final f = chord!.formula;
+
+    if (f.contains('♭3') && f.contains('♭5')) {
+      type = 'dim';
+    } else if (f.contains('♯5')) {
+      type = 'aug';
+    } else if (f.contains('4') && f.contains('5') && !f.contains('3')) {
+      type = 'sus4';
+    } else if (f.contains('♭3') || (sym.contains('m') && !sym.contains('maj'))) {
+      type = 'min';
+    }
+
+    if (sym.contains('maj7')) {
+      fourth = 'maj7';
+    } else if (sym.contains('7') || sym.contains('dom7')) {
+      fourth = 'dom7';
+    } else if (sym.contains('add9')) {
+      fourth = 'add9';
+    } else if (sym.contains('6')) {
+      fourth = 'maj6';
+    }
+
+    var bass = '';
+    if (chord!.bassPitchClass != chord!.rootPitchClass) {
+      final interval = (chord!.bassPitchClass - chord!.rootPitchClass + 12) % 12;
+      if (interval == 3 || interval == 4) {
+        bass = '3';
+      } else if (interval == 6 || interval == 7 || interval == 8) {
+        bass = '5';
+      } else if (interval == 10 || interval == 11) {
+        bass = '7';
+      } else {
+        bass = chord!.bass;
+      }
+    }
+
+    return TransferredChordParams(
+      root: root,
+      type: type,
+      fourth: fourth,
+      bass: bass,
+      isFixed: true,
+    );
   }
 }
