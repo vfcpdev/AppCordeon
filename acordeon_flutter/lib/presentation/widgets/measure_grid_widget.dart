@@ -310,6 +310,20 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                 onTap: notifier.toggleLiveChordMarker,
                               ),
                               const SizedBox(width: 3),
+                              _AutoChordDetectButton(
+                                accordionNumber: widget.accordionNumber,
+                                isActive: state.isPlaybackAutoChordDetectEnabled,
+                                onTap: notifier.togglePlaybackAutoChordDetect,
+                              ),
+                              const SizedBox(width: 3),
+                              _BeatAdjustButton(
+                                accordionNumber: widget.accordionNumber,
+                                nudgeOffsetSeconds: state.beatNudgeOffset,
+                                onNudge: notifier.adjustBeatOffset,
+                                onSync: notifier.syncBeatToCurrentAudioTime,
+                                onReset: notifier.resetBeatOffset,
+                              ),
+                              const SizedBox(width: 3),
                               _CompleteChordsButton(
                                 accordionNumber: widget.accordionNumber,
                                 hasYellowDecisions: state.yellowDecisionBeats.isNotEmpty,
@@ -2530,6 +2544,227 @@ class _LiveMarkerButton extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Botón para activar/desactivar la detección automática de acordes en reproducción
+/// (actuando exclusivamente cuando se detecta un cambio armónico).
+class _AutoChordDetectButton extends StatelessWidget {
+  final int accordionNumber;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _AutoChordDetectButton({
+    required this.accordionNumber,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const activeBg = Color(0xFF0D9488); // Teal
+    const activeBorder = Color(0xFF0F766E);
+
+    return Tooltip(
+      message: isActive
+          ? 'Auto-Acorde Activo: Detecta y asigna acordes al reproducir SOLO en cada cambio armónico'
+          : 'Activar Detección Automática de Acordes en Reproducción (solo en cambios de acorde)',
+      child: InkWell(
+        key: ValueKey('auto_chord_detect_btn_$accordionNumber'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+          decoration: BoxDecoration(
+            color: isActive ? activeBg : const Color(0xFFE2E8F0),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: isActive ? activeBorder : const Color(0xFFCBD5E1),
+              width: 0.9,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FaIcon(
+                FontAwesomeIcons.bolt,
+                size: 9.0,
+                color: isActive ? Colors.white : const Color(0xFF64748B),
+              ),
+              const SizedBox(width: 3),
+              Text(
+                'Auto',
+                style: TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w800,
+                  color: isActive ? Colors.white : const Color(0xFF475569),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Botón de control y menú para ajustes de sincronización y fase del pulso (Beat Nudge / Sync).
+class _BeatAdjustButton extends StatelessWidget {
+  final int accordionNumber;
+  final double nudgeOffsetSeconds;
+  final void Function(double delta) onNudge;
+  final VoidCallback onSync;
+  final VoidCallback onReset;
+
+  const _BeatAdjustButton({
+    required this.accordionNumber,
+    required this.nudgeOffsetSeconds,
+    required this.onNudge,
+    required this.onSync,
+    required this.onReset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ms = (nudgeOffsetSeconds * 1000).round();
+    final isNudged = ms != 0;
+
+    return PopupMenuButton<String>(
+      key: ValueKey('beat_adjust_menu_btn_$accordionNumber'),
+      tooltip: 'Ajustes del Beat (Fase/Sincronización): ${ms >= 0 ? "+" : ""}$ms ms',
+      padding: EdgeInsets.zero,
+      offset: const Offset(0, 24),
+      onSelected: (val) {
+        switch (val) {
+          case '-50ms':
+            onNudge(-0.050);
+            break;
+          case '-25ms':
+            onNudge(-0.025);
+            break;
+          case '+25ms':
+            onNudge(0.025);
+            break;
+          case '+50ms':
+            onNudge(0.050);
+            break;
+          case 'sync':
+            onSync();
+            break;
+          case 'reset':
+            onReset();
+            break;
+        }
+      },
+      itemBuilder: (ctx) => [
+        PopupMenuItem<String>(
+          enabled: false,
+          height: 28,
+          child: Text(
+            'Ajustes del Beat (Desfase: ${ms >= 0 ? "+" : ""}$ms ms)',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF0F172A)),
+          ),
+        ),
+        const PopupMenuDivider(height: 4),
+        const PopupMenuItem<String>(
+          value: 'sync',
+          height: 32,
+          child: Row(
+            children: [
+              FaIcon(FontAwesomeIcons.arrowsRotate, size: 12, color: Color(0xFF2563EB)),
+              SizedBox(width: 8),
+              Text('Sincronizar Beat al audio actual', style: TextStyle(fontSize: 11)),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: '-50ms',
+          height: 30,
+          child: Row(
+            children: [
+              FaIcon(FontAwesomeIcons.backward, size: 11, color: Color(0xFFD97706)),
+              SizedBox(width: 8),
+              Text('Atrasar Beat -50 ms', style: TextStyle(fontSize: 11)),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: '-25ms',
+          height: 30,
+          child: Row(
+            children: [
+              FaIcon(FontAwesomeIcons.backwardStep, size: 11, color: Color(0xFFD97706)),
+              SizedBox(width: 8),
+              Text('Atrasar Beat -25 ms', style: TextStyle(fontSize: 11)),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: '+25ms',
+          height: 30,
+          child: Row(
+            children: [
+              FaIcon(FontAwesomeIcons.forwardStep, size: 11, color: Color(0xFF16A34A)),
+              SizedBox(width: 8),
+              Text('Adelantar Beat +25 ms', style: TextStyle(fontSize: 11)),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: '+50ms',
+          height: 30,
+          child: Row(
+            children: [
+              FaIcon(FontAwesomeIcons.forward, size: 11, color: Color(0xFF16A34A)),
+              SizedBox(width: 8),
+              Text('Adelantar Beat +50 ms', style: TextStyle(fontSize: 11)),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(height: 4),
+        const PopupMenuItem<String>(
+          value: 'reset',
+          height: 30,
+          child: Row(
+            children: [
+              FaIcon(FontAwesomeIcons.rotateLeft, size: 11, color: Color(0xFFDC2626)),
+              SizedBox(width: 8),
+              Text('Restablecer desfase (0 ms)', style: TextStyle(fontSize: 11)),
+            ],
+          ),
+        ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+        decoration: BoxDecoration(
+          color: isNudged ? const Color(0xFFEFF6FF) : const Color(0xFFE2E8F0),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isNudged ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
+            width: 0.9,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FaIcon(
+              FontAwesomeIcons.sliders,
+              size: 9.0,
+              color: isNudged ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+            ),
+            const SizedBox(width: 3),
+            Text(
+              isNudged ? '${ms >= 0 ? "+" : ""}$ms' : 'Beat',
+              style: TextStyle(
+                fontSize: 8.5,
+                fontWeight: FontWeight.w800,
+                color: isNudged ? const Color(0xFF1D4ED8) : const Color(0xFF475569),
+              ),
+            ),
+          ],
         ),
       ),
     );

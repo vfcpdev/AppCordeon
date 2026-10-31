@@ -181,6 +181,17 @@ class AccordionSimulatorState {
   final double? _audioStartOffset;
   double get audioStartOffset => _audioStartOffset ?? 0.0;
 
+  /// Detección automática del acorde en reproducción sólo cuando hay cambios de acorde.
+  final bool? _isPlaybackAutoChordDetectEnabled;
+  bool get isPlaybackAutoChordDetectEnabled => _isPlaybackAutoChordDetectEnabled ?? false;
+
+  /// Micro-ajuste o ajuste fino del desfase del pulso (s) respecto a la cuadrícula.
+  final double? _beatNudgeOffset;
+  double get beatNudgeOffset => _beatNudgeOffset ?? 0.0;
+
+  /// Desplazamiento temporal total acumulado (inicio de audio + micro-ajuste de beat).
+  double get effectiveAudioStartOffset => audioStartOffset + beatNudgeOffset;
+
   /// Acorde activo en el Compás actual (o el más reciente dentro del compás/tiempo).
   String get activeCompasChord {
     if (selectedBarIndex == null || selectedBarIndex! < 0 || selectedBarIndex! >= measures.length) {
@@ -284,8 +295,12 @@ class AccordionSimulatorState {
     bool? isLiveChordMarkerActive,
     double? bpmCalibrationStart,
     double? audioStartOffset,
+    bool? isPlaybackAutoChordDetectEnabled,
+    double? beatNudgeOffset,
   })  : _audioStartOffset = audioStartOffset ?? 0.0,
         _bpmCalibrationStart = bpmCalibrationStart ?? -1.0,
+        _isPlaybackAutoChordDetectEnabled = isPlaybackAutoChordDetectEnabled ?? false,
+        _beatNudgeOffset = beatNudgeOffset ?? 0.0,
         _markedBeats = markedBeats ?? const {},
         _yellowDecisionBeats = yellowDecisionBeats ?? const {},
         _multiBeatPattern = multiBeatPattern ?? '',
@@ -369,10 +384,15 @@ class AccordionSimulatorState {
     bool? isLiveChordMarkerActive,
     double? bpmCalibrationStart,
     double? audioStartOffset,
+    bool? isPlaybackAutoChordDetectEnabled,
+    double? beatNudgeOffset,
   }) {
     return AccordionSimulatorState(
       audioStartOffset: audioStartOffset ?? this.audioStartOffset,
       bpmCalibrationStart: bpmCalibrationStart ?? this.bpmCalibrationStart,
+      isPlaybackAutoChordDetectEnabled:
+          isPlaybackAutoChordDetectEnabled ?? this.isPlaybackAutoChordDetectEnabled,
+      beatNudgeOffset: beatNudgeOffset ?? this.beatNudgeOffset,
       backgroundColor: backgroundColor ?? this.backgroundColor,
       notation: notation ?? this.notation,
       showDiapason1: showDiapason1 ?? this.showDiapason1,
@@ -1198,6 +1218,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   // Reproductor y Cuadrícula
   int? _lastPlayedBar;
   int? _lastPlayedBeat;
+  String? _lastPlaybackDetectedChord;
 
   /// Mapa raíz → semitono (MIDI pitch class, base Do = 60 - 12 = 48 + pitchClass)
   static const Map<String, int> _rootPitchClass = {
@@ -1403,18 +1424,24 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       final wrappedTime = !fileDrives && nextTime >= totalDur ? 0.0 : nextTime;
 
       final beatDuration = 60.0 / bpm;
-      final effectiveTime = math.max(0.0, wrappedTime - state.audioStartOffset);
+      final effectiveOffset = state.effectiveAudioStartOffset;
+      final effectiveTime = math.max(0.0, wrappedTime - effectiveOffset);
       final totalBeats = (effectiveTime / beatDuration).floor();
-      final currentBar = wrappedTime >= state.audioStartOffset
+      final currentBar = wrappedTime >= effectiveOffset
           ? (totalBeats ~/ 4) % (state.measures.isNotEmpty ? state.measures.length : 8)
           : 0;
-      final currentBeat = wrappedTime >= state.audioStartOffset ? totalBeats % 4 : 0;
+      final currentBeat = wrappedTime >= effectiveOffset ? totalBeats % 4 : 0;
 
       state = state.copyWith(
         currentAudioTime: wrappedTime,
         selectedBarIndex: currentBar,
         selectedBeatIndex: currentBeat,
       );
+
+      // Detección automática en reproducción: ÚNICAMENTE cuando ocurre una transición armónica
+      if (state.isPlaybackAutoChordDetectEnabled) {
+        _checkPlaybackAutoChordChange(wrappedTime);
+      }
 
       // Reproducir acorde al entrar en un nuevo beat
       if (currentBar != _lastPlayedBar || currentBeat != _lastPlayedBeat) {
@@ -1434,6 +1461,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     _currentBeatNotes = [];
     _audioBridge.noteOff(84);
     _audioBridge.noteOff(76);
+    _lastPlaybackDetectedChord = null;
     state = state.copyWith(
       isPlayingAudio: false,
       currentAudioTime: 0.0,
@@ -1582,7 +1610,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final secondsPerBar = (60.0 / bpm) * 4.0;
     final currentBar = state.selectedBarIndex ?? 0;
     final targetBar = (currentBar - 1).clamp(0, state.measures.isNotEmpty ? state.measures.length - 1 : 0);
-    seekAudio(state.audioStartOffset + targetBar * secondsPerBar);
+    seekAudio(state.effectiveAudioStartOffset + targetBar * secondsPerBar);
   }
 
   /// Avanza al siguiente compás y sincroniza la posición del audio y de la cuadrícula.
@@ -1592,7 +1620,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final currentBar = state.selectedBarIndex ?? 0;
     final maxBar = state.measures.isNotEmpty ? state.measures.length - 1 : 0;
     final targetBar = (currentBar + 1).clamp(0, maxBar);
-    seekAudio(state.audioStartOffset + targetBar * secondsPerBar);
+    seekAudio(state.effectiveAudioStartOffset + targetBar * secondsPerBar);
   }
 
   void seekAudio(double time) {
@@ -1604,20 +1632,135 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
     final bpm = state.audioReport?.bpm ?? 120.0;
     final beatDuration = 60.0 / bpm;
-    final effectiveTime = math.max(0.0, clamped - state.audioStartOffset);
+    final effectiveOffset = state.effectiveAudioStartOffset;
+    final effectiveTime = math.max(0.0, clamped - effectiveOffset);
     final totalBeats = (effectiveTime / beatDuration).floor();
-    final currentBar = clamped >= state.audioStartOffset
+    final currentBar = clamped >= effectiveOffset
         ? (totalBeats ~/ 4) % (state.measures.isNotEmpty ? state.measures.length : 8)
         : 0;
-    final currentBeat = clamped >= state.audioStartOffset ? totalBeats % 4 : 0;
+    final currentBeat = clamped >= effectiveOffset ? totalBeats % 4 : 0;
     _lastPlayedBar = currentBar;
     _lastPlayedBeat = currentBeat;
+    _lastPlaybackDetectedChord = null;
 
     state = state.copyWith(
       currentAudioTime: clamped,
       selectedBarIndex: currentBar,
       selectedBeatIndex: currentBeat,
     );
+  }
+
+  /// Conmuta la detección automática de acordes durante la reproducción de audio.
+  /// Cuando está activa, se asignan y marcan acordes en la cuadrícula ÚNICAMENTE
+  /// cuando el audio presenta un cambio armónico observable (transición).
+  void togglePlaybackAutoChordDetect() {
+    final next = !state.isPlaybackAutoChordDetectEnabled;
+    _lastPlaybackDetectedChord = null;
+    state = state.copyWith(isPlaybackAutoChordDetectEnabled: next);
+    if (next && state.isPlayingAudio && state.audioReport != null) {
+      _checkPlaybackAutoChordChange(state.currentAudioTime);
+    }
+  }
+
+  /// Realiza un micro-ajuste temporal del desfase del pulso (Beat Nudge) en segundos.
+  /// Positivo = adelanta el beat; Negativo = atrasa el beat.
+  /// {P}: deltaSeconds.isFinite.
+  /// {Q}: state.beatNudgeOffset actualizado y códigos de tiempo recalculados.
+  void adjustBeatOffset(double deltaSeconds) {
+    final cmd = AdjustBeatOffsetCommand(
+      currentOffset: state.beatNudgeOffset,
+      deltaSeconds: deltaSeconds,
+    );
+    if (!cmd.canExecute()) return;
+    final newOffset = cmd.execute();
+    state = state.copyWith(beatNudgeOffset: newOffset);
+    if (state.audioReport != null) {
+      _updateMeasuresTimeCodes();
+    }
+  }
+
+  /// Restablece el desfase del pulso a 0.0 segundos.
+  void resetBeatOffset() {
+    state = state.copyWith(beatNudgeOffset: 0.0);
+    if (state.audioReport != null) {
+      _updateMeasuresTimeCodes();
+    }
+  }
+
+  /// Sincroniza instantáneamente el pulso más próximo al tiempo actual del reproductor (Beat Sync).
+  void syncBeatToCurrentAudioTime() {
+    final bpm = state.audioReport?.bpm.toDouble() ?? 120.0;
+    final cmd = SyncBeatToAudioCommand(
+      currentAudioTime: state.currentAudioTime,
+      audioStartOffset: state.audioStartOffset,
+      bpm: bpm,
+    );
+    if (!cmd.canExecute()) return;
+    final delta = cmd.execute();
+    adjustBeatOffset(delta);
+  }
+
+  /// Evalúa si hay un cambio de acorde en el tiempo de reproducción actual y lo aplica
+  /// atómicamente a la cuadrícula de compases solo si difiere del último acorde registrado.
+  void _checkPlaybackAutoChordChange(double audioTime) {
+    if (!state.isPlaybackAutoChordDetectEnabled) return;
+    final report = state.audioReport;
+    if (report == null || report.chords.isEmpty || state.measures.isEmpty) return;
+
+    final bpm = report.bpm.toDouble();
+    final effectiveOffset = state.effectiveAudioStartOffset;
+
+    final cmd = DetectPlaybackChordTransitionCommand(
+      currentAudioTime: audioTime,
+      bpm: bpm,
+      startOffset: effectiveOffset,
+      measures: state.measures,
+      markedBeats: state.markedBeats,
+      chords: report.chords,
+      lastDetectedChordText: _lastPlaybackDetectedChord,
+      notation: state.notation,
+    );
+
+    if (!cmd.canExecute()) return;
+    final result = cmd.execute();
+
+    if (result.hasTransition) {
+      _lastPlaybackDetectedChord = result.detectedChordText;
+      _gridHistory.saveSnapshot(
+        measures: state.measures,
+        markedBeats: state.markedBeats,
+        yellowDecisionBeats: state.yellowDecisionBeats,
+      );
+
+      state = state.copyWith(
+        measures: result.updatedMeasures,
+        markedBeats: result.updatedMarkedBeats,
+        selectedBarIndex: result.targetBar,
+        selectedBeatIndex: result.targetBeat,
+      );
+
+      // Reproducir sonoramente el nuevo acorde en el sintetizador
+      _playBeatChord(result.targetBar, result.targetBeat);
+    }
+  }
+
+  /// Recalcula los textos de tiempo ($mins:$secs) de cada pulso según el offset acumulado.
+  void _updateMeasuresTimeCodes() {
+    final bpm = state.audioReport?.bpm.toDouble() ?? 120.0;
+    final secondsPerBeat = 60.0 / bpm;
+    final totalOffset = state.effectiveAudioStartOffset;
+
+    final updated = state.measures.map((row) {
+      final updatedBeats = row.beats.map((b) {
+        final timeSec = totalOffset + (b.barIndex * 4 + b.beatIndex) * secondsPerBeat;
+        final mins = (timeSec ~/ 60).toString().padLeft(2, '0');
+        final secs = ((timeSec % 60).toInt()).toString().padLeft(2, '0');
+        return b.copyWith(timeText: '$mins:$secs');
+      }).toList();
+      return MeasureRow(barNumber: row.barNumber, beats: updatedBeats);
+    }).toList();
+
+    state = state.copyWith(measures: updated);
   }
 
   /// Acopla o desacopla la pista de audio al transporte del Compás.

@@ -131,6 +131,69 @@ class _AccordionKeyboardListenerState extends ConsumerState<AccordionKeyboardLis
       return false;
     }
 
+    // 4. Ajustes del beat y auto-detección con tecla Alt
+    if (event is KeyDownEvent && HardwareKeyboard.instance.isAltPressed) {
+      final isAnyEditing = FocusManager.instance.primaryFocus?.context?.widget is EditableText;
+      if (!isAnyEditing) {
+        final notifier = ref.read(accordionSimulatorProvider.notifier);
+        final messenger = ScaffoldMessenger.maybeOf(context);
+
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+          notifier.adjustBeatOffset(-0.025);
+          if (mounted) {
+            final ms = (ref.read(accordionSimulatorProvider).beatNudgeOffset * 1000).round();
+            messenger?.hideCurrentSnackBar();
+            messenger?.showSnackBar(SnackBar(
+              content: Text('Beat atrasado -25 ms (Desfase: ${ms >= 0 ? "+" : ""}$ms ms)'),
+              duration: const Duration(seconds: 1),
+            ));
+          }
+          return true;
+        }
+
+        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          notifier.adjustBeatOffset(0.025);
+          if (mounted) {
+            final ms = (ref.read(accordionSimulatorProvider).beatNudgeOffset * 1000).round();
+            messenger?.hideCurrentSnackBar();
+            messenger?.showSnackBar(SnackBar(
+              content: Text('Beat adelantado +25 ms (Desfase: ${ms >= 0 ? "+" : ""}$ms ms)'),
+              duration: const Duration(seconds: 1),
+            ));
+          }
+          return true;
+        }
+
+        if (event.logicalKey == LogicalKeyboardKey.keyB) {
+          notifier.syncBeatToCurrentAudioTime();
+          if (mounted) {
+            final ms = (ref.read(accordionSimulatorProvider).beatNudgeOffset * 1000).round();
+            messenger?.hideCurrentSnackBar();
+            messenger?.showSnackBar(SnackBar(
+              content: Text('Beat sincronizado con el audio (Desfase: ${ms >= 0 ? "+" : ""}$ms ms)'),
+              duration: const Duration(seconds: 2),
+            ));
+          }
+          return true;
+        }
+
+        if (event.logicalKey == LogicalKeyboardKey.keyA) {
+          notifier.togglePlaybackAutoChordDetect();
+          if (mounted) {
+            final active = ref.read(accordionSimulatorProvider).isPlaybackAutoChordDetectEnabled;
+            messenger?.hideCurrentSnackBar();
+            messenger?.showSnackBar(SnackBar(
+              content: Text(active
+                  ? 'Detección Automática en Reproducción Activada (solo en cambios de acorde).'
+                  : 'Detección Automática en Reproducción Desactivada.'),
+              duration: const Duration(seconds: 2),
+            ));
+          }
+          return true;
+        }
+      }
+    }
+
     _handleKeyEvent(event);
     return false;
   }

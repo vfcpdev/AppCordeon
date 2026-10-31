@@ -858,3 +858,280 @@ class ApplyMeasureChordsFromAudioCommand implements AccordionCommand<ApplyMeasur
     });
   }
 }
+
+/// Resultado de la evaluación de transición armónica en tiempo de reproducción.
+class PlaybackChordTransitionResult {
+  final bool hasTransition;
+  final int targetBar;
+  final int targetBeat;
+  final String detectedChordText;
+  final DetectedChordSegment? segment;
+  final List<MeasureRow> updatedMeasures;
+  final Set<int> updatedMarkedBeats;
+
+  const PlaybackChordTransitionResult({
+    required this.hasTransition,
+    required this.targetBar,
+    required this.targetBeat,
+    required this.detectedChordText,
+    this.segment,
+    required this.updatedMeasures,
+    required this.updatedMarkedBeats,
+  });
+}
+
+/// Comando para la detección automática de acordes durante la reproducción de audio,
+/// activándose ÚNICAMENTE cuando ocurre una transición armónica (cambio de acorde).
+///
+/// # Triplas de Hoare:
+/// - {P}: `currentAudioTime >= 0.0 && bpm >= 30.0 && measures.isNotEmpty && chords.isNotEmpty && startOffset >= 0.0`.
+/// - {Q}: Si `hasTransition == true`:
+///          - `detectedChordText != lastDetectedChordText`
+///          - `updatedMeasures[targetBar].beats[targetBeat].chord == detectedChordText`
+///          - `updatedMarkedBeats.contains(targetBar * 4 + targetBeat) == true`
+///        Si `hasTransition == false`:
+///          - `updatedMeasures == measures && updatedMarkedBeats == markedBeats` (Inmutabilidad garantizada).
+/// - {I}: `updatedMeasures.length == measures.length`.
+class DetectPlaybackChordTransitionCommand implements AccordionCommand<PlaybackChordTransitionResult> {
+  @override
+  String get commandName => 'DetectPlaybackChordTransitionCommand';
+
+  final double currentAudioTime;
+  final double bpm;
+  final double startOffset;
+  final List<MeasureRow> measures;
+  final Set<int> markedBeats;
+  final List<DetectedChordSegment> chords;
+  final String? lastDetectedChordText;
+  final NotationMode notation;
+
+  const DetectPlaybackChordTransitionCommand({
+    required this.currentAudioTime,
+    required this.bpm,
+    required this.startOffset,
+    required this.measures,
+    required this.markedBeats,
+    required this.chords,
+    this.lastDetectedChordText,
+    this.notation = NotationMode.latina,
+  });
+
+  @override
+  bool canExecute() =>
+      currentAudioTime >= 0.0 && bpm >= 30.0 && measures.isNotEmpty && chords.isNotEmpty && startOffset >= 0.0;
+
+  @override
+  void assertPreconditions() {
+    if (currentAudioTime < 0.0) {
+      throw const PreconditionViolationException(
+        'DetectPlaybackChordTransitionCommand',
+        'El tiempo actual de reproducción no puede ser negativo.',
+      );
+    }
+    if (bpm < 30.0) {
+      throw const PreconditionViolationException(
+        'DetectPlaybackChordTransitionCommand',
+        'El BPM debe ser de al menos 30.',
+      );
+    }
+    if (measures.isEmpty) {
+      throw const PreconditionViolationException(
+        'DetectPlaybackChordTransitionCommand',
+        'La cuadrícula de compases no puede estar vacía.',
+      );
+    }
+    if (chords.isEmpty) {
+      throw const PreconditionViolationException(
+        'DetectPlaybackChordTransitionCommand',
+        'La lista de acordes analizados no puede estar vacía.',
+      );
+    }
+    if (startOffset < 0.0) {
+      throw const PreconditionViolationException(
+        'DetectPlaybackChordTransitionCommand',
+        'El desplazamiento de inicio no puede ser negativo.',
+      );
+    }
+  }
+
+  @override
+  PlaybackChordTransitionResult execute() {
+    assertPreconditions();
+
+    final seg = _findSegmentForTime(chords, currentAudioTime);
+    if (seg == null) {
+      return PlaybackChordTransitionResult(
+        hasTransition: false,
+        targetBar: 0,
+        targetBeat: 0,
+        detectedChordText: '',
+        segment: null,
+        updatedMeasures: measures,
+        updatedMarkedBeats: markedBeats,
+      );
+    }
+
+    final chordText = notation == NotationMode.alemana
+        ? seg.chordSymbol
+        : (seg.chordName.isNotEmpty ? seg.chordName : seg.chordSymbol);
+
+    // Condición estricta: ÚNICAMENTE cuando hay un cambio de acorde detectable
+    final isChordChange = chordText.isNotEmpty && (chordText != lastDetectedChordText);
+
+    final beatDuration = 60.0 / bpm;
+    final elapsed = math.max(0.0, currentAudioTime - startOffset);
+    final totalBeats = (elapsed / beatDuration).floor();
+    final targetBar = (totalBeats ~/ 4).clamp(0, measures.length - 1);
+    final targetBeat = (totalBeats % 4).clamp(0, 3);
+    final linearKey = targetBar * 4 + targetBeat;
+
+    if (!isChordChange) {
+      return PlaybackChordTransitionResult(
+        hasTransition: false,
+        targetBar: targetBar,
+        targetBeat: targetBeat,
+        detectedChordText: chordText,
+        segment: seg,
+        updatedMeasures: measures,
+        updatedMarkedBeats: markedBeats,
+      );
+    }
+
+    // Aplicar la transición en la cuadrícula de compases
+    final updatedMeasures = List<MeasureRow>.from(measures);
+    final row = updatedMeasures[targetBar];
+    final beats = List<MeasureBeat>.from(row.beats);
+
+    beats[targetBeat] = beats[targetBeat].copyWith(
+      chord: chordText,
+      isContinue: false,
+    );
+    updatedMeasures[targetBar] = MeasureRow(barNumber: row.barNumber, beats: beats);
+
+    final updatedMarked = Set<int>.from(markedBeats)..add(linearKey);
+
+    return PlaybackChordTransitionResult(
+      hasTransition: true,
+      targetBar: targetBar,
+      targetBeat: targetBeat,
+      detectedChordText: chordText,
+      segment: seg,
+      updatedMeasures: updatedMeasures,
+      updatedMarkedBeats: updatedMarked,
+    );
+  }
+
+  DetectedChordSegment? _findSegmentForTime(List<DetectedChordSegment> segments, double time) {
+    if (segments.isEmpty) return null;
+    for (final s in segments) {
+      if (time >= s.startTime && time < s.endTime) {
+        return s;
+      }
+    }
+    return segments.reduce((best, s) {
+      final bestMid = (best.startTime + best.endTime) / 2.0;
+      final sMid = (s.startTime + s.endTime) / 2.0;
+      return (sMid - time).abs() < (bestMid - time).abs() ? s : best;
+    });
+  }
+}
+
+/// Comando para micro-ajuste de la fase o desfase del pulso (Beat Nudge).
+///
+/// # Triplas de Hoare:
+/// - {P}: `currentOffset.isFinite && deltaSeconds.isFinite && minLimit <= maxLimit`.
+/// - {Q}: `result >= minLimit && result <= maxLimit` con precisión a milisegundos.
+/// - {I}: Monotonía estricta según el signo de `deltaSeconds`.
+class AdjustBeatOffsetCommand implements AccordionCommand<double> {
+  @override
+  String get commandName => 'AdjustBeatOffsetCommand';
+
+  final double currentOffset;
+  final double deltaSeconds;
+  final double minLimit;
+  final double maxLimit;
+
+  const AdjustBeatOffsetCommand({
+    required this.currentOffset,
+    required this.deltaSeconds,
+    this.minLimit = -5.0,
+    this.maxLimit = 5.0,
+  });
+
+  @override
+  bool canExecute() => currentOffset.isFinite && deltaSeconds.isFinite && minLimit <= maxLimit;
+
+  @override
+  void assertPreconditions() {
+    if (!currentOffset.isFinite || !deltaSeconds.isFinite) {
+      throw const PreconditionViolationException(
+        'AdjustBeatOffsetCommand',
+        'Los parámetros de ajuste temporal deben ser valores numéricos finitos.',
+      );
+    }
+    if (minLimit > maxLimit) {
+      throw const PreconditionViolationException(
+        'AdjustBeatOffsetCommand',
+        'El límite inferior no puede superar al límite superior.',
+      );
+    }
+  }
+
+  @override
+  double execute() {
+    assertPreconditions();
+    final candidate = (currentOffset + deltaSeconds).clamp(minLimit, maxLimit);
+    // Redondeo a 3 decimales para evitar artefactos de coma flotante (milisegundos)
+    return (candidate * 1000.0).roundToDouble() / 1000.0;
+  }
+}
+
+/// Comando para sincronizar instantáneamente el pulso más cercano al tiempo actual del reproductor (Beat Sync).
+///
+/// # Triplas de Hoare:
+/// - {P}: `currentAudioTime >= 0.0 && bpm >= 30.0`.
+/// - {Q}: El ajuste retornado $\delta$ ubica el pulso dentro de $[-\Delta t / 2, \Delta t / 2]$.
+class SyncBeatToAudioCommand implements AccordionCommand<double> {
+  @override
+  String get commandName => 'SyncBeatToAudioCommand';
+
+  final double currentAudioTime;
+  final double audioStartOffset;
+  final double bpm;
+
+  const SyncBeatToAudioCommand({
+    required this.currentAudioTime,
+    required this.audioStartOffset,
+    required this.bpm,
+  });
+
+  @override
+  bool canExecute() => currentAudioTime >= 0.0 && bpm >= 30.0;
+
+  @override
+  void assertPreconditions() {
+    if (currentAudioTime < 0.0) {
+      throw const PreconditionViolationException(
+        'SyncBeatToAudioCommand',
+        'El tiempo actual no puede ser negativo.',
+      );
+    }
+    if (bpm < 30.0) {
+      throw const PreconditionViolationException(
+        'SyncBeatToAudioCommand',
+        'El BPM debe ser de al menos 30.',
+      );
+    }
+  }
+
+  @override
+  double execute() {
+    assertPreconditions();
+    final secondsPerBeat = 60.0 / bpm;
+    final relativeTime = currentAudioTime - audioStartOffset;
+    final nearestBeatIndex = (relativeTime / secondsPerBeat).round();
+    final idealBeatTime = audioStartOffset + (nearestBeatIndex * secondsPerBeat);
+    final delta = currentAudioTime - idealBeatTime;
+    return (delta * 1000.0).roundToDouble() / 1000.0;
+  }
+}
