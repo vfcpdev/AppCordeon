@@ -1,3 +1,4 @@
+import '../../domain/theory/beat_clock.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' show Color, Offset;
@@ -175,6 +176,14 @@ class AccordionSimulatorState {
   double get bpmCalibrationStart => _bpmCalibrationStart ?? -1.0;
   bool get isCalibratingBpm => bpmCalibrationStart >= 0.0;
 
+  /// Segundo del audio donde inicia el Compás 1 (fijado con el 1er toque de Control).
+  final double? _downbeatOffset;
+  double get downbeatOffset => _downbeatOffset ?? 0.0;
+
+  /// Reloj musical derivado (BPM del audio + desplazamiento del Compás 1).
+  BeatClock get beatClock =>
+      BeatClock(bpm: audioReport?.bpm ?? 120, offset: downbeatOffset);
+
   /// Acorde activo en el Compás actual (o el más reciente dentro del compás/tiempo).
   String get activeCompasChord {
     if (selectedBarIndex == null || selectedBarIndex! < 0 || selectedBarIndex! >= measures.length) {
@@ -277,7 +286,9 @@ class AccordionSimulatorState {
     double? metronomeVolume,
     bool? isLiveChordMarkerActive,
     double? bpmCalibrationStart,
+    double? downbeatOffset,
   })  : _bpmCalibrationStart = bpmCalibrationStart ?? -1.0,
+        _downbeatOffset = downbeatOffset ?? 0.0,
         _markedBeats = markedBeats ?? const {},
         _yellowDecisionBeats = yellowDecisionBeats ?? const {},
         _multiBeatPattern = multiBeatPattern ?? '',
@@ -360,9 +371,11 @@ class AccordionSimulatorState {
     double? metronomeVolume,
     bool? isLiveChordMarkerActive,
     double? bpmCalibrationStart,
+    double? downbeatOffset,
   }) {
     return AccordionSimulatorState(
       bpmCalibrationStart: bpmCalibrationStart ?? this.bpmCalibrationStart,
+      downbeatOffset: clearAudio ? 0.0 : (downbeatOffset ?? this.downbeatOffset),
       backgroundColor: backgroundColor ?? this.backgroundColor,
       notation: notation ?? this.notation,
       showDiapason1: showDiapason1 ?? this.showDiapason1,
