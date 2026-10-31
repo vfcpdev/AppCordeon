@@ -646,6 +646,25 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                       ),
                       child: Row(
                         children: [
+                          // Checkbox de marcado del compás, a la izquierda del
+                          // número: marca o desmarca los 4 tiempos del compás.
+                          Container(
+                            width: 15,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF1F5F9),
+                              border: Border(
+                                right: BorderSide(color: Color(0xFFE2E8F0)),
+                              ),
+                            ),
+                            child: Center(
+                              child: _BeatMarkCheckbox(
+                                key: ValueKey('measure_checkbox_$mIdx'),
+                                isChecked: notifier.isMeasureMarked(mIdx),
+                                onTap: () => notifier.toggleMeasureMark(mIdx),
+                              ),
+                            ),
+                          ),
+
                           // Número de compás
                           Container(
                             width: 18,
@@ -665,55 +684,51 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                             ),
                           ),
 
-                          // 4 Cuadros del compás en fila horizontal, uno al lado del otro
+                          // 4 Cuadros del compás en fila horizontal, uno al lado
+                          // del otro; separados por un hueco que deja ver el
+                          // fondo del compás como divisor entre cuadros.
                           Expanded(
-                            child: IntrinsicHeight(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: measure.beats.asMap().entries.map((entry) {
-                                  final beatIdx = entry.key;
-                                  final beat = entry.value;
-
-                                  final isCurrentPlayhead = state.isPlayingAudio &&
-                                      state.selectedBarIndex == mIdx &&
-                                      state.selectedBeatIndex == beatIdx;
-
-                                  final beatCell = _InlineBeatChordEditor(
-                                    accordionId: widget.accordionNumber,
-                                    measureIndex: mIdx,
-                                    beatIndex: beatIdx,
-                                    totalMeasures: state.measures.length,
-                                    chord: beat.chord,
-                                    timeText: beat.timeText,
-                                    bellows: beat.bellows,
-                                    isCurrentPlayhead: isCurrentPlayhead,
-                                    isMarked: notifier.isBeatMarked(mIdx, beatIdx),
-                                    isYellowDecision: state.yellowDecisionBeats.contains(mIdx * 4 + beatIdx),
-                                    isSelected: state.selectedBarIndex == mIdx && state.selectedBeatIndex == beatIdx,
-                                    hasTrailingBorder: beatIdx < measure.beats.length - 1,
-                                    notation: state.notation,
-                                    onChanged: (newChord) {
-                                      notifier.updateMeasureBeat(mIdx, beatIdx, newChord);
-                                    },
-                                    onSelected: () {
-                                      notifier.selectBeat(mIdx, beatIdx);
-                                    },
-                                    onNavigate: (bar, beat) {
-                                      notifier.selectBeat(bar, beat);
-                                      _scrollToBar(bar);
-                                    },
-                                    onToggleMark: () {
-                                      notifier.toggleBeatMark(mIdx, beatIdx);
-                                    },
-                                    onBellowsChanged: (bellows) {
-                                      notifier.setBeatBellows(mIdx, beatIdx, bellows);
-                                    },
-                                    onLiveMarker: () => notifier.markLiveChordChange(),
-                                  );
-
-                                  return Expanded(child: beatCell);
-                                }).toList(),
-                              ),
+                            child: Row(
+                              children: [
+                                for (final entry in measure.beats.asMap().entries) ...[
+                                  if (entry.key > 0) const SizedBox(width: 1),
+                                  Expanded(
+                                    child: _InlineBeatChordEditor(
+                                      accordionId: widget.accordionNumber,
+                                      measureIndex: mIdx,
+                                      beatIndex: entry.key,
+                                      totalMeasures: state.measures.length,
+                                      chord: entry.value.chord,
+                                      timeText: entry.value.timeText,
+                                      bellows: entry.value.bellows,
+                                      isCurrentPlayhead: state.isPlayingAudio &&
+                                          state.selectedBarIndex == mIdx &&
+                                          state.selectedBeatIndex == entry.key,
+                                      isMarked: notifier.isBeatMarked(mIdx, entry.key),
+                                      isYellowDecision: state.yellowDecisionBeats.contains(mIdx * 4 + entry.key),
+                                      isSelected: state.selectedBarIndex == mIdx && state.selectedBeatIndex == entry.key,
+                                      notation: state.notation,
+                                      onChanged: (newChord) {
+                                        notifier.updateMeasureBeat(mIdx, entry.key, newChord);
+                                      },
+                                      onSelected: () {
+                                        notifier.selectBeat(mIdx, entry.key);
+                                      },
+                                      onNavigate: (bar, beat) {
+                                        notifier.selectBeat(bar, beat);
+                                        _scrollToBar(bar);
+                                      },
+                                      onToggleMark: () {
+                                        notifier.toggleBeatMark(mIdx, entry.key);
+                                      },
+                                      onBellowsChanged: (bellows) {
+                                        notifier.setBeatBellows(mIdx, entry.key, bellows);
+                                      },
+                                      onLiveMarker: () => notifier.markLiveChordChange(),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ],
@@ -1442,7 +1457,6 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final bool isMarked;
   final bool isYellowDecision;
   final bool isSelected;
-  final bool hasBottomBorder;
   final NotationMode notation;
   final ValueChanged<String> onChanged;
   final VoidCallback? onSelected;
@@ -1463,7 +1477,6 @@ class _InlineBeatChordEditor extends StatefulWidget {
     required this.isMarked,
     this.isYellowDecision = false,
     this.isSelected = false,
-    required this.hasBottomBorder,
     this.notation = NotationMode.latina,
     required this.onChanged,
     this.onSelected,
@@ -1806,6 +1819,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
           duration: const Duration(milliseconds: 120),
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
           decoration: BoxDecoration(
+            // Radio condicional: bordes "Stateful" no ocasionan problemas; el
+            // divisor entre cuadros es un hueco (no un borde), así que el
+            // radio siempre se admite sobre bordes uniformes.
+            borderRadius: BorderRadius.circular(4),
             color: isCellSelected
                 ? const Color(0xFFDBEAFE) // Resaltado azul suave y vivo para cuadro seleccionado
                 : (_isEditing
@@ -1817,7 +1834,6 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                             : (isMarked
                                 ? const Color(0xFFF0FDF4) // Tiempo marcado con el checkbox
                                 : Colors.white)))),
-            borderRadius: BorderRadius.circular(4),
             border: isCellSelected
                 ? Border.all(color: const Color(0xFF2563EB), width: 1.8) // Cuadro resaltado nítido con borde completo
                 : (_isEditing
@@ -1832,9 +1848,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                                     width: 1.2,
                                   )
                                 : Border.all(
-                                    color: widget.hasBottomBorder
-                                        ? const Color(0xFFE2E8F0)
-                                        : Colors.transparent,
+                                    color: Colors.transparent,
                                     width: 0.8,
                                   ))))),
             boxShadow: isCellSelected
@@ -1865,106 +1879,143 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Con la tarjeta de Compás estrecha, el tiempo no cabe junto al
-              // Con la tarjeta de Compás, dar prioridad al cuadro de texto de acorde
+              // El ancho disponible determina el modo de la celda del cuadro:
+              // - >= 65px: fila horizontal clásica (acorde a la izquierda + controles).
+              // - < 65px (los 4 cuadros en fila uno al lado del otro): celda
+              //   compacta vertical, con el acorde centrado y la casilla de
+              //   marcado debajo; el tiempo y las flechas se ocultan si no caben.
               final showArrows = constraints.maxWidth >= 65;
+              final showCompactArrows = constraints.maxWidth >= 52;
               final showTime = constraints.maxWidth >= 155;
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Cuadro de texto interactivo con foco directo y tamaño de texto aumentado
-                  Expanded(
-                    child: Tooltip(
-                      message: hasChord ? 'Acorde: ${widget.chord}' : '',
-                      waitDuration: const Duration(milliseconds: 600),
-                      child: TextField(
-                        controller: _controller,
-                        focusNode: _focusNode,
-                        readOnly: !_isEditing,
-                        textAlignVertical: TextAlignVertical.center,
-                        onTap: () {
-                          if (!_isEditing) {
-                            _activateEdit();
-                          }
-                        },
-                        style: TextStyle(
-                          fontSize: 10.0,
-                          letterSpacing: -0.2,
-                          fontWeight: (isFocusedOrSelected || hasChord)
-                              ? FontWeight.w900
-                              : FontWeight.w600,
-                          color: isPlaying
-                              ? const Color(0xFFB45309)
-                              : (isFocusedOrSelected
-                                  ? const Color(0xFF1D4ED8)
-                                  : (hasChord
-                                      ? const Color(0xFF0F172A)
-                                      : const Color(0xFF94A3B8))),
-                        ),
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          hintText: '-',
-                          hintStyle: TextStyle(
-                            fontSize: 10.0,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF94A3B8),
-                          ),
-                          contentPadding: EdgeInsets.zero,
-                          border: InputBorder.none,
-                        ),
-                        onChanged: (_) {
-                          _commit();
-                        },
-                        onSubmitted: (_) {
-                          _commit();
-                          _moveSelection(1);
-                        },
-                      ),
-                    ),
+
+              final chordField = Tooltip(
+                message: hasChord ? 'Acorde: ${widget.chord}' : '',
+                waitDuration: const Duration(milliseconds: 600),
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  readOnly: !_isEditing,
+                  textAlignVertical: TextAlignVertical.center,
+                  textAlign: showArrows ? TextAlign.start : TextAlign.center,
+                  onTap: () {
+                    if (!_isEditing) {
+                      _activateEdit();
+                    }
+                  },
+                  onTap: () {
+                    if (!_isEditing) {
+                      _activateEdit();
+                    }
+                  },
+                  style: TextStyle(
+                    fontSize: 10.0,
+                    letterSpacing: -0.2,
+                    fontWeight: (isFocusedOrSelected || hasChord)
+                        ? FontWeight.w900
+                        : FontWeight.w600,
+                    color: isPlaying
+                        ? const Color(0xFFB45309)
+                        : (isFocusedOrSelected
+                            ? const Color(0xFF1D4ED8)
+                            : (hasChord
+                                ? const Color(0xFF0F172A)
+                                : const Color(0xFF94A3B8))),
                   ),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    hintText: '-',
+                    hintStyle: TextStyle(
+                      fontSize: 10.0,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF94A3B8),
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (_) {
+                    _commit();
+                  },
+                  onSubmitted: (_) {
+                    _commit();
+                    _moveSelection(1);
+                  },
+                ),
+              );
+
+              final markCheckbox = _BeatMarkCheckbox(
+                key: ValueKey(
+                  'beat_checkbox_${widget.measureIndex}_${widget.beatIndex}',
+                ),
+                isChecked: isMarked,
+                onTap: widget.onToggleMark,
+              );
+
+              final bellowsArrows = _BeatBellowsArrows(
+                bellows: widget.bellows,
+                isEnabled: hasChord,
+                onBellowsChanged: hasChord ? widget.onBellowsChanged : null,
+              );
+
+              if (showArrows) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Acorde del cuadro, alineado a la izquierda
+                    Expanded(child: chordField),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (showTime) ...[
+                          Text(
+                            widget.timeText,
+                            style: TextStyle(
+                              fontSize: 7.5,
+                              fontWeight: isCellSelected
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                              color: isCellSelected
+                                  ? const Color(0xFF1D4ED8)
+                                  : const Color(0xFF64748B),
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                        ],
+                        // Checkbox para marcar el tiempo y flechas Abre/Cierre a su derecha
+                        Padding(
+                          padding: const EdgeInsets.only(right: 2.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              markCheckbox,
+                              if (showArrows) ...[
+                                const SizedBox(width: 2),
+                                bellowsArrows,
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+
+              // Modo compacto: los 4 cuadros del compás en fila horizontal.
+              // Acorde arriba (centrado) y controles de marcado/fuelle debajo.
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  chordField,
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (showTime) ...[
-                        Text(
-                          widget.timeText,
-                          style: TextStyle(
-                            fontSize: 7.5,
-                            fontWeight: isCellSelected
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                            color: isCellSelected
-                                ? const Color(0xFF1D4ED8)
-                                : const Color(0xFF64748B),
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        const SizedBox(width: 3),
+                      markCheckbox,
+                      if (showCompactArrows) ...[
+                        const SizedBox(width: 2),
+                        bellowsArrows,
                       ],
-                      // Checkbox para marcar el tiempo y flechas Abre/Cierre a su derecha
-                      Padding(
-                        padding: const EdgeInsets.only(right: 2.0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _BeatMarkCheckbox(
-                              key: ValueKey(
-                                'beat_checkbox_${widget.measureIndex}_${widget.beatIndex}',
-                              ),
-                              isChecked: isMarked,
-                              onTap: widget.onToggleMark,
-                            ),
-                            if (showArrows) ...[
-                              const SizedBox(width: 2),
-                              _BeatBellowsArrows(
-                                bellows: widget.bellows,
-                                isEnabled: hasChord,
-                                onBellowsChanged: hasChord ? widget.onBellowsChanged : null,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ],

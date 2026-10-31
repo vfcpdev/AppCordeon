@@ -1821,9 +1821,34 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   bool isBeatMarked(int barIndex, int beatIndex) =>
       state.markedBeats.contains(beatKey(barIndex, beatIndex));
 
-  /// Marca o desmarca un tiempo con el checkbox del Compás. Los tiempos
-  /// marcados reciben el acorde del Constructor de forma simultánea y son los
-  /// únicos que se ejecutan durante la reproducción.
+  /// Marca o desmarca los 4 tiempos de un compás con el checkbox a la izquierda
+  /// del número del compás. Si los 4 tiempos están marcados, los desmarca;
+  /// en caso contrario (parcial o desmarcado) los marca a los 4, preservando
+  /// las marcas de los demás compases.
+  void toggleMeasureMark(int barIndex) {
+    if (barIndex < 0 || barIndex >= state.measures.length) return;
+    final measureKeys = {for (var i = 0; i < 4; i++) beatKey(barIndex, i)};
+    final next = Set<int>.from(state.markedBeats);
+    if (measureKeys.every(next.contains)) {
+      next.removeAll(measureKeys);
+    } else {
+      next.addAll(measureKeys);
+    }
+    state = state.copyWith(markedBeats: next);
+  }
+
+  /// Indica si los 4 tiempos del compás [barIndex] están marcados.
+  bool isMeasureMarked(int barIndex) {
+    if (barIndex < 0 || barIndex >= state.measures.length) return false;
+    return measureKeysOf(barIndex).every(state.markedBeats.contains);
+  }
+
+  /// Claves planas de los 4 tiempos del compás [barIndex].
+  Set<int> measureKeysOf(int barIndex) =>
+      {for (var i = 0; i < 4; i++) beatKey(barIndex, i)};
+  /// Marca o desmarca un tiempo individual. Los tiempos marcados reciben el
+  /// acorde del Constructor de forma simultánea y son los únicos que se
+  /// ejecutan durante la reproducción.
   void toggleBeatMark(int barIndex, int beatIndex) {
     final key = beatKey(barIndex, beatIndex);
     final next = Set<int>.from(state.markedBeats);
