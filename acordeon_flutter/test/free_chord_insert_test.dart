@@ -106,31 +106,39 @@ void main() {
 
     expect(container.read(accordionSimulatorProvider).markedBeats, isEmpty);
 
-    // Primer toque en checkbox (0, 0): marca solo ese tiempo
-    await tester.tap(find.byKey(const ValueKey('beat_checkbox_0_0')));
-    await tester.pumpAndSettle();
-    expect(
-      container.read(accordionSimulatorProvider).markedBeats,
-      containsAll(<int>[AccordionSimulatorNotifier.beatKey(0, 0)]),
-    );
-    expect(
-      container.read(accordionSimulatorProvider).markedBeats.length,
-      equals(1),
-    );
-
-    // Marcar (1, 2): marca solo ese tiempo, sin afectar (0, 0)
-    await tester.tap(find.byKey(const ValueKey('beat_checkbox_1_2')));
+    // Primer toque en checkbox del compás 0: marca sus 4 tiempos
+    await tester.tap(find.byKey(const ValueKey('measure_checkbox_0')));
     await tester.pumpAndSettle();
     expect(
       container.read(accordionSimulatorProvider).markedBeats,
       containsAll(<int>[
         AccordionSimulatorNotifier.beatKey(0, 0),
-        AccordionSimulatorNotifier.beatKey(1, 2),
+        AccordionSimulatorNotifier.beatKey(0, 1),
+        AccordionSimulatorNotifier.beatKey(0, 2),
+        AccordionSimulatorNotifier.beatKey(0, 3),
       ]),
     );
     expect(
       container.read(accordionSimulatorProvider).markedBeats.length,
-      equals(2),
+      equals(4),
+    );
+
+    // Marcar compás 1: marca sus 4 tiempos, sin afectar el compás 0
+    await tester.tap(find.byKey(const ValueKey('measure_checkbox_1')));
+    await tester.pumpAndSettle();
+    expect(
+      container.read(accordionSimulatorProvider).markedBeats,
+      containsAll(<int>[
+        AccordionSimulatorNotifier.beatKey(0, 0),
+        AccordionSimulatorNotifier.beatKey(0, 3),
+        AccordionSimulatorNotifier.beatKey(1, 0),
+        AccordionSimulatorNotifier.beatKey(1, 2),
+        AccordionSimulatorNotifier.beatKey(1, 3),
+      ]),
+    );
+    expect(
+      container.read(accordionSimulatorProvider).markedBeats.length,
+      equals(8),
     );
 
     // Marcar no debe abrir la edición del acorde.
@@ -139,8 +147,8 @@ void main() {
     );
     expect(firstBeatField.focusNode?.hasFocus, isFalse);
 
-    // Segundo toque en (0, 0): desmarca solo ese tiempo, (1, 2) permanece marcado
-    await tester.tap(find.byKey(const ValueKey('beat_checkbox_0_0')));
+    // Segundo toque en compás 0: desmarca sus 4 tiempos, el compás 1 permanece
+    await tester.tap(find.byKey(const ValueKey('measure_checkbox_0')));
     await tester.pumpAndSettle();
     expect(
       container.read(accordionSimulatorProvider).markedBeats,
@@ -149,6 +157,10 @@ void main() {
     expect(
       container.read(accordionSimulatorProvider).markedBeats,
       contains(AccordionSimulatorNotifier.beatKey(1, 2)),
+    );
+    expect(
+      container.read(accordionSimulatorProvider).markedBeats.length,
+      equals(4),
     );
   });
 }

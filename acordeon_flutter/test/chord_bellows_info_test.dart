@@ -163,7 +163,9 @@ void main() {
         const ProviderScope(
           child: MaterialApp(
             home: Scaffold(
-              body: MeasureGridWidget(width: 150),
+              // Ancho amplio: las celdas horizontales muestran tiempo y flechas
+              // (con 4 cuadros uno al lado del otro se requieren >= 65px por celda)
+              body: MeasureGridWidget(width: 320),
             ),
           ),
         ),

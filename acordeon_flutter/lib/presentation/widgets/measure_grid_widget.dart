@@ -718,9 +718,6 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                         notifier.selectBeat(bar, beat);
                                         _scrollToBar(bar);
                                       },
-                                      onToggleMark: () {
-                                        notifier.toggleBeatMark(mIdx, entry.key);
-                                      },
                                       onBellowsChanged: (bellows) {
                                         notifier.setBeatBellows(mIdx, entry.key, bellows);
                                       },
@@ -1461,7 +1458,6 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final VoidCallback? onSelected;
   final void Function(int bar, int beat)? onNavigate;
-  final VoidCallback? onToggleMark;
   final ValueChanged<BellowsMode>? onBellowsChanged;
   final VoidCallback? onLiveMarker;
 
@@ -1481,7 +1477,6 @@ class _InlineBeatChordEditor extends StatefulWidget {
     required this.onChanged,
     this.onSelected,
     this.onNavigate,
-    this.onToggleMark,
     this.onBellowsChanged,
     this.onLiveMarker,
   });
@@ -1880,10 +1875,11 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               // El ancho disponible determina el modo de la celda del cuadro:
-              // - >= 65px: fila horizontal clásica (acorde a la izquierda + controles).
+              // - >= 65px: fila horizontal clásica (acorde a la izquierda + fuelle).
               // - < 65px (los 4 cuadros en fila uno al lado del otro): celda
-              //   compacta vertical, con el acorde centrado y la casilla de
-              //   marcado debajo; el tiempo y las flechas se ocultan si no caben.
+              //   compacta vertical con el acorde centrado; el tiempo y el
+              //   fuelle se ocultan si no caben. La marcación por checkbox vive
+              //   a la izquierda del número del compás, no en la celda.
               final showArrows = constraints.maxWidth >= 65;
               final showCompactArrows = constraints.maxWidth >= 52;
               final showTime = constraints.maxWidth >= 155;
@@ -1897,11 +1893,6 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                   readOnly: !_isEditing,
                   textAlignVertical: TextAlignVertical.center,
                   textAlign: showArrows ? TextAlign.start : TextAlign.center,
-                  onTap: () {
-                    if (!_isEditing) {
-                      _activateEdit();
-                    }
-                  },
                   onTap: () {
                     if (!_isEditing) {
                       _activateEdit();
@@ -1940,14 +1931,6 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     _moveSelection(1);
                   },
                 ),
-              );
-
-              final markCheckbox = _BeatMarkCheckbox(
-                key: ValueKey(
-                  'beat_checkbox_${widget.measureIndex}_${widget.beatIndex}',
-                ),
-                isChecked: isMarked,
-                onTap: widget.onToggleMark,
               );
 
               final bellowsArrows = _BeatBellowsArrows(
