@@ -52,6 +52,8 @@ void main() {
     notifier.setFreeChordRoot(2); // Re
     await tester.pumpAndSettle();
 
+    final st = container.read(accordionSimulatorProvider);
+    final pcs = container.read(activeChordPitchClassesProvider(1));
     final buttons3D = tester.widgetList<AccordionButton3D>(
       find.descendant(
         of: find.byType(BassPanelWidget),
@@ -296,5 +298,89 @@ void main() {
     notifier.setBeatBellows(0, 0, BellowsMode.push);
     await tester.pumpAndSettle();
     expect(container.read(accordionSimulatorProvider).bellows1, BellowsMode.push);
+  });
+
+  testWidgets('Los bajos diferencian coincidencia exacta y cercanía armónica',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: AcordeonApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(BassPanelWidget)),
+    );
+    final notifier = container.read(accordionSimulatorProvider.notifier);
+
+    // Aseguramos que esté seleccionado Do Mayor (root: 0) en Cinco Letras:
+    // Cierra (push) tiene Bajo 4 (Do) y Acorde 4 (Do Maj) como EXACTOS.
+    // Tiene Bajo 2 (Sol / V) y Acorde 2 (Sol Maj / V) como CERCANOS.
+    if (container.read(accordionSimulatorProvider).freeChordRoot != 0) {
+      notifier.setFreeChordRoot(0);
+    }
+    notifier.setBellows1(BellowsMode.push);
+    await tester.pumpAndSettle();
+
+    final buttons3D = tester.widgetList<AccordionButton3D>(
+      find.descendant(
+        of: find.byType(BassPanelWidget),
+        matching: find.byType(AccordionButton3D),
+      ),
+    ).toList();
+
+    final exactButtons = buttons3D.where((b) => b.bassMatchPush == BassMatchType.exact).toList();
+    final closeButtons = buttons3D.where((b) => b.bassMatchPush == BassMatchType.close).toList();
+    final noneButtons = buttons3D.where((b) => b.bassMatchPush == BassMatchType.none).toList();
+
+    expect(exactButtons, isNotEmpty, reason: 'Debe haber bajos con coincidencia exacta (Do)');
+    expect(closeButtons, isNotEmpty, reason: 'Debe haber bajos por cercanía armónica (Sol / Fa)');
+    expect(noneButtons, isNotEmpty, reason: 'Debe haber bajos sin coincidencia armónica');
+  });
+
+  testWidgets('Al reproducir acorde o arpegio, los bajos acompañantes se muestran presionados según el fuelle',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: AcordeonApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(BassPanelWidget)),
+    );
+    final notifier = container.read(accordionSimulatorProvider.notifier);
+
+    if (container.read(accordionSimulatorProvider).freeChordRoot != 0) {
+      notifier.setFreeChordRoot(0); // Do
+    }
+    notifier.setBellows1(BellowsMode.push);
+    notifier.playFreeChord();
+    await tester.pump();
+
+    final buttons3D = tester.widgetList<AccordionButton3D>(
+      find.descendant(
+        of: find.byType(BassPanelWidget),
+        matching: find.byType(AccordionButton3D),
+      ),
+    ).toList();
+
+    final pressedBasses = buttons3D.where((b) => b.isPressed).toList();
+    expect(pressedBasses, isNotEmpty, reason: 'Los bajos acompañantes deben presionarse al dar play');
+    for (final btn in pressedBasses) {
+      expect(btn.bassMatchPush.isMatch, isTrue, reason: 'Solo los bajos que acompañan en push deben presionarse');
+    }
+
+    await tester.pump(const Duration(milliseconds: 1000));
   });
 }

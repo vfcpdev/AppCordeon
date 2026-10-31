@@ -301,6 +301,76 @@ class ChordCatalog {
       ],
     );
   }
+
+  /// Obtiene la clase de altura de la raíz (0..11) a partir del símbolo del acorde.
+  static int? rootPitchClassForChordSymbol(String chord) {
+    final trimmed = chord.trim();
+    if (trimmed.isEmpty) return null;
+    int? rootPc;
+    int longestMatch = 0;
+    for (final entry in rootPitchClasses.entries) {
+      if (trimmed.startsWith(entry.key)) {
+        if (entry.key.length > longestMatch) {
+          longestMatch = entry.key.length;
+          rootPc = entry.value;
+        }
+      }
+    }
+    return rootPc;
+  }
+
+  /// Evalúa si las notas de un botón de bajo acompañan al acorde activo,
+  /// diferenciando entre coincidencia exacta (tónica / tríada idéntica)
+  /// o cercanía armónica (grados IV/V, 5ta, relativo o notas en común).
+  static BassMatchType evaluateBassMatch({
+    required List<int> notes,
+    required ButtonType type,
+    required int chordRoot,
+    required Set<int> chordPitchClasses,
+  }) {
+    if (notes.isEmpty || chordPitchClasses.isEmpty) return BassMatchType.none;
+
+    final btnPcs = notes.map((n) => n % 12).toSet();
+    final mainPc = notes.first % 12;
+
+    if (type == ButtonType.fundamental) {
+      // Coincidencia exacta: la nota del bajo es la tónica del acorde
+      if (mainPc == chordRoot) {
+        return BassMatchType.exact;
+      }
+      // Cercanía: es la 5ta del acorde (bajo alternante directo), grado IV,
+      // relativo o nota del acorde (3ra)
+      final isFifth = mainPc == (chordRoot + 7) % 12;
+      final isFourth = mainPc == (chordRoot + 5) % 12;
+      final isRelative = mainPc == (chordRoot + 9) % 12;
+      final isChordTone = chordPitchClasses.contains(mainPc);
+
+      if (isFifth || isFourth || isRelative || isChordTone) {
+        return BassMatchType.close;
+      }
+    } else {
+      // type == ButtonType.chord
+      // Coincidencia exacta: todas las notas del acorde del bajo están en el acorde
+      // y su tónica coincide con la raíz del acorde
+      final allNotesInChord = btnPcs.every((pc) => chordPitchClasses.contains(pc));
+      if (allNotesInChord && btnPcs.contains(chordRoot)) {
+        return BassMatchType.exact;
+      }
+
+      // Cercanía: acorde de dominante (V), subdominante (IV), relativo,
+      // o comparte al menos 2 notas con el acorde activo
+      final isDominantRoot = mainPc == (chordRoot + 7) % 12;
+      final isSubdominantRoot = mainPc == (chordRoot + 5) % 12;
+      final isRelativeRoot = mainPc == (chordRoot + 9) % 12;
+      final sharedCount = btnPcs.where((pc) => chordPitchClasses.contains(pc)).length;
+
+      if (allNotesInChord || isDominantRoot || isSubdominantRoot || isRelativeRoot || sharedCount >= 2) {
+        return BassMatchType.close;
+      }
+    }
+
+    return BassMatchType.none;
+  }
 }
 
 /// Resultado del análisis de completitud armónica según la dirección del fuelle.

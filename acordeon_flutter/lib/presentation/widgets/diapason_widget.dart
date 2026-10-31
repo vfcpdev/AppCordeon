@@ -349,7 +349,8 @@ class DiapasonWidget extends ConsumerWidget {
         // Todos los botones permanecen visibles. En Abrir/Cerrar solo se
         // colorean los que producen una nota del acorde vigente.
         ...buttons.map((btn) {
-          final isPressed = activeButtons.contains(btn.id);
+          final isPressed = activeButtons.contains('a${accordionNumber}_${btn.id}') ||
+              activeButtons.contains(btn.id);
           final isDetector = detectorSelectedButtons.contains(btn.id);
           final midiToPlay = currentBellows == BellowsMode.pull
               ? btn.pull

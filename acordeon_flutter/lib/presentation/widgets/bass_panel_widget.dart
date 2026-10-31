@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/models/accordion_data.dart';
+import '../../domain/theory/chord_catalog.dart';
 import '../../domain/theory/music_theory.dart';
 import '../controllers/accordion_controller.dart';
 import 'accordion_button_3d.dart';
@@ -159,6 +160,59 @@ class BassPanelWidget extends ConsumerWidget {
               ),
             ),
           ),
+
+          // Leyenda inferior de acompañamiento de bajos
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE2E8F0),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(13),
+                bottomRight: Radius.circular(13),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEF4444),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 3),
+                const Text(
+                  'Exacto',
+                  style: TextStyle(
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF59E0B),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 3),
+                const Text(
+                  'Cercano',
+                  style: TextStyle(
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF475569),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -173,6 +227,13 @@ class BassPanelWidget extends ConsumerWidget {
   }) {
     final isPrimary = accordionNumber == 1;
     final currentTuning = isPrimary ? state.tuning1 : state.tuning2;
+
+    final int activeChordRoot;
+    if (!state.isFreeChordFixed && state.activeCompasChord.isNotEmpty) {
+      activeChordRoot = ChordCatalog.rootPitchClassForChordSymbol(state.activeCompasChord) ?? state.freeChordRoot;
+    } else {
+      activeChordRoot = state.freeChordRoot;
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -229,50 +290,87 @@ class BassPanelWidget extends ConsumerWidget {
               ? pullMidi
               : pushMidi;
 
-          final isChordPull = activeChordPitchClasses.isNotEmpty && (
-            btn.pullNotes.any((n) => activeChordPitchClasses.contains(n % 12)) ||
-            activeChordPitchClasses.contains(pullMidi % 12)
+          final pushMatch = ChordCatalog.evaluateBassMatch(
+            notes: btn.pushNotes,
+            type: btn.type,
+            chordRoot: activeChordRoot,
+            chordPitchClasses: activeChordPitchClasses,
           );
-          final isChordPush = activeChordPitchClasses.isNotEmpty && (
-            btn.pushNotes.any((n) => activeChordPitchClasses.contains(n % 12)) ||
-            activeChordPitchClasses.contains(pushMidi % 12)
+          final pullMatch = ChordCatalog.evaluateBassMatch(
+            notes: btn.pullNotes,
+            type: btn.type,
+            chordRoot: activeChordRoot,
+            chordPitchClasses: activeChordPitchClasses,
           );
+
+          final isChordPull = pullMatch.isMatch;
+          final isChordPush = pushMatch.isMatch;
+
+          String tooltipMsg;
+          if (currentBellows == BellowsMode.push) {
+            final desc = pushMatch == BassMatchType.exact
+                ? 'Coincidencia exacta'
+                : (pushMatch == BassMatchType.close ? 'Acompañamiento cercano' : '');
+            tooltipMsg = desc.isNotEmpty ? '${btn.label} ($desc)' : btn.label;
+          } else if (currentBellows == BellowsMode.pull) {
+            final desc = pullMatch == BassMatchType.exact
+                ? 'Coincidencia exacta'
+                : (pullMatch == BassMatchType.close ? 'Acompañamiento cercano' : '');
+            tooltipMsg = desc.isNotEmpty ? '${btn.label} ($desc)' : btn.label;
+          } else {
+            final parts = <String>[];
+            if (pullMatch == BassMatchType.exact) {
+              parts.add('Abre: Exacto');
+            } else if (pullMatch == BassMatchType.close) {
+              parts.add('Abre: Cercano');
+            }
+            if (pushMatch == BassMatchType.exact) {
+              parts.add('Cierra: Exacto');
+            } else if (pushMatch == BassMatchType.close) {
+              parts.add('Cierra: Cercano');
+            }
+            tooltipMsg = parts.isNotEmpty ? '${btn.label} (${parts.join(' · ')})' : btn.label;
+          }
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 6.5),
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                Positioned(
-                  // Alineado a la derecha contra el borde izquierdo del botón:
-                  // los números de 1 y 2 dígitos quedan en la misma columna.
-                  right: _buttonSize + 4.8,
-                  child: Text(
-                    '$index',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white.withValues(alpha: 0.95),
-                      shadows: const [
-                        Shadow(color: Colors.black, offset: Offset(0, 1), blurRadius: 3),
-                        Shadow(color: Colors.black87, blurRadius: 2),
-                      ],
+            child: Tooltip(
+              message: tooltipMsg,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  Positioned(
+                    // Alineado a la derecha contra el borde izquierdo del botón:
+                    // los números de 1 y 2 dígitos quedan en la misma columna.
+                    right: _buttonSize + 4.8,
+                    child: Text(
+                      '$index',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white.withValues(alpha: 0.95),
+                        shadows: const [
+                          Shadow(color: Colors.black, offset: Offset(0, 1), blurRadius: 3),
+                          Shadow(color: Colors.black87, blurRadius: 2),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                AccordionButton3D(
-                  size: _buttonSize,
-                  isPressed: isPressed,
-                  bellowsMode: currentBellows,
-                  buttonType: btn.type,
-                  isChordPull: isChordPull,
-                  isChordPush: isChordPush,
-                  onPointerDown: () => notifier.pressButton(btn.id, midiToPlay),
-                  onPointerUp: () => notifier.releaseButton(btn.id, midiToPlay),
-                  child: _buildBassButtonLabel(pushName, pullName, currentBellows),
-                ),
+                  AccordionButton3D(
+                    size: _buttonSize,
+                    isPressed: isPressed,
+                    bellowsMode: currentBellows,
+                    buttonType: btn.type,
+                    isChordPull: isChordPull,
+                    isChordPush: isChordPush,
+                    bassMatchPush: pushMatch,
+                    bassMatchPull: pullMatch,
+                    onPointerDown: () => notifier.pressButton(btn.id, midiToPlay),
+                    onPointerUp: () => notifier.releaseButton(btn.id, midiToPlay),
+                    child: _buildBassButtonLabel(pushName, pullName, currentBellows),
+                  ),
 
                 // Insignia flotante Abre / Cierra al presionar bajo
                 if (isPressed && (currentBellows == BellowsMode.push || currentBellows == BellowsMode.pull))
@@ -311,7 +409,8 @@ class BassPanelWidget extends ConsumerWidget {
                   ),
               ],
             ),
-          );
+          ),
+        );
         }),
       ],
     );

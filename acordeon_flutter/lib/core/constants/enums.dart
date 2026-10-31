@@ -28,3 +28,11 @@ enum ButtonType {
   fundamental,
   chord,
 }
+
+enum BassMatchType {
+  none,
+  exact,
+  close;
+
+  bool get isMatch => this != BassMatchType.none;
+}

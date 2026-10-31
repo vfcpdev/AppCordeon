@@ -13,6 +13,8 @@ class AccordionButton3D extends StatelessWidget {
   final bool isSelectedForRhythm;
   final bool isChordPull;
   final bool isChordPush;
+  final BassMatchType bassMatchPull;
+  final BassMatchType bassMatchPush;
   final bool isDetectorSelected;
   final bool showGloss;
   final Widget? child;
@@ -28,6 +30,8 @@ class AccordionButton3D extends StatelessWidget {
     this.isSelectedForRhythm = false,
     this.isChordPull = false,
     this.isChordPush = false,
+    this.bassMatchPull = BassMatchType.none,
+    this.bassMatchPush = BassMatchType.none,
     this.isDetectorSelected = false,
     this.showGloss = true,
     this.child,
@@ -59,6 +63,8 @@ class AccordionButton3D extends StatelessWidget {
             isSelectedForRhythm: isSelectedForRhythm,
             isChordPull: isChordPull,
             isChordPush: isChordPush,
+            bassMatchPull: bassMatchPull,
+            bassMatchPush: bassMatchPush,
             isDetectorSelected: isDetectorSelected,
             showGloss: showGloss,
           ),
@@ -76,6 +82,8 @@ class _AccordionButton3DPainter extends CustomPainter {
   final bool isSelectedForRhythm;
   final bool isChordPull;
   final bool isChordPush;
+  final BassMatchType bassMatchPull;
+  final BassMatchType bassMatchPush;
   final bool isDetectorSelected;
   final bool showGloss;
 
@@ -86,6 +94,8 @@ class _AccordionButton3DPainter extends CustomPainter {
     required this.isSelectedForRhythm,
     required this.isChordPull,
     required this.isChordPush,
+    this.bassMatchPull = BassMatchType.none,
+    this.bassMatchPush = BassMatchType.none,
     required this.isDetectorSelected,
     required this.showGloss,
   });
@@ -199,28 +209,26 @@ class _AccordionButton3DPainter extends CustomPainter {
         ],
         stops: const [0.0, 0.55, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
-    } else if (buttonType != null && bellowsMode == BellowsMode.pull && isChordPull) {
-      // Bajo sincronizado con el fuelle: Abre (pull) en azul solo si coincide con el acorde
+    } else if (buttonType != null && bellowsMode == BellowsMode.pull && (isChordPull || bassMatchPull.isMatch)) {
+      // Bajo en Abre (pull): Azul para exacto, Cian/Celeste para cercanía armónica
+      final isExact = bassMatchPull == BassMatchType.exact || (bassMatchPull == BassMatchType.none && isChordPull);
       bodyPaint.shader = RadialGradient(
         center: const Alignment(-0.40, -0.40),
         radius: 0.88,
-        colors: const [
-          Color(0xFFDBEAFE),
-          Color(0xFF60A5FA),
-          Color(0xFF2563EB),
-        ],
+        colors: isExact
+            ? const [Color(0xFFDBEAFE), Color(0xFF60A5FA), Color(0xFF2563EB)]
+            : const [Color(0xFFE0F2FE), Color(0xFF38BDF8), Color(0xFF0284C7)],
         stops: const [0.0, 0.58, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
-    } else if (buttonType != null && bellowsMode == BellowsMode.push && isChordPush) {
-      // Bajo sincronizado con el fuelle: Cierra (push) en rojo solo si coincide con el acorde
+    } else if (buttonType != null && bellowsMode == BellowsMode.push && (isChordPush || bassMatchPush.isMatch)) {
+      // Bajo en Cierra (push): Rojo para exacto, Ámbar/Naranja para cercanía armónica
+      final isExact = bassMatchPush == BassMatchType.exact || (bassMatchPush == BassMatchType.none && isChordPush);
       bodyPaint.shader = RadialGradient(
         center: const Alignment(-0.40, -0.40),
         radius: 0.88,
-        colors: const [
-          Color(0xFFFEE2E2),
-          Color(0xFFF87171),
-          Color(0xFFDC2626),
-        ],
+        colors: isExact
+            ? const [Color(0xFFFEE2E2), Color(0xFFF87171), Color(0xFFDC2626)]
+            : const [Color(0xFFFEF3C7), Color(0xFFF59E0B), Color(0xFFD97706)],
         stops: const [0.0, 0.58, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     } else if (!chordTint) {
@@ -295,17 +303,37 @@ class _AccordionButton3DPainter extends CustomPainter {
         canvas.drawCircle(center, radius, bodyPaint);
 
         if (paintPullHalf) {
-          // Mitad izquierda = Abre (azul)
+          // Mitad izquierda = Abre (azul exacto o cian cercano)
+          final isClosePull = buttonType != null && bassMatchPull == BassMatchType.close;
+          final effectivePullPaint = isClosePull
+              ? (Paint()
+                ..shader = RadialGradient(
+                  center: const Alignment(-0.35, -0.35),
+                  radius: 0.85,
+                  colors: const [Color(0xFFE0F2FE), Color(0xFF38BDF8), Color(0xFF0284C7)],
+                  stops: const [0.0, 0.55, 1.0],
+                ).createShader(Rect.fromCircle(center: center, radius: radius)))
+              : pullPaint;
           canvas.save();
           canvas.clipRect(Rect.fromLTWH(0, 0, size.width / 2, size.height));
-          canvas.drawCircle(center, radius, pullPaint);
+          canvas.drawCircle(center, radius, effectivePullPaint);
           canvas.restore();
         }
         if (paintPushHalf) {
-          // Mitad derecha = Cierra (rojo)
+          // Mitad derecha = Cierra (rojo exacto o ámbar cercano)
+          final isClosePush = buttonType != null && bassMatchPush == BassMatchType.close;
+          final effectivePushPaint = isClosePush
+              ? (Paint()
+                ..shader = RadialGradient(
+                  center: const Alignment(-0.35, -0.35),
+                  radius: 0.85,
+                  colors: const [Color(0xFFFEF3C7), Color(0xFFF59E0B), Color(0xFFD97706)],
+                  stops: const [0.0, 0.55, 1.0],
+                ).createShader(Rect.fromCircle(center: center, radius: radius)))
+              : pushPaint;
           canvas.save();
           canvas.clipRect(Rect.fromLTWH(size.width / 2, 0, size.width / 2, size.height));
-          canvas.drawCircle(center, radius, pushPaint);
+          canvas.drawCircle(center, radius, effectivePushPaint);
           canvas.restore();
         }
       } else {
@@ -416,6 +444,18 @@ class _AccordionButton3DPainter extends CustomPainter {
     } else if (isSelectedForRhythm) {
       borderPaint.color = const Color(0xFF7DD3FC);
       borderPaint.strokeWidth = 1.4;
+    } else if (buttonType != null && (bellowsMode == BellowsMode.pull || bellowsMode == BellowsMode.push || bellowsMode == BellowsMode.both) && (bassMatchPull.isMatch || bassMatchPush.isMatch || isChordPull || isChordPush)) {
+      // Bajo armónico: Borde dorado para coincidencia exacta, borde resaltado para cercanía
+      final isExact = (bellowsMode == BellowsMode.pull && (bassMatchPull == BassMatchType.exact || (bassMatchPull == BassMatchType.none && isChordPull))) ||
+          (bellowsMode == BellowsMode.push && (bassMatchPush == BassMatchType.exact || (bassMatchPush == BassMatchType.none && isChordPush))) ||
+          (bellowsMode == BellowsMode.both && (bassMatchPull == BassMatchType.exact || bassMatchPush == BassMatchType.exact));
+      if (isExact) {
+        borderPaint.color = const Color(0xFFFBBF24); // Oro nítido
+        borderPaint.strokeWidth = 2.2;
+      } else {
+        borderPaint.color = bellowsMode == BellowsMode.push ? const Color(0xFFFDBA74) : const Color(0xFF7DD3FC);
+        borderPaint.strokeWidth = 1.8;
+      }
     } else if (buttonType != null && bellowsMode == BellowsMode.pull) {
       // Bajo en Abre: borde azul.
       borderPaint.color = const Color(0xFF93C5FD);

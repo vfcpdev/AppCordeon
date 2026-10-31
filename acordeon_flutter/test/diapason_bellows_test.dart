@@ -226,4 +226,80 @@ void main() {
 
     expect(TuningRegistry.orderedTunings.first.id, 'cinco_letras');
   });
+
+  testWidgets(
+      'Al dar play al acorde, solo se muestran presionados los botones según está el fuelle',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: DiapasonWidget(
+              accordionNumber: 1,
+              currentTuning: TuningRegistry.defaultTunings[0],
+              onTuningChanged: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(DiapasonWidget)),
+    );
+    final notifier = container.read(accordionSimulatorProvider.notifier);
+
+    // 1. Cerrar (Push): solo los botones cuya nota push pertenece al acorde se muestran presionados
+    notifier.setBellows1(BellowsMode.push);
+    notifier.playFreeChord();
+    await tester.pump();
+
+    final pushButtons =
+        tester.widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget));
+    final pressedInPush = pushButtons.where((btn) => btn.isPressed).toList();
+    expect(pressedInPush, isNotEmpty);
+    for (final btn in pressedInPush) {
+      expect(btn.isChordPush, isTrue);
+    }
+
+    // Esperar a que se liberen los botones del acorde anterior
+    await tester.pump(const Duration(milliseconds: 1000));
+
+    // 2. Abrir (Pull): solo los botones cuya nota pull pertenece al acorde se muestran presionados
+    notifier.setBellows1(BellowsMode.pull);
+    notifier.playFreeChord();
+    await tester.pump();
+
+    final pullButtons =
+        tester.widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget));
+    final pressedInPull = pullButtons.where((btn) => btn.isPressed).toList();
+    expect(pressedInPull, isNotEmpty);
+    for (final btn in pressedInPull) {
+      expect(btn.isChordPull, isTrue);
+    }
+
+    // Esperar a que se liberen los botones del acorde anterior
+    await tester.pump(const Duration(milliseconds: 1000));
+
+    // 3. Arpegio: durante la reproducción del arpegio, los botones presionados corresponden al fuelle
+    notifier.setBellows1(BellowsMode.push);
+    notifier.arpeggioFreeChord();
+    await tester.pump();
+
+    final arpButtons =
+        tester.widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget));
+    final pressedInArp = arpButtons.where((btn) => btn.isPressed).toList();
+    expect(pressedInArp, isNotEmpty);
+    for (final btn in pressedInArp) {
+      expect(btn.isChordPush, isTrue);
+    }
+
+    // Limpieza de temporizadores de Future.delayed en el test
+    await tester.pump(const Duration(milliseconds: 1500));
+  });
 }

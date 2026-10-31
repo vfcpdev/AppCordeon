@@ -1,4 +1,3 @@
-s
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' show Color, Offset;
@@ -1615,8 +1614,13 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final targetPitchClasses = notes.map((n) => n % 12).toSet();
     final octFilter = state.freeChordOctave;
 
-    // Busca en ambos acordeones los botones correspondientes
-    for (final trebleData in [state.trebleData1, state.trebleData2]) {
+    final accordions = [
+      (1, state.trebleData1, state.bellows1),
+      (2, state.trebleData2, state.bellows2),
+    ];
+
+    // Busca en cada acordeón los botones correspondientes según la dirección activa del fuelle
+    for (final (accNum, trebleData, bellows) in accordions) {
       for (final row in trebleData.values) {
         for (final btn in row) {
           final matchesPull = octFilter == 'all'
@@ -1626,10 +1630,59 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
               ? targetPitchClasses.contains(btn.push % 12)
               : targetMidis.contains(btn.push);
 
-          if (matchesPull || matchesPush) {
-            matchingButtonIds.add(btn.id);
+          final bool isMatch;
+          switch (bellows) {
+            case BellowsMode.push:
+              isMatch = matchesPush;
+              break;
+            case BellowsMode.pull:
+              isMatch = matchesPull;
+              break;
+            case BellowsMode.both:
+              isMatch = matchesPull || matchesPush;
+              break;
+          }
+
+          if (isMatch) {
+            matchingButtonIds.add('a${accNum}_${btn.id}');
           }
         }
+      }
+    }
+
+    // Resalta también los bajos de acompañamiento (por coincidencia exacta o cercanía) según el fuelle
+    final chordRoot = notes.isNotEmpty ? notes.first % 12 : state.freeChordRoot;
+    final bellows1 = state.bellows1;
+
+    for (final btn in state.bassData1) {
+      final pushMatch = ChordCatalog.evaluateBassMatch(
+        notes: btn.pushNotes,
+        type: btn.type,
+        chordRoot: chordRoot,
+        chordPitchClasses: targetPitchClasses,
+      );
+      final pullMatch = ChordCatalog.evaluateBassMatch(
+        notes: btn.pullNotes,
+        type: btn.type,
+        chordRoot: chordRoot,
+        chordPitchClasses: targetPitchClasses,
+      );
+
+      final bool isBassMatch;
+      switch (bellows1) {
+        case BellowsMode.push:
+          isBassMatch = pushMatch.isMatch;
+          break;
+        case BellowsMode.pull:
+          isBassMatch = pullMatch.isMatch;
+          break;
+        case BellowsMode.both:
+          isBassMatch = pushMatch.isMatch || pullMatch.isMatch;
+          break;
+      }
+
+      if (isBassMatch) {
+        matchingButtonIds.add(btn.id);
       }
     }
 
@@ -1698,7 +1751,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       for (final row in state.trebleData1.values) {
         for (final btn in row) {
           if (btn.id == btnId) {
-            notes.add(btn.push + state.tuning1.offset);
+            final midi = state.bellows1 == BellowsMode.pull ? btn.pull : btn.push;
+            notes.add(midi);
           }
         }
       }
@@ -1720,7 +1774,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       for (final row in state.trebleData1.values) {
         for (final btn in row) {
           if (btn.id == btnId) {
-            notes.add(btn.push + state.tuning1.offset);
+            final midi = state.bellows1 == BellowsMode.pull ? btn.pull : btn.push;
+            notes.add(midi);
           }
         }
       }
