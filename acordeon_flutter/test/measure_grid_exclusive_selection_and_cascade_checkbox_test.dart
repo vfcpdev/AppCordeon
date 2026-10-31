@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:acordeon_flutter/core/di/providers.dart';
 import 'package:acordeon_flutter/domain/commands/accordion_commands.dart';
-import 'package:acordeon_flutter/domain/models/measure_models.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
@@ -110,22 +109,8 @@ void main() {
       addTearDown(container.dispose);
       final notifier = container.read(accordionSimulatorProvider.notifier);
 
-      // Iniciar con 2 compases (8 pulsos: 0..7)
-      final dummyMeasures = [
-        MeasureRow(measureIndex: 0, beats: [
-          MeasureBeat(chord: 'Do', timeText: '0.00'),
-          MeasureBeat(chord: '', timeText: '0.50'),
-          MeasureBeat(chord: '', timeText: '1.00'),
-          MeasureBeat(chord: '', timeText: '1.50'),
-        ]),
-        MeasureRow(measureIndex: 1, beats: [
-          MeasureBeat(chord: 'Sol', timeText: '2.00'),
-          MeasureBeat(chord: '', timeText: '2.50'),
-          MeasureBeat(chord: '', timeText: '3.00'),
-          MeasureBeat(chord: '', timeText: '3.50'),
-        ]),
-      ];
-      notifier.setMeasures(dummyMeasures);
+      // El estado inicial ya cuenta con 8 compases (32 pulsos: 0..31)
+      expect(container.read(accordionSimulatorProvider).measures.length, equals(8));
 
       // Marcar individualmente el pulso 0
       notifier.toggleBeatMark(0, 0);
@@ -134,14 +119,24 @@ void main() {
       // Ahora seleccionar con checkbox el pulso en compás 1, beat 0 (clave lineal = 4)
       notifier.toggleBeatMarkWithCascade(1, 0);
 
-      // Debe mantener el pulso 0 y marcar 4, 5, 6, 7
+      // Debe mantener el pulso 0 y marcar desde 4 hasta 31
       final marks = container.read(accordionSimulatorProvider).markedBeats;
-      expect(marks, equals({0, 4, 5, 6, 7}));
+      expect(marks.contains(0), isTrue);
+      expect(marks.contains(1), isFalse);
+      expect(marks.contains(2), isFalse);
+      expect(marks.contains(3), isFalse);
+      for (var i = 4; i < 32; i++) {
+        expect(marks.contains(i), isTrue, reason: 'El pulso $i debe estar marcado.');
+      }
 
       // Desmarcar desde compás 1, beat 2 (clave lineal = 6)
       notifier.toggleBeatMarkWithCascade(1, 2);
       final marksAfter = container.read(accordionSimulatorProvider).markedBeats;
-      expect(marksAfter, equals({0, 4, 5}));
+      expect(marksAfter.contains(0), isTrue);
+      expect(marksAfter.contains(4), isTrue);
+      expect(marksAfter.contains(5), isTrue);
+      expect(marksAfter.contains(6), isFalse);
+      expect(marksAfter.contains(7), isFalse);
     });
   });
 
@@ -155,15 +150,9 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final dummyMeasures = [
-        MeasureRow(measureIndex: 0, beats: [
-          MeasureBeat(chord: 'Do', timeText: '0.00'),
-          MeasureBeat(chord: 'Sol', timeText: '0.50'),
-          MeasureBeat(chord: 'Lam', timeText: '1.00'),
-          MeasureBeat(chord: 'Fa', timeText: '1.50'),
-        ]),
-      ];
-      container.read(accordionSimulatorProvider.notifier).setMeasures(dummyMeasures);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+      notifier.updateMeasureBeat(0, 0, 'Do');
+      notifier.updateMeasureBeat(0, 1, 'Sol');
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -175,13 +164,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Encontrar los TextFields de los beats dentro de la cuadrícula
-      // Los TextFields en MeasureGridWidget corresponden a los beats
+      // Encontrar los TextFields en la cuadrícula
       final textFields = find.byType(TextField);
       expect(textFields, findsWidgets);
 
       // Seleccionar el primer cuadro (compás 0, beat 0)
-      final firstBeatTextField = textFields.at(1); // at(0) puede ser el BPM o búsqueda
+      final firstBeatTextField = textFields.at(1); // at(0) es el TextField del BPM en el encabezado
       await tester.tap(firstBeatTextField);
       await tester.pumpAndSettle();
 
