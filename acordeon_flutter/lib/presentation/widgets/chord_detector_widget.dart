@@ -513,43 +513,46 @@ class ChordDetectorWidget extends ConsumerWidget {
                         ),
                         const SizedBox(width: 4),
                         Expanded(
-                          child: InkWell(
-                            key: const ValueKey('detector_show_diapason_btn'),
-                            onTap: () {
-                              notifier.showDetectedChordOnDiapason();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Acorde ${chord.formattedSymbol(notation)} mostrado en el diapasón.',
-                                  ),
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(4),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 2.5, horizontal: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF7C3AED),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              alignment: Alignment.center,
-                              child: const FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    FaIcon(FontAwesomeIcons.eye, size: 7.5, color: Colors.white),
-                                    SizedBox(width: 2.5),
-                                    Text(
-                                      'Diapasón',
-                                      style: TextStyle(
-                                        fontSize: 7.5,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
+                          child: Tooltip(
+                            message: 'Transferir al constructor y fijar en diapasón',
+                            child: InkWell(
+                              key: const ValueKey('detector_show_diapason_btn'),
+                              onTap: () {
+                                notifier.showDetectedChordOnDiapason();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Acorde ${chord.formattedSymbol(notation)} transferido al constructor y diapasón.',
                                     ),
-                                  ],
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(4),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 2.5, horizontal: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF7C3AED),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                alignment: Alignment.center,
+                                child: const FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      FaIcon(FontAwesomeIcons.eye, size: 7.5, color: Colors.white),
+                                      SizedBox(width: 2.5),
+                                      Text(
+                                        'Diapasón',
+                                        style: TextStyle(
+                                          fontSize: 7.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
