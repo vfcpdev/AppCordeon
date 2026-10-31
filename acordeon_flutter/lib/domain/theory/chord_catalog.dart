@@ -79,7 +79,7 @@ class ChordCatalog {
   /// en el sistema ('Sol#' [4] + 'sus4' [4] + 'maj7' [4] = 'Sol#sus4maj7' [12 caracteres]).
   static const String maxChordName = 'Sol#sus4maj7';
 
-  /// Símbolo textual del acorde (p. ej. `Dom7`, `Sol°7`, `Cadd9`) listo para
+  /// Símbolo textual del acorde (p. ej. `Dom7`, `Sol°7`, `Cadd9`, `Do/Mi`) listo para
   /// guardarse en una celda del Compás. Devuelve vacío si no hay tónica.
   ///
   /// Se usan los sufijos que entiende el reproductor del Compás (`m`, `dim`,
@@ -89,11 +89,13 @@ class ChordCatalog {
     required int root,
     required String type,
     required String extension,
+    String bass = '',
     bool latin = true,
     bool display = false,
   }) {
     if (root < 0 || root > 11) return '';
-    final rootName = (latin ? latinRootNames : germanRootNames)[root];
+    final rootNames = latin ? latinRootNames : germanRootNames;
+    final rootName = rootNames[root];
 
     final typeSymbol = switch (type) {
       'min' => 'm',
@@ -114,7 +116,24 @@ class ChordCatalog {
       _ => '',
     };
 
-    return '$rootName$typeSymbol$extensionSymbol';
+    String bassPart = '';
+    if (bass.isNotEmpty && bass != 'none') {
+      int? bassPc;
+      if (bass == '3' || bass == '/3') {
+        bassPc = (root + (type == 'min' ? 3 : 4)) % 12;
+      } else if (bass == '5' || bass == '/5') {
+        bassPc = (root + (type == 'dim' ? 6 : (type == 'aug' ? 8 : 7))) % 12;
+      } else if (bass == '7' || bass == '/7') {
+        bassPc = (root + (extension == 'maj7' ? 11 : 10)) % 12;
+      } else {
+        bassPc = rootPitchClassForChordSymbol(bass);
+      }
+      if (bassPc != null) {
+        bassPart = '/${rootNames[bassPc]}';
+      }
+    }
+
+    return '$rootName$typeSymbol$extensionSymbol$bassPart';
   }
 
   /// Nombres de las notas que componen el acorde según la notación solicitada.
@@ -145,10 +164,20 @@ class ChordCatalog {
   };
 
   /// Convierte el símbolo de un acorde a la notación especificada (latina o alemana),
-  /// preservando el tipo y las extensiones armónicas (p. ej. 'Do7' <-> 'C7', 'Solm' <-> 'Gm').
+  /// preservando el tipo y las extensiones armónicas (p. ej. 'Do7' <-> 'C7', 'Solm' <-> 'Gm', 'Do/Mi' <-> 'C/E').
   static String formatChordForNotation(String chord, NotationMode notation) {
     final trimmed = chord.trim();
     if (trimmed.isEmpty || trimmed == '-') return trimmed;
+
+    // Soporte para acordes con barra '/' (Slash Chords)
+    if (trimmed.contains('/')) {
+      final parts = trimmed.split('/');
+      if (parts.length == 2) {
+        final main = formatChordForNotation(parts[0], notation);
+        final bass = formatChordForNotation(parts[1], notation);
+        return '$main/$bass';
+      }
+    }
 
     String? matchedRoot;
     int? pitchClass;
@@ -345,18 +374,29 @@ class ChordCatalog {
     return '$newRootName$rest';
   }
 
-  /// Extrae las clases de altura (0..11) a partir de una cadena de acorde (p. ej. 'Do', 'Sol7', 'Am', etc.)
+  /// Extrae las clases de altura (0..11) a partir de una cadena de acorde (p. ej. 'Do', 'Sol7', 'Am', 'C/E', etc.)
   static Set<int> pitchClassesForChordSymbol(String chord) {
     final trimmed = chord.trim();
     if (trimmed.isEmpty) return const {};
 
+    // Manejo de acordes con bajo alterado / slash chords (ej: C/E, Do/Sol)
+    int? slashBassPc;
+    String chordToParse = trimmed;
+    if (trimmed.contains('/')) {
+      final parts = trimmed.split('/');
+      if (parts.length == 2) {
+        chordToParse = parts[0].trim();
+        slashBassPc = rootPitchClassForChordSymbol(parts[1].trim());
+      }
+    }
+
     int? rootPc;
     String rest = '';
     for (final entry in rootPitchClasses.entries) {
-      if (trimmed.startsWith(entry.key)) {
-        if (rootPc == null || entry.key.length > (trimmed.length - rest.length)) {
+      if (chordToParse.startsWith(entry.key)) {
+        if (rootPc == null || entry.key.length > (chordToParse.length - rest.length)) {
           rootPc = entry.value;
-          rest = trimmed.substring(entry.key.length);
+          rest = chordToParse.substring(entry.key.length);
         }
       }
     }
@@ -398,6 +438,11 @@ class ChordCatalog {
     if (rest.contains('add9')) {
       pcs.add((rootPc + 2) % 12);
     }
+
+    if (slashBassPc != null) {
+      pcs.add(slashBassPc);
+    }
+
     return pcs;
   }
 
@@ -445,13 +490,15 @@ class ChordCatalog {
   }
 
   /// Obtiene la clase de altura de la raíz (0..11) a partir del símbolo del acorde.
+  /// Si es un acorde con barra (ej: C/E, Do/Sol), analiza la raíz principal.
   static int? rootPitchClassForChordSymbol(String chord) {
     final trimmed = chord.trim();
     if (trimmed.isEmpty) return null;
+    final chordToParse = trimmed.contains('/') ? trimmed.split('/')[0].trim() : trimmed;
     int? rootPc;
     int longestMatch = 0;
     for (final entry in rootPitchClasses.entries) {
-      if (trimmed.startsWith(entry.key)) {
+      if (chordToParse.startsWith(entry.key)) {
         if (entry.key.length > longestMatch) {
           longestMatch = entry.key.length;
           rootPc = entry.value;
@@ -459,6 +506,22 @@ class ChordCatalog {
       }
     }
     return rootPc;
+  }
+
+  /// Obtiene la clase de altura del bajo (0..11) a partir del símbolo del acorde.
+  /// Si es un acorde con barra (ej: C/E, Do/Sol), devuelve la nota tras la barra;
+  /// de lo contrario, devuelve la tónica principal.
+  static int? bassPitchClassForChordSymbol(String chord) {
+    final trimmed = chord.trim();
+    if (trimmed.isEmpty) return null;
+    if (trimmed.contains('/')) {
+      final parts = trimmed.split('/');
+      if (parts.length == 2) {
+        final bass = rootPitchClassForChordSymbol(parts[1].trim());
+        if (bass != null) return bass;
+      }
+    }
+    return rootPitchClassForChordSymbol(trimmed);
   }
 
   /// Evalúa si las notas de un botón de bajo acompañan al acorde activo,

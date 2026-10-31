@@ -1,10 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../core/constants/enums.dart';
+import '../../domain/theory/chord_catalog.dart';
+import '../../domain/theory/chord_detector_engine.dart';
 import '../controllers/accordion_controller.dart';
 
+/// Widget compacto, reactivo y desacoplable para el Detector Inteligente de Acordes.
+/// Se ubica directamente debajo de la sección "Estado del Acorde" o como ventana flotante.
 class ChordDetectorWidget extends ConsumerWidget {
-  const ChordDetectorWidget({super.key});
+  final double? width;
+  final bool isFloating;
+  final VoidCallback? onDock;
+
+  const ChordDetectorWidget({
+    super.key,
+    this.width,
+    this.isFloating = false,
+    this.onDock,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -13,330 +27,551 @@ class ChordDetectorWidget extends ConsumerWidget {
 
     final chord = state.detectedChord;
     final hasSelection = state.detectorSelectedButtons.isNotEmpty;
+    final notation = state.notation;
+
+    // Disponibilidad en el fuelle (Abre / Cierra)
+    final availability = chord != null
+        ? ChordDetectorEngine.evaluateDiapasonBellows(
+            chordPitchClasses: chord.pitchClasses,
+            trebleData: state.trebleData1,
+          )
+        : null;
+
+    final cardWidth = width ?? 185.0;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      width: cardWidth,
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFCBD5E1)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: state.detectorMode
+              ? const Color(0xFFC084FC)
+              : const Color(0xFFCBD5E1),
+          width: state.detectorMode ? 1.2 : 0.8,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Cabecera: Título y Controles
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            alignment: WrapAlignment.spaceBetween,
-            children: [
-              const Row(
+          // ─── CABECERA: TÍTULO Y BOTONES DE ACCIÓN ──────────────────────
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const FaIcon(
+                  FontAwesomeIcons.microchip,
+                  size: 10,
+                  color: Color(0xFF7C3AED),
+                ),
+                const SizedBox(width: 4),
+                const Text(
+                  'Detector',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF7C3AED),
+                  ),
+                ),
+                const SizedBox(width: 6),
+
+                // 1. Push Button Activo / Inactivo (Sin texto, Verde = Activo, Rojo = Inactivo)
+                Tooltip(
+                  message: state.detectorMode
+                      ? 'Detector Activo (clic para desactivar)'
+                      : 'Detector Inactivo (clic para activar)',
+                  child: InkWell(
+                    key: const ValueKey('detector_toggle_active_btn'),
+                    onTap: notifier.toggleDetectorMode,
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: state.detectorMode
+                            ? const Color(0xFF16A34A) // Verde Activo
+                            : const Color(0xFFDC2626), // Rojo Inactivo
+                        borderRadius: BorderRadius.circular(4),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (state.detectorMode
+                                    ? const Color(0xFF16A34A)
+                                    : const Color(0xFFDC2626))
+                                .withValues(alpha: 0.4),
+                            blurRadius: 3,
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: const FaIcon(
+                        FontAwesomeIcons.powerOff,
+                        size: 8.5,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+
+                // 2. Botón Play (Solo icono)
+                Tooltip(
+                  message: 'Reproducir acorde',
+                  child: InkWell(
+                    key: const ValueKey('detector_play_btn'),
+                    onTap: hasSelection ? notifier.playDetectorChord : null,
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: hasSelection
+                            ? const Color(0xFF0284C7)
+                            : const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      alignment: Alignment.center,
+                      child: FaIcon(
+                        FontAwesomeIcons.play,
+                        size: 8.5,
+                        color: hasSelection ? Colors.white : const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+
+                // 3. Botón Arpegio (Solo icono, igual que en Acorde)
+                Tooltip(
+                  message: 'Reproducir arpegio',
+                  child: InkWell(
+                    key: const ValueKey('detector_arpeggio_btn'),
+                    onTap: hasSelection ? notifier.arpeggioDetectorChord : null,
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: hasSelection
+                            ? const Color(0xFF059669)
+                            : const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      alignment: Alignment.center,
+                      child: FaIcon(
+                        FontAwesomeIcons.music,
+                        size: 8.5,
+                        color: hasSelection ? Colors.white : const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+
+                // 4. Botón Limpiar (Solo icono trash)
+                Tooltip(
+                  message: 'Limpiar selección',
+                  child: InkWell(
+                    key: const ValueKey('detector_clear_btn'),
+                    onTap: hasSelection ? notifier.clearDetector : null,
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: hasSelection
+                            ? const Color(0xFFFEE2E2)
+                            : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      alignment: Alignment.center,
+                      child: FaIcon(
+                        FontAwesomeIcons.trashCan,
+                        size: 8.5,
+                        color: hasSelection
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFFCBD5E1),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+
+                // 5. Botón Desacoplar / Acoplar
+                Tooltip(
+                  message: state.isChordDetectorUndocked
+                      ? 'Acoplar Detector de Acordes'
+                      : 'Desacoplar Detector de Acordes (mover libremente)',
+                  child: InkWell(
+                    key: const ValueKey('detector_undock_btn'),
+                    onTap: onDock ?? notifier.toggleUndockChordDetector,
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: state.isChordDetectorUndocked
+                            ? const Color(0xFFEFF6FF)
+                            : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: state.isChordDetectorUndocked
+                              ? const Color(0xFF3B82F6)
+                              : const Color(0xFFCBD5E1),
+                          width: 0.8,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: FaIcon(
+                        state.isChordDetectorUndocked
+                            ? FontAwesomeIcons.compress
+                            : FontAwesomeIcons.arrowUpRightFromSquare,
+                        size: 8.0,
+                        color: state.isChordDetectorUndocked
+                            ? const Color(0xFF2563EB)
+                            : const Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 5),
+
+          // ─── ESTADO DE SELECCIÓN O GUÍA ────────────────────────────────
+          if (!hasSelection)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Text(
+                state.detectorMode
+                    ? 'Toca 2 o más botones en el diapasón para identificar el acorde.'
+                    : 'Activa el botón verde para seleccionar botones en el diapasón.',
+                style: const TextStyle(
+                  fontSize: 7.8,
+                  color: Color(0xFF64748B),
+                  fontStyle: FontStyle.italic,
+                  height: 1.2,
+                ),
+              ),
+            )
+          else ...[
+            // Tira de conteo
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  FaIcon(FontAwesomeIcons.microchip, size: 14, color: Color(0xFF7C3AED)),
-                  SizedBox(width: 6),
                   Text(
-                    'Detector de Acordes',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
+                    '${state.detectorSelectedButtons.length} botones',
+                    style: const TextStyle(
+                      fontSize: 8.0,
+                      fontWeight: FontWeight.bold,
                       color: Color(0xFF7C3AED),
                     ),
                   ),
+                  if (chord != null && chord.inversion.isNotEmpty) ...[
+                    const SizedBox(width: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3E8FF),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: Text(
+                        chord.inversion,
+                        style: const TextStyle(
+                          fontSize: 7.0,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF7E22CE),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
+            ),
+            const SizedBox(height: 4),
 
-              Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
+            // ─── ACORDE CONSTRUIDO / IDENTIFICADO ────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAF5FF),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFE9D5FF)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Botón Modo Selección (ON / OFF)
-                  InkWell(
-                    onTap: notifier.toggleDetectorMode,
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: state.detectorMode ? const Color(0xFF7C3AED) : Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFF7C3AED)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          FaIcon(
-                            FontAwesomeIcons.handPointer,
-                            size: 9,
-                            color: state.detectorMode ? Colors.white : const Color(0xFF7C3AED),
+                  // Nombre del acorde (sigue notación)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          chord != null
+                              ? chord.formattedName(notation)
+                              : 'Identificando...',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w900,
+                            color: chord != null
+                                ? const Color(0xFF581C87)
+                                : const Color(0xFF94A3B8),
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Modo: ${state.detectorMode ? "ON" : "OFF"}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (chord != null && chord.chordSymbol.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFFD8B4FE)),
+                          ),
+                          child: Text(
+                            chord.formattedSymbol(notation),
+                            style: const TextStyle(
+                              fontSize: 9.0,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF7C3AED),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+
+                  // Notas que forman el acorde
+                  if (chord != null) ...[
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          const TextSpan(
+                            text: 'Notas: ',
                             style: TextStyle(
-                              fontSize: 9.5,
+                              fontSize: 8.0,
                               fontWeight: FontWeight.bold,
-                              color: state.detectorMode ? Colors.white : const Color(0xFF7C3AED),
+                              color: Color(0xFF6B21A8),
+                            ),
+                          ),
+                          TextSpan(
+                            text: chord.pitchClasses
+                                .map((pc) => notation == NotationMode.alemana
+                                    ? ChordCatalog.germanRootNames[pc]
+                                    : ChordCatalog.latinRootNames[pc])
+                                .join(' - '),
+                            style: const TextStyle(
+                              fontSize: 8.0,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF15803D),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 4),
 
-                  // Tocar
-                  ElevatedButton.icon(
-                    icon: const FaIcon(FontAwesomeIcons.play, size: 9),
-                    label: const Text('Tocar', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0284C7),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                      minimumSize: const Size(0, 24),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    // Lógica del acorde en el diapasón: Fuelle Abre / Cierra
+                    if (availability != null)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: availability.isCompletePull
+                                    ? const Color(0xFFDCFCE7)
+                                    : const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(3),
+                                border: Border.all(
+                                  color: availability.isCompletePull
+                                      ? const Color(0xFF86EFAC)
+                                      : const Color(0xFFFDE68A),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Text(
+                                availability.isCompletePull
+                                    ? 'Abre (←): Completo'
+                                    : 'Abre: ${availability.pullMatchedPcs.length}/${chord.pitchClasses.length}',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 7.2,
+                                  fontWeight: FontWeight.w800,
+                                  color: availability.isCompletePull
+                                      ? const Color(0xFF15803D)
+                                      : const Color(0xFFB45309),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: availability.isCompletePush
+                                    ? const Color(0xFFDCFCE7)
+                                    : const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(3),
+                                border: Border.all(
+                                  color: availability.isCompletePush
+                                      ? const Color(0xFF86EFAC)
+                                      : const Color(0xFFFDE68A),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Text(
+                                availability.isCompletePush
+                                    ? 'Cierra (→): Completo'
+                                    : 'Cierra: ${availability.pushMatchedPcs.length}/${chord.pitchClasses.length}',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 7.2,
+                                  fontWeight: FontWeight.w800,
+                                  color: availability.isCompletePush
+                                      ? const Color(0xFF15803D)
+                                      : const Color(0xFFB45309),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    const SizedBox(height: 5),
+
+                    // Botones de acción: Asignar y Mostrar en Diapasón
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            key: const ValueKey('detector_assign_btn'),
+                            onTap: () {
+                              notifier.assignDetectedChordToCompas(1);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Acorde ${chord.formattedSymbol(notation)} asignado al compás.',
+                                  ),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 2.5, horizontal: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0284C7),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              alignment: Alignment.center,
+                              child: const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    FaIcon(FontAwesomeIcons.squareCheck, size: 7.5, color: Colors.white),
+                                    SizedBox(width: 2.5),
+                                    Text(
+                                      'Asignar',
+                                      style: TextStyle(
+                                        fontSize: 7.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: InkWell(
+                            key: const ValueKey('detector_show_diapason_btn'),
+                            onTap: () {
+                              notifier.showDetectedChordOnDiapason();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Acorde ${chord.formattedSymbol(notation)} mostrado en el diapasón.',
+                                  ),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 2.5, horizontal: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7C3AED),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              alignment: Alignment.center,
+                              child: const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    FaIcon(FontAwesomeIcons.eye, size: 7.5, color: Colors.white),
+                                    SizedBox(width: 2.5),
+                                    Text(
+                                      'Diapasón',
+                                      style: TextStyle(
+                                        fontSize: 7.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    onPressed: hasSelection ? notifier.playDetectorChord : null,
-                  ),
 
-                  // Arpegio
-                  ElevatedButton.icon(
-                    icon: const FaIcon(FontAwesomeIcons.music, size: 9),
-                    label: const Text('Arpegio', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF059669),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                      minimumSize: const Size(0, 24),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                    ),
-                    onPressed: hasSelection ? notifier.arpeggioDetectorChord : null,
-                  ),
-
-                  // Limpiar
-                  IconButton(
-                    icon: const FaIcon(FontAwesomeIcons.trashCan, size: 10, color: Colors.redAccent),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
-                    onPressed: notifier.clearDetector,
-                    tooltip: 'Limpiar selección',
-                  ),
+                    if (chord.alternatives.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        'Alt: ${chord.alternatives.join(", ")}',
+                        style: const TextStyle(
+                          fontSize: 7.2,
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
                 ],
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Subbarra de dirección de fuelle al seleccionar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: const Color(0xFFCBD5E1)),
             ),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Fuelle:', style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B))),
-                    const SizedBox(width: 4),
-                    ToggleButtons(
-                      isSelected: [
-                        state.detectorDirection == 'auto',
-                        state.detectorDirection == 'push',
-                        state.detectorDirection == 'pull',
-                      ],
-                      onPressed: (idx) {
-                        final dirs = ['auto', 'push', 'pull'];
-                        notifier.setDetectorDirection(dirs[idx]);
-                      },
-                      borderRadius: BorderRadius.circular(4),
-                      selectedColor: Colors.white,
-                      fillColor: const Color(0xFF7C3AED),
-                      constraints: const BoxConstraints(minHeight: 18, minWidth: 32),
-                      children: const [
-                        Text('Auto', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold)),
-                        Text('Cierra', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold)),
-                        Text('Abre', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ],
-                ),
-                Text(
-                  '${state.detectorSelectedButtons.length} botones',
-                  style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          // Tira de botones seleccionados
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: const Color(0xFFCBD5E1)),
-            ),
-            child: hasSelection
-                ? Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: state.detectorSelectedButtons.map((btnId) {
-                      return Chip(
-                        label: Text(btnId, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
-                        backgroundColor: const Color(0xFFE0E7FF),
-                        padding: EdgeInsets.zero,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
-                      );
-                    }).toList(),
-                  )
-                : const Text(
-                    'Haz clic en los botones del diapasón para seleccionarlos...',
-                    style: TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8), fontStyle: FontStyle.italic),
-                  ),
-          ),
-          const SizedBox(height: 8),
-
-          // Tarjeta de Resultado Armónico
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFDF4FF),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFF0ABFC)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'ACORDE IDENTIFICADO:',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF7C3AED),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    if (chord != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3E8FF),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: const Color(0xFFD8B4FE)),
-                        ),
-                        child: Text(
-                          chord.inversion,
-                          style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF7E22CE)),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-
-                Text(
-                  chord != null ? chord.name : 'Selecciona 2 o más botones',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    color: chord != null ? const Color(0xFF0F172A) : const Color(0xFF64748B),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // 4 Cajas Métricas (TÓNICA, BAJO REAL, ESTRUCTURA, TIPO)
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatBox(
-                        'TÓNICA',
-                        chord?.root ?? '-',
-                        const Color(0xFF0284C7),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: _buildStatBox(
-                        'BAJO REAL',
-                        chord?.bass ?? '-',
-                        const Color(0xFFB45309),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: _buildStatBox(
-                        'ESTRUCTURA',
-                        chord?.formula ?? '-',
-                        const Color(0xFF059669),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: _buildStatBox(
-                        'TIPO',
-                        chord?.type ?? '-',
-                        const Color(0xFFDB2777),
-                      ),
-                    ),
-                  ],
-                ),
-
-                if (chord != null && chord.alternatives.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    'También puede ser: ${chord.alternatives.join(", ")}',
-                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatBox(String label, String value, Color valueColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 7.5, fontWeight: FontWeight.w800, color: Color(0xFF64748B)),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            value,
-            style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: valueColor),
-            overflow: TextOverflow.ellipsis,
-          ),
+          ],
         ],
       ),
     );

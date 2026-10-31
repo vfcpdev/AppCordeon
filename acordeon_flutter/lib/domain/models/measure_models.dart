@@ -53,6 +53,11 @@ class DetectedChordModel {
   final String type;
   final String inversion;
   final List<String> alternatives;
+  final String chordSymbol;
+  final Set<int> pitchClasses;
+  final int rootPitchClass;
+  final int bassPitchClass;
+  final List<int> notes;
 
   const DetectedChordModel({
     required this.name,
@@ -62,5 +67,25 @@ class DetectedChordModel {
     required this.type,
     required this.inversion,
     this.alternatives = const [],
+    this.chordSymbol = '',
+    this.pitchClasses = const {},
+    this.rootPitchClass = 0,
+    this.bassPitchClass = 0,
+    this.notes = const [],
   });
+
+  /// Devuelve el nombre del acorde adaptado a la notación (Latina o Americana/Alemana).
+  String formattedName(NotationMode notation) {
+    if (notation == NotationMode.alemana) {
+      if (chordSymbol.isNotEmpty) return chordSymbol;
+      return name;
+    }
+    return name;
+  }
+
+  /// Devuelve el símbolo del acorde adaptado a la notación.
+  String formattedSymbol(NotationMode notation) {
+    if (chordSymbol.isEmpty) return root;
+    return chordSymbol;
+  }
 }

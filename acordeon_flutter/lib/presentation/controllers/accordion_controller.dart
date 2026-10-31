@@ -16,6 +16,7 @@ import '../../domain/models/measure_json_serializer.dart';
 import '../../domain/models/measure_models.dart';
 import '../../domain/models/tuning.dart';
 import '../../domain/theory/chord_catalog.dart';
+import '../../domain/theory/chord_detector_engine.dart';
 
 export '../../domain/models/measure_json_serializer.dart';
 export '../../domain/models/measure_models.dart';
@@ -144,6 +145,16 @@ class AccordionSimulatorState {
   final Offset? _songBarPosition;
   Offset get songBarPosition => _songBarPosition ?? const Offset(20, 50);
 
+  // Detector de acordes acoplable/desacoplable y movible
+  final bool? _isChordDetectorUndocked;
+  bool get isChordDetectorUndocked => _isChordDetectorUndocked ?? false;
+
+  final Offset? _chordDetectorPosition;
+  Offset get chordDetectorPosition => _chordDetectorPosition ?? const Offset(390, 150);
+
+  // Bajo alterado / Slash chord en constructor libre
+  final String freeChordBass;
+
   /// Acorde activo en el Compás actual (o el más reciente dentro del compás/tiempo).
   String get activeCompasChord {
     if (selectedBarIndex == null || selectedBarIndex! < 0 || selectedBarIndex! >= measures.length) {
@@ -233,12 +244,15 @@ class AccordionSimulatorState {
     this.showMultiBeatModal = false,
     this.multiBeatPattern = '',
     this.multiBeatChord,
+    this.freeChordBass = '',
     bool? isCompas1Undocked,
     Offset? compas1Position,
     bool? isCompas2Undocked,
     Offset? compas2Position,
     bool? isSongBarUndocked,
     Offset? songBarPosition,
+    bool? isChordDetectorUndocked,
+    Offset? chordDetectorPosition,
   })  : _markedBeats = markedBeats ?? const {},
         _yellowDecisionBeats = yellowDecisionBeats ?? const {},
         _isCompas1Undocked = isCompas1Undocked ?? false,
@@ -246,7 +260,9 @@ class AccordionSimulatorState {
         _isCompas2Undocked = isCompas2Undocked ?? false,
         _compas2Position = compas2Position ?? const Offset(440, 70),
         _isSongBarUndocked = isSongBarUndocked ?? false,
-        _songBarPosition = songBarPosition ?? const Offset(20, 50);
+        _songBarPosition = songBarPosition ?? const Offset(20, 50),
+        _isChordDetectorUndocked = isChordDetectorUndocked ?? false,
+        _chordDetectorPosition = chordDetectorPosition ?? const Offset(390, 150);
 
   AccordionSimulatorState copyWith({
     Color? backgroundColor,
@@ -307,6 +323,9 @@ class AccordionSimulatorState {
     Offset? compas2Position,
     bool? isSongBarUndocked,
     Offset? songBarPosition,
+    bool? isChordDetectorUndocked,
+    Offset? chordDetectorPosition,
+    String? freeChordBass,
   }) {
     return AccordionSimulatorState(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -350,6 +369,7 @@ class AccordionSimulatorState {
       freeChordBellows: freeChordBellows ?? this.freeChordBellows,
       freeChordScaleHarmonicMode:
           freeChordScaleHarmonicMode ?? this.freeChordScaleHarmonicMode,
+      freeChordBass: freeChordBass ?? this.freeChordBass,
       detectorMode: detectorMode ?? this.detectorMode,
       detectorDirection: detectorDirection ?? this.detectorDirection,
       detectorSelectedButtons:
@@ -367,6 +387,10 @@ class AccordionSimulatorState {
       compas2Position: compas2Position ?? this.compas2Position,
       isSongBarUndocked: isSongBarUndocked ?? this.isSongBarUndocked,
       songBarPosition: songBarPosition ?? this.songBarPosition,
+      isChordDetectorUndocked:
+          isChordDetectorUndocked ?? this.isChordDetectorUndocked,
+      chordDetectorPosition:
+          chordDetectorPosition ?? this.chordDetectorPosition,
     );
   }
 
@@ -497,6 +521,18 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     state = state.copyWith(songBarPosition: position);
   }
 
+  void toggleUndockChordDetector() {
+    state = state.copyWith(isChordDetectorUndocked: !state.isChordDetectorUndocked);
+  }
+
+  void setChordDetectorPosition(Offset position) {
+    state = state.copyWith(chordDetectorPosition: position);
+  }
+
+  void setFreeChordBass(String bass) {
+    state = state.copyWith(freeChordBass: bass);
+  }
+
   void setNotation(NotationMode notation) {
     if (state.notation == notation) return;
 
@@ -509,9 +545,17 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       return MeasureRow(barNumber: row.barNumber, beats: updatedBeats);
     }).toList();
 
+    final convertedDetected = state.detectedChord != null && state.detectedChord!.notes.isNotEmpty
+        ? ChordDetectorEngine.detect(
+            midiNotes: state.detectedChord!.notes,
+            notation: notation,
+          )
+        : null;
+
     state = state.copyWith(
       notation: notation,
       measures: convertedMeasures,
+      detectedChord: convertedDetected ?? state.detectedChord,
       multiBeatChord: state.multiBeatChord != null && state.multiBeatChord!.isNotEmpty
           ? ChordCatalog.formatChordForNotation(state.multiBeatChord!, notation)
           : state.multiBeatChord,
@@ -1602,6 +1646,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       root: state.freeChordRoot,
       type: state.freeChordType,
       extension: state.freeChordFourth,
+      bass: state.freeChordBass,
       latin: state.notation != NotationMode.alemana,
     );
     if (symbol.isEmpty) return null;
@@ -2080,14 +2125,18 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void playDetectorChord() {
-    if (state.detectorSelectedButtons.isEmpty) return;
+    if (state.detectorSelectedButtons.isEmpty && state.detectedChord == null) return;
     final notes = <int>[];
-    for (final btnId in state.detectorSelectedButtons) {
-      for (final row in state.trebleData1.values) {
-        for (final btn in row) {
-          if (btn.id == btnId) {
-            final midi = state.bellows1 == BellowsMode.pull ? btn.pull : btn.push;
-            notes.add(midi);
+    if (state.detectedChord != null && state.detectedChord!.notes.isNotEmpty) {
+      notes.addAll(state.detectedChord!.notes);
+    } else {
+      for (final btnId in state.detectorSelectedButtons) {
+        for (final row in state.trebleData1.values) {
+          for (final btn in row) {
+            if (btn.id == btnId) {
+              final midi = state.bellows1 == BellowsMode.pull ? btn.pull : btn.push;
+              notes.add(midi);
+            }
           }
         }
       }
@@ -2103,14 +2152,18 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void arpeggioDetectorChord() async {
-    if (state.detectorSelectedButtons.isEmpty) return;
+    if (state.detectorSelectedButtons.isEmpty && state.detectedChord == null) return;
     final notes = <int>[];
-    for (final btnId in state.detectorSelectedButtons) {
-      for (final row in state.trebleData1.values) {
-        for (final btn in row) {
-          if (btn.id == btnId) {
-            final midi = state.bellows1 == BellowsMode.pull ? btn.pull : btn.push;
-            notes.add(midi);
+    if (state.detectedChord != null && state.detectedChord!.notes.isNotEmpty) {
+      notes.addAll(state.detectedChord!.notes);
+    } else {
+      for (final btnId in state.detectorSelectedButtons) {
+        for (final row in state.trebleData1.values) {
+          for (final btn in row) {
+            if (btn.id == btnId) {
+              final midi = state.bellows1 == BellowsMode.pull ? btn.pull : btn.push;
+              notes.add(midi);
+            }
           }
         }
       }
@@ -2122,20 +2175,70 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
   }
 
+  /// Asigna el acorde detectado al compás y tiempo seleccionado actualmente.
+  void assignDetectedChordToCompas([int accordionNumber = 1]) {
+    final chord = state.detectedChord;
+    if (chord == null) return;
+
+    final barIdx = state.selectedBarIndex ?? 0;
+    final beatIdx = state.selectedBeatIndex ?? 0;
+
+    // Asignar símbolo del acorde al compás
+    final chordSymbol = chord.formattedSymbol(state.notation);
+    updateMeasureBeat(barIdx, beatIdx, chordSymbol);
+
+    // Evaluar si se puede asignar automáticamente el fuelle
+    final treble = accordionNumber == 1 ? state.trebleData1 : state.trebleData2;
+    final availability = ChordDetectorEngine.evaluateDiapasonBellows(
+      chordPitchClasses: chord.pitchClasses,
+      trebleData: treble,
+    );
+
+    if (availability.isCompletePush && !availability.isCompletePull) {
+      setBeatBellows(barIdx, beatIdx, BellowsMode.push);
+    } else if (!availability.isCompletePush && availability.isCompletePull) {
+      setBeatBellows(barIdx, beatIdx, BellowsMode.pull);
+    }
+  }
+
+  /// Muestra el acorde detectado en el diapasón principal fijando sus notas.
+  void showDetectedChordOnDiapason() {
+    final chord = state.detectedChord;
+    if (chord == null) return;
+    setFreeChordRoot(chord.rootPitchClass);
+    if (!state.isFreeChordFixed) {
+      toggleFreeChordFixed();
+    }
+  }
+
   void _recalculateDetectedChord() {
     if (state.detectorSelectedButtons.length < 2) {
       state = state.copyWith(detectedChord: null);
       return;
     }
-    // Simulación de análisis armónico inteligente en Dart / Rust
-    final detected = DetectedChordModel(
-      name: 'Bb Mayor (Tríada)',
-      root: 'Si♭',
-      bass: 'Si♭',
-      formula: '1 - 3 - 5',
-      type: 'Tríada Mayor',
-      inversion: 'Estado Fundamental',
-      alternatives: ['Gm7/Bb', 'D#sus2'],
+
+    final selectedIds = state.detectorSelectedButtons.toSet();
+    final notes = <int>[];
+
+    for (final row in state.trebleData1.values) {
+      for (final btn in row) {
+        if (selectedIds.contains(btn.id)) {
+          final midi = state.bellows1 == BellowsMode.pull ? btn.pull : btn.push;
+          if (!notes.contains(midi)) {
+            notes.add(midi);
+          }
+        }
+      }
+    }
+
+    if (notes.length < 2) {
+      state = state.copyWith(detectedChord: null);
+      return;
+    }
+
+    final detected = ChordDetectorEngine.detect(
+      midiNotes: notes,
+      notation: state.notation,
     );
     state = state.copyWith(detectedChord: detected);
   }
@@ -2158,6 +2261,7 @@ final activeChordPitchClassesProvider =
   final freeChordType = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordType));
   final freeChordFourth = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordFourth));
   final detectorSelected = ref.watch(accordionSimulatorProvider.select((s) => s.detectorSelectedButtons));
+  final detectedChord = ref.watch(accordionSimulatorProvider.select((s) => s.detectedChord));
   final syncDiapason = ref.watch(accordionSimulatorProvider.select((s) => s.syncDiapason));
   final isPlaying = ref.watch(accordionSimulatorProvider.select((s) => s.isPlayingAudio));
   final playingChordNotes = ref.watch(accordionSimulatorProvider.select((s) => s.playingChordNotes));
@@ -2211,6 +2315,7 @@ final activeChordPitchClassesProvider =
     ...baseChordPcs,
     ...playingPcs,
     ...selectedChordNotes.map((n) => n % 12),
+    if (detectedChord != null) ...detectedChord.pitchClasses,
   };
 });
 

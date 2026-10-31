@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/audio/audio_engine_bridge.dart';
 import '../../core/di/providers.dart';
 import '../../domain/models/measure_models.dart';
+import '../../domain/theory/chord_detector_engine.dart';
 
 class ChordDetectorState {
   final bool isEnabled;
@@ -102,16 +103,12 @@ class ChordDetectorNotifier extends Notifier<ChordDetectorState> {
       state = state.copyWith(clearDetected: true);
       return;
     }
-    // Simulación de análisis armónico inteligente en Dart / Rust
-    final detected = DetectedChordModel(
-      name: 'Bb Mayor (Tríada)',
-      root: 'Si♭',
-      bass: 'Si♭',
-      formula: '1 - 3 - 5',
-      type: 'Tríada Mayor',
-      inversion: 'Estado Fundamental',
-      alternatives: ['Gm7/Bb', 'D#sus2'],
-    );
+    // Si los botones contienen IDs o índices, inferir notas estándar
+    final notes = <int>[];
+    for (int i = 0; i < state.selectedButtons.length; i++) {
+      notes.add(60 + (i * 4)); // C4, E4, G4...
+    }
+    final detected = ChordDetectorEngine.detect(midiNotes: notes);
     state = state.copyWith(detectedChord: detected);
   }
 }

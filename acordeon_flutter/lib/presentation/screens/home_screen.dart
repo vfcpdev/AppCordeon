@@ -109,21 +109,6 @@ class HomeScreen extends ConsumerWidget {
                             ),
 
                             const SizedBox(height: 10),
-
-                            // ================= FILA INFERIOR: TEORÍA ARMÓNICA =================
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  // Sección 3: Detector Inteligente de Acordes
-                                  SizedBox(
-                                    width: 818,
-                                    child: ChordDetectorWidget(),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -154,6 +139,13 @@ class HomeScreen extends ConsumerWidget {
                   position: state.songBarPosition,
                   onPositionChanged: notifier.setSongBarPosition,
                   onDock: notifier.toggleUndockSongBar,
+                ),
+              if (state.isChordDetectorUndocked)
+                _buildFloatingChordDetector(
+                  context: context,
+                  position: state.chordDetectorPosition,
+                  onPositionChanged: notifier.setChordDetectorPosition,
+                  onDock: notifier.toggleUndockChordDetector,
                 ),
               if (state.showMultiBeatModal)
                 const MultiBeatChordDialog(),
@@ -422,6 +414,111 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+
+  Widget _buildFloatingChordDetector({
+    required BuildContext context,
+    required Offset position,
+    required ValueChanged<Offset> onPositionChanged,
+    required VoidCallback onDock,
+  }) {
+    final screen = MediaQuery.sizeOf(context);
+    final clampedX = position.dx.clamp(5.0, (screen.width - 220).clamp(5.0, double.infinity));
+    final clampedY = position.dy.clamp(5.0, (screen.height - 300).clamp(5.0, double.infinity));
+
+    return Positioned(
+      left: clampedX,
+      top: clampedY,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          width: 200,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 16,
+                spreadRadius: 2,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onPanUpdate: (details) {
+                  onPositionChanged(Offset(position.dx + details.delta.dx, position.dy + details.delta.dy));
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF7C3AED),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FaIcon(
+                            FontAwesomeIcons.upDownLeftRight,
+                            size: 9,
+                            color: Colors.white70,
+                          ),
+                          SizedBox(width: 5),
+                          Text(
+                            'Detector (Móvil)',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      InkWell(
+                        key: const ValueKey('dock_floating_detector_btn'),
+                        onTap: onDock,
+                        borderRadius: BorderRadius.circular(4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'Acoplar',
+                            style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              ChordDetectorWidget(
+                width: 200,
+                isFloating: true,
+                onDock: onDock,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

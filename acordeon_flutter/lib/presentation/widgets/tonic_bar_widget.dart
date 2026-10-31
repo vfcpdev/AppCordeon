@@ -262,6 +262,7 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
       root: state.freeChordRoot,
       type: state.freeChordType,
       extension: state.freeChordFourth,
+      bass: state.freeChordBass,
       latin: state.notation != NotationMode.alemana,
     );
     final canInsert =

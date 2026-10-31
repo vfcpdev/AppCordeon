@@ -6,6 +6,7 @@ import '../../core/constants/enums.dart';
 import '../../core/di/providers.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
+import 'chord_detector_widget.dart';
 
 class MeasureGridWidget extends ConsumerStatefulWidget {
   final int accordionNumber;
@@ -153,6 +154,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
       root: state.freeChordRoot,
       type: state.freeChordType,
       extension: state.freeChordFourth,
+      bass: state.freeChordBass,
       latin: state.notation != NotationMode.alemana,
     );
 
@@ -710,9 +712,81 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     // Sección de Información debajo de la ventana de Compás:
     // Informa si el acorde está completo o incompleto según el fuelle (Abre y Cierra)
     _buildChordBellowsInfoCard(context, state, effectiveWidth),
+
+    if (isPrimary) ...[
+      const SizedBox(height: 6),
+      // Sección de Detector de Acordes debajo de Estado del Acorde (desacoplable)
+      if (!state.isChordDetectorUndocked)
+        ChordDetectorWidget(width: effectiveWidth)
+      else
+        _buildDetectorDockPlaceholder(context, effectiveWidth, notifier),
+    ],
   ],
 ),
 );
+  }
+
+  /// Marcador de posición cuando el Detector de Acordes está desacoplado (flotante).
+  Widget _buildDetectorDockPlaceholder(
+    BuildContext context,
+    double effectiveWidth,
+    AccordionSimulatorNotifier notifier,
+  ) {
+    return Container(
+      width: effectiveWidth,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFCBD5E1)),
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FaIcon(FontAwesomeIcons.microchip, size: 9, color: Color(0xFF7C3AED)),
+                SizedBox(width: 4),
+                Text(
+                  'Detector (Móvil)',
+                  style: TextStyle(
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 10),
+            InkWell(
+              key: const ValueKey('re_dock_detector_btn'),
+              onTap: notifier.toggleUndockChordDetector,
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE9FE),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: const Color(0xFFC4B5FD), width: 0.8),
+                ),
+                child: const Text(
+                  'Acoplar',
+                  style: TextStyle(
+                    fontSize: 7.5,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF6D28D9),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Sección informativa que reporta si el acorde está completo o incompleto según el fuelle.
@@ -757,6 +831,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         root: state.freeChordRoot,
         type: state.freeChordType,
         extension: state.freeChordFourth,
+        bass: state.freeChordBass,
         latin: isLatin,
         display: true,
       );

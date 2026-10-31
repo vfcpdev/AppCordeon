@@ -315,6 +315,46 @@ class FreeChordWidget extends ConsumerWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 8),
+
+              // Bajo alterado / Inversión con barra '/'
+              _buildMatrixSection(
+                title: 'Bajo (/)',
+                color: const Color(0xFF0D9488),
+                child: _buildMatrixGrid(
+                  columns: 4,
+                  cells: [
+                    _buildOptionButton(
+                      sigla: '—',
+                      tooltip: 'Fundamental (sin bajo alterado)',
+                      isActive: state.freeChordBass.isEmpty || state.freeChordBass == 'none',
+                      activeColor: const Color(0xFF0D9488),
+                      onTap: () => notifier.setFreeChordBass(''),
+                    ),
+                    _buildOptionButton(
+                      sigla: '/3',
+                      tooltip: '1ª Inversión (Bajo en 3ra)',
+                      isActive: state.freeChordBass == '3' || state.freeChordBass == '/3',
+                      activeColor: const Color(0xFF0D9488),
+                      onTap: () => notifier.setFreeChordBass('3'),
+                    ),
+                    _buildOptionButton(
+                      sigla: '/5',
+                      tooltip: '2ª Inversión (Bajo en 5ta)',
+                      isActive: state.freeChordBass == '5' || state.freeChordBass == '/5',
+                      activeColor: const Color(0xFF0D9488),
+                      onTap: () => notifier.setFreeChordBass('5'),
+                    ),
+                    _buildOptionButton(
+                      sigla: '/7',
+                      tooltip: '3ª Inversión (Bajo en 7ma)',
+                      isActive: state.freeChordBass == '7' || state.freeChordBass == '/7',
+                      activeColor: const Color(0xFF0D9488),
+                      onTap: () => notifier.setFreeChordBass('7'),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -391,13 +431,16 @@ class FreeChordWidget extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 8.5,
-                fontWeight: FontWeight.w900,
-                color: color,
-                letterSpacing: 0.3,
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                  letterSpacing: 0.3,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
