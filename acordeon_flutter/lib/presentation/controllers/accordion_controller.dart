@@ -91,10 +91,12 @@ class AccordionSimulatorState {
 
   /// Tiempos marcados con el checkbox de la cuadrícula. Si hay alguno, la
   /// inserción desde el Constructor y la reproducción se limitan a ellos.
-  final Set<int> markedBeats;
+  final Set<int>? _markedBeats;
+  Set<int> get markedBeats => _markedBeats ?? const {};
 
   /// Tiempos resaltados en amarillo para decidir el fuelle (acordes completos abriendo o cerrando).
-  final Set<int> yellowDecisionBeats;
+  final Set<int>? _yellowDecisionBeats;
+  Set<int> get yellowDecisionBeats => _yellowDecisionBeats ?? const {};
 
   // Sección 5: Acorde Libre y Escalas
   final int freeChordRoot; // 0=Do, 1=Do#, etc.
@@ -211,8 +213,8 @@ class AccordionSimulatorState {
     required this.measures,
     this.selectedBarIndex,
     this.selectedBeatIndex,
-    this.markedBeats = const {},
-    this.yellowDecisionBeats = const {},
+    Set<int>? markedBeats,
+    Set<int>? yellowDecisionBeats,
     required this.freeChordRoot,
     required this.freeChordType,
     required this.freeChordFourth,
@@ -237,7 +239,9 @@ class AccordionSimulatorState {
     Offset? compas2Position,
     bool? isSongBarUndocked,
     Offset? songBarPosition,
-  })  : _isCompas1Undocked = isCompas1Undocked ?? false,
+  })  : _markedBeats = markedBeats ?? const {},
+        _yellowDecisionBeats = yellowDecisionBeats ?? const {},
+        _isCompas1Undocked = isCompas1Undocked ?? false,
         _compas1Position = compas1Position ?? const Offset(220, 70),
         _isCompas2Undocked = isCompas2Undocked ?? false,
         _compas2Position = compas2Position ?? const Offset(440, 70),
