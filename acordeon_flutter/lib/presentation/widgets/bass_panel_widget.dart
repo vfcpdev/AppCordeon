@@ -229,7 +229,9 @@ class BassPanelWidget extends ConsumerWidget {
     final currentTuning = isPrimary ? state.tuning1 : state.tuning2;
 
     final int activeChordRoot;
-    if (!state.isFreeChordFixed && state.activeCompasChord.isNotEmpty) {
+    if (state.detectedChord != null) {
+      activeChordRoot = state.detectedChord!.rootPitchClass;
+    } else if (!state.isFreeChordFixed && state.activeCompasChord.isNotEmpty) {
       activeChordRoot = ChordCatalog.rootPitchClassForChordSymbol(state.activeCompasChord) ?? state.freeChordRoot;
     } else {
       activeChordRoot = state.freeChordRoot;
@@ -295,12 +297,14 @@ class BassPanelWidget extends ConsumerWidget {
             type: btn.type,
             chordRoot: activeChordRoot,
             chordPitchClasses: activeChordPitchClasses,
+            btnIndex: btn.btnIndex,
           );
           final pullMatch = ChordCatalog.evaluateBassMatch(
             notes: btn.pullNotes,
             type: btn.type,
             chordRoot: activeChordRoot,
             chordPitchClasses: activeChordPitchClasses,
+            btnIndex: btn.btnIndex,
           );
 
           final isChordPull = pullMatch.isMatch;

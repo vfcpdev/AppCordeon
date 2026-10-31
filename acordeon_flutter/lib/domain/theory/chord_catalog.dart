@@ -532,15 +532,35 @@ class ChordCatalog {
     required ButtonType type,
     required int chordRoot,
     required Set<int> chordPitchClasses,
+    int? btnIndex,
   }) {
-    if (notes.isEmpty || chordPitchClasses.isEmpty) return BassMatchType.none;
+    if (notes.isEmpty || chordPitchClasses.isEmpty || chordRoot < 0) {
+      return BassMatchType.none;
+    }
 
     final btnPcs = notes.map((n) => n % 12).toSet();
     final mainPc = notes.first % 12;
 
+    final isChordMinor = chordPitchClasses.contains((chordRoot + 3) % 12);
+    final isChordMajor = chordPitchClasses.contains((chordRoot + 4) % 12);
+
     if (type == ButtonType.fundamental) {
-      // Coincidencia exacta: la nota del bajo es la tónica del acorde
+      // Coincidencia de tónica
       if (mainPc == chordRoot) {
+        // En acordeones diatónicos con bajos homónimos (Fa Mayor / Fa menor o Do Mayor / Do menor):
+        // asociar con la pareja correcta según la modalidad (mayor vs menor)
+        if (btnIndex != null) {
+          // Caso Fa (root 5): Par 4 es menor en pull, Par 1 es mayor en pull
+          if (mainPc == 5) {
+            if (isChordMinor && btnIndex == 1) return BassMatchType.close;
+            if (isChordMajor && btnIndex == 4) return BassMatchType.close;
+          }
+          // Caso Do (root 0): Par 2 es menor en pull, Par 4 es mayor en push
+          if (mainPc == 0) {
+            if (isChordMinor && btnIndex == 4) return BassMatchType.close;
+            if (isChordMajor && btnIndex == 2) return BassMatchType.close;
+          }
+        }
         return BassMatchType.exact;
       }
       // Cercanía: es la 5ta del acorde (bajo alternante directo), grado IV,
@@ -560,6 +580,15 @@ class ChordCatalog {
       final allNotesInChord = btnPcs.every((pc) => chordPitchClasses.contains(pc));
       if (allNotesInChord && btnPcs.contains(chordRoot)) {
         return BassMatchType.exact;
+      }
+
+      // Si comparte la misma tónica pero tiene una modalidad contraria (3ra menor vs 3ra mayor),
+      // existe conflicto modal (no debe acompañar como "cercano")
+      final isBtnMinor = btnPcs.contains((mainPc + 3) % 12);
+      final isBtnMajor = btnPcs.contains((mainPc + 4) % 12);
+
+      if (mainPc == chordRoot && ((isChordMinor && isBtnMajor) || (isChordMajor && isBtnMinor))) {
+        return BassMatchType.none;
       }
 
       // Cercanía: acorde de dominante (V), subdominante (IV), relativo,

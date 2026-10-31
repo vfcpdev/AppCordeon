@@ -945,7 +945,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
   // Controles Diapasón 1
   void setTuning1(TuningDefinition t) => state = state.copyWith(tuning1: t);
-  void setBellows1(BellowsMode m) => state = state.copyWith(bellows1: m);
+  void setBellows1(BellowsMode m) {
+    state = state.copyWith(bellows1: m);
+    if (state.detectorSelectedButtons.isNotEmpty) {
+      _recalculateDetectedChord();
+    }
+  }
   void toggleBass1() =>
       state = state.copyWith(isBass1Collapsed: !state.isBass1Collapsed);
   void toggleMirror1() => state = state.copyWith(mirror1: !state.mirror1);
@@ -2034,9 +2039,14 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       }
     }
 
-    // Resalta también los bajos de acompañamiento (por coincidencia exacta o cercanía) según el fuelle
-    final chordRoot = notes.isNotEmpty ? notes.first % 12 : state.freeChordRoot;
+    // Resalta también los bajos de acompañamiento según el fuelle.
+    // Si existen coincidencias exactas para fundamental y acorde, se priorizan las exactas.
+    final chordRoot = state.detectedChord?.rootPitchClass ??
+        (notes.isNotEmpty ? notes.first % 12 : state.freeChordRoot);
     final bellows1 = state.bellows1;
+
+    final exactBassIds = <String>[];
+    final closeBassIds = <String>[];
 
     for (final btn in state.bassData1) {
       final pushMatch = ChordCatalog.evaluateBassMatch(
@@ -2044,30 +2054,46 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         type: btn.type,
         chordRoot: chordRoot,
         chordPitchClasses: targetPitchClasses,
+        btnIndex: btn.btnIndex,
       );
       final pullMatch = ChordCatalog.evaluateBassMatch(
         notes: btn.pullNotes,
         type: btn.type,
         chordRoot: chordRoot,
         chordPitchClasses: targetPitchClasses,
+        btnIndex: btn.btnIndex,
       );
 
-      final bool isBassMatch;
+      final BassMatchType match;
       switch (bellows1) {
         case BellowsMode.push:
-          isBassMatch = pushMatch.isMatch;
+          match = pushMatch;
           break;
         case BellowsMode.pull:
-          isBassMatch = pullMatch.isMatch;
+          match = pullMatch;
           break;
         case BellowsMode.both:
-          isBassMatch = pushMatch.isMatch || pullMatch.isMatch;
+          if (pushMatch == BassMatchType.exact || pullMatch == BassMatchType.exact) {
+            match = BassMatchType.exact;
+          } else if (pushMatch == BassMatchType.close || pullMatch == BassMatchType.close) {
+            match = BassMatchType.close;
+          } else {
+            match = BassMatchType.none;
+          }
           break;
       }
 
-      if (isBassMatch) {
-        matchingButtonIds.add(btn.id);
+      if (match == BassMatchType.exact) {
+        exactBassIds.add(btn.id);
+      } else if (match == BassMatchType.close) {
+        closeBassIds.add(btn.id);
       }
+    }
+
+    if (exactBassIds.isNotEmpty) {
+      matchingButtonIds.addAll(exactBassIds);
+    } else {
+      matchingButtonIds.addAll(closeBassIds);
     }
 
     if (matchingButtonIds.isEmpty) return;
@@ -2103,6 +2129,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       detectorMode: !state.detectorMode,
       detectorSelectedButtons: const [],
       detectedChord: null,
+      activeButtons: const {},
     );
   }
 
@@ -2125,6 +2152,19 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     state = state.copyWith(
       detectorSelectedButtons: const [],
       detectedChord: null,
+      activeButtons: const {},
+    );
+  }
+
+  /// Limpia completamente el diapasón dejando 0 botones presionados o resaltados.
+  void clearDiapason() {
+    state = state.copyWith(
+      freeChordRoot: -1,
+      isFreeChordFixed: false,
+      activeButtons: const {},
+      detectorSelectedButtons: const [],
+      detectedChord: null,
+      playingChordNotes: const {},
     );
   }
 
@@ -2222,26 +2262,72 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
 
     final selectedIds = state.detectorSelectedButtons.toSet();
-    final notes = <int>[];
+    final pullNotes = <int>[];
+    final pushNotes = <int>[];
 
     for (final row in state.trebleData1.values) {
       for (final btn in row) {
         if (selectedIds.contains(btn.id)) {
-          final midi = state.bellows1 == BellowsMode.pull ? btn.pull : btn.push;
-          if (!notes.contains(midi)) {
-            notes.add(midi);
-          }
+          if (!pullNotes.contains(btn.pull)) pullNotes.add(btn.pull);
+          if (!pushNotes.contains(btn.push)) pushNotes.add(btn.push);
         }
       }
     }
 
-    if (notes.length < 2) {
+    final List<int> effectiveNotes;
+    if (state.bellows1 == BellowsMode.pull) {
+      effectiveNotes = pullNotes;
+    } else if (state.bellows1 == BellowsMode.push) {
+      effectiveNotes = pushNotes;
+    } else {
+      // BellowsMode.both: analizar ambos sentidos y enriquecer información
+      final pushDet = pushNotes.length >= 2
+          ? ChordDetectorEngine.detect(midiNotes: pushNotes, notation: state.notation)
+          : null;
+      final pullDet = pullNotes.length >= 2
+          ? ChordDetectorEngine.detect(midiNotes: pullNotes, notation: state.notation)
+          : null;
+
+      if (pushDet != null && pullDet == null) {
+        state = state.copyWith(detectedChord: pushDet);
+        return;
+      } else if (pullDet != null && pushDet == null) {
+        state = state.copyWith(detectedChord: pullDet);
+        return;
+      } else if (pushDet != null && pullDet != null) {
+        final combinedAlts = List<String>.from(pushDet.alternatives);
+        final pullSym = pullDet.formattedSymbol(state.notation);
+        if (!combinedAlts.contains(pullSym) && pullSym != pushDet.formattedSymbol(state.notation)) {
+          combinedAlts.insert(0, 'Abre: $pullSym');
+        }
+        state = state.copyWith(
+          detectedChord: DetectedChordModel(
+            name: pushDet.name,
+            root: pushDet.root,
+            bass: pushDet.bass,
+            formula: pushDet.formula,
+            type: pushDet.type,
+            inversion: pushDet.inversion,
+            alternatives: combinedAlts,
+            chordSymbol: pushDet.chordSymbol,
+            pitchClasses: pushDet.pitchClasses,
+            rootPitchClass: pushDet.rootPitchClass,
+            bassPitchClass: pushDet.bassPitchClass,
+            notes: pushDet.notes,
+          ),
+        );
+        return;
+      }
+      effectiveNotes = pushNotes;
+    }
+
+    if (effectiveNotes.length < 2) {
       state = state.copyWith(detectedChord: null);
       return;
     }
 
     final detected = ChordDetectorEngine.detect(
-      midiNotes: notes,
+      midiNotes: effectiveNotes,
       notation: state.notation,
     );
     state = state.copyWith(detectedChord: detected);
@@ -2264,6 +2350,7 @@ final activeChordPitchClassesProvider =
   final freeChordRoot = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordRoot));
   final freeChordType = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordType));
   final freeChordFourth = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordFourth));
+  final detectorMode = ref.watch(accordionSimulatorProvider.select((s) => s.detectorMode));
   final detectorSelected = ref.watch(accordionSimulatorProvider.select((s) => s.detectorSelectedButtons));
   final detectedChord = ref.watch(accordionSimulatorProvider.select((s) => s.detectedChord));
   final syncDiapason = ref.watch(accordionSimulatorProvider.select((s) => s.syncDiapason));
@@ -2272,11 +2359,13 @@ final activeChordPitchClassesProvider =
 
   final isFreeChordFixed = ref.watch(accordionSimulatorProvider.select((s) => s.isFreeChordFixed));
 
-  final generated = ChordCatalog.notesFor(
-    root: freeChordRoot,
-    type: freeChordType,
-    extension: freeChordFourth,
-  );
+  final generated = freeChordRoot >= 0
+      ? ChordCatalog.notesFor(
+          root: freeChordRoot,
+          type: freeChordType,
+          extension: freeChordFourth,
+        )
+      : const <int>[];
 
   // Acorde activo en el Compás (seleccionado o reproduciéndose)
   final compasChord = ref.watch(accordionSimulatorProvider.select((s) => s.activeCompasChord));
@@ -2300,13 +2389,16 @@ final activeChordPitchClassesProvider =
     }
   }
 
-  // Si hay un acorde en el Compás y el constructor no está fijado manualmente,
-  // el acorde del Compás toma precedencia en el diapasón.
+  // Si estamos en modo detector, el diapasón no debe arrastrar el acorde
+  // del constructor libre (ej. Do Mayor). Debe mantenerse limpio o mostrar
+  // únicamente los botones del detector.
   final Set<int> baseChordPcs;
-  if (!isFreeChordFixed && compasPcs.isNotEmpty) {
+  if (detectorMode) {
+    baseChordPcs = const <int>{};
+  } else if (!isFreeChordFixed && compasPcs.isNotEmpty) {
     baseChordPcs = compasPcs;
   } else {
-    baseChordPcs = (isFreeChordFixed || !isPlaying || !syncDiapason)
+    baseChordPcs = (freeChordRoot >= 0 && (isFreeChordFixed || !isPlaying || !syncDiapason))
         ? generated.map((n) => n % 12).toSet()
         : const <int>{};
   }
