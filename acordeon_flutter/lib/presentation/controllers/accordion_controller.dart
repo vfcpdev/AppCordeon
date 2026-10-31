@@ -705,6 +705,11 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     return AudioLoadSuccess(report, fileName);
   }
 
+  /// Asigna directamente el reporte de análisis de audio (útil para pruebas y sincronización).
+  void setAudioReport(AudioAnalysisReport? report) {
+    state = state.copyWith(audioReport: report);
+  }
+
   /// Tipo MIME según la extensión del archivo cargado.
   static String _mimeTypeFor(String fileName) {
     final name = fileName.toLowerCase();
@@ -1335,9 +1340,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     state = state.copyWith(isLiveChordMarkerActive: !state.isLiveChordMarkerActive);
   }
 
-  /// Ejecuta un click de metrónomo (acento en beat 0, secundario en beats 1..3).
+  /// Ejecuta un chasquido de metrónomo (acento en beat 0, secundario en beats 1..3).
   void playMetronomeTick(int beatIndex) {
     PlayMetronomeTickCommand(
+      onPercussiveClick: ({bool isDownbeat = true, double volume = 0.8}) {
+        _audioBridge.playPercussiveClick(isDownbeat: isDownbeat, volume: volume);
+      },
       onNoteOn: (note, {velocity = 0.8}) => _audioBridge.noteOn(note, velocity: velocity),
       onNoteOff: (note) => _audioBridge.noteOff(note),
       beatIndex: beatIndex,
@@ -1370,9 +1378,30 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   /// Marca en vivo el cambio de acorde en el compás y tiempo exacto según el slider de audio.
+  /// Aplica el acorde detectado en el archivo de audio tanto a la cuadrícula como a la selección del diapasón.
   /// Se ejecuta al presionar la Barra Espaciadora durante la reproducción (Command Pattern + Hoare Triples).
   LiveMarkerResult? markLiveChordChange() {
     final bpm = state.audioReport?.bpm.toDouble() ?? 120.0;
+
+    // 1. Prioridad: Acorde detectado en el archivo de audio para la posición temporal actual
+    String? audioDetectedChord;
+    final report = state.audioReport;
+    if (report != null && report.chords.isNotEmpty) {
+      final t = state.currentAudioTime;
+      final matchingSegment = report.chords.firstWhere(
+        (seg) => t >= seg.startTime && t <= seg.endTime,
+        orElse: () => report.chords.reduce((best, seg) {
+          final bestMid = (best.startTime + best.endTime) / 2.0;
+          final segMid = (seg.startTime + seg.endTime) / 2.0;
+          return (segMid - t).abs() < (bestMid - t).abs() ? seg : best;
+        }),
+      );
+      audioDetectedChord = state.notation == NotationMode.alemana
+          ? matchingSegment.chordSymbol
+          : (matchingSegment.chordName.isNotEmpty ? matchingSegment.chordName : matchingSegment.chordSymbol);
+    }
+
+    // 2. Acorde del constructor libre
     final constructorChord = ChordCatalog.symbolFor(
       root: state.freeChordRoot,
       type: state.freeChordType,
@@ -1380,9 +1409,13 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       bass: state.freeChordBass,
       latin: state.notation != NotationMode.alemana,
     );
-    final activeChord = constructorChord.isNotEmpty
-        ? constructorChord
-        : state.detectedChord?.formattedSymbol(state.notation);
+
+    // Jerarquía armónica: 1. Audio detectado, 2. Constructor libre, 3. Detector diapasón
+    final activeChord = (audioDetectedChord != null && audioDetectedChord.trim().isNotEmpty)
+        ? audioDetectedChord.trim()
+        : (constructorChord.isNotEmpty
+            ? constructorChord
+            : state.detectedChord?.formattedSymbol(state.notation));
 
     final command = MarkLiveChordChangeCommand(
       currentAudioTime: state.currentAudioTime,

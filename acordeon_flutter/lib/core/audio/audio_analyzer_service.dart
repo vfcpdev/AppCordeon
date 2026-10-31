@@ -65,14 +65,17 @@ class AudioAnalyzerService implements AudioAnalyzer {
     final rawHarmChromagram = <List<double>>[];
     final globalChromaSum = List<double>.filled(12, 0.0);
 
+    // Buffers pre-asignados para evitar miles de reservas de memoria en el bucle FFT (Invariante Zero-GC en DSP)
+    final real = Float32List(windowSize);
+    final imag = Float32List(windowSize);
+
     for (int frame = 0; frame < totalFrames; frame++) {
       final offset = frame * hopSize;
-      final real = Float32List(windowSize);
-      final imag = Float32List(windowSize);
 
       for (int i = 0; i < windowSize; i++) {
         final sampleIdx = offset + i;
         real[i] = (sampleIdx < samples.length ? samples[sampleIdx] : 0.0) * hann[i];
+        imag[i] = 0.0;
       }
 
       fftProcessor.fftRadix2(real, imag);

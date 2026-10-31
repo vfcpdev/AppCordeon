@@ -89,6 +89,17 @@ class _AccordionKeyboardListenerState extends ConsumerState<AccordionKeyboardLis
       return true; // Consumir el evento Escape para evitar que el navegador o modales pierdan foco
     }
 
+    // 2. Barra espaciadora para aplicar el acorde detectado en el audio al compás y diapasón
+    if (event.logicalKey == LogicalKeyboardKey.space && event is KeyDownEvent) {
+      final isAnyEditing = FocusManager.instance.primaryFocus?.context?.widget is EditableText;
+      if (!isAnyEditing) {
+        final res = ref.read(accordionSimulatorProvider.notifier).markLiveChordChange();
+        if (res != null) {
+          return true;
+        }
+      }
+    }
+
     _handleKeyEvent(event);
     return false;
   }

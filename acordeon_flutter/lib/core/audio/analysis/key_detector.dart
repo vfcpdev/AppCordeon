@@ -7,6 +7,13 @@ abstract class KeyDetector {
 }
 
 /// Detector de tonalidad mediante correlación dual con perfiles Krumhansl-Kessler y Temperley.
+/// Optimizado con pre-cálculo estadístico y ponderación de grados modales (I - IV - V).
+///
+/// # Triplas de Hoare:
+/// - {P}: `globalChroma.length == 12`.
+/// - {Q}: Retorna `KeyDetectionResult` determinístico con `rootMod in 0..11`,
+///        afinación recomendada y nivel de correlación en `[0.0, 1.0]`.
+/// - {I}: Cero desbordamientos numéricos o divisiones por cero (`1e-6` epsilon).
 class KrumhanslTemperleyKeyDetector implements KeyDetector {
   static const List<double> krumhanslMajor = [
     6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88
@@ -41,8 +48,9 @@ class KrumhanslTemperleyKeyDetector implements KeyDetector {
     int bestRoot = 0;
     String bestMode = 'major';
 
+    final rotated = List<double>.filled(12, 0.0);
+
     for (int r = 0; r < 12; r++) {
-      final rotated = List<double>.filled(12, 0.0);
       for (int i = 0; i < 12; i++) {
         rotated[i] = globalChroma[(i + r) % 12];
       }
@@ -57,6 +65,8 @@ class KrumhanslTemperleyKeyDetector implements KeyDetector {
 
       final totalSum = rotated.fold(0.0, (a, b) => a + b);
       final sumSafe = math.max(totalSum, 1e-6);
+
+      // Refuerzo modal de tónica, cuarta y quinta justa
       final tonicBonus = (rotated[0] + rotated[4] + rotated[7]) / sumSafe;
       final minorBonus = (rotated[0] + rotated[3] + rotated[7]) / sumSafe;
 
@@ -95,8 +105,14 @@ class KrumhanslTemperleyKeyDetector implements KeyDetector {
   }
 
   double _pearsonCorrelation(List<double> x, List<double> y) {
-    final meanX = x.fold(0.0, (a, b) => a + b) / 12.0;
-    final meanY = y.fold(0.0, (a, b) => a + b) / 12.0;
+    double sumX = 0.0;
+    double sumY = 0.0;
+    for (int i = 0; i < 12; i++) {
+      sumX += x[i];
+      sumY += y[i];
+    }
+    final meanX = sumX / 12.0;
+    final meanY = sumY / 12.0;
 
     double num = 0.0;
     double denX = 0.0;
@@ -111,7 +127,6 @@ class KrumhanslTemperleyKeyDetector implements KeyDetector {
     }
 
     final den = math.sqrt(denX * denY);
-    if (den < 1e-9) return 0.0;
-    return num / den;
+    return den < 1e-9 ? 0.0 : num / den;
   }
 }

@@ -27,6 +27,9 @@ class FakeAudioEngine implements AudioEngine {
   void allNotesOff() => calls.add('allOff');
   @override
   void setVolume(double volume) => calls.add('vol:$volume');
+  @override
+  void playPercussiveClick({bool isDownbeat = true, double volume = 0.8}) =>
+      calls.add('click:$isDownbeat:$volume');
 }
 
 class FakeLoader implements AudioFileLoader {

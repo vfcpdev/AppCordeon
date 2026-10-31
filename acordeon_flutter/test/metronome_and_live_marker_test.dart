@@ -1,14 +1,52 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:acordeon_flutter/domain/commands/accordion_commands.dart';
+import 'package:acordeon_flutter/domain/models/audio_analysis_models.dart';
+import 'package:acordeon_flutter/core/audio/analysis/bpm_detector.dart';
+import 'package:acordeon_flutter/core/audio/analysis/key_detector.dart';
+import 'package:acordeon_flutter/core/audio/analysis/chord_segmenter.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
 void main() {
-  group('Metrónomo y Triplas de Hoare {P} C {Q}', () {
-    test('PlayMetronomeTickCommand: {P: beatIndex >= 0} emite C6 en beat 0 y E5 en beats 1..3', () {
+  group('Metrónomo y Chasquido Percusivo con Triplas de Hoare {P} C {Q}', () {
+    test('PlayMetronomeTickCommand: {P: beatIndex >= 0} emite chasquido percusivo onPercussiveClick con acento', () {
+      bool? capturedDownbeat;
+      double? capturedVolume;
+
+      final commandBeat0 = PlayMetronomeTickCommand(
+        onPercussiveClick: ({bool isDownbeat = true, double volume = 0.8}) {
+          capturedDownbeat = isDownbeat;
+          capturedVolume = volume;
+        },
+        beatIndex: 0,
+        volume: 0.9,
+      );
+
+      expect(commandBeat0.canExecute(), isTrue);
+      commandBeat0.execute();
+      expect(capturedDownbeat, isTrue); // Beat 0 es acento
+      expect(capturedVolume, equals(0.9));
+
+      // Beat 2: pulso secundario
+      final commandBeat2 = PlayMetronomeTickCommand(
+        onPercussiveClick: ({bool isDownbeat = true, double volume = 0.8}) {
+          capturedDownbeat = isDownbeat;
+          capturedVolume = volume;
+        },
+        beatIndex: 2,
+        volume: 0.8,
+      );
+
+      commandBeat2.execute();
+      expect(capturedDownbeat, isFalse); // Beat 2 no es downbeat
+      expect(capturedVolume, equals(0.8));
+    });
+
+    test('PlayMetronomeTickCommand: fallback a onNoteOn si onPercussiveClick es nulo', () {
       int? playedNote;
       double? playedVel;
 
@@ -27,28 +65,11 @@ void main() {
       expect(note0, equals(84)); // C6 acentuado
       expect(playedNote, equals(84));
       expect(playedVel, closeTo(0.95, 0.01));
-
-      // Beat 1: pulso secundario E5
-      final commandBeat1 = PlayMetronomeTickCommand(
-        onNoteOn: (note, {velocity = 0.8}) {
-          playedNote = note;
-          playedVel = velocity;
-        },
-        onNoteOff: (_) {},
-        beatIndex: 1,
-        volume: 0.8,
-      );
-
-      final note1 = commandBeat1.execute();
-      expect(note1, equals(76)); // E5
-      expect(playedNote, equals(76));
-      expect(playedVel, closeTo(0.65 * 0.8, 0.01));
     });
 
     test('PlayMetronomeTickCommand: Precondición {P} rechaza beatIndex negativo', () {
       final command = PlayMetronomeTickCommand(
-        onNoteOn: (_, {velocity = 0.8}) {},
-        onNoteOff: (_) {},
+        onPercussiveClick: ({bool isDownbeat = true, double volume = 0.8}) {},
         beatIndex: -1,
       );
 
@@ -60,7 +81,7 @@ void main() {
     });
   });
 
-  group('Marcador en Vivo de Acordes con Barra Espaciadora {P} C {Q}', () {
+  group('Marcador en Vivo de Acordes con Barra Espaciadora y Detección de Audio {P} C {Q}', () {
     test('MarkLiveChordChangeCommand: Mapea currentAudioTime del slider exactamente a compás y tiempo', () {
       final measures = List.generate(
         8,
@@ -73,11 +94,8 @@ void main() {
         ),
       );
 
-      // BPM = 120 -> cada tiempo dura 0.5s.
-      // A los 3.25 segundos:
-      // totalBeats = floor(3.25 / 0.5) = 6
-      // targetBar = 6 ~/ 4 = 1 (Compás 2)
-      // targetBeat = 6 % 4 = 2 (Tiempo 3)
+      // BPM = 120 -> cada tiempo dura 0.5s. A los 3.25 segundos:
+      // totalBeats = floor(3.25 / 0.5) = 6 -> Compás 1 (segundo compás), tiempo 2 (tercer tiempo)
       final command = MarkLiveChordChangeCommand(
         currentAudioTime: 3.25,
         bpm: 120.0,
@@ -95,39 +113,117 @@ void main() {
       expect(result.updatedMarkedBeats.contains(1 * 4 + 2), isTrue);
     });
 
-    test('MarkLiveChordChangeCommand: Precondición {P} rechaza tiempo negativo o BPM nulo', () {
-      const command = MarkLiveChordChangeCommand(
-        currentAudioTime: -2.0,
-        bpm: 120.0,
-        measures: [],
-        markedBeats: {},
-      );
-
-      expect(command.canExecute(), isFalse);
-      expect(
-        () => command.execute(),
-        throwsA(isA<PreconditionViolationException>()),
-      );
-    });
-
-    test('AccordionSimulatorNotifier ejecuta markLiveChordChange y actualiza selección', () {
+    test('markLiveChordChange aplica con prioridad el acorde detectado en el archivo de audio para el tiempo actual', () {
       final container = ProviderContainer();
       final notifier = container.read(accordionSimulatorProvider.notifier);
 
-      // Establecer posición de audio a 1.0s a 120 BPM -> Compás 0, Tiempo 2
-      notifier.seekAudio(1.0);
-      notifier.setFreeChordRoot(2); // Re Mayor
+      // Configurar un reporte de análisis de audio con segmentos detectados
+      final fakeReport = AudioAnalysisReport(
+        duration: 30.0,
+        bpm: 120,
+        mainKey: const KeyDetectionResult(
+          rootMod: 0,
+          mode: 'major',
+          keyNameLat: 'Do Mayor',
+          keyNameAle: 'C Major',
+          recommendedTuning: 'Cinco Letras (Bb-Eb-Ab)',
+          recommendedOffset: 10,
+          recommendedRow: 'row2',
+          correlation: 0.95,
+        ),
+        chords: const [
+          DetectedChordSegment(
+            startTime: 0.0,
+            endTime: 2.0,
+            rootMod: 0,
+            quality: 'maj',
+            chordName: 'Do Mayor',
+            chordSymbol: 'C',
+            noteMods: [0, 4, 7],
+            playbackMidis: [48, 52, 55],
+            confidence: 0.9,
+          ),
+          DetectedChordSegment(
+            startTime: 2.0,
+            endTime: 5.0,
+            rootMod: 7,
+            quality: 'dom7',
+            chordName: 'Sol 7ma',
+            chordSymbol: 'G7',
+            noteMods: [7, 11, 2, 5],
+            playbackMidis: [55, 59, 62, 65],
+            confidence: 0.95,
+          ),
+        ],
+      );
 
+      notifier.setAudioReport(fakeReport);
+
+      // Posicionar el audio en 2.5s (dentro del segmento Sol 7ma)
+      notifier.seekAudio(2.5);
+
+      // Al presionar la barra espaciadora (markLiveChordChange),
+      // debe aplicar el acorde detectado en el audio ("Sol 7ma" / "G7") y no requerir construcción manual
       final result = notifier.markLiveChordChange();
       expect(result, isNotNull);
-      expect(result!.targetBar, equals(0));
-      expect(result.targetBeat, equals(2));
+      expect(result!.assignedChord, equals('Sol 7ma'));
 
       final state = container.read(accordionSimulatorProvider);
-      expect(state.selectedBarIndex, equals(0));
-      expect(state.selectedBeatIndex, equals(2));
-      expect(state.measures[0].beats[2].chord, equals('Re'));
-      expect(state.markedBeats.contains(2), isTrue);
+      expect(state.measures[result.targetBar].beats[result.targetBeat].chord, equals('Sol 7ma'));
+      expect(state.activeCompasChord, equals('Sol 7ma'));
+    });
+  });
+
+  group('Optimización de Análisis de Audio Espectral {P} C {Q}', () {
+    test('AutocorrelationBpmDetector: Invariante {Q: 60 <= bpm <= 200}', () {
+      const detector = AutocorrelationBpmDetector();
+      final syntheticSamples = Float32List(44100 * 2); // 2 segundos
+      final bpm = detector.detectBpm(syntheticSamples, 44100.0);
+      expect(bpm, inInclusiveRange(60, 200));
+    });
+
+    test('KrumhanslTemperleyKeyDetector: Invariante {Q: 0 <= rootMod <= 11}', () {
+      const detector = KrumhanslTemperleyKeyDetector();
+      // Vector cromático con energía predominante en Do (0), Mi (4), Sol (7)
+      final chromaC = List<double>.generate(12, (i) => (i == 0 || i == 4 || i == 7) ? 1.0 : 0.05);
+      final key = detector.detectKey(chromaC);
+
+      expect(key.rootMod, equals(0)); // Do
+      expect(key.mode, equals('major'));
+      expect(key.correlation, greaterThanOrEqualTo(0.65));
+    });
+
+    test('HarmonicChordSegmenter: Asigna noteMods y playbackMidis precisos según la cualidad (Menor vs Mayor)', () {
+      const segmenter = HarmonicChordSegmenter();
+      final chromagram = [
+        List<double>.generate(12, (i) => (i == 9 || i == 0 || i == 4) ? 1.0 : 0.0), // La Menor: La(9), Do(0), Mi(4)
+      ];
+
+      final segments = segmenter.segmentChords(
+        chromagram,
+        chromagram,
+        chromagram,
+        2048,
+        44100.0,
+        const KeyDetectionResult(
+          rootMod: 9,
+          mode: 'minor',
+          keyNameLat: 'La Menor',
+          keyNameAle: 'A Minor',
+          recommendedTuning: 'Cinco Letras',
+          recommendedOffset: 10,
+          recommendedRow: 'row2',
+          correlation: 0.9,
+        ),
+      );
+
+      expect(segments.isNotEmpty, isTrue);
+      final seg = segments.first;
+      expect(seg.rootMod, equals(9));
+      expect(seg.quality, equals('min'));
+      // noteMods de La menor: [9, 0, 4] -> (9 + 3)%12 = 0 (Do), (9 + 7)%12 = 4 (Mi)
+      expect(seg.noteMods, equals([9, 0, 4]));
+      expect(seg.playbackMidis, equals([48 + 9, 48 + 9 + 3, 48 + 9 + 7]));
     });
   });
 

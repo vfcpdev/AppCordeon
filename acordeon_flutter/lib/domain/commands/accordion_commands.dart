@@ -584,21 +584,23 @@ class MarkLiveChordChangeCommand implements AccordionCommand<LiveMarkerResult> {
   }
 }
 
-/// Comando para reproducir el click acústico del metrónomo sincronizado al compás.
+/// Comando para reproducir el chasquido acústico del metrónomo sincronizado al compás.
 /// {P}: beatIndex >= 0, volume in [0.0, 1.0].
-/// {Q}: Pulso acústico emitido con acento en beat 0 (MIDI 84, C6) y pulsos secundarios en beats 1..3 (MIDI 76, E5).
+/// {Q}: Chasquido percusivo emitido con acento en beat 0 y pulsos secundarios en beats 1..3.
 class PlayMetronomeTickCommand implements AccordionCommand<int> {
   @override
   String get commandName => 'PlayMetronomeTickCommand';
 
-  final void Function(int midiNote, {double velocity}) onNoteOn;
-  final void Function(int midiNote) onNoteOff;
+  final void Function(int midiNote, {double velocity})? onNoteOn;
+  final void Function(int midiNote)? onNoteOff;
+  final void Function({bool isDownbeat, double volume})? onPercussiveClick;
   final int beatIndex;
   final double volume;
 
   const PlayMetronomeTickCommand({
-    required this.onNoteOn,
-    required this.onNoteOff,
+    this.onNoteOn,
+    this.onNoteOff,
+    this.onPercussiveClick,
     required this.beatIndex,
     this.volume = 0.8,
   });
@@ -621,16 +623,18 @@ class PlayMetronomeTickCommand implements AccordionCommand<int> {
     assertPreconditions();
 
     final isDownbeat = (beatIndex % 4) == 0;
-    // Beat 0: C6 (84) más brillante y acentuado; Beats 1, 2, 3: E5 (76)
     final midiNote = isDownbeat ? 84 : 76;
-    final velocity = (isDownbeat ? 0.95 : 0.65) * volume.clamp(0.0, 1.0);
+    final safeVolume = volume.clamp(0.0, 1.0);
 
-    onNoteOn(midiNote, velocity: velocity);
-
-    // Click percusivo ultra-breve (35 ms)
-    Future.delayed(const Duration(milliseconds: 35), () {
-      onNoteOff(midiNote);
-    });
+    if (onPercussiveClick != null) {
+      onPercussiveClick!(isDownbeat: isDownbeat, volume: safeVolume);
+    } else if (onNoteOn != null && onNoteOff != null) {
+      final velocity = (isDownbeat ? 0.95 : 0.65) * safeVolume;
+      onNoteOn!(midiNote, velocity: velocity);
+      Future.delayed(const Duration(milliseconds: 30), () {
+        onNoteOff!(midiNote);
+      });
+    }
 
     return midiNote;
   }

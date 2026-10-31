@@ -4,4 +4,5 @@ abstract class WebAudioSynth {
   void noteOff(int midiNote);
   void allNotesOff();
   void setVolume(double volume);
+  void playPercussiveClick({bool isDownbeat = true, double volume = 0.8});
 }

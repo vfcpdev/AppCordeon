@@ -32,4 +32,13 @@ class WebAudioSynthStub implements WebAudioSynth {
   void setVolume(double volume) {
     _engine.setVolume(volume);
   }
+
+  @override
+  void playPercussiveClick({bool isDownbeat = true, double volume = 0.8}) {
+    final midi = isDownbeat ? 84 : 76;
+    _engine.noteOn(midi);
+    Future.delayed(const Duration(milliseconds: 15), () {
+      _engine.noteOff(midi);
+    });
+  }
 }

@@ -9,6 +9,7 @@ abstract class AudioEngine {
   void noteOff(int midiNote);
   void allNotesOff();
   void setVolume(double volume);
+  void playPercussiveClick({bool isDownbeat = true, double volume = 0.8});
 }
 
 /// Implementación del motor de síntesis de acordeón con Web Audio / Multi-plataforma
@@ -74,5 +75,11 @@ class AcordeonEngineBridge implements AudioEngine {
   void setVolume(double volume) {
     _volume = volume.clamp(0.0, 1.0);
     _guard('setVolume', () => _synth?.setVolume(_volume));
+  }
+
+  @override
+  void playPercussiveClick({bool isDownbeat = true, double volume = 0.8}) {
+    _ensureSynth();
+    _guard('playPercussiveClick', () => _synth?.playPercussiveClick(isDownbeat: isDownbeat, volume: volume));
   }
 }

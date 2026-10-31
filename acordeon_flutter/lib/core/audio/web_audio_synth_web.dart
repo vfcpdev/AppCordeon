@@ -140,4 +140,48 @@ class WebAudioSynthImpl implements WebAudioSynth {
     }
     _activeNotes.clear();
   }
+
+  @override
+  void playPercussiveClick({bool isDownbeat = true, double volume = 0.8}) {
+    _ensureContext();
+    final ctx = _ctx;
+    final master = _masterGain;
+    if (ctx == null || master == null) return;
+
+    if (ctx.state == 'suspended') {
+      ctx.resume();
+    }
+
+    try {
+      final now = ctx.currentTime;
+      final effectiveVolume = (volume * _volume).clamp(0.01, 1.0);
+
+      // Envolvente de chasquido percusivo
+      final clickGain = ctx.createGain();
+      clickGain.gain.setValueAtTime(effectiveVolume * (isDownbeat ? 0.95 : 0.65), now);
+      clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.012);
+
+      // Oscilador con caída rápida de tono (pitch drop: chasquido seco)
+      final osc = ctx.createOscillator();
+      osc.type = isDownbeat ? 'sine' : 'triangle';
+      final startFreq = isDownbeat ? 2400.0 : 1750.0;
+      final endFreq = isDownbeat ? 140.0 : 90.0;
+      osc.frequency.setValueAtTime(startFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.008);
+
+      // Filtro pasa-altas para aislar el chasquido y suprimir frecuencias armónicas sostenidas
+      final filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(isDownbeat ? 850.0 : 1100.0, now);
+
+      osc.connect(clickGain);
+      clickGain.connect(filter);
+      filter.connect(master);
+
+      osc.start(now);
+      osc.stop(now + 0.018);
+    } catch (e) {
+      // Ignorar fallo de contexto Web Audio
+    }
+  }
 }
