@@ -164,6 +164,41 @@ pub extern "C" fn acordeon_analyze_audio_ffi(
     result.unwrap_or_else(|_| fallback_err("Excepción interna capturada durante el análisis de audio"))
 }
 
+/// Analiza los acordes sincronizados con compases y pulsos a partir de Float32 PCM.
+///
+/// # Tripla de Hoare:
+/// - {P}: `!channel_data_ptr.is_null() && length >= 4096 && sample_rate > 0.0 && bpm >= 30.0`.
+/// - {Q}: Retorna un JSON válido con la estructura `BeatAlignedChordsReport` o `{"error":"..."}`.
+///        La memoria retornada debe liberarse con `acordeon_free_string`.
+/// - {I}: No lanza pánicos a través del límite FFI C ABI (`catch_unwind`).
+#[no_mangle]
+pub extern "C" fn acordeon_detect_beat_chords_ffi(
+    channel_data_ptr: *const f32,
+    length: usize,
+    sample_rate: f32,
+    bpm: f32,
+    start_offset: f32,
+) -> *mut c_char {
+    let fallback_err = |msg: &str| {
+        let err_json = format!("{{\"error\":\"{}\"}}", msg);
+        CString::new(err_json).unwrap().into_raw()
+    };
+
+    if channel_data_ptr.is_null() || length < 4096 || (channel_data_ptr as usize % std::mem::align_of::<f32>() != 0) {
+        return fallback_err("Puntero nulo, desalineado o datos insuficientes (<4096 muestras)");
+    }
+
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        let slice = unsafe { std::slice::from_raw_parts(channel_data_ptr, length) };
+        match audio_analysis::analyze_beat_chords(slice, sample_rate, bpm, start_offset) {
+            Ok(json_str) => CString::new(json_str).unwrap().into_raw(),
+            Err(err) => fallback_err(&err),
+        }
+    }));
+
+    result.unwrap_or_else(|_| fallback_err("Excepción interna capturada durante la detección de acordes por compás"))
+}
+
 /// Libera la memoria de una cadena asignada por Rust para C ABI.
 ///
 /// # Tripla de Hoare:

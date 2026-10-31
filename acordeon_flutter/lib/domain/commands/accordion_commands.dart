@@ -1,5 +1,7 @@
+import 'dart:math' as math;
 import '../../core/constants/enums.dart';
 import '../models/accordion_data.dart';
+import '../models/audio_analysis_models.dart';
 import '../models/measure_models.dart';
 import '../theory/chord_detector_engine.dart';
 
@@ -504,9 +506,10 @@ class LiveMarkerResult {
 }
 
 /// Comando para marcar en vivo el cambio de acorde en el compás y tiempo exacto
-/// de reproducción según el slider / transporte de audio (Barra Espaciadora).
-/// {P}: bpm in [30, 300], currentAudioTime >= 0, measures no vacío.
-/// {Q}: targetBar y targetBeat corresponden a floor(currentAudioTime / beatDuration),
+/// de reproducción según el slider / transporte de audio (Barra Espaciadora),
+/// alineado al punto de inicio (startOffset) del Compás 1.
+/// {P}: bpm in [30, 300], currentAudioTime >= 0, startOffset >= 0, measures no vacío.
+/// {Q}: targetBar y targetBeat corresponden a floor(max(0, currentAudioTime - startOffset) / beatDuration),
 ///      (targetBar * 4 + targetBeat) in updatedMarkedBeats.
 class MarkLiveChordChangeCommand implements AccordionCommand<LiveMarkerResult> {
   @override
@@ -517,6 +520,7 @@ class MarkLiveChordChangeCommand implements AccordionCommand<LiveMarkerResult> {
   final List<MeasureRow> measures;
   final Set<int> markedBeats;
   final String? activeChord;
+  final double startOffset;
 
   const MarkLiveChordChangeCommand({
     required this.currentAudioTime,
@@ -524,10 +528,11 @@ class MarkLiveChordChangeCommand implements AccordionCommand<LiveMarkerResult> {
     required this.measures,
     required this.markedBeats,
     this.activeChord,
+    this.startOffset = 0.0,
   });
 
   @override
-  bool canExecute() => bpm > 0 && currentAudioTime >= 0 && measures.isNotEmpty;
+  bool canExecute() => bpm > 0 && currentAudioTime >= 0 && startOffset >= 0 && measures.isNotEmpty;
 
   @override
   void assertPreconditions() {
@@ -543,6 +548,12 @@ class MarkLiveChordChangeCommand implements AccordionCommand<LiveMarkerResult> {
         'El tiempo actual de audio no puede ser negativo.',
       );
     }
+    if (startOffset < 0) {
+      throw const PreconditionViolationException(
+        'MarkLiveChordChangeCommand',
+        'El desplazamiento de inicio de compás no puede ser negativo.',
+      );
+    }
     if (measures.isEmpty) {
       throw const PreconditionViolationException(
         'MarkLiveChordChangeCommand',
@@ -556,7 +567,8 @@ class MarkLiveChordChangeCommand implements AccordionCommand<LiveMarkerResult> {
     assertPreconditions();
 
     final beatDuration = 60.0 / bpm;
-    final totalBeats = (currentAudioTime / beatDuration).floor();
+    final elapsed = math.max(0.0, currentAudioTime - startOffset);
+    final totalBeats = (elapsed / beatDuration).floor();
     final targetBar = (totalBeats ~/ 4).clamp(0, measures.length - 1);
     final targetBeat = (totalBeats % 4).clamp(0, 3);
     final targetKey = targetBar * 4 + targetBeat;
@@ -698,5 +710,151 @@ class CalibrateBpmFromTapsCommand implements AccordionCommand<int> {
   int execute() {
     assertPreconditions();
     return rawBpm.round();
+  }
+}
+
+/// Resultado de la ejecución de [ApplyMeasureChordsFromAudioCommand].
+class ApplyMeasureChordsResult {
+  final List<MeasureRow> updatedMeasures;
+  final Set<int> updatedMarkedBeats;
+  final int totalChordChanges;
+
+  const ApplyMeasureChordsResult({
+    required this.updatedMeasures,
+    required this.updatedMarkedBeats,
+    required this.totalChordChanges,
+  });
+}
+
+/// Comando para aplicar automáticamente los cambios de acordes detectados en el audio
+/// a la cuadrícula de compases, sincronizados al BPM y al punto de inicio (Compás 1) del audio.
+///
+/// Sustituye la pulsación manual repetitiva de la barra espaciadora con un mapeo armónico
+/// continuo, algorítmico y matemáticamente preciso.
+///
+/// # Triplas de Hoare:
+/// - {P}: `measures.isNotEmpty`, `chords.isNotEmpty`, `bpm > 0`, `startOffset >= 0.0`.
+/// - {Q}: Todas las celdas de compás reciben el acorde correspondiente a su intervalo temporal
+///        [t_beat, t_beat + beatDuration]. Cada beat donde ocurre una transición/cambio de acorde
+///        queda registrado en `updatedMarkedBeats` con precisión milimétrica.
+/// - {I}: Conserva la cantidad de compases de la cuadrícula; no produce tiempos nulos ni negativos.
+class ApplyMeasureChordsFromAudioCommand implements AccordionCommand<ApplyMeasureChordsResult> {
+  @override
+  String get commandName => 'ApplyMeasureChordsFromAudioCommand';
+
+  final List<MeasureRow> measures;
+  final List<DetectedChordSegment> chords;
+  final double bpm;
+  final double startOffset;
+  final NotationMode notation;
+
+  const ApplyMeasureChordsFromAudioCommand({
+    required this.measures,
+    required this.chords,
+    required this.bpm,
+    this.startOffset = 0.0,
+    this.notation = NotationMode.latina,
+  });
+
+  @override
+  bool canExecute() => measures.isNotEmpty && chords.isNotEmpty && bpm > 0 && startOffset >= 0.0;
+
+  @override
+  void assertPreconditions() {
+    if (measures.isEmpty) {
+      throw const PreconditionViolationException(
+        'ApplyMeasureChordsFromAudioCommand',
+        'La lista de compases no puede estar vacía.',
+      );
+    }
+    if (chords.isEmpty) {
+      throw const PreconditionViolationException(
+        'ApplyMeasureChordsFromAudioCommand',
+        'La lista de acordes detectados no puede estar vacía.',
+      );
+    }
+    if (bpm <= 0) {
+      throw const PreconditionViolationException(
+        'ApplyMeasureChordsFromAudioCommand',
+        'El BPM debe ser estrictamente positivo.',
+      );
+    }
+    if (startOffset < 0) {
+      throw const PreconditionViolationException(
+        'ApplyMeasureChordsFromAudioCommand',
+        'El desplazamiento inicial de audio no puede ser negativo.',
+      );
+    }
+  }
+
+  @override
+  ApplyMeasureChordsResult execute() {
+    assertPreconditions();
+
+    final secondsPerBeat = 60.0 / bpm;
+    final updatedMeasures = <MeasureRow>[];
+    final updatedMarkedBeats = <int>{};
+    String previousChord = '';
+    int totalChanges = 0;
+
+    for (int barIdx = 0; barIdx < measures.length; barIdx++) {
+      final oldRow = measures[barIdx];
+      final newBeats = <MeasureBeat>[];
+
+      for (int beatIdx = 0; beatIdx < 4; beatIdx++) {
+        final beatTime = startOffset + (barIdx * 4 + beatIdx) * secondsPerBeat;
+        final midBeatTime = beatTime + (secondsPerBeat * 0.5);
+
+        final mins = (beatTime ~/ 60).toString().padLeft(2, '0');
+        final secs = ((beatTime % 60).toInt()).toString().padLeft(2, '0');
+
+        final chordSegment = _findSegmentForTime(chords, midBeatTime);
+        final chordText = chordSegment != null
+            ? (notation == NotationMode.alemana
+                ? chordSegment.chordSymbol
+                : (chordSegment.chordName.isNotEmpty ? chordSegment.chordName : chordSegment.chordSymbol))
+            : '';
+
+        final isChange = chordText.isNotEmpty && (chordText != previousChord || updatedMarkedBeats.isEmpty);
+        if (isChange) {
+          updatedMarkedBeats.add(barIdx * 4 + beatIdx);
+          previousChord = chordText;
+          totalChanges++;
+        }
+
+        newBeats.add(MeasureBeat(
+          barIndex: barIdx,
+          beatIndex: beatIdx,
+          chord: chordText,
+          timeText: '$mins:$secs',
+          isContinue: !isChange && chordText.isNotEmpty,
+        ));
+      }
+
+      updatedMeasures.add(MeasureRow(
+        barNumber: oldRow.barNumber,
+        beats: newBeats,
+      ));
+    }
+
+    return ApplyMeasureChordsResult(
+      updatedMeasures: updatedMeasures,
+      updatedMarkedBeats: updatedMarkedBeats,
+      totalChordChanges: totalChanges,
+    );
+  }
+
+  DetectedChordSegment? _findSegmentForTime(List<DetectedChordSegment> segments, double time) {
+    if (segments.isEmpty) return null;
+    for (final seg in segments) {
+      if (time >= seg.startTime && time < seg.endTime) {
+        return seg;
+      }
+    }
+    return segments.reduce((best, seg) {
+      final bestMid = (best.startTime + best.endTime) / 2.0;
+      final segMid = (seg.startTime + seg.endTime) / 2.0;
+      return (segMid - time).abs() < (bestMid - time).abs() ? seg : best;
+    });
   }
 }

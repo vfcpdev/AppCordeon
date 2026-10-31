@@ -111,14 +111,20 @@ class _AccordionKeyboardListenerState extends ConsumerState<AccordionKeyboardLis
         final messenger = ScaffoldMessenger.maybeOf(context);
         messenger?.hideCurrentSnackBar();
         if (bpm != null) {
+          final state = ref.read(accordionSimulatorProvider);
+          final mins = (state.audioStartOffset ~/ 60).toString().padLeft(2, '0');
+          final secs = (state.audioStartOffset % 60).toStringAsFixed(1).padLeft(4, '0');
           messenger?.showSnackBar(SnackBar(
-            content: Text('BPM ajustado a $bpm'),
-            duration: const Duration(seconds: 2),
+            content: Text('BPM ajustado a $bpm (Compás 1 en $mins:$secs). Cambios de acorde aplicados.'),
+            duration: const Duration(seconds: 3),
           ));
         } else if (calibrating) {
-          messenger?.showSnackBar(const SnackBar(
-            content: Text('Compás 1 marcado. Presiona Control al inicio del siguiente compás.'),
-            duration: Duration(seconds: 3),
+          final state = ref.read(accordionSimulatorProvider);
+          final mins = (state.audioStartOffset ~/ 60).toString().padLeft(2, '0');
+          final secs = (state.audioStartOffset % 60).toStringAsFixed(1).padLeft(4, '0');
+          messenger?.showSnackBar(SnackBar(
+            content: Text('Compás 1 fijado en $mins:$secs. Presiona Control al inicio del siguiente compás.'),
+            duration: const Duration(seconds: 3),
           ));
         }
       }
