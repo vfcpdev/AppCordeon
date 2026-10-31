@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:acordeon_flutter/core/constants/enums.dart';
 import 'package:acordeon_flutter/domain/commands/accordion_commands.dart';
 import 'package:acordeon_flutter/domain/memento/grid_memento.dart';
-import 'package:acordeon_flutter/domain/models/measure_models.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 
 void main() {
