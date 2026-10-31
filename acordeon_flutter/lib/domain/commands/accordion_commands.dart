@@ -70,6 +70,8 @@ class AssignDetectedChordCommand implements AccordionCommand<bool> {
       onSetBellows(barIndex, beatIndex, BellowsMode.push);
     } else if (!availability.isCompletePush && availability.isCompletePull) {
       onSetBellows(barIndex, beatIndex, BellowsMode.pull);
+    } else if (availability.isCompleteBoth) {
+      onSetBellows(barIndex, beatIndex, BellowsMode.push);
     }
 
     return true;

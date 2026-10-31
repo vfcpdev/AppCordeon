@@ -101,3 +101,4 @@ class StandardModalBassMatchingStrategy implements IBassMatchingStrategy {
     return BassMatchType.none;
   }
 }
+
