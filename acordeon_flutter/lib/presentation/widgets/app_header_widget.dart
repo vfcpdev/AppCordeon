@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../controllers/accordion_controller.dart';
 import 'audio_load_feedback.dart';
+import 'music_theory_dialog.dart';
 
 class AppHeaderWidget extends ConsumerWidget {
   const AppHeaderWidget({super.key});
@@ -200,6 +201,53 @@ class AppHeaderWidget extends ConsumerWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(width: 14),
+
+              // Botón Modal de Teoría Musical
+              Tooltip(
+                message: 'Abrir Guía y Manual de Teoría Musical para Acordeón',
+                child: InkWell(
+                  key: const ValueKey('music_theory_modal_btn'),
+                  onTap: () => MusicTheoryDialog.show(context),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0284C7).withValues(alpha: 0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1.5),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FaIcon(
+                          FontAwesomeIcons.graduationCap,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'Teoría Musical',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

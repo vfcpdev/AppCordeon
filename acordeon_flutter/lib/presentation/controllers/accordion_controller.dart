@@ -2128,8 +2128,6 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   void toggleDetectorMode() {
     state = state.copyWith(
       detectorMode: !state.detectorMode,
-      detectorSelectedButtons: const [],
-      detectedChord: null,
       activeButtons: const {},
     );
   }
@@ -2246,14 +2244,64 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     ).execute();
   }
 
-  /// Muestra el acorde detectado en el diapasón principal fijando sus notas.
-  void showDetectedChordOnDiapason() {
+  /// Transfiere de forma persistente y armónicamente completa el acorde detectado al Constructor Libre.
+  void transferDetectedChordToConstructor() {
     final chord = state.detectedChord;
     if (chord == null) return;
-    setFreeChordRoot(chord.rootPitchClass);
-    if (!state.isFreeChordFixed) {
-      toggleFreeChordFixed();
+
+    final root = chord.rootPitchClass;
+    String type = 'maj';
+    String fourth = 'none';
+
+    final sym = chord.chordSymbol.toLowerCase();
+    final f = chord.formula;
+
+    if (f.contains('♭3') && f.contains('♭5')) {
+      type = 'dim';
+    } else if (f.contains('♯5')) {
+      type = 'aug';
+    } else if (f.contains('4') && f.contains('5') && !f.contains('3')) {
+      type = 'sus4';
+    } else if (f.contains('♭3') || (sym.contains('m') && !sym.contains('maj'))) {
+      type = 'min';
     }
+
+    if (sym.contains('maj7')) {
+      fourth = 'maj7';
+    } else if (sym.contains('7') || sym.contains('dom7')) {
+      fourth = 'dom7';
+    } else if (sym.contains('add9')) {
+      fourth = 'add9';
+    } else if (sym.contains('6')) {
+      fourth = 'maj6';
+    }
+
+    String bass = '';
+    if (chord.bassPitchClass != chord.rootPitchClass) {
+      final interval = (chord.bassPitchClass - chord.rootPitchClass + 12) % 12;
+      if (interval == 3 || interval == 4) {
+        bass = '3';
+      } else if (interval == 6 || interval == 7 || interval == 8) {
+        bass = '5';
+      } else if (interval == 10 || interval == 11) {
+        bass = '7';
+      } else {
+        bass = chord.bass;
+      }
+    }
+
+    state = state.copyWith(
+      freeChordRoot: root,
+      freeChordType: type,
+      freeChordFourth: fourth,
+      freeChordBass: bass,
+      isFreeChordFixed: true,
+    );
+  }
+
+  /// Muestra el acorde detectado en el diapasón principal fijando sus notas y sincronizando el constructor.
+  void showDetectedChordOnDiapason() {
+    transferDetectedChordToConstructor();
   }
 
   void _recalculateDetectedChord() {
