@@ -251,10 +251,10 @@ void main() {
       expect(find.text('Compás'), findsOneWidget);
       expect(find.byType(FaIcon), findsWidgets);
 
-      // 2. Botón de Metrónomo (Click) presente inmediatamente junto a BPM
+      // 2. Botón de Metrónomo (icono stopwatch) presente inmediatamente junto a BPM
       final metronomeBtn = find.byKey(const ValueKey('metronome_toggle_btn_1'));
       expect(metronomeBtn, findsOneWidget);
-      expect(find.text('Click'), findsOneWidget);
+      expect(find.descendant(of: metronomeBtn, matching: find.byType(FaIcon)), findsOneWidget);
 
       // 3. Botón de Marcador en Vivo (Espacio) presente
       final liveMarkerBtn = find.byKey(const ValueKey('live_chord_marker_btn_1'));

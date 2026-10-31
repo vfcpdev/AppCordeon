@@ -192,15 +192,15 @@ void main() {
     // La barra de la canción debe estar visible
     expect(find.text('La Gota Fría - Demo Vallenato.wav'), findsOneWidget);
 
-    // Botones de reproducción horizontales (Atrás, Play, Adelante, Detener)
+    // Botones de reproducción horizontales (Atrás, Play, Adelante, Detener) y Slider
     expect(find.byTooltip('Compás Anterior'), findsOneWidget);
     expect(find.byTooltip('Reproducir'), findsOneWidget);
     expect(find.byTooltip('Siguiente Compás'), findsOneWidget);
     expect(find.byTooltip('Detener'), findsOneWidget);
+    expect(find.byKey(const ValueKey('track_playback_slider')), findsOneWidget);
 
-    // Opciones agrupadas (Tono, BPM, Cargar Acordes)
+    // Opciones agrupadas (Tono y Cargar Acordes, BPM removido a favor de la barra de Compás)
     expect(find.textContaining('Tono:'), findsOneWidget);
-    expect(find.textContaining('BPM'), findsWidgets);
     expect(find.text('Cargar Acordes'), findsOneWidget);
 
     // Desacoplar la barra de la canción
