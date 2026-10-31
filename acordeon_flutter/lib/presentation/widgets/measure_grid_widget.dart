@@ -649,7 +649,6 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                           // Número de compás
                           Container(
                             width: 18,
-                            padding: const EdgeInsets.symmetric(vertical: 6),
                             decoration: const BoxDecoration(
                               color: Color(0xFFF1F5F9),
                               border: Border(right: BorderSide(color: Color(0xFFCBD5E1))),
@@ -666,51 +665,55 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                             ),
                           ),
 
-                          // 4 Beats / Tiempos del compás
+                          // 4 Cuadros del compás en fila horizontal, uno al lado del otro
                           Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: measure.beats.asMap().entries.map((entry) {
-                                final beatIdx = entry.key;
-                                final beat = entry.value;
+                            child: IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: measure.beats.asMap().entries.map((entry) {
+                                  final beatIdx = entry.key;
+                                  final beat = entry.value;
 
-                                final isCurrentPlayhead = state.isPlayingAudio &&
-                                    state.selectedBarIndex == mIdx &&
-                                    state.selectedBeatIndex == beatIdx;
+                                  final isCurrentPlayhead = state.isPlayingAudio &&
+                                      state.selectedBarIndex == mIdx &&
+                                      state.selectedBeatIndex == beatIdx;
 
-                                return _InlineBeatChordEditor(
-                                  accordionId: widget.accordionNumber,
-                                  measureIndex: mIdx,
-                                  beatIndex: beatIdx,
-                                  totalMeasures: state.measures.length,
-                                  chord: beat.chord,
-                                  timeText: beat.timeText,
-                                  bellows: beat.bellows,
-                                  isCurrentPlayhead: isCurrentPlayhead,
-                                  isMarked: notifier.isBeatMarked(mIdx, beatIdx),
-                                  isYellowDecision: state.yellowDecisionBeats.contains(mIdx * 4 + beatIdx),
-                                  isSelected: state.selectedBarIndex == mIdx && state.selectedBeatIndex == beatIdx,
-                                  hasBottomBorder: beatIdx < measure.beats.length - 1,
-                                  notation: state.notation,
-                                  onChanged: (newChord) {
-                                    notifier.updateMeasureBeat(mIdx, beatIdx, newChord);
-                                  },
-                                  onSelected: () {
-                                    notifier.selectBeat(mIdx, beatIdx);
-                                  },
-                                  onNavigate: (bar, beat) {
-                                    notifier.selectBeat(bar, beat);
-                                    _scrollToBar(bar);
-                                  },
-                                  onToggleMark: () {
-                                    notifier.toggleBeatMark(mIdx, beatIdx);
-                                  },
-                                  onBellowsChanged: (bellows) {
-                                    notifier.setBeatBellows(mIdx, beatIdx, bellows);
-                                  },
-                                  onLiveMarker: () => notifier.markLiveChordChange(),
-                                );
-                              }).toList(),
+                                  final beatCell = _InlineBeatChordEditor(
+                                    accordionId: widget.accordionNumber,
+                                    measureIndex: mIdx,
+                                    beatIndex: beatIdx,
+                                    totalMeasures: state.measures.length,
+                                    chord: beat.chord,
+                                    timeText: beat.timeText,
+                                    bellows: beat.bellows,
+                                    isCurrentPlayhead: isCurrentPlayhead,
+                                    isMarked: notifier.isBeatMarked(mIdx, beatIdx),
+                                    isYellowDecision: state.yellowDecisionBeats.contains(mIdx * 4 + beatIdx),
+                                    isSelected: state.selectedBarIndex == mIdx && state.selectedBeatIndex == beatIdx,
+                                    hasTrailingBorder: beatIdx < measure.beats.length - 1,
+                                    notation: state.notation,
+                                    onChanged: (newChord) {
+                                      notifier.updateMeasureBeat(mIdx, beatIdx, newChord);
+                                    },
+                                    onSelected: () {
+                                      notifier.selectBeat(mIdx, beatIdx);
+                                    },
+                                    onNavigate: (bar, beat) {
+                                      notifier.selectBeat(bar, beat);
+                                      _scrollToBar(bar);
+                                    },
+                                    onToggleMark: () {
+                                      notifier.toggleBeatMark(mIdx, beatIdx);
+                                    },
+                                    onBellowsChanged: (bellows) {
+                                      notifier.setBeatBellows(mIdx, beatIdx, bellows);
+                                    },
+                                    onLiveMarker: () => notifier.markLiveChordChange(),
+                                  );
+
+                                  return Expanded(child: beatCell);
+                                }).toList(),
+                              ),
                             ),
                           ),
                         ],
