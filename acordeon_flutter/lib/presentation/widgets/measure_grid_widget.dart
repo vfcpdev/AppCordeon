@@ -217,57 +217,81 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                         ),
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            FaIcon(
-                              isPrimary ? FontAwesomeIcons.music : FontAwesomeIcons.link,
-                              size: 10,
-                              color: isPrimary ? const Color(0xFF0284C7) : const Color(0xFF059669),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              isPrimary ? 'Compás' : 'Compás A2',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w900,
-                                color: isPrimary ? const Color(0xFF0F172A) : const Color(0xFF059669),
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                        // Botón de acoplar / desacoplar y hacer movible el Compás
-                        Tooltip(
-                          message: isUndocked
-                              ? 'Acoplar ventana de Compás'
-                              : 'Desacoplar ventana de Compás (mover libremente)',
-                          child: InkWell(
-                            key: ValueKey('undock_compas_${widget.accordionNumber}'),
-                            onTap: () => notifier.toggleUndockCompas(widget.accordionNumber),
-                            borderRadius: BorderRadius.circular(4),
-                            child: Container(
-                              padding: const EdgeInsets.all(3.0),
-                              decoration: BoxDecoration(
-                                color: isUndocked ? const Color(0xFFEFF6FF) : Colors.white,
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                  color: isUndocked ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
-                                  width: 0.8,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final naturalWidth = constraints.maxWidth > 230.0 ? constraints.maxWidth : 230.0;
+                        return FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: SizedBox(
+                            width: naturalWidth,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    FaIcon(
+                                      isPrimary ? FontAwesomeIcons.music : FontAwesomeIcons.link,
+                                      size: 10,
+                                      color: isPrimary ? const Color(0xFF0284C7) : const Color(0xFF059669),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      isPrimary ? 'Compás' : 'Compás A2',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: isPrimary ? const Color(0xFF0F172A) : const Color(0xFF059669),
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    _BpmInputControl(
+                                      bpm: bpm,
+                                      compact: true,
+                                      onChanged: (newVal) => notifier.updateAudioBpm(newVal),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    _MetronomeButton(
+                                      accordionNumber: widget.accordionNumber,
+                                      isActive: state.isMetronomeActive,
+                                      onTap: notifier.toggleMetronome,
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              child: FaIcon(
-                                isUndocked ? FontAwesomeIcons.compress : FontAwesomeIcons.arrowUpRightFromSquare,
-                                size: 8.5,
-                                color: isUndocked ? const Color(0xFF2563EB) : const Color(0xFF64748B),
-                              ),
+                                // Botón de acoplar / desacoplar y hacer movible el Compás
+                                Tooltip(
+                                  message: isUndocked
+                                      ? 'Acoplar ventana de Compás'
+                                      : 'Desacoplar ventana de Compás (mover libremente)',
+                                  child: InkWell(
+                                    key: ValueKey('undock_compas_${widget.accordionNumber}'),
+                                    onTap: () => notifier.toggleUndockCompas(widget.accordionNumber),
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(3.0),
+                                      decoration: BoxDecoration(
+                                        color: isUndocked ? const Color(0xFFEFF6FF) : Colors.white,
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: isUndocked ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: FaIcon(
+                                        isUndocked ? FontAwesomeIcons.compress : FontAwesomeIcons.arrowUpRightFromSquare,
+                                        size: 8.5,
+                                        color: isUndocked ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
                   ),
 
@@ -284,25 +308,12 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                     ),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final compactBpm = constraints.maxWidth < 130;
                         return FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _BpmInputControl(
-                                bpm: bpm,
-                                compact: compactBpm,
-                                onChanged: (newVal) => notifier.updateAudioBpm(newVal),
-                              ),
-                              const SizedBox(width: 3),
-                              _MetronomeButton(
-                                accordionNumber: widget.accordionNumber,
-                                isActive: state.isMetronomeActive,
-                                onTap: notifier.toggleMetronome,
-                              ),
-                              const SizedBox(width: 3),
                               _LiveMarkerButton(
                                 accordionNumber: widget.accordionNumber,
                                 isActive: state.isLiveChordMarkerActive,
@@ -2463,24 +2474,10 @@ class _MetronomeButton extends StatelessWidget {
               width: 0.9,
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FaIcon(
-                FontAwesomeIcons.stopwatch,
-                size: 9.5,
-                color: isActive ? Colors.white : const Color(0xFF64748B),
-              ),
-              const SizedBox(width: 3),
-              Text(
-                'Click',
-                style: TextStyle(
-                  fontSize: 8.5,
-                  fontWeight: FontWeight.w800,
-                  color: isActive ? Colors.white : const Color(0xFF475569),
-                ),
-              ),
-            ],
+          child: FaIcon(
+            FontAwesomeIcons.stopwatch,
+            size: 9.5,
+            color: isActive ? Colors.white : const Color(0xFF64748B),
           ),
         ),
       ),

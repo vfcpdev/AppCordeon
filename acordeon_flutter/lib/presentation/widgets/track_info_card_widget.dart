@@ -147,6 +147,32 @@ class TrackInfoCardWidget extends ConsumerWidget {
                 ),
                 const SizedBox(width: 6),
 
+                // Slider de tiempo de reproducción
+                SizedBox(
+                  width: 95,
+                  height: 18,
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 2.5,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4.5),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 8.0),
+                      activeTrackColor: const Color(0xFF0284C7),
+                      inactiveTrackColor: const Color(0xFFCBD5E1),
+                      thumbColor: const Color(0xFF0284C7),
+                    ),
+                    child: Slider(
+                      key: const ValueKey('track_playback_slider'),
+                      value: state.currentAudioTime.clamp(0.0, totalDur),
+                      min: 0.0,
+                      max: totalDur > 0 ? totalDur : 1.0,
+                      onChanged: (val) {
+                        notifier.seekAudio(val);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+
                 // Contador de Tiempo actual / total
                 Text(
                   '${_formatTime(state.currentAudioTime)} / ${_formatTime(totalDur)}',
@@ -162,7 +188,7 @@ class TrackInfoCardWidget extends ConsumerWidget {
           ),
           const SizedBox(width: 10),
 
-          // ─── Opciones juntas: Tono, BPM y Cargar Acordes ────────────────
+          // ─── Opciones juntas: Tono y Cargar Acordes (sin colores) ─────────
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2.5),
             decoration: BoxDecoration(
@@ -173,14 +199,14 @@ class TrackInfoCardWidget extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 1. Tono detectado
+                // 1. Tono detectado (sin colores / neutro)
                 _GroupedOptionBadge(
                   icon: FontAwesomeIcons.key,
                   label: 'Tono: ${report.keyResult.keyNameLat}',
                   tooltip: 'Tono detectado (clic para editar o corregir)',
-                  background: const Color(0xFFEEF2FF),
-                  border: const Color(0xFFC7D2FE),
-                  foreground: const Color(0xFF4338CA),
+                  background: const Color(0xFFF8FAFC),
+                  border: const Color(0xFFCBD5E1),
+                  foreground: const Color(0xFF334155),
                   onTap: () => showDialog(
                     context: context,
                     builder: (_) => EditAudioKeyBpmDialog(report: report),
@@ -188,29 +214,14 @@ class TrackInfoCardWidget extends ConsumerWidget {
                 ),
                 const SizedBox(width: 4),
 
-                // 2. BPM
-                _GroupedOptionBadge(
-                  icon: FontAwesomeIcons.drum,
-                  label: '${report.bpm.toStringAsFixed(0)} BPM',
-                  tooltip: 'Tempo de la pista (clic para editar BPM)',
-                  background: const Color(0xFFFAF5FF),
-                  border: const Color(0xFFE9D5FF),
-                  foreground: const Color(0xFF7E22CE),
-                  onTap: () => showDialog(
-                    context: context,
-                    builder: (_) => EditAudioKeyBpmDialog(report: report),
-                  ),
-                ),
-                const SizedBox(width: 4),
-
-                // 3. Cargar Acordes a la cuadrícula de compases
+                // 2. Cargar Acordes a la cuadrícula de compases (sin colores / neutro)
                 _GroupedOptionBadge(
                   icon: FontAwesomeIcons.tableCells,
                   label: 'Cargar Acordes',
                   tooltip: 'Cargar acordes analizados a los compases',
-                  background: const Color(0xFFECFDF5),
-                  border: const Color(0xFFA7F3D0),
-                  foreground: const Color(0xFF059669),
+                  background: const Color(0xFFF8FAFC),
+                  border: const Color(0xFFCBD5E1),
+                  foreground: const Color(0xFF334155),
                   onTap: () {
                     notifier.applyChordsToMeasures(report.chords);
                     ScaffoldMessenger.of(context).showSnackBar(
