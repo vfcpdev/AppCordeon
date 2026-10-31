@@ -100,6 +100,31 @@ class _AccordionKeyboardListenerState extends ConsumerState<AccordionKeyboardLis
       }
     }
 
+    // 3. Tecla Control: calibración del BPM (1er toque = Compás 1, 2º toque = compás siguiente)
+    if (event is KeyDownEvent &&
+        (event.logicalKey == LogicalKeyboardKey.controlLeft ||
+            event.logicalKey == LogicalKeyboardKey.controlRight)) {
+      final notifier = ref.read(accordionSimulatorProvider.notifier);
+      final bpm = notifier.tapBpmCalibration();
+      if (mounted) {
+        final calibrating = ref.read(accordionSimulatorProvider).isCalibratingBpm;
+        final messenger = ScaffoldMessenger.maybeOf(context);
+        messenger?.hideCurrentSnackBar();
+        if (bpm != null) {
+          messenger?.showSnackBar(SnackBar(
+            content: Text('BPM ajustado a $bpm'),
+            duration: const Duration(seconds: 2),
+          ));
+        } else if (calibrating) {
+          messenger?.showSnackBar(const SnackBar(
+            content: Text('Compás 1 marcado. Presiona Control al inicio del siguiente compás.'),
+            duration: Duration(seconds: 3),
+          ));
+        }
+      }
+      return false;
+    }
+
     _handleKeyEvent(event);
     return false;
   }

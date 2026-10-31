@@ -640,3 +640,63 @@ class PlayMetronomeTickCommand implements AccordionCommand<int> {
   }
 }
 
+
+/// Comando para calibrar el BPM a partir de dos toques (tecla Control) que marcan
+/// el inicio del Compás 1 y el inicio del compás siguiente durante la reproducción.
+///
+/// {P}: 0 <= startTime < endTime, beatsPerBar > 0,
+///      y el BPM resultante está en [minBpm, maxBpm].
+/// {Q}: bpm = round(beatsPerBar * 60 / (endTime - startTime)).
+/// {I}: Comando puro (sin efectos secundarios); no depende de Flutter ni del reproductor.
+class CalibrateBpmFromTapsCommand implements AccordionCommand<int> {
+  @override
+  String get commandName => 'CalibrateBpmFromTapsCommand';
+
+  final double startTime;
+  final double endTime;
+  final int beatsPerBar;
+  final int minBpm;
+  final int maxBpm;
+
+  const CalibrateBpmFromTapsCommand({
+    required this.startTime,
+    required this.endTime,
+    this.beatsPerBar = 4,
+    this.minBpm = 30,
+    this.maxBpm = 300,
+  });
+
+  double get _interval => endTime - startTime;
+
+  double get rawBpm => _interval > 0 ? beatsPerBar * 60.0 / _interval : 0.0;
+
+  @override
+  bool canExecute() =>
+      startTime >= 0 &&
+      _interval > 0 &&
+      beatsPerBar > 0 &&
+      rawBpm >= minBpm &&
+      rawBpm <= maxBpm;
+
+  @override
+  void assertPreconditions() {
+    if (startTime < 0 || _interval <= 0) {
+      throw const PreconditionViolationException(
+        'CalibrateBpmFromTapsCommand',
+        'El segundo toque debe ocurrir después del primero.',
+      );
+    }
+    if (rawBpm < minBpm || rawBpm > maxBpm) {
+      throw const PreconditionViolationException(
+        'CalibrateBpmFromTapsCommand',
+        'El intervalo entre compases produce un BPM fuera de rango.',
+      );
+    }
+  }
+
+  @override
+  int execute() {
+    assertPreconditions();
+    return rawBpm.round();
+  }
+}

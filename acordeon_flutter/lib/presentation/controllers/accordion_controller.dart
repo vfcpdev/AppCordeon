@@ -169,6 +169,12 @@ class AccordionSimulatorState {
   final bool? _isLiveChordMarkerActive;
   bool get isLiveChordMarkerActive => _isLiveChordMarkerActive ?? false;
 
+  /// Marca temporal (s) del primer toque de Control para calibrar el BPM.
+  /// Valor negativo = calibración inactiva.
+  final double? _bpmCalibrationStart;
+  double get bpmCalibrationStart => _bpmCalibrationStart ?? -1.0;
+  bool get isCalibratingBpm => bpmCalibrationStart >= 0.0;
+
   /// Acorde activo en el Compás actual (o el más reciente dentro del compás/tiempo).
   String get activeCompasChord {
     if (selectedBarIndex == null || selectedBarIndex! < 0 || selectedBarIndex! >= measures.length) {
@@ -270,7 +276,9 @@ class AccordionSimulatorState {
     bool? isMetronomeActive,
     double? metronomeVolume,
     bool? isLiveChordMarkerActive,
-  })  : _markedBeats = markedBeats ?? const {},
+    double? bpmCalibrationStart,
+  })  : _bpmCalibrationStart = bpmCalibrationStart ?? -1.0,
+        _markedBeats = markedBeats ?? const {},
         _yellowDecisionBeats = yellowDecisionBeats ?? const {},
         _multiBeatPattern = multiBeatPattern ?? '',
         _freeChordBass = freeChordBass ?? '',
@@ -351,8 +359,10 @@ class AccordionSimulatorState {
     bool? isMetronomeActive,
     double? metronomeVolume,
     bool? isLiveChordMarkerActive,
+    double? bpmCalibrationStart,
   }) {
     return AccordionSimulatorState(
+      bpmCalibrationStart: bpmCalibrationStart ?? this.bpmCalibrationStart,
       backgroundColor: backgroundColor ?? this.backgroundColor,
       notation: notation ?? this.notation,
       showDiapason1: showDiapason1 ?? this.showDiapason1,
@@ -709,6 +719,49 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   void setAudioReport(AudioAnalysisReport? report) {
     state = state.copyWith(audioReport: report);
   }
+
+  /// Calibración del BPM con dos toques de la tecla Control (State: inactivo → esperando 2º toque).
+  ///
+  /// 1er toque: registra `currentAudioTime` como inicio del Compás 1.
+  /// 2º toque: registra el inicio del compás siguiente, calcula el BPM con
+  /// [CalibrateBpmFromTapsCommand] y lo aplica conservando la tonalidad.
+  ///
+  /// {P}: existe `audioReport`.
+  /// {Q}: retorna el nuevo BPM tras el 2º toque válido (y `audioReport.bpm` queda actualizado),
+  ///      o `null` tras el 1er toque / toque inválido. Tras el 2º toque la calibración se reinicia.
+  int? tapBpmCalibration() {
+    final report = state.audioReport;
+    if (report == null) return null;
+
+    final now = state.currentAudioTime;
+    if (!state.isCalibratingBpm) {
+      state = state.copyWith(bpmCalibrationStart: now);
+      return null;
+    }
+
+    final command = CalibrateBpmFromTapsCommand(
+      startTime: state.bpmCalibrationStart,
+      endTime: now,
+    );
+
+    if (!command.canExecute()) {
+      // Toque inválido (orden o rango): se toma como nuevo inicio de compás 1.
+      state = state.copyWith(bpmCalibrationStart: now);
+      return null;
+    }
+
+    final bpm = command.execute();
+    state = state.copyWith(bpmCalibrationStart: -1.0);
+    updateAudioKeyAndBpm(
+      rootMod: report.mainKey.rootMod,
+      mode: report.mainKey.mode,
+      bpm: bpm,
+    );
+    return bpm;
+  }
+
+  /// Cancela una calibración de BPM en curso.
+  void cancelBpmCalibration() => state = state.copyWith(bpmCalibrationStart: -1.0);
 
   /// Tipo MIME según la extensión del archivo cargado.
   static String _mimeTypeFor(String fileName) {
