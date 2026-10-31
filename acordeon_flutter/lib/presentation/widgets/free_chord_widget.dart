@@ -15,9 +15,6 @@ class FreeChordWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(accordionSimulatorProvider);
     final notifier = ref.read(accordionSimulatorProvider.notifier);
-    final rootName = state.freeChordRoot >= 0 && state.freeChordRoot < roots.length
-        ? roots[state.freeChordRoot]
-        : '—';
 
     return Container(
       padding: const EdgeInsets.all(8),
@@ -357,53 +354,6 @@ class FreeChordWidget extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
-
-          // Escala del Acorde Libre (Grados I, ii, iii, IV, V, vi, vii°)
-          Container(
-            padding: const EdgeInsets.only(top: 8),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: Color(0xFFE2E8F0), style: BorderStyle.solid)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      'Grados de la escala de $rootName',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF059669),
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-
-                // Chips de Grados Armónicos
-                Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
-                  children: [
-                    _buildDegreeChip('I', rootName, 'Mayor', () => notifier.selectFreeChordDegree(0, 'Mayor'), isActive: true),
-                    _buildDegreeChip('ii', _getRelative(rootName, 2), 'menor', () => notifier.selectFreeChordDegree(2, 'menor')),
-                    _buildDegreeChip('iii', _getRelative(rootName, 4), 'menor', () => notifier.selectFreeChordDegree(4, 'menor')),
-                    _buildDegreeChip('IV', _getRelative(rootName, 5), 'Mayor', () => notifier.selectFreeChordDegree(5, 'Mayor')),
-                    _buildDegreeChip('V', _getRelative(rootName, 7), 'Mayor', () => notifier.selectFreeChordDegree(7, 'Mayor')),
-                    _buildDegreeChip('vi', _getRelative(rootName, 9), 'menor', () => notifier.selectFreeChordDegree(9, 'menor')),
-                    _buildDegreeChip('vii°', _getRelative(rootName, 11), 'disminuido', () => notifier.selectFreeChordDegree(11, 'disminuido')),
-                  ],
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -537,41 +487,5 @@ class FreeChordWidget extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-
-  Widget _buildDegreeChip(String roman, String note, String quality, VoidCallback onTap, {bool isActive = false}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFECFDF5) : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: isActive ? const Color(0xFF22C55E) : const Color(0xFFCBD5E1)),
-        ),
-        child: Column(
-          children: [
-            Text(
-              roman,
-              style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: isActive ? const Color(0xFF059669) : const Color(0xFF059669)),
-            ),
-            Text(
-              note,
-              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: isActive ? const Color(0xFF065F46) : const Color(0xFF0F172A)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-
-  static String _getRelative(String root, int semitones) {
-    final idx = roots.indexOf(root);
-    if (idx == -1) return '';
-    return roots[(idx + semitones) % 12];
   }
 }
