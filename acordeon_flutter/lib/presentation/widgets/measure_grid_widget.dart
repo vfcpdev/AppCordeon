@@ -417,21 +417,26 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                       const SizedBox(width: 2),
                     ],
                     // Control de BPM editable con botones subir/bajar
-                    Expanded(
-                      child: Align(
-                        alignment: showTitle
-                            ? Alignment.centerRight
-                            : Alignment.center,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: _BpmInputControl(
-                            bpm: bpm,
-                            compact: compactBpm,
-                            onChanged: (newVal) =>
-                                notifier.updateAudioBpm(newVal),
-                          ),
+                    Align(
+                      alignment: showTitle
+                          ? Alignment.centerRight
+                          : Alignment.center,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: _BpmInputControl(
+                          bpm: bpm,
+                          compact: compactBpm,
+                          onChanged: (newVal) =>
+                              notifier.updateAudioBpm(newVal),
                         ),
                       ),
+                    ),
+                    const SizedBox(width: 3),
+                    // Botón y opciones de Acordes Completos a la derecha del BPM de compás
+                    _CompleteChordsButton(
+                      accordionNumber: widget.accordionNumber,
+                      hasYellowDecisions: state.yellowDecisionBeats.isNotEmpty,
+                      yellowDecisionsCount: state.yellowDecisionBeats.length,
                     ),
                     const SizedBox(width: 3),
                     // Botón de acoplar / desacoplar y hacer movible el Compás
@@ -467,6 +472,76 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
             ),
           ),
 
+          if (state.yellowDecisionBeats.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEF9C3),
+                border: Border(bottom: BorderSide(color: Color(0xFFFDE047))),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, size: 11, color: Color(0xFFB45309)),
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text(
+                      '${state.yellowDecisionBeats.length} acordes abren o cierran',
+                      style: const TextStyle(
+                        fontSize: 8.0,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF92400E),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  InkWell(
+                    key: ValueKey('apply_yellow_pull_quick_${widget.accordionNumber}'),
+                    onTap: () {
+                      final n = notifier.applyYellowDecision(BellowsMode.pull);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('$n acordes asignados a Abre (←)'), duration: const Duration(seconds: 2)),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(3),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(3),
+                        border: Border.all(color: const Color(0xFF3B82F6), width: 0.8),
+                      ),
+                      child: const Text(
+                        'Abre',
+                        style: TextStyle(fontSize: 7.5, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 3),
+                  InkWell(
+                    key: ValueKey('apply_yellow_push_quick_${widget.accordionNumber}'),
+                    onTap: () {
+                      final n = notifier.applyYellowDecision(BellowsMode.push);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('$n acordes asignados a Cierra (→)'), duration: const Duration(seconds: 2)),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(3),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(3),
+                        border: Border.all(color: const Color(0xFFEF4444), width: 0.8),
+                      ),
+                      child: const Text(
+                        'Cierra',
+                        style: TextStyle(fontSize: 7.5, fontWeight: FontWeight.bold, color: Color(0xFFB91C1C)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 4.0),
             child: Container(
@@ -540,6 +615,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                   bellows: beat.bellows,
                                   isCurrentPlayhead: isCurrentPlayhead,
                                   isMarked: notifier.isBeatMarked(mIdx, beatIdx),
+                                  isYellowDecision: state.yellowDecisionBeats.contains(mIdx * 4 + beatIdx),
                                   isSelected: state.selectedBarIndex == mIdx && state.selectedBeatIndex == beatIdx,
                                   hasBottomBorder: beatIdx < measure.beats.length - 1,
                                   notation: state.notation,
@@ -1213,6 +1289,7 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final BellowsMode bellows;
   final bool isCurrentPlayhead;
   final bool isMarked;
+  final bool isYellowDecision;
   final bool isSelected;
   final bool hasBottomBorder;
   final NotationMode notation;
@@ -1232,6 +1309,7 @@ class _InlineBeatChordEditor extends StatefulWidget {
     this.bellows = BellowsMode.both,
     required this.isCurrentPlayhead,
     required this.isMarked,
+    this.isYellowDecision = false,
     this.isSelected = false,
     required this.hasBottomBorder,
     this.notation = NotationMode.latina,
@@ -1550,9 +1628,11 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     ? Colors.white // Fondo blanco limpio al editar
                     : (isPlaying
                         ? const Color(0xFFFEF3C7)
-                        : (isMarked
-                            ? const Color(0xFFF0FDF4) // Tiempo marcado con el checkbox
-                            : Colors.white))),
+                        : (widget.isYellowDecision
+                            ? const Color(0xFFFEF08A) // Resaltado amarillo para decidir fuelle
+                            : (isMarked
+                                ? const Color(0xFFF0FDF4) // Tiempo marcado con el checkbox
+                                : Colors.white)))),
             borderRadius: BorderRadius.circular(4),
             border: isCellSelected
                 ? Border.all(color: const Color(0xFF2563EB), width: 1.8) // Cuadro resaltado nítido con borde completo
@@ -1560,17 +1640,19 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     ? Border.all(color: const Color(0xFF3B82F6), width: 1.8) // Borde activo de edición
                     : (isPlaying
                         ? Border.all(color: const Color(0xFFF59E0B), width: 1.8)
-                        : (isMarked
-                            ? Border.all(
-                                color: const Color(0xFF059669),
-                                width: 1.2,
-                              )
-                            : Border.all(
-                                color: widget.hasBottomBorder
-                                    ? const Color(0xFFE2E8F0)
-                                    : Colors.transparent,
-                                width: 0.8,
-                              )))),
+                        : (widget.isYellowDecision
+                            ? Border.all(color: const Color(0xFFEAB308), width: 1.8) // Borde amarillo dorado
+                            : (isMarked
+                                ? Border.all(
+                                    color: const Color(0xFF059669),
+                                    width: 1.2,
+                                  )
+                                : Border.all(
+                                    color: widget.hasBottomBorder
+                                        ? const Color(0xFFE2E8F0)
+                                        : Colors.transparent,
+                                    width: 0.8,
+                                  ))))),
             boxShadow: isCellSelected
                 ? [
                     BoxShadow(
@@ -1579,15 +1661,23 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                       spreadRadius: 0.8,
                     ),
                   ]
-                : (_isEditing
+                : (widget.isYellowDecision
                     ? [
                         BoxShadow(
-                          color: const Color(0xFF3B82F6).withValues(alpha: 0.20),
-                          blurRadius: 3,
-                          spreadRadius: 0.5,
+                          color: const Color(0xFFEAB308).withValues(alpha: 0.35),
+                          blurRadius: 4,
+                          spreadRadius: 0.8,
                         ),
                       ]
-                    : null),
+                    : (_isEditing
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF3B82F6).withValues(alpha: 0.20),
+                              blurRadius: 3,
+                              spreadRadius: 0.5,
+                            ),
+                          ]
+                        : null)),
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -1961,6 +2051,258 @@ class _ClearMarksButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Botón y menú de opciones para gestionar acordes completos según el fuelle
+/// colocado inmediatamente a la derecha del control de BPM.
+class _CompleteChordsButton extends ConsumerWidget {
+  final int accordionNumber;
+  final bool hasYellowDecisions;
+  final int yellowDecisionsCount;
+
+  const _CompleteChordsButton({
+    required this.accordionNumber,
+    required this.hasYellowDecisions,
+    required this.yellowDecisionsCount,
+  });
+
+  void _handleAction(BuildContext context, WidgetRef ref, String action) {
+    final notifier = ref.read(accordionSimulatorProvider.notifier);
+    switch (action) {
+      case 'assign':
+        final res = notifier.assignCompleteChordsBellows(accordionNumber);
+        final assigned = res['assigned'] ?? 0;
+        final yellow = res['yellow'] ?? 0;
+        final incomplete = res['incomplete'] ?? 0;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '$assigned acordes asignados. $yellow en amarillo (abren o cierran) para decidir. $incomplete incompletos.',
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        break;
+      case 'select':
+        final count = notifier.selectCompleteChordsBeats(accordionNumber);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$count tiempos con acordes completos seleccionados en el compás.'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        break;
+      case 'mark_yellow':
+        final count = notifier.markYellowDecisionBeats(accordionNumber);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$count acordes completos abriendo o cerrando marcados en amarillo.'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        break;
+      case 'apply_pull':
+        final count = notifier.applyYellowDecision(BellowsMode.pull);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$count acordes amarillos aplicados a Abre (←).'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        break;
+      case 'apply_push':
+        final count = notifier.applyYellowDecision(BellowsMode.push);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$count acordes amarillos aplicados a Cierra (→).'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        break;
+      case 'clear_yellow':
+        notifier.clearYellowDecisionBeats();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Marcas amarillas de decisión eliminadas.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<String>(
+      key: ValueKey('complete_chords_btn_$accordionNumber'),
+      tooltip: 'Opciones de Acordes Completos por Fuelle',
+      offset: const Offset(0, 26),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      elevation: 6,
+      onSelected: (val) => _handleAction(context, ref, val),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+        decoration: BoxDecoration(
+          color: hasYellowDecisions ? const Color(0xFFFEF9C3) : Colors.white,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: hasYellowDecisions ? const Color(0xFFEAB308) : const Color(0xFFCBD5E1),
+            width: hasYellowDecisions ? 1.2 : 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FaIcon(
+              FontAwesomeIcons.checkDouble,
+              size: 8.5,
+              color: hasYellowDecisions ? const Color(0xFFB45309) : const Color(0xFF0284C7),
+            ),
+            if (hasYellowDecisions) ...[
+              const SizedBox(width: 2),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 2.5, vertical: 0.5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '$yellowDecisionsCount',
+                  style: const TextStyle(
+                    fontSize: 7.0,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      itemBuilder: (context) => [
+        const PopupMenuItem<String>(
+          key: ValueKey('assign_complete_chords_opt'),
+          value: 'assign',
+          child: Row(
+            children: [
+              FaIcon(FontAwesomeIcons.wandMagicSparkles, size: 12, color: Color(0xFF0284C7)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Asignar acordes completos',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      'Auto-asigna unívocos y marca amarillos para decidir',
+                      style: TextStyle(fontSize: 9, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          key: ValueKey('select_complete_chords_opt'),
+          value: 'select',
+          child: Row(
+            children: [
+              FaIcon(FontAwesomeIcons.squareCheck, size: 12, color: Color(0xFF059669)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Seleccionar en compás',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      'Marca checkboxes de tiempos con notas completas',
+                      style: TextStyle(fontSize: 9, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          key: ValueKey('mark_yellow_chords_opt'),
+          value: 'mark_yellow',
+          child: Row(
+            children: [
+              FaIcon(FontAwesomeIcons.circleExclamation, size: 12, color: Color(0xFFD97706)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Marcar amarillos para decidir',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      'Resalta acordes que abren o cierran para elegir',
+                      style: TextStyle(fontSize: 9, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (hasYellowDecisions) ...[
+          const PopupMenuDivider(),
+          const PopupMenuItem<String>(
+            key: ValueKey('apply_yellow_pull_opt'),
+            value: 'apply_pull',
+            child: Row(
+              children: [
+                FaIcon(FontAwesomeIcons.arrowLeft, size: 12, color: Color(0xFF2563EB)),
+                SizedBox(width: 8),
+                Text(
+                  'Aplicar todos los amarillos a Abre (←)',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+                ),
+              ],
+            ),
+          ),
+          const PopupMenuItem<String>(
+            key: ValueKey('apply_yellow_push_opt'),
+            value: 'apply_push',
+            child: Row(
+              children: [
+                FaIcon(FontAwesomeIcons.arrowRight, size: 12, color: Color(0xFFDC2626)),
+                SizedBox(width: 8),
+                Text(
+                  'Aplicar todos los amarillos a Cierra (→)',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFB91C1C)),
+                ),
+              ],
+            ),
+          ),
+          const PopupMenuItem<String>(
+            key: ValueKey('clear_yellow_opt'),
+            value: 'clear_yellow',
+            child: Row(
+              children: [
+                FaIcon(FontAwesomeIcons.xmark, size: 12, color: Color(0xFF94A3B8)),
+                SizedBox(width: 8),
+                Text(
+                  'Limpiar marcas amarillas',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

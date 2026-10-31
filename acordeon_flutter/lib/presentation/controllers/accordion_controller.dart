@@ -93,6 +93,9 @@ class AccordionSimulatorState {
   /// inserción desde el Constructor y la reproducción se limitan a ellos.
   final Set<int> markedBeats;
 
+  /// Tiempos resaltados en amarillo para decidir el fuelle (acordes completos abriendo o cerrando).
+  final Set<int> yellowDecisionBeats;
+
   // Sección 5: Acorde Libre y Escalas
   final int freeChordRoot; // 0=Do, 1=Do#, etc.
   final String freeChordType; // maj, min, dim, aug, sus4
@@ -209,6 +212,7 @@ class AccordionSimulatorState {
     this.selectedBarIndex,
     this.selectedBeatIndex,
     this.markedBeats = const {},
+    this.yellowDecisionBeats = const {},
     required this.freeChordRoot,
     required this.freeChordType,
     required this.freeChordFourth,
@@ -272,6 +276,7 @@ class AccordionSimulatorState {
     int? selectedBarIndex,
     int? selectedBeatIndex,
     Set<int>? markedBeats,
+    Set<int>? yellowDecisionBeats,
     int? freeChordRoot,
     String? freeChordType,
     String? freeChordFourth,
@@ -331,6 +336,7 @@ class AccordionSimulatorState {
       selectedBarIndex: selectedBarIndex ?? this.selectedBarIndex,
       selectedBeatIndex: selectedBeatIndex ?? this.selectedBeatIndex,
       markedBeats: markedBeats ?? this.markedBeats,
+      yellowDecisionBeats: yellowDecisionBeats ?? this.yellowDecisionBeats,
       freeChordRoot: freeChordRoot ?? this.freeChordRoot,
       freeChordType: freeChordType ?? this.freeChordType,
       freeChordFourth: freeChordFourth ?? this.freeChordFourth,
@@ -1404,13 +1410,184 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       updatedMeasures[barIndex] = MeasureRow(barNumber: row.barNumber, beats: beats);
     }
 
+    final remainingYellow = Set<int>.from(state.yellowDecisionBeats);
+    if (state.markedBeats.contains(key)) {
+      remainingYellow.removeAll(state.markedBeats);
+    } else {
+      remainingYellow.remove(key);
+    }
+
     state = state.copyWith(
       measures: updatedMeasures,
       selectedBarIndex: barIndex,
       selectedBeatIndex: beatIndex,
       bellows1: newBellows != BellowsMode.both ? newBellows : state.bellows1,
+      yellowDecisionBeats: remainingYellow,
     );
   }
+
+  /// Analiza los acordes en la cuadrícula de compases según el diapasón del acordeón especificado.
+  /// - Asigna automáticamente push a los que solo están completos cerrando.
+  /// - Asigna automáticamente pull a los que solo están completos abriendo.
+  /// - Marca en amarillo (yellowDecisionBeats) los acordes completos abriendo o cerrando para decidir y aplicar.
+  Map<String, int> assignCompleteChordsBellows(int accordionNumber) {
+    final isPrimary = accordionNumber == 1;
+    final treble = isPrimary ? state.trebleData1 : state.trebleData2;
+
+    final pullPcs = <int>{};
+    final pushPcs = <int>{};
+    for (final row in treble.values) {
+      for (final btn in row) {
+        pullPcs.add(btn.pull % 12);
+        pushPcs.add(btn.push % 12);
+      }
+    }
+
+    final newYellow = <int>{};
+    int assignedCount = 0;
+    int yellowCount = 0;
+    int incompleteCount = 0;
+
+    final updatedMeasures = state.measures.map((measure) {
+      final updatedBeats = measure.beats.map((beat) {
+        final chord = beat.chord.trim();
+        if (chord.isEmpty) return beat;
+
+        final chordPcs = ChordCatalog.pitchClassesForChordSymbol(chord);
+        if (chordPcs.isEmpty) return beat;
+
+        final isCompletePush = chordPcs.difference(pushPcs).isEmpty;
+        final isCompletePull = chordPcs.difference(pullPcs).isEmpty;
+        final key = beat.barIndex * 4 + beat.beatIndex;
+
+        if (isCompletePush && !isCompletePull) {
+          assignedCount++;
+          return beat.copyWith(bellows: BellowsMode.push);
+        } else if (!isCompletePush && isCompletePull) {
+          assignedCount++;
+          return beat.copyWith(bellows: BellowsMode.pull);
+        } else if (isCompletePush && isCompletePull) {
+          yellowCount++;
+          newYellow.add(key);
+          return beat;
+        } else {
+          incompleteCount++;
+          return beat;
+        }
+      }).toList();
+
+      return MeasureRow(barNumber: measure.barNumber, beats: updatedBeats);
+    }).toList();
+
+    state = state.copyWith(
+      measures: updatedMeasures,
+      yellowDecisionBeats: newYellow,
+    );
+
+    return {
+      'assigned': assignedCount,
+      'yellow': yellowCount,
+      'incomplete': incompleteCount,
+    };
+  }
+
+  /// Selecciona (marca con checkbox) todos los tiempos cuyos acordes tienen notas completas.
+  int selectCompleteChordsBeats(int accordionNumber) {
+    final isPrimary = accordionNumber == 1;
+    final treble = isPrimary ? state.trebleData1 : state.trebleData2;
+
+    final pullPcs = <int>{};
+    final pushPcs = <int>{};
+    for (final row in treble.values) {
+      for (final btn in row) {
+        pullPcs.add(btn.pull % 12);
+        pushPcs.add(btn.push % 12);
+      }
+    }
+
+    final completeKeys = <int>{};
+    for (final measure in state.measures) {
+      for (final beat in measure.beats) {
+        final chord = beat.chord.trim();
+        if (chord.isEmpty) continue;
+        final chordPcs = ChordCatalog.pitchClassesForChordSymbol(chord);
+        if (chordPcs.isEmpty) continue;
+        final isCompletePush = chordPcs.difference(pushPcs).isEmpty;
+        final isCompletePull = chordPcs.difference(pullPcs).isEmpty;
+        if (isCompletePush || isCompletePull) {
+          completeKeys.add(beat.barIndex * 4 + beat.beatIndex);
+        }
+      }
+    }
+
+    state = state.copyWith(markedBeats: completeKeys);
+    return completeKeys.length;
+  }
+
+  /// Marca en amarillo todos los tiempos cuyos acordes están completos tanto abriendo como cerrando
+  /// (abriendo o cerrando) para que el usuario pueda decidir.
+  int markYellowDecisionBeats(int accordionNumber) {
+    final isPrimary = accordionNumber == 1;
+    final treble = isPrimary ? state.trebleData1 : state.trebleData2;
+
+    final pullPcs = <int>{};
+    final pushPcs = <int>{};
+    for (final row in treble.values) {
+      for (final btn in row) {
+        pullPcs.add(btn.pull % 12);
+        pushPcs.add(btn.push % 12);
+      }
+    }
+
+    final yellowKeys = <int>{};
+    for (final measure in state.measures) {
+      for (final beat in measure.beats) {
+        final chord = beat.chord.trim();
+        if (chord.isEmpty) continue;
+        final chordPcs = ChordCatalog.pitchClassesForChordSymbol(chord);
+        if (chordPcs.isEmpty) continue;
+        final isCompletePush = chordPcs.difference(pushPcs).isEmpty;
+        final isCompletePull = chordPcs.difference(pullPcs).isEmpty;
+        if (isCompletePush && isCompletePull) {
+          yellowKeys.add(beat.barIndex * 4 + beat.beatIndex);
+        }
+      }
+    }
+
+    state = state.copyWith(yellowDecisionBeats: yellowKeys);
+    return yellowKeys.length;
+  }
+
+  /// Aplica la decisión de fuelle (Abre o Cierra) a todos los acordes resaltados en amarillo
+  /// y limpia el resaltado de decisión.
+  int applyYellowDecision(BellowsMode mode, [Set<int>? specificKeys]) {
+    final targets = specificKeys ?? state.yellowDecisionBeats;
+    if (targets.isEmpty) return 0;
+
+    int applied = 0;
+    final updatedMeasures = state.measures.map((measure) {
+      final updatedBeats = measure.beats.map((beat) {
+        final key = beat.barIndex * 4 + beat.beatIndex;
+        if (targets.contains(key)) {
+          applied++;
+          return beat.copyWith(bellows: mode);
+        }
+        return beat;
+      }).toList();
+      return MeasureRow(barNumber: measure.barNumber, beats: updatedBeats);
+    }).toList();
+
+    final remainingYellow = Set<int>.from(state.yellowDecisionBeats)..removeAll(targets);
+
+    state = state.copyWith(
+      measures: updatedMeasures,
+      yellowDecisionBeats: remainingYellow,
+    );
+    return applied;
+  }
+
+  /// Limpia las marcas amarillas de decisión de fuelle.
+  void clearYellowDecisionBeats() => state = state.copyWith(yellowDecisionBeats: const {});
 
   /// Inserta el acorde generado en el constructor. Si hay tiempos marcados con
   /// el checkbox, se asigna a todos ellos a la vez; si no, a la celda
