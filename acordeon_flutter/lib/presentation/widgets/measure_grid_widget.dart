@@ -1960,7 +1960,8 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Acorde del cuadro, alineado a la izquierda
+                    // Acorde del cuadro, alineado a la izquierda (sin checkbox:
+                    // el marcado vive a la izquierda del número del compás)
                     Expanded(child: chordField),
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1981,19 +1982,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                           ),
                           const SizedBox(width: 3),
                         ],
-                        // Checkbox para marcar el tiempo y flechas Abre/Cierre a su derecha
+                        // Flechas Abre/Cierre a la derecha del acorde
                         Padding(
                           padding: const EdgeInsets.only(right: 2.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              markCheckbox,
-                              if (showArrows) ...[
-                                const SizedBox(width: 2),
-                                bellowsArrows,
-                              ],
-                            ],
-                          ),
+                          child: bellowsArrows,
                         ),
                       ],
                     ),
@@ -2002,22 +1994,17 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
               }
 
               // Modo compacto: los 4 cuadros del compás en fila horizontal.
-              // Acorde arriba (centrado) y controles de marcado/fuelle debajo.
+              // Únicamente el acorde centrado y (si cabe) el fuelle debajo:
+              // la celda no lleva checkbox.
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   chordField,
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      markCheckbox,
-                      if (showCompactArrows) ...[
-                        const SizedBox(width: 2),
-                        bellowsArrows,
-                      ],
-                    ],
-                  ),
+                  if (showCompactArrows)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 1),
+                      child: bellowsArrows,
+                    ),
                 ],
               );
             },
