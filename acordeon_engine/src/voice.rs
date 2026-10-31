@@ -1,4 +1,14 @@
 //! Modelado acústico de lengüetas de acordeón diatónico (Reed Model) de alto rendimiento.
+//!
+//! # Enfoque Formal con Triplas de Hoare:
+//! - Precondición {P}: `sample_rate > 0.0` y notas MIDI en `[0, 127]`.
+//! - Postcondición {Q}: Cada muestra generada satisface `|sample| <= 1.0` sin NaN ni Infinitos.
+//! - Invariante {I}:
+//!     * `0.0 <= phase_norm_a < 1.0`
+//!     * `0.0 <= phase_norm_b < 1.0`
+//!     * `0.0 <= envelope <= 1.0`
+//!     * Cero asignaciones en el hilo de audio en tiempo real (`no-alloc`).
+
 use std::f32::consts::PI;
 use std::sync::OnceLock;
 
@@ -36,30 +46,45 @@ fn get_reed_b_table() -> &'static [f32; WAVETABLE_SIZE] {
     })
 }
 
+/// Búsqueda con interpolación lineal en la tabla de ondas.
+///
+/// # Tripla de Hoare:
+/// - {P}: `table` contiene muestras válidas de amplitud y `0.0 <= phase_norm < 1.0`.
+/// - {Q}: Retorna una interpolación continua acotada `[-1.0, 1.0]`.
 #[inline(always)]
 fn lookup_wavetable(table: &[f32; WAVETABLE_SIZE], phase_norm: f32) -> f32 {
-    let index_f = phase_norm * (WAVETABLE_SIZE as f32);
+    let clamped_phase = phase_norm.clamp(0.0, 1.0 - f32::EPSILON);
+    let index_f = clamped_phase * (WAVETABLE_SIZE as f32);
     let i0 = (index_f as usize) % WAVETABLE_SIZE;
     let i1 = (i0 + 1) % WAVETABLE_SIZE;
     let frac = index_f - (index_f as usize as f32);
     table[i0] + frac * (table[i1] - table[i0])
 }
 
+/// Estado de la envolvente de la lengüeta acústica (State Pattern).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EnvelopeState {
+    Idle,
+    Attack,
+    Release,
+}
+
 pub struct AccordionVoice {
     pub midi_note: u8,
     pub frequency: f32,
     pub is_active: bool,
+    pub envelope: f32,
+    pub state: EnvelopeState,
     phase_norm_a: f32, // Fase normalizada [0.0, 1.0) para lengüeta principal
     phase_norm_b: f32, // Fase normalizada [0.0, 1.0) para lengüeta musette
     sample_rate: f32,
-    envelope: f32,
-    target_envelope: f32,
-    release_speed: f32,
     attack_speed: f32,
+    release_speed: f32,
 }
 
 impl AccordionVoice {
     pub fn new(sample_rate: f32) -> Self {
+        let safe_sr = if sample_rate <= 0.0 { 44100.0 } else { sample_rate };
         // Inicializar tablas en el arranque
         let _ = get_reed_a_table();
         let _ = get_reed_b_table();
@@ -68,40 +93,67 @@ impl AccordionVoice {
             midi_note: 0,
             frequency: 440.0,
             is_active: false,
+            envelope: 0.0,
+            state: EnvelopeState::Idle,
             phase_norm_a: 0.0,
             phase_norm_b: 0.0,
-            sample_rate,
-            envelope: 0.0,
-            target_envelope: 0.0,
-            attack_speed: 1.0 / (0.015 * sample_rate),  // 15ms ataque rápido de lengüeta
-            release_speed: 1.0 / (0.035 * sample_rate), // 35ms caída natural de fuelle
+            sample_rate: safe_sr,
+            attack_speed: 1.0 / (0.015 * safe_sr),  // 15ms ataque rápido de lengüeta
+            release_speed: 1.0 / (0.035 * safe_sr), // 35ms caída natural de fuelle
         }
+    }
+
+    /// Actualiza la tasa de muestreo preservando la estabilidad.
+    pub fn set_sample_rate(&mut self, sample_rate: f32) {
+        let safe_sr = if sample_rate <= 0.0 { 44100.0 } else { sample_rate };
+        self.sample_rate = safe_sr;
+        self.attack_speed = 1.0 / (0.015 * safe_sr);
+        self.release_speed = 1.0 / (0.035 * safe_sr);
     }
 
     pub fn note_on(&mut self, midi_note: u8) {
         self.midi_note = midi_note;
         self.frequency = 440.0 * 2.0_f32.powf((midi_note as f32 - 69.0) / 12.0);
         self.is_active = true;
-        self.target_envelope = 1.0;
+        self.state = EnvelopeState::Attack;
     }
 
     pub fn note_off(&mut self) {
-        self.target_envelope = 0.0;
+        if self.is_active {
+            self.state = EnvelopeState::Release;
+        }
     }
 
-    /// Renderiza una muestra mediante lookup tables interpoladas y batimento musette
+    /// Renderiza una muestra mediante lookup tables interpoladas y batimento musette.
+    ///
+    /// # Tripla de Hoare:
+    /// - {P}: Invariante {I} se cumple en la llamada.
+    /// - {Q}: Salida `s` cumple `-1.0 <= s <= 1.0`, e Invariante {I} se preserva para el siguiente ciclo.
     #[inline]
     pub fn next_sample(&mut self) -> f32 {
-        if !self.is_active {
+        if !self.is_active || self.state == EnvelopeState::Idle {
             return 0.0;
         }
 
-        // Seguimiento del envolvente ADSR
-        if self.envelope < self.target_envelope {
-            self.envelope = (self.envelope + self.attack_speed).min(self.target_envelope);
-        } else if self.envelope > self.target_envelope {
-            self.envelope = (self.envelope - self.release_speed).max(0.0);
-            if self.envelope <= 0.0001 {
+        // Transición de la máquina de estados del envolvente
+        match self.state {
+            EnvelopeState::Attack => {
+                self.envelope += self.attack_speed;
+                if self.envelope >= 1.0 {
+                    self.envelope = 1.0;
+                }
+            }
+            EnvelopeState::Release => {
+                self.envelope -= self.release_speed;
+                if self.envelope <= 0.0001 {
+                    self.envelope = 0.0;
+                    self.is_active = false;
+                    self.state = EnvelopeState::Idle;
+                    return 0.0;
+                }
+            }
+            EnvelopeState::Idle => {
+                self.envelope = 0.0;
                 self.is_active = false;
                 return 0.0;
             }
@@ -118,7 +170,14 @@ impl AccordionVoice {
         let s_b = lookup_wavetable(table_b, self.phase_norm_b);
 
         self.phase_norm_a = (self.phase_norm_a + delta_a).fract();
+        if self.phase_norm_a < 0.0 {
+            self.phase_norm_a += 1.0;
+        }
+
         self.phase_norm_b = (self.phase_norm_b + delta_b).fract();
+        if self.phase_norm_b < 0.0 {
+            self.phase_norm_b += 1.0;
+        }
 
         (s_a * 0.6 + s_b * 0.4) * self.envelope
     }

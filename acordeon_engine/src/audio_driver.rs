@@ -2,7 +2,7 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{SampleFormat, StreamConfig};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use crate::synth::AccordionSynth;
+use crate::synth::{AccordionSynth, DspRenderer};
 
 /// Controlador de audio nativo en tiempo real con cpal (WASAPI en Windows).
 /// El stream se aísla en un hilo dedicado para garantizar thread-safety.
@@ -40,7 +40,7 @@ impl AudioDriver {
                 let actual_channels = default_config.channels() as usize;
 
                 if let Ok(mut s) = synth_clone.lock() {
-                    s.sample_rate = actual_sample_rate;
+                    s.set_sample_rate(actual_sample_rate);
                 }
 
                 let config: StreamConfig = default_config.clone().into();
@@ -48,6 +48,9 @@ impl AudioDriver {
                 let channels = actual_channels;
 
                 let err_fn = |err| eprintln!("[acordeon_engine] Error en stream de audio cpal: {}", err);
+
+                // Tamaño de bloque fijo en stack para garantizar Invariante No-Alloc en DSP
+                const CHUNK_LEN: usize = 512;
 
                 let stream = match default_config.sample_format() {
                     SampleFormat::F32 => device.build_output_stream(
@@ -63,11 +66,14 @@ impl AudioDriver {
                     SampleFormat::I16 => device.build_output_stream(
                         &config,
                         move |data: &mut [i16], _: &cpal::OutputCallbackInfo| {
-                            let mut temp_f32 = vec![0.0f32; data.len()];
+                            let mut temp_chunk = [0.0f32; CHUNK_LEN];
                             if let Ok(mut s) = synth_audio.lock() {
-                                s.process_interleaved(&mut temp_f32, channels);
-                                for (out_sample, in_sample) in data.iter_mut().zip(temp_f32.iter()) {
-                                    *out_sample = (in_sample.clamp(-1.0, 1.0) * 32767.0) as i16;
+                                for chunk in data.chunks_mut(CHUNK_LEN) {
+                                    let sub_slice = &mut temp_chunk[..chunk.len()];
+                                    s.process_interleaved(sub_slice, channels);
+                                    for (out_sample, in_sample) in chunk.iter_mut().zip(sub_slice.iter()) {
+                                        *out_sample = (in_sample.clamp(-1.0, 1.0) * 32767.0) as i16;
+                                    }
                                 }
                             }
                         },
@@ -77,12 +83,15 @@ impl AudioDriver {
                     SampleFormat::U16 => device.build_output_stream(
                         &config,
                         move |data: &mut [u16], _: &cpal::OutputCallbackInfo| {
-                            let mut temp_f32 = vec![0.0f32; data.len()];
+                            let mut temp_chunk = [0.0f32; CHUNK_LEN];
                             if let Ok(mut s) = synth_audio.lock() {
-                                s.process_interleaved(&mut temp_f32, channels);
-                                for (out_sample, in_sample) in data.iter_mut().zip(temp_f32.iter()) {
-                                    let sample_norm = in_sample.clamp(-1.0, 1.0) * 0.5 + 0.5;
-                                    *out_sample = (sample_norm * 65535.0) as u16;
+                                for chunk in data.chunks_mut(CHUNK_LEN) {
+                                    let sub_slice = &mut temp_chunk[..chunk.len()];
+                                    s.process_interleaved(sub_slice, channels);
+                                    for (out_sample, in_sample) in chunk.iter_mut().zip(sub_slice.iter()) {
+                                        let sample_norm = in_sample.clamp(-1.0, 1.0) * 0.5 + 0.5;
+                                        *out_sample = (sample_norm * 65535.0) as u16;
+                                    }
                                 }
                             }
                         },
