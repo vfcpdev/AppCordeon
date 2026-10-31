@@ -77,8 +77,8 @@ class _EditAudioKeyBpmDialogState extends ConsumerState<EditAudioKeyBpmDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        width: 420,
-        padding: const EdgeInsets.all(22),
+        width: 460,
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -103,12 +103,15 @@ class _EditAudioKeyBpmDialogState extends ConsumerState<EditAudioKeyBpmDialog> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Text(
-                  'Corregir Tono Principal y BPM',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF0F172A),
+                const Expanded(
+                  child: Text(
+                    'Corregir Tono Principal y BPM',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F172A),
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -273,32 +276,37 @@ class _EditAudioKeyBpmDialogState extends ConsumerState<EditAudioKeyBpmDialog> {
             const SizedBox(height: 20),
 
             // Botones de acción
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    'Cancelar',
-                    style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      'Cancelar',
+                      style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.check, size: 16),
-                  label: const Text(
-                    'Guardar y Aplicar',
-                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.check, size: 16),
+                    label: const Text(
+                      'Guardar y Aplicar',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0284C7),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    onPressed: _saveChanges,
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0284C7),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  ),
-                  onPressed: _saveChanges,
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

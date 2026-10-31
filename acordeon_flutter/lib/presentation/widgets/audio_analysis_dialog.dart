@@ -18,6 +18,9 @@ class AudioAnalysisDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(accordionSimulatorProvider.notifier);
+    final currentReport = ref.watch(
+      accordionSimulatorProvider.select((s) => s.audioReport),
+    ) ?? report;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -38,53 +41,59 @@ class AudioAnalysisDialog extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0F2FE),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const FaIcon(FontAwesomeIcons.compactDisc, size: 20, color: Color(0xFF0284C7)),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          fileName,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0F2FE),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        Row(
+                        child: const FaIcon(FontAwesomeIcons.compactDisc, size: 20, color: Color(0xFF0284C7)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Duración: ${report.duration}s  •  Tempo: ${report.bpm} BPM',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                              fileName,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0F172A),
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFECFDF5),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: const Color(0xFFA7F3D0)),
-                              ),
-                              child: Text(
-                                report.engine,
-                                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
-                              ),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  'Duración: ${currentReport.duration}s  •  Tempo: ${currentReport.bpm} BPM',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFECFDF5),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                                  ),
+                                  child: Text(
+                                    currentReport.engine,
+                                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
@@ -113,20 +122,24 @@ class AudioAnalysisDialog extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'TONALIDAD DETECTADA',
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF0284C7),
-                                letterSpacing: 0.5,
+                            const Flexible(
+                              child: Text(
+                                'TONALIDAD DETECTADA',
+                                style: TextStyle(
+                                  fontSize: 9.0,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0284C7),
+                                  letterSpacing: 0.4,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: 4),
                             InkWell(
                               onTap: () {
                                 showDialog(
                                   context: context,
-                                  builder: (_) => EditAudioKeyBpmDialog(report: report),
+                                  builder: (_) => EditAudioKeyBpmDialog(report: currentReport),
                                 );
                               },
                               borderRadius: BorderRadius.circular(4),
@@ -153,7 +166,7 @@ class AudioAnalysisDialog extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          report.mainKey.keyNameLat,
+                          currentReport.mainKey.keyNameLat,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
@@ -161,7 +174,7 @@ class AudioAnalysisDialog extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          'Cifrado: ${report.mainKey.keyNameAle}  (Confianza ${(report.mainKey.correlation * 100).toInt()}%)',
+                          'Cifrado: ${currentReport.mainKey.keyNameAle}  (Confianza ${(currentReport.mainKey.correlation * 100).toInt()}%)',
                           style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -193,7 +206,7 @@ class AudioAnalysisDialog extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          report.mainKey.recommendedTuning,
+                          currentReport.mainKey.recommendedTuning,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w900,
@@ -201,7 +214,7 @@ class AudioAnalysisDialog extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          'Hilera recomendada: ${report.mainKey.recommendedRow.replaceAll("row", "Hilera ")}',
+                          'Hilera recomendada: ${currentReport.mainKey.recommendedRow.replaceAll("row", "Hilera ")}',
                           style: const TextStyle(fontSize: 10, color: Color(0xFF92400E), fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -218,7 +231,7 @@ class AudioAnalysisDialog extends ConsumerWidget {
               child: ElevatedButton.icon(
                 icon: const FaIcon(FontAwesomeIcons.sliders, size: 12),
                 label: Text(
-                  'Sintonizar Acordeón 1 a ${report.mainKey.recommendedTuning}',
+                  'Sintonizar Acordeón 1 a ${currentReport.mainKey.recommendedTuning}',
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -228,10 +241,10 @@ class AudioAnalysisDialog extends ConsumerWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: () {
-                  notifier.applyDetectedTuning(report.mainKey);
+                  notifier.applyDetectedTuning(currentReport.mainKey);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Acordeón 1 sintonizado a ${report.mainKey.recommendedTuning}'),
+                      content: Text('Acordeón 1 sintonizado a ${currentReport.mainKey.recommendedTuning}'),
                       duration: const Duration(seconds: 2),
                     ),
                   );
@@ -244,20 +257,25 @@ class AudioAnalysisDialog extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const FaIcon(FontAwesomeIcons.music, size: 12, color: Color(0xFF059669)),
-                    const SizedBox(width: 6),
-                    Text(
-                      'ACORDES EN LA LÍNEA DE TIEMPO (${report.chords.length} segmentos)',
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF059669),
-                        letterSpacing: 0.4,
+                Expanded(
+                  child: Row(
+                    children: [
+                      const FaIcon(FontAwesomeIcons.music, size: 12, color: Color(0xFF059669)),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'ACORDES EN LA LÍNEA DE TIEMPO (${currentReport.chords.length} segmentos)',
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF059669),
+                            letterSpacing: 0.4,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 TextButton.icon(
                   icon: const FaIcon(FontAwesomeIcons.tableCells, size: 11),
@@ -267,7 +285,7 @@ class AudioAnalysisDialog extends ConsumerWidget {
                     visualDensity: VisualDensity.compact,
                   ),
                   onPressed: () {
-                    notifier.applyChordsToMeasures(report.chords);
+                    notifier.applyChordsToMeasures(currentReport.chords);
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -291,10 +309,10 @@ class AudioAnalysisDialog extends ConsumerWidget {
                 ),
                 child: ListView.separated(
                   padding: const EdgeInsets.all(8),
-                  itemCount: report.chords.length,
+                  itemCount: currentReport.chords.length,
                   separatorBuilder: (context, _) => const Divider(height: 8, color: Color(0xFFE2E8F0)),
                   itemBuilder: (context, idx) {
-                    final ch = report.chords[idx];
+                    final ch = currentReport.chords[idx];
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
