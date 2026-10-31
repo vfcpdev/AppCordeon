@@ -1623,6 +1623,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     seekAudio(state.effectiveAudioStartOffset + targetBar * secondsPerBar);
   }
 
+  /// Posiciona la reproducción de audio en el segundo indicado y sincroniza la cuadrícula de compases.
+  ///
+  /// # Tripla de Hoare:
+  /// - {P}: `time.isFinite`.
+  /// - {Q}: `0.0 <= state.currentAudioTime <= totalDur && 0 <= state.selectedBarIndex < measures.length && 0 <= state.selectedBeatIndex < 4`.
+  /// - {I}: `_lastPlaybackDetectedChord == null` (garantiza re-detección limpia del acorde tras el salto temporal).
   void seekAudio(double time) {
     final clamped = time.clamp(
       0.0,
