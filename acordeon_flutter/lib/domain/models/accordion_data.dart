@@ -1,21 +1,38 @@
 import '../../core/constants/enums.dart';
 
-/// Modelo de un botón físico del diapasón melódico.
-class TrebleButtonModel {
+/// Clase base abstracta que modela cualquier botón físico del acordeón (melódico o bajo).
+/// Aplica Principios de OOP: Abstracción, Herencia, Polimorfismo y Liskov Substitution (LSP).
+abstract class AccordionButtonModel {
   final String id;
+  final int btnIndex;
+
+  const AccordionButtonModel({
+    required this.id,
+    required this.btnIndex,
+  });
+
+  /// Transpone las notas del botón aplicando un desplazamiento armónico de semitonos.
+  AccordionButtonModel transpose(int offset);
+
+  /// Notas MIDI producidas por el botón según la dirección del fuelle.
+  List<int> notesForBellows(BellowsMode bellows);
+}
+
+/// Modelo de un botón físico del diapasón melódico.
+class TrebleButtonModel extends AccordionButtonModel {
   final String rowKey; // 'row1', 'row2', 'row3'
-  final int btnIndex; // 1..10 o 1..11
   final int push; // Nota MIDI cerrando fuelle
   final int pull; // Nota MIDI abriendo fuelle
 
   const TrebleButtonModel({
-    required this.id,
+    required super.id,
     required this.rowKey,
-    required this.btnIndex,
+    required super.btnIndex,
     required this.push,
     required this.pull,
   });
 
+  @override
   TrebleButtonModel transpose(int offset) {
     return TrebleButtonModel(
       id: id,
@@ -25,13 +42,16 @@ class TrebleButtonModel {
       pull: pull + offset,
     );
   }
+
+  @override
+  List<int> notesForBellows(BellowsMode bellows) {
+    return [bellows == BellowsMode.pull ? pull : push];
+  }
 }
 
 /// Modelo de un botón del panel de bajos (fundamental o acorde).
-class BassButtonModel {
-  final String id;
+class BassButtonModel extends AccordionButtonModel {
   final ButtonType type; // fundamental o chord
-  final int btnIndex; // 1..6
   final String label;
   final List<int> pushNotes;
   final List<int> pullNotes;
@@ -39,9 +59,9 @@ class BassButtonModel {
   final String namePull;
 
   const BassButtonModel({
-    required this.id,
+    required super.id,
     required this.type,
-    required this.btnIndex,
+    required super.btnIndex,
     required this.label,
     required this.pushNotes,
     required this.pullNotes,
@@ -49,6 +69,7 @@ class BassButtonModel {
     required this.namePull,
   });
 
+  @override
   BassButtonModel transpose(int offset) {
     return BassButtonModel(
       id: id,
@@ -60,6 +81,11 @@ class BassButtonModel {
       namePush: namePush,
       namePull: namePull,
     );
+  }
+
+  @override
+  List<int> notesForBellows(BellowsMode bellows) {
+    return bellows == BellowsMode.pull ? pullNotes : pushNotes;
   }
 }
 

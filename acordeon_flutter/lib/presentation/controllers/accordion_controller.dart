@@ -10,6 +10,7 @@ import '../../core/audio/audio_file_player.dart';
 import '../../core/audio/demo_track_generator.dart';
 import '../../core/constants/enums.dart';
 import '../../core/di/providers.dart';
+import '../../domain/commands/accordion_commands.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/audio_analysis_models.dart';
 import '../../domain/models/measure_json_serializer.dart';
@@ -2156,16 +2157,25 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     );
   }
 
-  /// Limpia completamente el diapasón dejando 0 botones presionados o resaltados.
+  /// Limpia completamente el diapasón dejando 0 botones presionados o resaltados (Command Pattern).
   void clearDiapason() {
-    state = state.copyWith(
-      freeChordRoot: -1,
-      isFreeChordFixed: false,
-      activeButtons: const {},
-      detectorSelectedButtons: const [],
-      detectedChord: null,
-      playingChordNotes: const {},
-    );
+    ClearDiapasonCommand(({
+      required freeChordRoot,
+      required isFreeChordFixed,
+      required activeButtons,
+      required detectorSelectedButtons,
+      required detectedChord,
+      required playingChordNotes,
+    }) {
+      state = state.copyWith(
+        freeChordRoot: freeChordRoot,
+        isFreeChordFixed: isFreeChordFixed,
+        activeButtons: activeButtons,
+        detectorSelectedButtons: detectorSelectedButtons,
+        detectedChord: detectedChord,
+        playingChordNotes: playingChordNotes,
+      );
+    }).execute();
   }
 
   void playDetectorChord() {
@@ -2219,30 +2229,21 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
   }
 
-  /// Asigna el acorde detectado al compás y tiempo seleccionado actualmente.
+  /// Asigna el acorde detectado al compás y tiempo seleccionado actualmente (Command Pattern).
   void assignDetectedChordToCompas([int accordionNumber = 1]) {
-    final chord = state.detectedChord;
-    if (chord == null) return;
-
     final barIdx = state.selectedBarIndex ?? 0;
     final beatIdx = state.selectedBeatIndex ?? 0;
-
-    // Asignar símbolo del acorde al compás
-    final chordSymbol = chord.formattedSymbol(state.notation);
-    updateMeasureBeat(barIdx, beatIdx, chordSymbol);
-
-    // Evaluar si se puede asignar automáticamente el fuelle
     final treble = accordionNumber == 1 ? state.trebleData1 : state.trebleData2;
-    final availability = ChordDetectorEngine.evaluateDiapasonBellows(
-      chordPitchClasses: chord.pitchClasses,
-      trebleData: treble,
-    );
 
-    if (availability.isCompletePush && !availability.isCompletePull) {
-      setBeatBellows(barIdx, beatIdx, BellowsMode.push);
-    } else if (!availability.isCompletePush && availability.isCompletePull) {
-      setBeatBellows(barIdx, beatIdx, BellowsMode.pull);
-    }
+    AssignDetectedChordCommand(
+      chord: state.detectedChord,
+      barIndex: barIdx,
+      beatIndex: beatIdx,
+      notation: state.notation,
+      trebleData: treble,
+      onUpdateBeat: updateMeasureBeat,
+      onSetBellows: (bar, beat, bellows) => setBeatBellows(bar, beat, bellows),
+    ).execute();
   }
 
   /// Muestra el acorde detectado en el diapasón principal fijando sus notas.
@@ -2413,5 +2414,34 @@ final activeChordPitchClassesProvider =
     ...selectedChordNotes.map((n) => n % 12),
     if (detectedChord != null) ...detectedChord.pitchClasses,
   };
+});
+
+/// Selector atómico memoizado que indica si el diapasón está en reposo limpio (sin notas activas).
+final isDiapasonCleanProvider = Provider<bool>((ref) {
+  final activeButtons = ref.watch(accordionSimulatorProvider.select((s) => s.activeButtons));
+  final detectorMode = ref.watch(accordionSimulatorProvider.select((s) => s.detectorMode));
+  final detectorButtons = ref.watch(accordionSimulatorProvider.select((s) => s.detectorSelectedButtons));
+  final freeRoot = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordRoot));
+  final compasChord = ref.watch(accordionSimulatorProvider.select((s) => s.activeCompasChord));
+  final isPlaying = ref.watch(accordionSimulatorProvider.select((s) => s.isPlayingAudio));
+
+  if (activeButtons.isNotEmpty || isPlaying) return false;
+  if (detectorMode) return detectorButtons.isEmpty;
+  return freeRoot < 0 && compasChord.isEmpty;
+});
+
+/// Selector atómico memoizado de la dirección del fuelle de un acordeón específico (ISP).
+final bellowsModeProvider = Provider.family<BellowsMode, int>((ref, accNumber) {
+  return ref.watch(accordionSimulatorProvider.select(
+    (s) => accNumber == 1 ? s.bellows1 : s.bellows2,
+  ));
+});
+
+/// Selector atómico del estado del detector de acordes para widgets especializados (ISP).
+final detectorStatusSliceProvider = Provider<({bool active, int count, bool hasChord})>((ref) {
+  final mode = ref.watch(accordionSimulatorProvider.select((s) => s.detectorMode));
+  final count = ref.watch(accordionSimulatorProvider.select((s) => s.detectorSelectedButtons.length));
+  final hasChord = ref.watch(accordionSimulatorProvider.select((s) => s.detectedChord != null));
+  return (active: mode, count: count, hasChord: hasChord);
 });
 
