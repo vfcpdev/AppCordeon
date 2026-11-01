@@ -251,7 +251,7 @@ class AccordionSimulatorState {
       for (final hit in pattern.hits)
         if (position >= hit.onsetQuarterBeats &&
             position < hit.onsetQuarterBeats + hit.durationQuarterBeats)
-          hit.buttonIndex,
+          ...hit.buttonIndexes,
     };
   }
 
@@ -263,7 +263,7 @@ class AccordionSimulatorState {
       for (final hit in pattern.hits)
         if (position >= hit.onsetQuarterBeats &&
             position < hit.onsetQuarterBeats + hit.durationQuarterBeats)
-          hit.buttonIndex: hit,
+          for (final buttonIndex in hit.buttonIndexes) buttonIndex: hit,
     };
   }
 
@@ -1706,6 +1706,16 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     state = state.copyWith(
       selectedBassRhythmPatternId: patternId,
       isBassMetronomeActive: true,
+      bassRhythmElapsedSeconds: 0,
+    );
+    _syncStandaloneMetronome();
+  }
+
+  /// Detiene la ejecución del ritmo de bajos sin borrar el patrón elegido.
+  void stopBassRhythm() {
+    if (!state.isBassMetronomeActive) return;
+    state = state.copyWith(
+      isBassMetronomeActive: false,
       bassRhythmElapsedSeconds: 0,
     );
     _syncStandaloneMetronome();

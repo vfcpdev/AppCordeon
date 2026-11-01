@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE score-partwise PUBLIC
+    "-//Recordare//DTD MusicXML 4.0 Partwise//EN"
+    "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="4.0">
+    <work>
+        <work-title>Chandé</work-title>
+    </work>
+    <part-list>
+        <score-part id="P1">
+            <part-name>Acordeón</part-name>
+            <score-instrument id="P1-BASS">
+                <instrument-name>Bajo Principal</instrument-name>
+            </score-instrument>
+            <score-instrument id="P1-CHORD">
+                <instrument-name>Acorde Acompañante</instrument-name>
+            </score-instrument>
+        </score-part>
+        <score-part id="P2">
+            <part-name>Caja Vallenata</part-name>
+        </score-part>
+        <score-part id="P3">
+            <part-name>Guacharaca</part-name>
+        </score-part>
+    </part-list>
+    <part id="P1">
+        <measure number="1">
+            <attributes>
+                <divisions>12</divisions>
+                <key>
+                    <fifths>0</fifths>
+                </key>
+                <time>
+                    <beats>4</beats>
+                    <beat-type>4</beat-type>
+                </time>
+                <clef>
+                    <sign>G</sign>
+                    <line>2</line>
+                </clef>
+            </attributes>
+            <direction placement="above">
+                <direction-type>
+                    <metronome>
+                        <beat-unit>quarter</beat-unit>
+                        <per-minute>145</per-minute>
+                    </metronome>
+                </direction-type>
+                <sound tempo="145" />
+            </direction>
+            <direction placement="above">
+                <direction-type>
+                    <words font-weight="bold">V. CHANDÉ</words>
+                </direction-type>
+            </direction>
+            <barline location="left">
+                <repeat direction="forward" />
+            </barline>
+            <note>
+                <pitch>
+                    <step>G</step>
+                    <octave>2</octave>
+                </pitch>
+                <duration>3</duration>
+                <voice>1</voice>
+                <type>16th</type>
+                <instrument id="P1-BASS" />
+                <notations>
+                    <technical>
+                        <fingering>2</fingering>
+                    </technical>
+                </notations>
+            </note>
+            <forward>
+                <duration>6</duration>
+            </forward>
+            <note>
+                <pitch>
+                    <step>A</step>
+                    <octave>4</octave>
+                </pitch>
+                <duration>3</duration>
+                <voice>1</voice>
+                <type>16th</type>
+                <instrument id="P1-CHORD" />
+                <notations>
+                    <technical>
+                        <fingering>2</fingering>
+                    </technical>
+                </notations>
+            </note>
+            <forward>
+                <duration>12</duration>
+            </forward>
+            <note>
+                <pitch>
+                    <step>G</step>
+                    <octave>2</octave>
+                </pitch>
+                <duration>3</duration>
+                <voice>1</voice>
+                <type>16th</type>
+                <instrument id="P1-BASS" />
+                <notations>
+                    <technical>
+                        <fingering>3</fingering>
+                    </technical>
+                </notations>
+            </note>
+            <forward>
+                <duration>6</duration>
+            </forward>
+            <note>
+                <pitch>
+                    <step>E</step>
+                    <octave>4</octave>
+                </pitch>
+                <duration>3</duration>
+                <voice>1</voice>
+                <type>16th</type>
+                <instrument id="P1-CHORD" />
+                <notations>
+                    <technical>
+                        <fingering>2</fingering>
+                    </technical>
+                </notations>
+            </note>
+            <forward>
+                <duration>12</duration>
+            </forward>
+        </measure>
+        <measure number="2">
+            <attributes>
+                <divisions>4</divisions>
+            </attributes>
+            <barline location="left">
+                <ending number="1" type="start" />
+            </barline>
+            <note>
+                <pitch>
+                    <step>D</step>
+                    <octave>4</octave>
+                </pitch>
+                <duration>8</duration>
+                <voice>1</voice>
+                <type>half</type>
+            </note>
+            <note>
+                <pitch>
+                    <step>C</step>
+                    <octave>4</octave>
+                </pitch>
+                <duration>8</duration>
+                <voice>1</voice>
+                <type>half</type>
+            </note>
+            <barline location="right">
+                <ending number="1" type="stop" />
+                <repeat direction="backward" />
+            </barline>
+        </measure>
+        <measure number="3">
+            <barline location="left">
+                <ending number="2" type="start" />
+            </barline>
+            <note>
+                <pitch>
+                    <step>C</step>
+                    <octave>4</octave>
+                </pitch>
+                <duration>16</duration>
+                <voice>1</voice>
+                <type>whole</type>
+            </note>
+            <barline location="right">
+                <ending number="2" type="stop" />
+            </barline>
+        </measure>
+    </part>
+    <part id="P2">
+        <measure number="1">
+            <attributes>
+                <divisions>4</divisions>
+                <key>
+                    <fifths>0</fifths>
+                </key>
+                <time>
+                    <beats>4</beats>
+                    <beat-type>4</beat-type>
+                </time>
+                <clef>
+                    <sign>perc</sign>
+                </clef>
+            </attributes>
+            <barline location="left">
+                <repeat direction="forward" />
+            </barline>
+            <note>
+                <unpitched>
+                    <display-step>A</display-step>
+                    <display-octave>4</display-octave>
+                </unpitched>
+                <duration>4</duration>
+                <voice>1</voice>
+                <type>quarter</type>
+                <notehead>x</notehead>
+            </note>
+            <note>
+                <unpitched>
+                    <display-step>A</display-step>
+                    <display-octave>4</display-octave>
+                </unpitched>
+                <duration>4</duration>
+                <voice>1</voice>
+                <type>quarter</type>
+                <notehead>normal</notehead>
+            </note>
+            <note>
+                <unpitched>
+                    <display-step>A</display-step>
+                    <display-octave>4</display-octave>
+                </unpitched>
+                <duration>4</duration>
+                <voice>1</voice>
+                <type>quarter</type>
+                <notehead>x</notehead>
+            </note>
+            <note>
+                <unpitched>
+                    <display-step>A</display-step>
+                    <display-octave>4</display-octave>
+                </unpitched>
+                <duration>4</duration>
+                <voice>1</voice>
+                <type>quarter</type>
+                <notehead>normal</notehead>
+            </note>
+        </measure>
+        <measure number="2">
+            <barline location="left">
+                <ending number="1" type="start" />
+            </barline>
+            <note>
+                <unpitched>
+                    <display-step>A</display-step>
+                    <display-octave>4</display-octave>
+                </unpitched>
+                <duration>16</duration>
+                <voice>1</voice>
+                <type>whole</type>
+            </note>
+            <barline location="right">
+                <ending number="1" type="stop" />
+                <repeat direction="backward" />
+            </barline>
+        </measure>
+        <measure number="3">
+            <barline location="left">
+                <ending number="2" type="start" />
+            </barline>
+            <note>
+                <unpitched>
+                    <display-step>A</display-step>
+                    <display-octave>4</display-octave>
+                </unpitched>
+                <duration>16</duration>
+                <voice>1</voice>
+                <type>whole</type>
+            </note>
+            <barline location="right">
+                <ending number="2" type="stop" />
+            </barline>
+        </measure>
+    </part>
+    <part id="P3">
+        <measure number="1">
+            <attributes>
+                <divisions>4</divisions>
+                <key>
+                    <fifths>0</fifths>
+                </key>
+                <time>
+                    <beats>4</beats>
+                    <beat-type>4</beat-type>
+                </time>
+                <clef>
+                    <sign>perc</sign>
+                </clef>
+            </attributes>
+            <barline location="left">
+                <repeat direction="forward" />
+            </barline>
+            <note>
+                <unpitched>
+                    <display-step>B</display-step>
+                    <display-octave>4</display-octave>
+                </unpitched>
+                <duration>4</duration>
+                <voice>1</voice>
+                <type>quarter</type>
+                <notehead>x</notehead>
+            </note>
+            <note>
+                <unpitched>
+                    <display-step>B</display-step>
+                    <display-octave>4</display-octave>
+                </unpitched>
+                <duration>4</duration>
+                <voice>1</voice>
+                <type>quarter</type>
+                <notehead>x</notehead>
+            </note>
+            <note>
+                <unpitched>
+                    <display-step>B</display-step>
+                    <display-octave>4</display-octave>
+                </unpitched>
+                <duration>4</duration>
+                <voice>1</voice>
+                <type>quarter</type>
+                <notehead>x</notehead>
+            </note>
+            <note>
+                <unpitched>
+                    <display-step>B</display-step>
+                    <display-octave>4</display-octave>
+                </unpitched>
+                <duration>4</duration>
+                <voice>1</voice>
+                <type>quarter</type>
+                <notehead>x</notehead>
+            </note>
+        </measure>
+        <measure number="2">
+            <barline location="left">
+                <ending number="1" type="start" />
+            </barline>
+            <note>
+                <unpitched>
+                    <display-step>B</display-step>
+                    <display-octave>4</display-octave>
+                </unpitched>
+                <duration>16</duration>
+                <voice>1</voice>
+                <type>whole</type>
+            </note>
+            <barline location="right">
+                <ending number="1" type="stop" />
+                <repeat direction="backward" />
+            </barline>
+        </measure>
+        <measure number="3">
+            <barline location="left">
+                <ending number="2" type="start" />
+            </barline>
+            <note>
+                <unpitched>
+                    <display-step>B</display-step>
+                    <display-octave>4</display-octave>
+                </unpitched>
+                <duration>16</duration>
+                <voice>1</voice>
+                <type>whole</type>
+            </note>
+            <barline location="right">
+                <ending number="2" type="stop" />
+            </barline>
+        </measure>
+    </part>
+</score-partwise>

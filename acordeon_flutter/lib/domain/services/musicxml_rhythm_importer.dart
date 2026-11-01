@@ -7,8 +7,9 @@ import '../models/bass_rhythm_pattern.dart';
 ///
 /// {P}: el documento es MusicXML partwise válido, salvo por el evento de
 /// pausa defectuoso que se reconoce explícitamente.
-/// {Q}: cada nota no-pausa produce un golpe con índice 0..11 y tiempo en
-/// negras; las pausas avanzan el reloj sin resaltar botones.
+/// {Q}: cada nota no-pausa produce un golpe con una pareja de botones
+/// (bajo + acorde de la misma nota) y tiempo en negras; las pausas avanzan el
+/// reloj sin resaltar botones.
 class MusicXmlRhythmImporter {
   static final RegExp _rhythmSectionName = RegExp(
     r'(paseo|merengue|puya|son|chand[eé]|cumbia)',
@@ -195,35 +196,23 @@ class MusicXmlRhythmImporter {
           final onsetOrder = a.onset.compareTo(b.onset);
           return onsetOrder == 0 ? a.order.compareTo(b.order) : onsetOrder;
         });
-        var untypedHitIndex = 0;
-        var fundamentalHitIndex = 0;
-        var chordHitIndex = 0;
+        var hitIndex = 0;
         final hits = <BassRhythmHit>[];
         for (final hit in pendingHits) {
-          final buttonIndex = switch (hit.buttonType) {
-            BassRhythmButtonType.fundamental => _panelButtonIndex(
-              fundamentalHitIndex++,
-              isChord: false,
-            ),
-            BassRhythmButtonType.chord => _panelButtonIndex(
-              chordHitIndex++,
-              isChord: true,
-            ),
-            null => untypedHitIndex++ % 12,
-          };
-          final fingerNumber = switch (hit.buttonType) {
-            BassRhythmButtonType.fundamental =>
-              (fundamentalHitIndex - 1).isEven ? 2 : 3,
-            BassRhythmButtonType.chord => hit.fingerNumber ?? 2,
-            null => hit.fingerNumber,
-          };
+          // Cada nota importada se ejecuta como pareja bajo + acorde de la
+          // misma nota: índice (2) en el bajo y medio (3) en el acorde.
+          final pairIndex = hitIndex++;
+          final bassButtonIndex = _panelButtonIndex(pairIndex, isChord: false);
+          final chordButtonIndex = _panelButtonIndex(pairIndex, isChord: true);
           hits.add(
             BassRhythmHit(
               onsetQuarterBeats: hit.onset,
               durationQuarterBeats: hit.duration,
-              buttonIndex: buttonIndex,
+              buttonIndex: bassButtonIndex,
+              pairedButtonIndex: chordButtonIndex,
               buttonType: hit.buttonType,
-              fingerNumber: fingerNumber,
+              fingerNumber: 2,
+              pairedFingerNumber: 3,
               isAccented: hit.isAccented,
               isStaccato: hit.isStaccato,
             ),
@@ -311,9 +300,13 @@ class MusicXmlRhythmImporter {
     return null;
   }
 
-  static int _panelButtonIndex(int hitIndex, {required bool isChord}) {
-    final pairRow = (hitIndex ~/ 2) % 3;
-    final columnOffset = hitIndex.isEven ? 0 : 6;
+  /// Índice del botón de bajo o de acorde para la pareja [pairIndex].
+  ///
+  /// Las parejas alternan columnas: exterior (1-2, 3-4, 5-6) e interior
+  /// (1-2, 3-4, 5-6), de arriba hacia abajo.
+  static int _panelButtonIndex(int pairIndex, {required bool isChord}) {
+    final pairRow = (pairIndex ~/ 2) % 3;
+    final columnOffset = pairIndex.isEven ? 0 : 6;
     final typeOffset = isChord ? 0 : 1;
     return columnOffset + pairRow * 2 + typeOffset;
   }

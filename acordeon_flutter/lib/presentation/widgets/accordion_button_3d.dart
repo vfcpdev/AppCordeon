@@ -485,15 +485,15 @@ class _AccordionButton3DPainter extends CustomPainter {
 
     // 6. Dot indicador de botón seleccionado para ritmo en bajos
     if (isSelectedForRhythm) {
-      final dotCenter = Offset(size.width - 5, size.height - 5);
+      final dotCenter = Offset(size.width - 6, size.height - 6);
       final dotPaint = Paint()..color = const Color(0xFF0284C7);
       final dotBorder = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0
+        ..strokeWidth = 1.2
         ..color = Colors.white;
 
-      canvas.drawCircle(dotCenter, 3.5, dotPaint);
-      canvas.drawCircle(dotCenter, 3.5, dotBorder);
+      canvas.drawCircle(dotCenter, 4.2, dotPaint);
+      canvas.drawCircle(dotCenter, 4.2, dotBorder);
     }
   }
 

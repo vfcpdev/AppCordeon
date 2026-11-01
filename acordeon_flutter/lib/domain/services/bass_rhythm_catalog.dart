@@ -91,26 +91,21 @@ class BassRhythmCatalog {
     required double bpm,
     required List<(double, BassRhythmButtonType, bool, bool)> events,
   }) {
-    var bassHitIndex = 0;
-    var chordHitIndex = 0;
+    var hitIndex = 0;
     final hits = events.map((event) {
-      final type = event.$2;
-      final buttonIndex = switch (type) {
-        BassRhythmButtonType.fundamental =>
-          _panelButtonIndex(bassHitIndex++, isChord: false),
-        BassRhythmButtonType.chord =>
-          _panelButtonIndex(chordHitIndex++, isChord: true),
-      };
-      final fingerNumber = switch (type) {
-        BassRhythmButtonType.fundamental => (bassHitIndex - 1).isEven ? 2 : 3,
-        BassRhythmButtonType.chord => 2,
-      };
+      // Cada golpe se toca con la pareja bajo + acorde de la misma nota:
+      // el índice (2) va en el bajo y el medio (3) en el acorde.
+      final pairIndex = hitIndex++;
+      final bassButtonIndex = _panelButtonIndex(pairIndex, isChord: false);
+      final chordButtonIndex = _panelButtonIndex(pairIndex, isChord: true);
       return BassRhythmHit(
         onsetQuarterBeats: event.$1,
         durationQuarterBeats: 0.125,
-        buttonIndex: buttonIndex,
-        buttonType: type,
-        fingerNumber: fingerNumber,
+        buttonIndex: bassButtonIndex,
+        pairedButtonIndex: chordButtonIndex,
+        buttonType: event.$2,
+        fingerNumber: 2,
+        pairedFingerNumber: 3,
         isAccented: event.$3,
         isStaccato: event.$4,
       );
@@ -128,9 +123,13 @@ class BassRhythmCatalog {
     );
   }
 
-  static int _panelButtonIndex(int hitIndex, {required bool isChord}) {
-    final pairRow = (hitIndex ~/ 2) % 3;
-    final columnOffset = hitIndex.isEven ? 0 : 6;
+  /// Índice del botón de bajo o de acorde para la pareja [pairIndex].
+  ///
+  /// Las parejas alternan columnas: exterior (1-2, 3-4, 5-6) e interior
+  /// (1-2, 3-4, 5-6), de arriba hacia abajo.
+  static int _panelButtonIndex(int pairIndex, {required bool isChord}) {
+    final pairRow = (pairIndex ~/ 2) % 3;
+    final columnOffset = pairIndex.isEven ? 0 : 6;
     final typeOffset = isChord ? 0 : 1;
     return columnOffset + pairRow * 2 + typeOffset;
   }

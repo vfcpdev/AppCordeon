@@ -1,11 +1,19 @@
 enum BassRhythmButtonType { fundamental, chord }
 
+/// Golpe de un patrón rítmico de bajos.
+///
+/// Cada golpe se ejecuta con una pareja de botones de la misma nota: el bajo
+/// (dedo índice, [fingerNumber]) y su acorde (dedo medio,
+/// [pairedFingerNumber]). [buttonIndex] y [pairedButtonIndex] son los índices
+/// físicos de esa pareja en el panel de bajos.
 class BassRhythmHit {
   final double onsetQuarterBeats;
   final double durationQuarterBeats;
   final int buttonIndex;
+  final int? pairedButtonIndex;
   final BassRhythmButtonType? buttonType;
   final int? fingerNumber;
+  final int? pairedFingerNumber;
   final bool isAccented;
   final bool isStaccato;
 
@@ -13,11 +21,27 @@ class BassRhythmHit {
     required this.onsetQuarterBeats,
     required this.durationQuarterBeats,
     required this.buttonIndex,
+    this.pairedButtonIndex,
     this.buttonType,
     this.fingerNumber,
+    this.pairedFingerNumber,
     this.isAccented = false,
     this.isStaccato = false,
   });
+
+  /// Índices de los botones que se resaltan al ejecutar el golpe.
+  List<int> get buttonIndexes => [
+    buttonIndex,
+    if (pairedButtonIndex != null && pairedButtonIndex != buttonIndex)
+      pairedButtonIndex!,
+  ];
+
+  /// Dedo que corresponde a un botón iluminado por este golpe.
+  int? fingerNumberFor(int buttonIndex) {
+    if (pairedButtonIndex == buttonIndex) return pairedFingerNumber;
+    if (this.buttonIndex == buttonIndex) return fingerNumber;
+    return null;
+  }
 }
 
 class BassRhythmPattern {

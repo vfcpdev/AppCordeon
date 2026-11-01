@@ -368,7 +368,9 @@ class BassPanelWidget extends ConsumerWidget {
           final isChordPull = pullMatch.isMatch;
           final isChordPush = pushMatch.isMatch;
           final rhythmHit = rhythmHits[rhythmButtonOffset + entry.key];
-          final fingerNumber = rhythmHit?.fingerNumber;
+          final fingerNumber = rhythmHit?.fingerNumberFor(
+            rhythmButtonOffset + entry.key,
+          );
 
           String tooltipMsg;
           if (currentBellows == BellowsMode.push) {
@@ -468,22 +470,22 @@ class BassPanelWidget extends ConsumerWidget {
                   ),
                   if (fingerNumber != null)
                     Positioned(
-                      top: -3,
-                      right: -3,
+                      top: -4,
+                      right: -4,
                       child: Container(
-                        width: 17,
-                        height: 17,
+                        width: 21,
+                        height: 21,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: const Color(0xFF0E7490),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1.2),
+                          border: Border.all(color: Colors.white, width: 1.4),
                         ),
                         child: Text(
                           '$fingerNumber',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 9,
+                            fontSize: 11,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -571,12 +573,12 @@ class BassPanelWidget extends ConsumerWidget {
             key: ValueKey('bass_rhythm_import_btn_$accordionNumber'),
             tooltip: 'Importar patrón MusicXML',
             onPressed: () => _importRhythmPatterns(context, notifier),
-            constraints: const BoxConstraints.tightFor(width: 26, height: 28),
+            constraints: const BoxConstraints.tightFor(width: 29, height: 31),
             padding: EdgeInsets.zero,
-            splashRadius: 14,
+            splashRadius: 15,
             icon: const Icon(
               Icons.file_upload_outlined,
-              size: 15,
+              size: 16.5,
               color: Color(0xFF334155),
             ),
           ),
@@ -585,7 +587,7 @@ class BassPanelWidget extends ConsumerWidget {
             height: 28,
             child: TextButton(
               key: ValueKey('bass_rhythm_pattern_picker_$accordionNumber'),
-              onPressed: () => _showRhythmPicker(context, state, notifier),
+              onPressed: () => _showRhythmPicker(context),
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 5),
                 foregroundColor: const Color(0xFF0F172A),
@@ -593,7 +595,16 @@ class BassPanelWidget extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.music_note, size: 13),
+                  Icon(
+                    selectedPattern != null && state.isBassMetronomeActive
+                        ? Icons.graphic_eq
+                        : Icons.music_note,
+                    size: 13,
+                    color:
+                        selectedPattern != null && state.isBassMetronomeActive
+                        ? const Color(0xFF059669)
+                        : null,
+                  ),
                   const SizedBox(width: 3),
                   Expanded(
                     child: Text(
@@ -611,36 +622,18 @@ class BassPanelWidget extends ConsumerWidget {
               ),
             ),
           ),
-          IconButton(
-            key: ValueKey('bass_metronome_toggle_btn_$accordionNumber'),
-            tooltip: state.isBassMetronomeActive
-                ? 'Detener metrónomo de bajos'
-                : 'Iniciar metrónomo de bajos',
-            onPressed: notifier.toggleBassMetronome,
-            constraints: const BoxConstraints.tightFor(width: 26, height: 28),
-            padding: EdgeInsets.zero,
-            splashRadius: 14,
-            icon: Icon(
-              state.isBassMetronomeActive
-                  ? Icons.stop_circle_outlined
-                  : Icons.play_circle_outline,
-              size: 16,
-              color: state.isBassMetronomeActive
-                  ? const Color(0xFF059669)
-                  : const Color(0xFF334155),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Future<void> _showRhythmPicker(
-    BuildContext context,
-    AccordionSimulatorState state,
-    AccordionSimulatorNotifier notifier,
-  ) async {
-    final selectedId = await showModalBottomSheet<String>(
+  /// Abre el selector de ritmos como panel persistente.
+  ///
+  /// El panel no se cierra al elegir un ritmo: cada ítem inicia su patrón y
+  /// el panel se actualiza con el ritmo activo. El botón de stop detiene la
+  /// ejecución sin cerrar el panel.
+  Future<void> _showRhythmPicker(BuildContext context) async {
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -649,54 +642,88 @@ class BassPanelWidget extends ConsumerWidget {
           constraints: BoxConstraints(
             maxHeight: MediaQuery.sizeOf(modalContext).height * 0.72,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
-                child: Text(
-                  'Selecciona un ritmo',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                ),
-              ),
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: state.bassRhythmPatterns.length,
-                  itemBuilder: (context, index) {
-                    final pattern = state.bassRhythmPatterns[index];
-                    final isSelected = pattern.id == state.selectedBassRhythmPatternId;
-                    return ListTile(
-                      key: ValueKey('bass_rhythm_option_${pattern.id}'),
-                      leading: Icon(
-                        isSelected
-                            ? Icons.graphic_eq
-                            : Icons.music_note_outlined,
-                        color: isSelected
-                            ? const Color(0xFF059669)
-                            : const Color(0xFF475569),
-                      ),
-                      title: Text(pattern.name),
-                      subtitle: Text(
-                        '${pattern.beatsPerMeasure}/${pattern.beatType} · '
-                        '${pattern.quarterNotesPerMinute?.round() ?? 120} BPM · '
-                        '${pattern.hits.length} golpes',
-                      ),
-                      trailing: const Icon(Icons.play_arrow),
-                      onTap: () => Navigator.pop(modalContext, pattern.id),
-                    );
-                  },
-                ),
-              ),
-            ],
+          child: Consumer(
+            builder: (context, ref, child) {
+              final state = ref.watch(accordionSimulatorProvider);
+              final notifier = ref.read(accordionSimulatorProvider.notifier);
+              final isPlaying = state.isBassMetronomeActive;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 8, 12),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Selecciona un ritmo',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          key: ValueKey(
+                            'bass_rhythm_stop_btn_$accordionNumber',
+                          ),
+                          tooltip: isPlaying
+                              ? 'Detener ritmo'
+                              : 'El ritmo está detenido',
+                          onPressed: isPlaying ? notifier.stopBassRhythm : null,
+                          icon: const Icon(Icons.stop_rounded, size: 26),
+                          color: const Color(0xFFDC2626),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: state.bassRhythmPatterns.length,
+                      itemBuilder: (context, index) {
+                        final pattern = state.bassRhythmPatterns[index];
+                        final isSelected =
+                            pattern.id == state.selectedBassRhythmPatternId;
+                        final isActive = isSelected && isPlaying;
+                        return ListTile(
+                          key: ValueKey('bass_rhythm_option_${pattern.id}'),
+                          leading: Icon(
+                            isActive
+                                ? Icons.graphic_eq
+                                : Icons.music_note_outlined,
+                            color: isActive
+                                ? const Color(0xFF059669)
+                                : const Color(0xFF475569),
+                          ),
+                          title: Text(pattern.name),
+                          subtitle: Text(
+                            '${pattern.beatsPerMeasure}/${pattern.beatType} · '
+                            '${pattern.quarterNotesPerMinute?.round() ?? 120} BPM · '
+                            '${pattern.hits.length} golpes',
+                          ),
+                          trailing: Icon(
+                            isActive
+                                ? Icons.stop_circle_outlined
+                                : Icons.play_circle_outline,
+                            color: isActive
+                                ? const Color(0xFF059669)
+                                : const Color(0xFF334155),
+                          ),
+                          onTap: () =>
+                              notifier.playBassRhythmPattern(pattern.id),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
     );
-    if (selectedId != null && context.mounted) {
-      notifier.playBassRhythmPattern(selectedId);
-    }
   }
 
   Future<void> _importRhythmPatterns(

@@ -52,50 +52,72 @@ const _musicXml = '''
 </score-partwise>
 ''';
 
+const _rhythmFiles = <(String, String)>[
+  ('paseo.musicxml', 'I. PASEO VALLENATO'),
+  ('merengue.musicxml', 'II. MERENGUE VALLENATO'),
+  ('puya.musicxml', 'III. PUYA VALLENATA'),
+  ('son.musicxml', 'IV. SON VALLENATO (Bajo Arrastrado)'),
+  ('chande.musicxml', 'V. CHANDÉ'),
+  ('cumbia.musicxml', 'VI. CUMBIA COLOMBIANA'),
+];
+
+BassRhythmPattern _patternFromFile(String fileName, String patternName) {
+  final score = File('../$fileName').readAsStringSync();
+  return MusicXmlRhythmImporter()
+      .importPatterns(score)
+      .patterns
+      .firstWhere((pattern) => pattern.name == patternName);
+}
+
 void main() {
   group('MusicXML bass rhythm import', () {
-    test(
-      'imports the five Paseo Vallenato events from the structured score',
-      () {
-        final score = File(
-          '../patrones_ritmicos_estructurados.musicxml',
-        ).readAsStringSync();
-        final result = MusicXmlRhythmImporter().importPatterns(score);
-        final paseo = result.patterns.firstWhere(
-          (pattern) => pattern.name == 'I. PASEO VALLENATO',
-        );
+    test('imports the five Paseo Vallenato events from its own file', () {
+      final paseo = _patternFromFile('paseo.musicxml', 'I. PASEO VALLENATO');
 
-        expect(paseo.beatsPerMeasure, 4);
-        expect(paseo.beatType, 4);
-        expect(paseo.quarterNotesPerMinute, 130);
-        expect(paseo.hits, hasLength(5));
-        expect(paseo.hits.map((hit) => hit.buttonType), [
-          BassRhythmButtonType.fundamental,
-          BassRhythmButtonType.fundamental,
-          BassRhythmButtonType.chord,
-          BassRhythmButtonType.fundamental,
-          BassRhythmButtonType.chord,
-        ]);
-        expect(paseo.hits.map((hit) => hit.buttonIndex), [1, 7, 0, 3, 6]);
-        expect(paseo.hits.map((hit) => hit.onsetQuarterBeats), [
-          0,
-          1 / 3,
-          2 / 3,
-          1,
-          1.5,
-        ]);
-      },
-    );
+      expect(paseo.beatsPerMeasure, 4);
+      expect(paseo.beatType, 4);
+      expect(paseo.quarterNotesPerMinute, 130);
+      expect(paseo.hits, hasLength(5));
+      expect(paseo.hits.map((hit) => hit.buttonType), [
+        BassRhythmButtonType.fundamental,
+        BassRhythmButtonType.fundamental,
+        BassRhythmButtonType.chord,
+        BassRhythmButtonType.fundamental,
+        BassRhythmButtonType.chord,
+      ]);
+      expect(paseo.hits.map((hit) => hit.buttonIndex), [1, 7, 3, 9, 5]);
+      expect(paseo.hits.map((hit) => hit.pairedButtonIndex), [0, 6, 2, 8, 4]);
+      expect(paseo.hits.map((hit) => hit.fingerNumber), [2, 2, 2, 2, 2]);
+      expect(paseo.hits.map((hit) => hit.pairedFingerNumber), [3, 3, 3, 3, 3]);
+      expect(paseo.hits.map((hit) => hit.onsetQuarterBeats), [
+        0,
+        1 / 3,
+        2 / 3,
+        1,
+        1.5,
+      ]);
+    });
 
     test('lists each named rhythm once, excluding repeat measures', () {
-      final score = File(
-        '../patrones_ritmicos_estructurados.musicxml',
-      ).readAsStringSync();
+      final names = <String>[];
+      for (final (file, expectedName) in _rhythmFiles) {
+        final score = File('../$file').readAsStringSync();
+        final patterns = MusicXmlRhythmImporter()
+            .importPatterns(score)
+            .patterns;
+        final named = patterns
+            .where((pattern) => pattern.name == expectedName)
+            .toList();
 
-      final patterns = MusicXmlRhythmImporter().importPatterns(score).patterns;
+        expect(
+          named,
+          hasLength(1),
+          reason: '$file debe contener un solo "$expectedName"',
+        );
+        names.add(named.single.name);
+      }
 
-      expect(patterns, hasLength(6));
-      expect(patterns.map((pattern) => pattern.name), [
+      expect(names, [
         'I. PASEO VALLENATO',
         'II. MERENGUE VALLENATO',
         'III. PUYA VALLENATA',
@@ -106,15 +128,13 @@ void main() {
     });
 
     test('imports Vallenato grooves with row fingering and articulations', () {
-      final score = File(
-        '../patrones_ritmicos_estructurados.musicxml',
-      ).readAsStringSync();
-      final patterns = MusicXmlRhythmImporter().importPatterns(score).patterns;
+      BassRhythmPattern patternFrom(String fileName, String name) =>
+          _patternFromFile(fileName, name);
 
-      BassRhythmPattern patternNamed(String name) =>
-          patterns.firstWhere((pattern) => pattern.name == name);
-
-      final merengue = patternNamed('II. MERENGUE VALLENATO');
+      final merengue = patternFrom(
+        'merengue.musicxml',
+        'II. MERENGUE VALLENATO',
+      );
       expect(merengue.hits, hasLength(4));
       expect(merengue.hits.map((hit) => hit.buttonType), [
         BassRhythmButtonType.fundamental,
@@ -128,8 +148,10 @@ void main() {
         1.5,
         2.25,
       ]);
-      expect(merengue.hits.map((hit) => hit.buttonIndex), [1, 7, 0, 3]);
-      expect(merengue.hits.map((hit) => hit.fingerNumber), [2, 3, 2, 2]);
+      expect(merengue.hits.map((hit) => hit.buttonIndex), [1, 7, 3, 9]);
+      expect(merengue.hits.map((hit) => hit.pairedButtonIndex), [0, 6, 2, 8]);
+      expect(merengue.hits.map((hit) => hit.fingerNumber), [2, 2, 2, 2]);
+      expect(merengue.hits.map((hit) => hit.pairedFingerNumber), [3, 3, 3, 3]);
       expect(merengue.hits.map((hit) => hit.isAccented), [
         false,
         false,
@@ -137,7 +159,7 @@ void main() {
         false,
       ]);
 
-      final puya = patternNamed('III. PUYA VALLENATA');
+      final puya = patternFrom('puya.musicxml', 'III. PUYA VALLENATA');
       expect(puya.hits, hasLength(4));
       expect(puya.hits.every((hit) => hit.isStaccato), isTrue);
       expect(puya.hits.map((hit) => hit.onsetQuarterBeats), [
@@ -147,7 +169,7 @@ void main() {
         2.25,
       ]);
 
-      final chande = patternNamed('V. CHANDÉ');
+      final chande = patternFrom('chande.musicxml', 'V. CHANDÉ');
       expect(chande.hits, hasLength(4));
       expect(chande.hits.map((hit) => hit.onsetQuarterBeats), [
         0,
@@ -156,7 +178,7 @@ void main() {
         2.75,
       ]);
 
-      final cumbia = patternNamed('VI. CUMBIA COLOMBIANA');
+      final cumbia = patternFrom('cumbia.musicxml', 'VI. CUMBIA COLOMBIANA');
       expect(cumbia.hits, hasLength(4));
       expect(cumbia.hits.map((hit) => hit.buttonType), [
         BassRhythmButtonType.fundamental,
@@ -164,8 +186,10 @@ void main() {
         BassRhythmButtonType.fundamental,
         BassRhythmButtonType.chord,
       ]);
-      expect(cumbia.hits.map((hit) => hit.fingerNumber), [2, 2, 3, 2]);
-      expect(cumbia.hits.map((hit) => hit.buttonIndex), [1, 0, 7, 6]);
+      expect(cumbia.hits.map((hit) => hit.fingerNumber), [2, 2, 2, 2]);
+      expect(cumbia.hits.map((hit) => hit.pairedFingerNumber), [3, 3, 3, 3]);
+      expect(cumbia.hits.map((hit) => hit.buttonIndex), [1, 7, 3, 9]);
+      expect(cumbia.hits.map((hit) => hit.pairedButtonIndex), [0, 6, 2, 8]);
     });
 
     test('preserves meter, tempo, rests, timing, and button order', () {
@@ -183,11 +207,13 @@ void main() {
       expect(paseo.hits, hasLength(2));
       expect(paseo.hits[0].onsetQuarterBeats, 0);
       expect(paseo.hits[1].onsetQuarterBeats, 2);
-      expect(paseo.hits.map((hit) => hit.buttonIndex), [0, 1]);
+      expect(paseo.hits.map((hit) => hit.buttonIndex), [1, 7]);
+      expect(paseo.hits.map((hit) => hit.pairedButtonIndex), [0, 6]);
       expect(merengue.beatsPerMeasure, 6);
       expect(merengue.beatType, 8);
       expect(merengue.durationQuarterBeats, 3);
       expect(merengue.hits.map((hit) => hit.buttonIndex), [1, 7]);
+      expect(merengue.hits.map((hit) => hit.pairedButtonIndex), [0, 6]);
     });
 
     test('recovers only the known malformed event as a pause', () {
@@ -209,7 +235,7 @@ void main() {
       expect(paseo.durationQuarterBeats, 4);
     });
 
-    test('cycles sequential hits across all twelve physical bass buttons', () {
+    test('cycles sequential hits across the six bass pairs', () {
       final notes = List.generate(
         13,
         (_) =>
@@ -225,11 +251,42 @@ void main() {
 ''';
 
       final result = MusicXmlRhythmImporter().importPatterns(xml);
+      final hits = result.patterns.single.hits;
 
-      expect(result.patterns.single.hits.map((hit) => hit.buttonIndex), [
-        ...List<int>.generate(12, (index) => index),
+      // Parejas alternas: exterior 1-2, interior 1-2, exterior 3-4, ...
+      expect(hits.map((hit) => hit.buttonIndex), [
+        1,
+        7,
+        3,
+        9,
+        5,
+        11,
+        1,
+        7,
+        3,
+        9,
+        5,
+        11,
+        1,
+      ]);
+      expect(hits.map((hit) => hit.pairedButtonIndex), [
+        0,
+        6,
+        2,
+        8,
+        4,
+        10,
+        0,
+        6,
+        2,
+        8,
+        4,
+        10,
         0,
       ]);
+      expect(hits.every((hit) => hit.fingerNumber == 2), isTrue);
+      expect(hits.every((hit) => hit.pairedFingerNumber == 3), isTrue);
+      expect(hits.map((hit) => hit.buttonIndexes), everyElement(hasLength(2)));
     });
 
     test('rejects malformed XML outside the documented recovery case', () {
@@ -311,15 +368,27 @@ void main() {
         await tester.tap(
           find.byKey(const ValueKey('bass_rhythm_option_builtin:merengue')),
         );
-        await tester.pumpAndSettle();
+        await tester.pump();
+
+        // El selector sigue abierto mientras el ritmo se reproduce.
+        expect(find.text('Selecciona un ritmo'), findsOneWidget);
         var state = container.read(accordionSimulatorProvider);
         expect(state.selectedBassRhythmPattern?.name, 'Merengue Vallenato');
         expect(state.isBassMetronomeActive, isTrue);
         expect(audioEngine.clickCount, 1);
-        await tester.tap(
-          find.byKey(const ValueKey('bass_metronome_toggle_btn_1')),
-        );
+
+        // El stop del selector detiene el ritmo sin cerrar el panel.
+        await tester.tap(find.byKey(const ValueKey('bass_rhythm_stop_btn_1')));
         await tester.pump();
+        state = container.read(accordionSimulatorProvider);
+        expect(state.isBassMetronomeActive, isFalse);
+        expect(find.text('Selecciona un ritmo'), findsOneWidget);
+
+        // Cerrar el selector para continuar con la importación.
+        await tester.tapAt(const Offset(5, 5));
+        await tester.pumpAndSettle();
+        expect(find.text('Selecciona un ritmo'), findsNothing);
+
         audioEngine.clickCount = 0;
         audioEngine.clickAccents.clear();
 
@@ -342,33 +411,33 @@ void main() {
           find.byKey(const ValueKey('bass_rhythm_option_P1:2')),
           findsOneWidget,
         );
-        await tester.tap(
-          find.byKey(const ValueKey('bass_rhythm_option_P1:2')),
-        );
-        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('bass_rhythm_option_P1:2')));
+        await tester.pump();
 
         state = container.read(accordionSimulatorProvider);
         expect(state.selectedBassRhythmPattern?.name, 'Merengue');
-        expect(state.activeBassRhythmButtonIndexes, contains(1));
+        // Primer golpe: pareja bajo 1 + acorde 1.
+        expect(state.activeBassRhythmButtonIndexes, containsAll([1, 0]));
         expect(state.isBassMetronomeActive, isTrue);
         expect(audioEngine.clickCount, 1);
         expect(audioEngine.clickAccents, [false]);
+        expect(find.text('Selecciona un ritmo'), findsOneWidget);
 
         await tester.pump(const Duration(milliseconds: 375));
         state = container.read(accordionSimulatorProvider);
         expect(state.bassRhythmElapsedSeconds, greaterThan(0));
         expect(audioEngine.clickAccents, [false, true]);
-        expect(state.activeBassRhythmButtonIndexes, contains(7));
+        // Segundo golpe: pareja bajo 2 + acorde 2.
+        expect(state.activeBassRhythmButtonIndexes, containsAll([7, 6]));
         final renderedButtons = tester
             .widgetList<AccordionButton3D>(find.byType(AccordionButton3D))
             .toList();
         expect(renderedButtons, hasLength(12));
         expect(renderedButtons[1].isSelectedForRhythm, isFalse);
         expect(renderedButtons[7].isSelectedForRhythm, isTrue);
+        expect(renderedButtons[6].isSelectedForRhythm, isTrue);
 
-        await tester.tap(
-          find.byKey(const ValueKey('bass_metronome_toggle_btn_1')),
-        );
+        await tester.tap(find.byKey(const ValueKey('bass_rhythm_stop_btn_1')));
         await tester.pump();
         expect(
           container.read(accordionSimulatorProvider).isBassMetronomeActive,
