@@ -24,7 +24,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byTooltip(RegExp(r'^Tónica ')), findsNothing);
-    expect(find.byKey(const ValueKey('insert_chord_to_compas_btn')), findsOneWidget);
+    expect(find.byKey(const ValueKey('insert_chord_to_compas_btn')), findsNothing);
     expect(find.byKey(const ValueKey('multi_beat_modal_checkbox')), findsOneWidget);
   });
 
@@ -38,7 +38,16 @@ void main() {
       const ProviderScope(
         child: MaterialApp(
           home: Scaffold(
-            body: SingleChildScrollView(child: FreeChordWidget()),
+            body: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(
+                  width: 280,
+                  child: SingleChildScrollView(child: FreeChordWidget()),
+                ),
+                const MeasureGridWidget(width: 185),
+              ],
+            ),
           ),
         ),
       ),

@@ -159,6 +159,20 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
       bass: state.freeChordBass,
       latin: state.notation != NotationMode.alemana,
     );
+    final hasSelectedCell = selectedBar != null &&
+        selectedBeat != null &&
+        selectedBar >= 0 &&
+        selectedBar < state.measures.length &&
+        selectedBeat >= 0 &&
+        selectedBeat < state.measures[selectedBar].beats.length;
+    final markedCount = state.markedBeats.length;
+    final insertTargetLabel = markedCount > 0
+        ? '$markedCount tiempo${markedCount == 1 ? '' : 's'} marcado${markedCount == 1 ? '' : 's'}'
+        : (hasSelectedCell
+            ? 'Compás ${selectedBar! + 1} · Tiempo ${selectedBeat! + 1}'
+            : 'sin casilla seleccionada');
+    final canInsertChord =
+        constructorChord.isNotEmpty && (markedCount > 0 || hasSelectedCell);
 
     final chordToEdit = selectedChord ??
         ((state.multiBeatChord != null && state.multiBeatChord!.isNotEmpty)
@@ -486,6 +500,52 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                   FontAwesomeIcons.penToSquare,
                                   size: 13.5,
                                   color: isEditActive ? Colors.white : const Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Tooltip(
+                            message: canInsertChord
+                                ? 'Agregar $constructorChord a $insertTargetLabel'
+                                : 'Selecciona un acorde y una casilla del Compás',
+                            child: InkWell(
+                              key: const ValueKey('insert_chord_to_compas_btn'),
+                              onTap: canInsertChord
+                                  ? () {
+                                      final symbol =
+                                          notifier.insertFreeChordIntoSelectedBeat();
+                                      if (symbol == null) return;
+                                      ScaffoldMessenger.of(context)
+                                        ..hideCurrentSnackBar()
+                                        ..showSnackBar(
+                                          SnackBar(
+                                            content: Text('$symbol → $insertTargetLabel'),
+                                            duration: const Duration(milliseconds: 1400),
+                                          ),
+                                        );
+                                    }
+                                  : null,
+                              borderRadius: BorderRadius.circular(5),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: canInsertChord
+                                      ? const Color(0xFF16A34A)
+                                      : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(
+                                    color: canInsertChord
+                                        ? const Color(0xFF16A34A)
+                                        : const Color(0xFFCBD5E1),
+                                  ),
+                                ),
+                                child: FaIcon(
+                                  FontAwesomeIcons.plus,
+                                  size: 13.5,
+                                  color: canInsertChord
+                                      ? Colors.white
+                                      : const Color(0xFF94A3B8),
                                 ),
                               ),
                             ),

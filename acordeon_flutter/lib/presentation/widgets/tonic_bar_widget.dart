@@ -241,30 +241,6 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
     final state = ref.watch(accordionSimulatorProvider);
     final notifier = ref.read(accordionSimulatorProvider.notifier);
 
-    final barIndex = state.selectedBarIndex;
-    final beatIndex = state.selectedBeatIndex;
-    final hasSelectedCell = barIndex != null &&
-        beatIndex != null &&
-        barIndex >= 0 &&
-        barIndex < state.measures.length &&
-        beatIndex >= 0 &&
-        beatIndex < state.measures[barIndex].beats.length;
-    final markedCount = state.markedBeats.length;
-    final targetLabel = markedCount > 0
-        ? '$markedCount tiempo${markedCount == 1 ? '' : 's'} marcado${markedCount == 1 ? '' : 's'}'
-        : (hasSelectedCell
-            ? 'Compás ${barIndex + 1} · Tiempo ${beatIndex + 1}'
-            : 'sin celda seleccionada');
-    final insertSymbol = ChordCatalog.symbolFor(
-      root: state.freeChordRoot,
-      type: state.freeChordType,
-      extension: state.freeChordFourth,
-      bass: state.freeChordBass,
-      latin: state.notation != NotationMode.alemana,
-    );
-    final canInsert =
-        insertSymbol.isNotEmpty && (markedCount > 0 || hasSelectedCell);
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
       decoration: BoxDecoration(
@@ -404,55 +380,13 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
                 ),
                 const SizedBox(height: 4),
 
-                // Botón de Compás (+) y checkbox para modal de asignación múltiple a su derecha
+                // Checkbox para abrir el modal de asignación múltiple
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Center(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Tooltip(
-                          message: canInsert
-                              ? 'Agregar $insertSymbol a $targetLabel'
-                              : 'Selecciona una tónica y marca tiempos o una celda del Compás',
-                          child: InkWell(
-                            key: const ValueKey('insert_chord_to_compas_btn'),
-                            onTap: canInsert
-                                ? () {
-                                    final symbol =
-                                        notifier.insertFreeChordIntoSelectedBeat();
-                                    if (symbol == null) return;
-                                    ScaffoldMessenger.of(context)
-                                      ..hideCurrentSnackBar()
-                                      ..showSnackBar(
-                                        SnackBar(
-                                          content: Text('$symbol → $targetLabel'),
-                                          duration: const Duration(milliseconds: 1400),
-                                        ),
-                                      );
-                                  }
-                                : null,
-                            borderRadius: BorderRadius.circular(5),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3.5),
-                              decoration: BoxDecoration(
-                                color: canInsert
-                                    ? const Color(0xFF16A34A)
-                                    : const Color(0xFFE2E8F0),
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              child: FaIcon(
-                                FontAwesomeIcons.plus,
-                                size: 11,
-                                color: canInsert
-                                    ? Colors.white
-                                    : const Color(0xFF94A3B8),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        // Checkbox para asignación a múltiples compases
                         Tooltip(
                           message: state.showMultiBeatModal
                               ? 'Cerrar ventana de asignación múltiple'

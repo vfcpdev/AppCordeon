@@ -56,8 +56,8 @@ void main() {
     });
   });
 
-  group('TonicBarWidget - Checkbox a la derecha de Agregar a Compás', () {
-    testWidgets('Checkbox a la derecha de agregar a compás abre y cierra el modal movible',
+  group('TonicBarWidget - Asignación múltiple', () {
+    testWidgets('el checkbox abre y cierra el modal movible',
         (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -80,8 +80,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Debe encontrarse el botón de agregar a compás y el checkbox a su derecha
-      expect(find.byKey(const ValueKey('insert_chord_to_compas_btn')), findsOneWidget);
+      // La inserción está en la cuadrícula del Compás, no en la barra de tónica.
+      expect(find.byKey(const ValueKey('insert_chord_to_compas_btn')), findsNothing);
       final checkboxFinder = find.byKey(const ValueKey('multi_beat_modal_checkbox'));
       expect(checkboxFinder, findsOneWidget);
 
@@ -180,6 +180,12 @@ void main() {
       // Al seleccionar el compás 1 cuadro 1 (que tiene Sol7), el botón de edición está activo
       notifier.selectBeat(0, 0);
       await tester.pumpAndSettle();
+      final insertBtnFinder = find.byKey(const ValueKey('insert_chord_to_compas_btn'));
+      expect(insertBtnFinder, findsOneWidget);
+      expect(
+        tester.getCenter(insertBtnFinder).dx,
+        greaterThan(tester.getCenter(editBtnFinder).dx),
+      );
 
       // Pulsar el botón de edición debe abrir el modal para ese acorde y precargar la cadena de texto
       await tester.tap(editBtnFinder);
