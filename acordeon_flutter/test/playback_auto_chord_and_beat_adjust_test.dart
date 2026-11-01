@@ -73,6 +73,27 @@ List<MeasureRow> _generateMeasures(int count) {
 }
 
 void main() {
+  test('la reproducción ejecuta el acorde detectado en cada avance del audio', () async {
+    final engine = _RecordingAudioEngine();
+    final container = ProviderContainer(
+      overrides: [audioEngineProvider.overrideWithValue(engine)],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(accordionSimulatorProvider.notifier);
+    notifier.setAudioReport(_report);
+
+    notifier.togglePlayAudio();
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+
+    final state = container.read(accordionSimulatorProvider);
+    expect(state.isPlayingAudio, isTrue);
+    expect(state.activeCompasChord, 'G');
+    expect(state.playingChordNotes, {67, 71, 74});
+    expect(engine.noteOns, containsAll([67, 71, 74]));
+
+    notifier.stopAudio();
+  });
+
   test('al avanzar, ejecuta el acorde detectado y lo muestra en el diapasón', () {
     final engine = _RecordingAudioEngine();
     final container = ProviderContainer(
