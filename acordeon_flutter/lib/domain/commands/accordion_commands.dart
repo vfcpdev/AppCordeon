@@ -610,6 +610,7 @@ class PlayMetronomeTickCommand implements AccordionCommand<int> {
   final void Function({bool isDownbeat, double volume})? onPercussiveClick;
   final int beatIndex;
   final double volume;
+  final int beatsPerMeasure;
 
   const PlayMetronomeTickCommand({
     this.onNoteOn,
@@ -617,10 +618,12 @@ class PlayMetronomeTickCommand implements AccordionCommand<int> {
     this.onPercussiveClick,
     required this.beatIndex,
     this.volume = 0.8,
+    this.beatsPerMeasure = 4,
   });
 
   @override
-  bool canExecute() => beatIndex >= 0 && volume >= 0.0;
+  bool canExecute() =>
+      beatIndex >= 0 && volume >= 0.0 && beatsPerMeasure > 0;
 
   @override
   void assertPreconditions() {
@@ -630,13 +633,19 @@ class PlayMetronomeTickCommand implements AccordionCommand<int> {
         'El índice de tiempo no puede ser negativo.',
       );
     }
+    if (beatsPerMeasure <= 0) {
+      throw const PreconditionViolationException(
+        'PlayMetronomeTickCommand',
+        'El compás debe contener al menos un tiempo.',
+      );
+    }
   }
 
   @override
   int execute() {
     assertPreconditions();
 
-    final isDownbeat = (beatIndex % 4) == 0;
+    final isDownbeat = (beatIndex % beatsPerMeasure) == 0;
     final midiNote = isDownbeat ? 84 : 76;
     final safeVolume = volume.clamp(0.0, 1.0);
 
@@ -1322,4 +1331,3 @@ class DeleteGridChordsCommand implements AccordionCommand<GridChordsDeletionResu
         'Violación {Q}: deletedCount $deletedCount fuera de rango.');
   }
 }
-

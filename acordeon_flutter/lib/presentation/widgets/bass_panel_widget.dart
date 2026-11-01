@@ -88,6 +88,7 @@ class BassPanelWidget extends ConsumerWidget {
     final activeChordPitchClasses = ref.watch(
       activeChordPitchClassesProvider(accordionNumber),
     );
+    final rhythmButtonIndexes = state.activeBassRhythmButtonIndexes;
 
     return Container(
       margin: const EdgeInsets.only(right: 8),
@@ -170,6 +171,8 @@ class BassPanelWidget extends ConsumerWidget {
                     state: state,
                     notifier: notifier,
                     activeChordPitchClasses: activeChordPitchClasses,
+                    rhythmButtonIndexes: rhythmButtonIndexes,
+                    rhythmButtonOffset: 0,
                   ),
                   // Espacio suficiente para los números de la columna interior.
                   const SizedBox(width: 18.0),
@@ -179,6 +182,8 @@ class BassPanelWidget extends ConsumerWidget {
                     state: state,
                     notifier: notifier,
                     activeChordPitchClasses: activeChordPitchClasses,
+                    rhythmButtonIndexes: rhythmButtonIndexes,
+                    rhythmButtonOffset: 6,
                   ),
                 ],
               ),
@@ -234,6 +239,7 @@ class BassPanelWidget extends ConsumerWidget {
                     color: Color(0xFF475569),
                   ),
                 ),
+                _buildRhythmControls(context, state, notifier),
               ],
             ),
           ),
@@ -256,6 +262,8 @@ class BassPanelWidget extends ConsumerWidget {
     required AccordionSimulatorState state,
     required AccordionSimulatorNotifier notifier,
     required Set<int> activeChordPitchClasses,
+    required Set<int> rhythmButtonIndexes,
+    required int rhythmButtonOffset,
   }) {
     final isPrimary = accordionNumber == 1;
     final currentTuning = isPrimary ? state.tuning1 : state.tuning2;
@@ -421,6 +429,10 @@ class BassPanelWidget extends ConsumerWidget {
                     isChordPush: isChordPush,
                     bassMatchPush: pushMatch,
                     bassMatchPull: pullMatch,
+                    isSelectedForRhythm:
+                        rhythmButtonIndexes.contains(
+                          rhythmButtonOffset + entry.key,
+                        ),
                     onPointerDown: () =>
                         notifier.pressButton(btn.id, midiToPlay),
                     onPointerUp: () =>
@@ -489,6 +501,146 @@ class BassPanelWidget extends ConsumerWidget {
         }),
       ],
     );
+  }
+
+  Widget _buildRhythmControls(
+    BuildContext context,
+    AccordionSimulatorState state,
+    AccordionSimulatorNotifier notifier,
+  ) {
+    final selectedPattern = state.selectedBassRhythmPattern;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: const BoxDecoration(
+        color: Color(0xFFE2E8F0),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(13),
+          bottomRight: Radius.circular(13),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            key: ValueKey('bass_rhythm_import_btn_$accordionNumber'),
+            tooltip: 'Importar patrón MusicXML',
+            onPressed: () => _importRhythmPatterns(context, notifier),
+            constraints: const BoxConstraints.tightFor(width: 26, height: 28),
+            padding: EdgeInsets.zero,
+            splashRadius: 14,
+            icon: const Icon(
+              Icons.file_upload_outlined,
+              size: 15,
+              color: Color(0xFF334155),
+            ),
+          ),
+          SizedBox(
+            width: 84,
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                key: ValueKey('bass_rhythm_pattern_picker_$accordionNumber'),
+                value: selectedPattern?.id,
+                isDense: true,
+                isExpanded: true,
+                itemHeight: 34,
+                hint: const Text(
+                  'Patrón',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 9, color: Color(0xFF475569)),
+                ),
+                selectedItemBuilder: (context) => state.bassRhythmPatterns
+                    .map(
+                      (pattern) => Align(
+                        alignment: Alignment.centerLeft,
+                        child: Tooltip(
+                          message:
+                              '${pattern.name} · ${pattern.partName} · Compás ${pattern.measureNumber}',
+                          child: Text(
+                            pattern.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                items: state.bassRhythmPatterns
+                    .map(
+                      (pattern) => DropdownMenuItem(
+                        value: pattern.id,
+                        child: Text(
+                          '${pattern.name} · ${pattern.partName} · C${pattern.measureNumber}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: state.bassRhythmPatterns.isEmpty
+                    ? null
+                    : notifier.selectBassRhythmPattern,
+              ),
+            ),
+          ),
+          IconButton(
+            key: ValueKey('bass_metronome_toggle_btn_$accordionNumber'),
+            tooltip: state.isBassMetronomeActive
+                ? 'Detener metrónomo de bajos'
+                : 'Iniciar metrónomo de bajos',
+            onPressed: notifier.toggleBassMetronome,
+            constraints: const BoxConstraints.tightFor(width: 26, height: 28),
+            padding: EdgeInsets.zero,
+            splashRadius: 14,
+            icon: Icon(
+              state.isBassMetronomeActive
+                  ? Icons.stop_circle_outlined
+                  : Icons.play_circle_outline,
+              size: 16,
+              color: state.isBassMetronomeActive
+                  ? const Color(0xFF059669)
+                  : const Color(0xFF334155),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _importRhythmPatterns(
+    BuildContext context,
+    AccordionSimulatorNotifier notifier,
+  ) async {
+    try {
+      final result = await notifier.importBassRhythmPatterns();
+      if (!context.mounted || result == null) return;
+      final recoveryMessage = result.recoveredMalformedEvents == 0
+          ? ''
+          : ' Se recuperó ${result.recoveredMalformedEvents} evento(s) malformado(s) como pausa.';
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Se importaron ${result.patterns.length} patrones.$recoveryMessage',
+          ),
+        ),
+      );
+    } on FormatException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text('No se pudo importar el MusicXML: $error')),
+      );
+    } on Exception catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text('Error al leer el archivo: $error')),
+      );
+    }
   }
 
   Widget _buildBassButtonLabel(

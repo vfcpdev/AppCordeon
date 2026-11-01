@@ -15,9 +15,11 @@ import '../../domain/commands/accordion_commands.dart';
 import '../../domain/memento/grid_memento.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/audio_analysis_models.dart';
+import '../../domain/models/bass_rhythm_pattern.dart';
 import '../../domain/models/measure_json_serializer.dart';
 import '../../domain/models/measure_models.dart';
 import '../../domain/models/tuning.dart';
+import '../../domain/services/musicxml_rhythm_importer.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../../domain/theory/chord_detector_engine.dart';
 
@@ -210,6 +212,43 @@ class AccordionSimulatorState {
   final double? _metronomeVolume;
   double get metronomeVolume => _metronomeVolume ?? 0.8;
 
+  final List<BassRhythmPattern> bassRhythmPatterns;
+  final String? selectedBassRhythmPatternId;
+  final bool isBassMetronomeActive;
+  final double bassRhythmElapsedSeconds;
+
+  BassRhythmPattern? get selectedBassRhythmPattern {
+    final selectedId = selectedBassRhythmPatternId;
+    if (selectedId == null) return null;
+    for (final pattern in bassRhythmPatterns) {
+      if (pattern.id == selectedId) return pattern;
+    }
+    return null;
+  }
+
+  double get bassRhythmPositionQuarterBeats {
+    final pattern = selectedBassRhythmPattern;
+    if (pattern == null || pattern.durationQuarterBeats <= 0) return 0;
+    final bpm =
+        pattern.quarterNotesPerMinute ?? audioReport?.bpm.toDouble() ?? 120.0;
+    final elapsedSeconds = isPlayingAudio
+        ? compasTime
+        : bassRhythmElapsedSeconds;
+    return (elapsedSeconds * bpm / 60.0) % pattern.durationQuarterBeats;
+  }
+
+  Set<int> get activeBassRhythmButtonIndexes {
+    final pattern = selectedBassRhythmPattern;
+    if (pattern == null) return const {};
+    final position = bassRhythmPositionQuarterBeats;
+    return {
+      for (final hit in pattern.hits)
+        if (position >= hit.onsetQuarterBeats &&
+            position < hit.onsetQuarterBeats + hit.durationQuarterBeats)
+          hit.buttonIndex,
+    };
+  }
+
   final bool? _isLiveChordMarkerActive;
   bool get isLiveChordMarkerActive => _isLiveChordMarkerActive ?? false;
 
@@ -319,6 +358,10 @@ class AccordionSimulatorState {
     Offset? chordDetectorPosition,
     bool? isMetronomeActive,
     double? metronomeVolume,
+    this.bassRhythmPatterns = const [],
+    this.selectedBassRhythmPatternId,
+    this.isBassMetronomeActive = false,
+    this.bassRhythmElapsedSeconds = 0.0,
     bool? isLiveChordMarkerActive,
     this.copiedChord = '',
     double? bpmCalibrationStart,
@@ -418,6 +461,11 @@ class AccordionSimulatorState {
     String? freeChordBass,
     bool? isMetronomeActive,
     double? metronomeVolume,
+    List<BassRhythmPattern>? bassRhythmPatterns,
+    String? selectedBassRhythmPatternId,
+    bool clearSelectedBassRhythmPattern = false,
+    bool? isBassMetronomeActive,
+    double? bassRhythmElapsedSeconds,
     bool? isLiveChordMarkerActive,
     String? copiedChord,
     double? bpmCalibrationStart,
@@ -513,6 +561,15 @@ class AccordionSimulatorState {
           chordDetectorPosition ?? this.chordDetectorPosition,
       isMetronomeActive: isMetronomeActive ?? this.isMetronomeActive,
       metronomeVolume: metronomeVolume ?? this.metronomeVolume,
+      bassRhythmPatterns: bassRhythmPatterns ?? this.bassRhythmPatterns,
+      selectedBassRhythmPatternId: clearSelectedBassRhythmPattern
+          ? null
+          : (selectedBassRhythmPatternId ??
+                this.selectedBassRhythmPatternId),
+      isBassMetronomeActive:
+          isBassMetronomeActive ?? this.isBassMetronomeActive,
+      bassRhythmElapsedSeconds:
+          bassRhythmElapsedSeconds ?? this.bassRhythmElapsedSeconds,
       isLiveChordMarkerActive:
           isLiveChordMarkerActive ?? this.isLiveChordMarkerActive,
       copiedChord: copiedChord ?? this.copiedChord,
@@ -1397,6 +1454,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       _currentBeatNotes = [];
       _audioBridge.noteOff(84);
       _audioBridge.noteOff(76);
+      _syncStandaloneMetronome();
       return;
     }
 
@@ -1455,6 +1513,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
           selectedBeatIndex: 0,
           playingChordNotes: const {},
         );
+        _syncStandaloneMetronome();
         return;
       }
 
@@ -1504,8 +1563,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         _lastPlayedBar = currentBar;
         _lastPlayedBeat = currentBeat;
         _playBeatChord(currentBar, currentBeat);
-        if (state.isMetronomeActive) {
-          playMetronomeTick(currentBeat);
+        if (state.isMetronomeActive || state.isBassMetronomeActive) {
+          final pattern = state.selectedBassRhythmPattern;
+          playMetronomeTick(
+            pattern == null ? currentBeat : totalBeats,
+            beatsPerMeasure: pattern?.beatsPerMeasureInQuarterNotes ?? 4,
+          );
         }
       }
     });
@@ -1527,22 +1590,60 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       playingChordNotes: const {},
     );
     _audioBridge.allNotesOff();
+    _syncStandaloneMetronome();
   }
 
   Timer? _standaloneMetronomeTimer;
   int _standaloneBeat = 0;
+  final MusicXmlRhythmImporter _rhythmImporter = MusicXmlRhythmImporter();
+
+  /// {P}: el selector de archivos puede devolver un MusicXML de texto o cancelar.
+  /// {Q}: al importar, las pistas disponibles reemplazan las anteriores y la
+  /// primera queda seleccionada; cancelar conserva el estado actual.
+  Future<BassRhythmImportSummary?> importBassRhythmPatterns() async {
+    final content = await ref
+        .read(fileStorageProvider)
+        .pickTextFile(allowedExtensions: const ['musicxml', 'xml']);
+    if (content == null) return null;
+
+    final summary = _rhythmImporter.importPatterns(content);
+    state = state.copyWith(
+      bassRhythmPatterns: summary.patterns,
+      selectedBassRhythmPatternId: summary.patterns.first.id,
+      bassRhythmElapsedSeconds: 0,
+    );
+    _syncStandaloneMetronome();
+    return summary;
+  }
+
+  /// {P}: el identificador es nulo o pertenece a un patrón importado.
+  /// {Q}: el reloj del patrón inicia en cero y el metrónomo conserva el BPM correcto.
+  void selectBassRhythmPattern(String? patternId) {
+    if (patternId != null &&
+        !state.bassRhythmPatterns.any((pattern) => pattern.id == patternId)) {
+      throw ArgumentError.value(
+        patternId,
+        'patternId',
+        'No corresponde a un patrón rítmico importado.',
+      );
+    }
+    state = state.copyWith(
+      selectedBassRhythmPatternId: patternId,
+      clearSelectedBassRhythmPattern: patternId == null,
+      bassRhythmElapsedSeconds: 0,
+    );
+    _syncStandaloneMetronome();
+  }
+
+  void toggleBassMetronome() {
+    state = state.copyWith(isBassMetronomeActive: !state.isBassMetronomeActive);
+    _syncStandaloneMetronome();
+  }
 
   /// Alterna el estado del metrónomo (click rítmico de compás).
   void toggleMetronome() {
-    final nextActive = !state.isMetronomeActive;
-    state = state.copyWith(isMetronomeActive: nextActive);
-    if (!state.isPlayingAudio) {
-      if (nextActive) {
-        _startStandaloneMetronome();
-      } else {
-        _stopStandaloneMetronome();
-      }
-    }
+    state = state.copyWith(isMetronomeActive: !state.isMetronomeActive);
+    _syncStandaloneMetronome();
   }
 
   /// Ajusta el volumen del click del metrónomo [0.0, 1.0].
@@ -1558,7 +1659,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   /// Ejecuta un chasquido de metrónomo (acento en beat 0, secundario en beats 1..3).
-  void playMetronomeTick(int beatIndex) {
+  void playMetronomeTick(int beatIndex, {int beatsPerMeasure = 4}) {
     PlayMetronomeTickCommand(
       onPercussiveClick: ({bool isDownbeat = true, double volume = 0.8}) {
         _audioBridge.playPercussiveClick(
@@ -1571,15 +1672,38 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       onNoteOff: (note) => _audioBridge.noteOff(note),
       beatIndex: beatIndex,
       volume: state.metronomeVolume,
+      beatsPerMeasure: beatsPerMeasure,
     ).execute();
+  }
+
+  double get _standaloneMetronomeBpm =>
+      state.selectedBassRhythmPattern?.quarterNotesPerMinute ??
+      state.audioReport?.bpm.toDouble() ??
+      120.0;
+
+  int get _standaloneMetronomeBeatsPerMeasure =>
+      state.selectedBassRhythmPattern?.beatsPerMeasureInQuarterNotes ?? 4;
+
+  void _syncStandaloneMetronome() {
+    if (state.isPlayingAudio ||
+        (!state.isMetronomeActive && !state.isBassMetronomeActive)) {
+      _stopStandaloneMetronome();
+      return;
+    }
+    _startStandaloneMetronome();
   }
 
   void _startStandaloneMetronome() {
     _standaloneMetronomeTimer?.cancel();
-    final bpm = state.audioReport?.bpm ?? 120.0;
+    final bpm = _standaloneMetronomeBpm;
     final intervalMs = ((60.0 / bpm) * 1000).toInt().clamp(100, 3000);
+    final beatsPerMeasure = _standaloneMetronomeBeatsPerMeasure;
     _standaloneBeat = 0;
-    playMetronomeTick(_standaloneBeat);
+    state = state.copyWith(bassRhythmElapsedSeconds: 0);
+    playMetronomeTick(
+      _standaloneBeat,
+      beatsPerMeasure: beatsPerMeasure,
+    );
 
     _standaloneMetronomeTimer = Timer.periodic(
       Duration(milliseconds: intervalMs),
@@ -1588,8 +1712,16 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
           timer.cancel();
           return;
         }
-        _standaloneBeat = (_standaloneBeat + 1) % 4;
-        playMetronomeTick(_standaloneBeat);
+        final currentBeatsPerMeasure = _standaloneMetronomeBeatsPerMeasure;
+        _standaloneBeat = (_standaloneBeat + 1) % currentBeatsPerMeasure;
+        state = state.copyWith(
+          bassRhythmElapsedSeconds:
+              state.bassRhythmElapsedSeconds + intervalMs / 1000.0,
+        );
+        playMetronomeTick(
+          _standaloneBeat,
+          beatsPerMeasure: currentBeatsPerMeasure,
+        );
       },
     );
   }
