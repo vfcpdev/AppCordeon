@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:acordeon_flutter/core/constants/enums.dart';
 import 'package:acordeon_flutter/domain/commands/accordion_commands.dart';
 import 'package:acordeon_flutter/domain/models/audio_analysis_models.dart';
-import 'package:acordeon_flutter/domain/models/measure_models.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 
 const _sampleChords = [
@@ -80,13 +79,25 @@ void main() {
     });
 
     test('{Q}: 4 tiempos en 2.4 s → 100 BPM', () {
-      expect(const CalibrateBpmFromTapsCommand(startTime: 0.5, endTime: 2.9).execute(), 100);
+      expect(
+        const CalibrateBpmFromTapsCommand(
+          startTime: 0.5,
+          endTime: 2.9,
+        ).execute(),
+        100,
+      );
     });
 
     test('{P} violada: orden invertido o BPM fuera de rango', () {
-      const inverted = CalibrateBpmFromTapsCommand(startTime: 3.0, endTime: 1.0);
+      const inverted = CalibrateBpmFromTapsCommand(
+        startTime: 3.0,
+        endTime: 1.0,
+      );
       expect(inverted.canExecute(), isFalse);
-      expect(() => inverted.execute(), throwsA(isA<PreconditionViolationException>()));
+      expect(
+        () => inverted.execute(),
+        throwsA(isA<PreconditionViolationException>()),
+      );
 
       const tooFast = CalibrateBpmFromTapsCommand(startTime: 1.0, endTime: 1.1);
       expect(tooFast.canExecute(), isFalse);
@@ -130,53 +141,56 @@ void main() {
   });
 
   group('ApplyMeasureChordsFromAudioCommand {P} C {Q}', () {
-    test('{Q}: asigna acordes sincronizados con pulsos y marca transiciones exactas', () {
-      final measures = _generateEmptyMeasures(2);
+    test(
+      '{Q}: asigna acordes sincronizados con pulsos y marca transiciones exactas',
+      () {
+        final measures = _generateEmptyMeasures(2);
 
-      final cmd = ApplyMeasureChordsFromAudioCommand(
-        measures: measures,
-        chords: _sampleChords,
-        bpm: 120.0,
-        startOffset: 0.0,
-        notation: NotationMode.latina,
-      );
+        final cmd = ApplyMeasureChordsFromAudioCommand(
+          measures: measures,
+          chords: _sampleChords,
+          bpm: 120.0,
+          startOffset: 0.0,
+          notation: NotationMode.latina,
+        );
 
-      expect(cmd.canExecute(), isTrue);
-      final result = cmd.execute();
+        expect(cmd.canExecute(), isTrue);
+        final result = cmd.execute();
 
-      expect(result.updatedMeasures.length, 2);
-      expect(result.totalChordChanges, 3);
+        expect(result.updatedMeasures.length, 2);
+        expect(result.totalChordChanges, 3);
 
-      // Compás 0:
-      // Beat 0 (mid: 0.25s): Sol Mayor (Cambio inicial)
-      expect(result.updatedMeasures[0].beats[0].chord, 'Sol Mayor');
-      expect(result.updatedMeasures[0].beats[0].isContinue, isFalse);
-      // Beat 1 (mid: 0.75s): Sol Mayor (Continuación)
-      expect(result.updatedMeasures[0].beats[1].chord, 'Sol Mayor');
-      expect(result.updatedMeasures[0].beats[1].isContinue, isTrue);
-      // Beat 2 (mid: 1.25s): Sol Mayor (Continuación)
-      expect(result.updatedMeasures[0].beats[2].chord, 'Sol Mayor');
-      expect(result.updatedMeasures[0].beats[2].isContinue, isTrue);
-      // Beat 3 (mid: 1.75s): Do Mayor (Transición)
-      expect(result.updatedMeasures[0].beats[3].chord, 'Do Mayor');
-      expect(result.updatedMeasures[0].beats[3].isContinue, isFalse);
+        // Compás 0:
+        // Beat 0 (mid: 0.25s): Sol Mayor (Cambio inicial)
+        expect(result.updatedMeasures[0].beats[0].chord, 'Sol Mayor');
+        expect(result.updatedMeasures[0].beats[0].isContinue, isFalse);
+        // Beat 1 (mid: 0.75s): Sol Mayor (Continuación)
+        expect(result.updatedMeasures[0].beats[1].chord, 'Sol Mayor');
+        expect(result.updatedMeasures[0].beats[1].isContinue, isTrue);
+        // Beat 2 (mid: 1.25s): Sol Mayor (Continuación)
+        expect(result.updatedMeasures[0].beats[2].chord, 'Sol Mayor');
+        expect(result.updatedMeasures[0].beats[2].isContinue, isTrue);
+        // Beat 3 (mid: 1.75s): Do Mayor (Transición)
+        expect(result.updatedMeasures[0].beats[3].chord, 'Do Mayor');
+        expect(result.updatedMeasures[0].beats[3].isContinue, isFalse);
 
-      // Compás 1:
-      // Beat 0 (mid: 2.25s): Do Mayor (Continuación)
-      expect(result.updatedMeasures[1].beats[0].chord, 'Do Mayor');
-      expect(result.updatedMeasures[1].beats[0].isContinue, isTrue);
-      // Beat 2 (mid: 3.25s): Re Mayor (Transición)
-      expect(result.updatedMeasures[1].beats[2].chord, 'Re Mayor');
-      expect(result.updatedMeasures[1].beats[2].isContinue, isFalse);
+        // Compás 1:
+        // Beat 0 (mid: 2.25s): Do Mayor (Continuación)
+        expect(result.updatedMeasures[1].beats[0].chord, 'Do Mayor');
+        expect(result.updatedMeasures[1].beats[0].isContinue, isTrue);
+        // Beat 2 (mid: 3.25s): Re Mayor (Transición)
+        expect(result.updatedMeasures[1].beats[2].chord, 'Re Mayor');
+        expect(result.updatedMeasures[1].beats[2].isContinue, isFalse);
 
-      // Verificación de pulsos marcados con cambio armónico:
-      // Beat 0 (0*4+0 = 0), Beat 3 (0*4+3 = 3), Beat 6 (1*4+2 = 6)
-      expect(result.updatedMarkedBeats.contains(0), isTrue);
-      expect(result.updatedMarkedBeats.contains(3), isTrue);
-      expect(result.updatedMarkedBeats.contains(6), isTrue);
-      expect(result.updatedMarkedBeats.contains(1), isFalse);
-      expect(result.updatedMarkedBeats.contains(4), isFalse);
-    });
+        // Verificación de pulsos marcados con cambio armónico:
+        // Beat 0 (0*4+0 = 0), Beat 3 (0*4+3 = 3), Beat 6 (1*4+2 = 6)
+        expect(result.updatedMarkedBeats.contains(0), isTrue);
+        expect(result.updatedMarkedBeats.contains(3), isTrue);
+        expect(result.updatedMarkedBeats.contains(6), isTrue);
+        expect(result.updatedMarkedBeats.contains(1), isFalse);
+        expect(result.updatedMarkedBeats.contains(4), isFalse);
+      },
+    );
 
     test('{P} violada: precondición falla si no hay acordes o compases', () {
       final emptyCmd = ApplyMeasureChordsFromAudioCommand(
@@ -185,47 +199,56 @@ void main() {
         bpm: 120.0,
       );
       expect(emptyCmd.canExecute(), isFalse);
-      expect(() => emptyCmd.execute(), throwsA(isA<PreconditionViolationException>()));
+      expect(
+        () => emptyCmd.execute(),
+        throwsA(isA<PreconditionViolationException>()),
+      );
     });
   });
 
   group('tapBpmCalibration (tecla Control)', () {
-    test('1er toque fija audioStartOffset; 2º toque calibra BPM y aplica acordes automáticamente', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final notifier = container.read(accordionSimulatorProvider.notifier);
-      notifier.setAudioReport(_report);
+    test(
+      '1er toque fija audioStartOffset; 2º toque calibra BPM y aplica acordes automáticamente',
+      () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(accordionSimulatorProvider.notifier);
+        notifier.setAudioReport(_report);
 
-      // 1er toque en 1.5s (fija inicio de Compás 1)
-      notifier.seekAudio(1.5);
-      expect(notifier.tapBpmCalibration(), isNull);
-      var state = container.read(accordionSimulatorProvider);
-      expect(state.isCalibratingBpm, isTrue);
-      expect(state.audioStartOffset, 1.5);
+        // 1er toque en 1.5s (fija inicio de Compás 1)
+        notifier.seekAudio(1.5);
+        expect(notifier.tapBpmCalibration(), isNull);
+        var state = container.read(accordionSimulatorProvider);
+        expect(state.isCalibratingBpm, isTrue);
+        expect(state.audioStartOffset, 1.5);
 
-      // 2º toque en 3.5s (4 pulsos en 2.0s → 120 BPM)
-      notifier.seekAudio(3.5);
-      final calibratedBpm = notifier.tapBpmCalibration();
-      expect(calibratedBpm, 120);
+        // 2º toque en 3.5s (4 pulsos en 2.0s → 120 BPM)
+        notifier.seekAudio(3.5);
+        final calibratedBpm = notifier.tapBpmCalibration();
+        expect(calibratedBpm, 120);
 
-      state = container.read(accordionSimulatorProvider);
-      expect(state.isCalibratingBpm, isFalse);
-      expect(state.audioStartOffset, 1.5);
-      expect(state.audioReport!.bpm, 120);
+        state = container.read(accordionSimulatorProvider);
+        expect(state.isCalibratingBpm, isFalse);
+        expect(state.audioStartOffset, 1.5);
+        expect(state.audioReport!.bpm, 120);
 
-      // Verifica que los acordes por compás se sincronizaron con el nuevo inicio
-      expect(state.measures.isNotEmpty, isTrue);
-      // El compás 0 inicia en 1.5s, por lo que el pulso 0 (1.5 + 0.25 = 1.75s) tiene 'Do Mayor'
-      expect(state.measures[0].beats[0].chord, 'Do Mayor');
-      expect(state.markedBeats.isNotEmpty, isTrue);
-    });
+        // Verifica que los acordes por compás se sincronizaron con el nuevo inicio
+        expect(state.measures.isNotEmpty, isTrue);
+        // El compás 0 inicia en 1.5s, por lo que el pulso 0 (1.5 + 0.25 = 1.75s) tiene 'Do Mayor'
+        expect(state.measures[0].beats[0].chord, 'Do Mayor');
+        expect(state.markedBeats.isNotEmpty, isTrue);
+      },
+    );
 
     test('sin audio cargado no hace nada', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final notifier = container.read(accordionSimulatorProvider.notifier);
       expect(notifier.tapBpmCalibration(), isNull);
-      expect(container.read(accordionSimulatorProvider).isCalibratingBpm, isFalse);
+      expect(
+        container.read(accordionSimulatorProvider).isCalibratingBpm,
+        isFalse,
+      );
     });
   });
 }
