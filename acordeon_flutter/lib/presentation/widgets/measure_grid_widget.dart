@@ -695,7 +695,14 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                 for (final entry in measure.beats.asMap().entries) ...[
                                   if (entry.key > 0) const SizedBox(width: 1),
                                   Expanded(
+                                    // Identidad estable por cuadro: evita que
+                                    // ListView.builder recicle el State de una
+                                    // celda en otra y "extienda" el acorde de
+                                    // un cuadro al vecino del mismo compás.
                                     child: _InlineBeatChordEditor(
+                                      key: ValueKey(
+                                        'beat_cell_${mIdx}_${entry.key}',
+                                      ),
                                       accordionId: widget.accordionNumber,
                                       measureIndex: mIdx,
                                       beatIndex: entry.key,
@@ -1442,8 +1449,15 @@ class _ChordTools {
   }
 }
 
-/// Celda de tiempo/acorde editable en línea: al hacer clic recibe foco directamente
-/// sin abrir ningún diálogo modal.
+/// Celda de tiempo/acorde editable en línea: al hacer clic recibe foco de forma
+/// inmediata (en tap-down, sin esperar al ciclo de clic completo) sin abrir
+/// ningún diálogo modal.
+///
+/// Independencia por cuadro: cada celda tiene identidad estable
+/// (ValueKey 'beat_cell_<compás>_<tiempo>'), de modo que su selección, su foco
+/// y su contenido jamás se mezclan con otro cuadro del mismo compás o de la
+/// cuadrícula. Con el cuadro seleccionado (sin editar), Backspace/Delete lo
+/// resetea a vacío sin extender el acorde de cuadros vecinos.
 class _InlineBeatChordEditor extends StatefulWidget {
   final int accordionId;
   final int measureIndex;
@@ -1464,6 +1478,7 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final VoidCallback? onLiveMarker;
 
   const _InlineBeatChordEditor({
+    super.key, // identidad estable por cuadro (ValueKey 'beat_cell_b_t')
     required this.accordionId,
     required this.measureIndex,
     required this.beatIndex,
@@ -1661,10 +1676,11 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     widget.onSelected?.call();
     if (mounted) {
       setState(() {});
+      // Scroll/foco inmediato: sin animación (selección instantánea).
       Scrollable.ensureVisible(
         context,
         alignment: 0.5,
-        duration: const Duration(milliseconds: 100),
+        duration: Duration.zero,
       );
     }
   }
@@ -1693,10 +1709,11 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     );
     if (mounted) {
       setState(() {});
+      // Foco inmediato al seleccionar: sin demora de animación.
       Scrollable.ensureVisible(
         context,
         alignment: 0.5,
-        duration: const Duration(milliseconds: 100),
+        duration: Duration.zero,
       );
     }
   }
@@ -1809,8 +1826,13 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     return Focus(
       focusNode: _cellFocusNode,
       child: GestureDetector(
+        // Foco inmediato: la selección y el foco del textbox ocurren en
+        // tap-down, sin esperar al ciclo completo de tap (tap-up/clic).
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => _activateEdit(),
         onTap: () {
-          _activateEdit();
+          // Fallback por si el tap-down fue consumido por un gesto competidor.
+          if (!_isEditing) _activateEdit();
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
