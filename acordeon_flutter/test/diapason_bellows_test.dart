@@ -107,8 +107,8 @@ void main() {
           find.byKey(const ValueKey('diapason_chord_label_1')),
         );
 
-    // Latina por defecto: Do mayor con notas (Do - Mi - Sol).
-    expect(label().textSpan?.toPlainText(), 'Do   Mayor   (Do - Mi - Sol)');
+    // Latina por defecto: el acorde mayor se muestra solo con su tónica.
+    expect(label().data, 'Do');
 
     final labelBox = tester.widget<Container>(
       find
@@ -126,12 +126,12 @@ void main() {
     notifier.setFreeChordType('dim');
     notifier.setFreeChordFourth('dim7');
     await tester.pumpAndSettle();
-    expect(label().textSpan?.toPlainText(), 'Do   Disminuido   Séptima   (Do - Mi♭ - Fa# - La)');
+    expect(label().data, 'Do°7');
 
     // Al cambiar a notación alemana cambia la tónica y las notas, no la cualidad.
     notifier.setNotation(NotationMode.alemana);
     await tester.pumpAndSettle();
-    expect(label().textSpan?.toPlainText(), 'C   Disminuido   Séptima   (C - Eb - F# - A)');
+    expect(label().data, 'C°7');
   });
 
   testWidgets('el botón de tonalidad es funcional y abre el selector de afinación',

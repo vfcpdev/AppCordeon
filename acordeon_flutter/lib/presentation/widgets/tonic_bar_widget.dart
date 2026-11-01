@@ -241,9 +241,6 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
     final state = ref.watch(accordionSimulatorProvider);
     final notifier = ref.read(accordionSimulatorProvider.notifier);
 
-    final isLatin = state.notation != NotationMode.alemana;
-    final rootNames = isLatin ? ChordCatalog.latinRootNames : ChordCatalog.germanRootNames;
-
     final barIndex = state.selectedBarIndex;
     final beatIndex = state.selectedBeatIndex;
     final hasSelectedCell = barIndex != null &&
@@ -267,12 +264,6 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
     );
     final canInsert =
         insertSymbol.isNotEmpty && (markedCount > 0 || hasSelectedCell);
-
-    // Botones ordenados en 2 columnas verticales:
-    // Columna 1 (6 notas naturales): Do, Re, Mi, Fa, Sol, La
-    // Columna 2 (alteraciones y Si): Do#, Mi♭, Fa#, Sol#, Si♭, Si
-    const col1 = [0, 2, 4, 5, 7, 9];      // Do, Re, Mi, Fa, Sol, La
-    const col2 = [1, 3, 6, 8, 10, 11];   // Do#, Mi♭, Fa#, Sol#, Si♭, Si
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
@@ -504,103 +495,10 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
                   ),
                 ),
                 const SizedBox(height: 4),
-
-                // Botones distribuidos en columnas
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Columna 1
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: col1.map((idx) {
-                          final isSelected = state.freeChordRoot == idx;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: _buildTonicButton(
-                              rootName: rootNames[idx],
-                              isActive: isSelected,
-                              onTap: () => notifier.setFreeChordRoot(idx),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    // Columna 2
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: col2.map((idx) {
-                          final isSelected = state.freeChordRoot == idx;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: _buildTonicButton(
-                              rootName: rootNames[idx],
-                              isActive: isSelected,
-                              onTap: () => notifier.setFreeChordRoot(idx),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTonicButton({
-    required String rootName,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    return Tooltip(
-      message: 'Tónica $rootName',
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 90),
-          height: 24,
-          padding: const EdgeInsets.symmetric(horizontal: 2),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isActive ? const Color(0xFF059669) : const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(
-              color: isActive ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
-              width: isActive ? 1.2 : 1.0,
-            ),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFF059669).withValues(alpha: 0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    )
-                  ]
-                : null,
-          ),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              rootName,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                height: 1.0,
-                color: isActive ? Colors.white : const Color(0xFF1E293B),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

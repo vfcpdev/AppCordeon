@@ -6,6 +6,28 @@ import 'package:acordeon_flutter/presentation/widgets/free_chord_widget.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
 void main() {
+  testWidgets('la sección de acordes no muestra botones de tónica',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(child: FreeChordWidget()),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip(RegExp(r'^Tónica ')), findsNothing);
+    expect(find.byKey(const ValueKey('insert_chord_to_compas_btn')), findsOneWidget);
+    expect(find.byKey(const ValueKey('multi_beat_modal_checkbox')), findsOneWidget);
+  });
+
   testWidgets('el botón Compás inserta el acorde en la celda seleccionada',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1600, 1200);

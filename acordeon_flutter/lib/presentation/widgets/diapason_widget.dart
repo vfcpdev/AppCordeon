@@ -7,7 +7,6 @@ import '../../domain/models/tuning.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
 import 'diapason_button_widget.dart';
-import 'tonic_bar_widget.dart';
 import 'tuning_picker_dialog.dart';
 
 class DiapasonWidget extends ConsumerWidget {
@@ -49,6 +48,7 @@ class DiapasonWidget extends ConsumerWidget {
     final freeChordRoot = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordRoot));
     final freeChordType = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordType));
     final freeChordFourth = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordFourth));
+    final freeChordBass = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordBass));
     final notation = ref.watch(accordionSimulatorProvider.select((s) => s.notation));
     final isFreeChordFixed = ref.watch(accordionSimulatorProvider.select((s) => s.isFreeChordFixed));
 
@@ -57,6 +57,14 @@ class DiapasonWidget extends ConsumerWidget {
     final formattedCompasChord = compasChord.isNotEmpty
         ? ChordCatalog.formatChordForNotation(compasChord, notation)
         : '';
+    final formattedFreeChord = ChordCatalog.symbolFor(
+      root: freeChordRoot,
+      type: freeChordType,
+      extension: freeChordFourth,
+      bass: freeChordBass,
+      latin: notation != NotationMode.alemana,
+      display: true,
+    );
 
     final rowList = [
       _RowDef(
@@ -203,22 +211,17 @@ class DiapasonWidget extends ConsumerWidget {
                   ),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: Text.rich(
+                    child: Text(
                       (!isFreeChordFixed && formattedCompasChord.isNotEmpty)
-                          ? ChordCatalog.buildChordLabelSpans(
-                              chord: compasChord,
-                              notation: notation,
-                              fontSize: 9.5,
-                            )
-                          : TonicBarWidget.buildChordNameSpans(
-                              root: freeChordRoot,
-                              type: freeChordType,
-                              extension: freeChordFourth,
-                              latin: notation != NotationMode.alemana,
-                              fontSize: 9.5,
-                            ),
+                          ? formattedCompasChord
+                          : (formattedFreeChord.isEmpty ? '—' : formattedFreeChord),
                       key: ValueKey('diapason_chord_label_$accordionNumber'),
                       maxLines: 1,
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                      ),
                     ),
                   ),
                 ),

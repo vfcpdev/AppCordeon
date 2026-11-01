@@ -192,42 +192,15 @@ class AccordionSimulatorState {
   /// Desplazamiento temporal total acumulado (inicio de audio + micro-ajuste de beat).
   double get effectiveAudioStartOffset => audioStartOffset + beatNudgeOffset;
 
-  /// Acorde activo en el Compás actual (o el más reciente dentro del compás/tiempo).
+  /// Acorde de la casilla seleccionada, sin heredar acordes de otras casillas.
   String get activeCompasChord {
     if (selectedBarIndex == null || selectedBarIndex! < 0 || selectedBarIndex! >= measures.length) {
       return '';
     }
     final row = measures[selectedBarIndex!];
     final beatIdx = selectedBeatIndex ?? 0;
-
-    // 1. Probar en el beat seleccionado
-    if (beatIdx >= 0 && beatIdx < row.beats.length) {
-      final c = row.beats[beatIdx].chord.trim();
-      if (c.isNotEmpty) return c;
-    }
-
-    // 2. Probar hacia atrás en el mismo compás
-    for (int b = beatIdx - 1; b >= 0; b--) {
-      final c = row.beats[b].chord.trim();
-      if (c.isNotEmpty) return c;
-    }
-
-    // 3. Probar en cualquier beat del mismo compás
-    for (final b in row.beats) {
-      final c = b.chord.trim();
-      if (c.isNotEmpty) return c;
-    }
-
-    // 4. Si el compás actual está totalmente vacío, buscar hacia atrás en compases previos
-    for (int m = selectedBarIndex! - 1; m >= 0; m--) {
-      final prevRow = measures[m];
-      for (int b = prevRow.beats.length - 1; b >= 0; b--) {
-        final c = prevRow.beats[b].chord.trim();
-        if (c.isNotEmpty) return c;
-      }
-    }
-
-    return '';
+    if (beatIdx < 0 || beatIdx >= row.beats.length) return '';
+    return row.beats[beatIdx].chord.trim();
   }
 
   const AccordionSimulatorState({
@@ -2956,4 +2929,3 @@ final detectorStatusSliceProvider = Provider<({bool active, int count, bool hasC
   final hasChord = ref.watch(accordionSimulatorProvider.select((s) => s.detectedChord != null));
   return (active: mode, count: count, hasChord: hasChord);
 });
-

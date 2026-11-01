@@ -249,12 +249,7 @@ void main() {
     final labelFinder = find.byKey(const ValueKey('diapason_chord_label_1'));
     expect(labelFinder, findsOneWidget);
     final labelWidget = tester.widget<Text>(labelFinder);
-    final labelText = labelWidget.textSpan?.toPlainText() ?? '';
-    expect(labelText, contains('Sol7'));
-    expect(labelText, contains('Sol'));
-    expect(labelText, contains('Si'));
-    expect(labelText, contains('Re'));
-    expect(labelText, contains('Fa'));
+    expect(labelWidget.data, 'Sol7');
 
     // 3. Comprobamos que activeChordPitchClassesProvider(1) contenga las clases de altura de Sol7 (7, 11, 2, 5)
     final activePcs = container.read(activeChordPitchClassesProvider(1));
@@ -289,17 +284,19 @@ void main() {
     await tester.pumpAndSettle();
 
     final labelWidgetGerman = tester.widget<Text>(labelFinder);
-    final labelTextGerman = labelWidgetGerman.textSpan?.toPlainText() ?? '';
-    expect(labelTextGerman, contains('G7'));
-    expect(labelTextGerman, contains('G'));
-    expect(labelTextGerman, contains('B'));
-    expect(labelTextGerman, contains('D'));
-    expect(labelTextGerman, contains('F'));
+    expect(labelWidgetGerman.data, 'G7');
 
     // 6. Si se asigna dirección de fuelle 'Cierra' (push) al beat del compás, el fuelle del diapasón 1 se sincroniza
     notifier.setBeatBellows(0, 0, BellowsMode.push);
     await tester.pumpAndSettle();
     expect(container.read(accordionSimulatorProvider).bellows1, BellowsMode.push);
+
+    // Cada casilla es independiente: al seleccionar una vacía no se hereda
+    // el acorde de la casilla anterior.
+    notifier.selectBeat(0, 1);
+    await tester.pumpAndSettle();
+    expect(container.read(accordionSimulatorProvider).activeCompasChord, isEmpty);
+    expect(container.read(accordionSimulatorProvider).measures[0].beats[0].chord, 'G7');
   });
 
   testWidgets('Los bajos diferencian coincidencia exacta y cercanía armónica',
