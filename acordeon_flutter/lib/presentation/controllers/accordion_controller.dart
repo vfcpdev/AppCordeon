@@ -1704,7 +1704,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     _standaloneMetronomeTimer = Timer.periodic(
       Duration(milliseconds: intervalMs),
       (timer) {
-        if (!state.isMetronomeActive || state.isPlayingAudio) {
+        if ((!state.isMetronomeActive && !state.isBassMetronomeActive) ||
+            state.isPlayingAudio) {
           timer.cancel();
           return;
         }

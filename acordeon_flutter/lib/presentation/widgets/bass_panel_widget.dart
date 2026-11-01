@@ -535,7 +535,6 @@ class BassPanelWidget extends ConsumerWidget {
                 value: selectedPattern?.id,
                 isDense: true,
                 isExpanded: true,
-                itemHeight: 34,
                 hint: const Text(
                   'Patrón',
                   maxLines: 1,
