@@ -126,6 +126,7 @@ class AccordionSimulatorState {
   final List<MeasureRow> measures;
   final int? selectedBarIndex;
   final int? selectedBeatIndex;
+  final bool isManualBeatSelection;
 
   /// Tiempos marcados con el checkbox de la cuadrícula. Si hay alguno, la
   /// inserción desde el Constructor y la reproducción se limitan a ellos.
@@ -244,7 +245,8 @@ class AccordionSimulatorState {
     if (barIndex != null && barIndex >= 0 && barIndex < measures.length) {
       final beats = measures[barIndex].beats;
       if (beatIndex >= 0 && beatIndex < beats.length) {
-        return beats[beatIndex].chord.trim();
+        final chord = beats[beatIndex].chord.trim();
+        if (chord.isNotEmpty || isManualBeatSelection) return chord;
       }
     }
     if (!isAudioCoupled) return '';
@@ -282,6 +284,7 @@ class AccordionSimulatorState {
     required this.measures,
     this.selectedBarIndex,
     this.selectedBeatIndex,
+    this.isManualBeatSelection = false,
     Set<int>? markedBeats,
     this.isMultiBeatAssignmentMode = false,
     Set<int>? multiBeatAssignmentTargets,
@@ -376,6 +379,7 @@ class AccordionSimulatorState {
     List<MeasureRow>? measures,
     int? selectedBarIndex,
     int? selectedBeatIndex,
+    bool? isManualBeatSelection,
     Set<int>? markedBeats,
     bool? isMultiBeatAssignmentMode,
     Set<int>? multiBeatAssignmentTargets,
@@ -458,6 +462,8 @@ class AccordionSimulatorState {
       measures: measures ?? this.measures,
       selectedBarIndex: selectedBarIndex ?? this.selectedBarIndex,
       selectedBeatIndex: selectedBeatIndex ?? this.selectedBeatIndex,
+      isManualBeatSelection:
+          isManualBeatSelection ?? this.isManualBeatSelection,
       markedBeats: markedBeats ?? this.markedBeats,
       isMultiBeatAssignmentMode:
           isMultiBeatAssignmentMode ?? this.isMultiBeatAssignmentMode,
@@ -1162,6 +1168,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       measures: generated,
       selectedBarIndex: 0,
       selectedBeatIndex: 0,
+      isManualBeatSelection: false,
       audioStartOffset: offset,
     );
   }
@@ -1394,7 +1401,11 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
 
     _stopStandaloneMetronome();
-    state = state.copyWith(isPlayingAudio: true, isFreeChordBeingEdited: false);
+    state = state.copyWith(
+      isPlayingAudio: true,
+      isFreeChordBeingEdited: false,
+      isManualBeatSelection: false,
+    );
     _lastPlayedBar = null;
     _lastPlayedBeat = null;
 
@@ -1480,6 +1491,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         totalAudioDuration: audioDur > 0 ? audioDur : null,
         selectedBarIndex: currentBar,
         selectedBeatIndex: currentBeat,
+        isManualBeatSelection: false,
       );
 
       // Detección automática en reproducción: ÚNICAMENTE cuando ocurre una transición armónica
@@ -1735,6 +1747,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       currentCompasTime: clamped,
       selectedBarIndex: currentBar,
       selectedBeatIndex: currentBeat,
+      isManualBeatSelection: false,
     );
     if (audition || state.isPlayingAudio) {
       _playBeatChord(currentBar, currentBeat);
@@ -1757,6 +1770,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       currentCompasTime: time,
       selectedBarIndex: currentBar,
       selectedBeatIndex: currentBeat,
+      isManualBeatSelection: false,
     );
     if (audition || state.isPlayingAudio) {
       _playBeatChord(currentBar, currentBeat);
@@ -1852,6 +1866,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         markedBeats: result.updatedMarkedBeats,
         selectedBarIndex: result.targetBar,
         selectedBeatIndex: result.targetBeat,
+        isManualBeatSelection: false,
       );
 
       // Reproducir sonoramente el nuevo acorde en el sintetizador
@@ -1914,6 +1929,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       state = state.copyWith(
         selectedBarIndex: barIdx,
         selectedBeatIndex: beatIdx,
+        isManualBeatSelection: false,
         isFreeChordBeingEdited: false,
       );
       return;
@@ -1923,6 +1939,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       state = state.copyWith(
         selectedBarIndex: barIdx,
         selectedBeatIndex: beatIdx,
+        isManualBeatSelection: false,
         isFreeChordBeingEdited: false,
       );
       return;
@@ -1942,6 +1959,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     state = state.copyWith(
       selectedBarIndex: barIdx,
       selectedBeatIndex: beatIdx,
+      isManualBeatSelection: true,
       bellows1: nextBellows,
       activeButtons: const {},
       playingChordNotes: const {},
