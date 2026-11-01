@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../core/constants/layout_constants.dart';
 import '../controllers/accordion_controller.dart';
 import '../widgets/accordion_keyboard_listener.dart';
 import '../widgets/app_header_widget.dart';
@@ -74,7 +75,10 @@ class HomeScreen extends ConsumerWidget {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           if (!state.isCompas1Undocked)
-                                            const MeasureGridWidget(accordionNumber: 1, width: 185)
+                                            const MeasureGridWidget(
+                                              accordionNumber: 1,
+                                              width: CompasCardMetrics.width,
+                                            )
                                           else
                                             _buildDockPlaceholder(1, notifier),
                                           const SizedBox(width: 6),
@@ -98,7 +102,10 @@ class HomeScreen extends ConsumerWidget {
 
                                       // Cuadrícula de compases de Acordeón 2 con estructura y opciones completas
                                       if (!state.isCompas2Undocked)
-                                        const MeasureGridWidget(accordionNumber: 2, width: 185)
+                                        const MeasureGridWidget(
+                                          accordionNumber: 2,
+                                          width: CompasCardMetrics.width,
+                                        )
                                       else
                                         _buildDockPlaceholder(2, notifier),
                                       const SizedBox(width: 10),
@@ -203,7 +210,7 @@ class HomeScreen extends ConsumerWidget {
   Widget _buildDockPlaceholder(int accordionNumber, AccordionSimulatorNotifier notifier) {
     final isPrimary = accordionNumber == 1;
     return Container(
-      width: 185,
+      width: CompasCardMetrics.width,
       height: 140,
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
@@ -272,7 +279,7 @@ class HomeScreen extends ConsumerWidget {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          width: 185,
+          width: CompasCardMetrics.width,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -345,7 +352,7 @@ class HomeScreen extends ConsumerWidget {
               ),
               MeasureGridWidget(
                 accordionNumber: accordionNumber,
-                width: 185,
+                width: CompasCardMetrics.width,
                 isUndocked: true,
               ),
             ],

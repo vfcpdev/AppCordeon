@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
+import '../../core/constants/layout_constants.dart';
 import '../../core/di/providers.dart';
+import '../../core/text/chord_text_fitter.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
 import 'chord_detector_widget.dart';
@@ -132,7 +134,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final totalBeats = state.measures.length * 4;
     final allMarked = totalBeats > 0 && state.markedBeats.length == totalBeats;
     final hasMarks = state.markedBeats.isNotEmpty;
-    final effectiveWidth = widget.width ?? 185.0;
+    final effectiveWidth = widget.width ?? CompasCardMetrics.width;
     final isUndocked = widget.isUndocked || (widget.accordionNumber == 1
         ? state.isCompas1Undocked
         : state.isCompas2Undocked);
@@ -618,7 +620,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 4.0),
             child: Container(
-              constraints: const BoxConstraints(maxHeight: 330),
+              constraints: BoxConstraints(maxHeight: CompasCardMetrics.gridMaxHeight),
               child: RawScrollbar(
                 controller: _compasScrollController,
                 thumbVisibility: true,
@@ -1884,6 +1886,23 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
               final showCompactArrows = constraints.maxWidth >= 52;
               final showTime = constraints.maxWidth >= 155;
 
+              // Ajuste {P} C {Q} del tamaño de la fuente del acorde: la cadena
+              // se muestra completa, reduciendo el tamaño de forma monótona
+              // hasta la cota mínima cuando es demasiado larga para la celda.
+              // En modo clásico se reserva el ancho del fuelle (y del tiempo);
+              // en modo compacto el texto usa el ancho completo de la celda.
+              final controlsWidth = showArrows ? (showTime ? 72.0 : 33.0) : 0.0;
+              final availableTextWidth = showArrows
+                  ? (constraints.maxWidth - controlsWidth).clamp(0.0, double.infinity)
+                  : constraints.maxWidth;
+              final fittedFontSize = ChordTextFitter.fitFontSize(
+                text: _controller.text,
+                availableWidth: availableTextWidth,
+                baseFontSize: 10.0,
+                minFontSize: 6.0,
+                horizontalPadding: 8.0,
+              );
+
               final chordField = Tooltip(
                 message: hasChord ? 'Acorde: ${widget.chord}' : '',
                 waitDuration: const Duration(milliseconds: 600),
@@ -1899,7 +1918,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     }
                   },
                   style: TextStyle(
-                    fontSize: 10.0,
+                    fontSize: fittedFontSize,
                     letterSpacing: -0.2,
                     fontWeight: (isFocusedOrSelected || hasChord)
                         ? FontWeight.w900
@@ -1925,6 +1944,8 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                   ),
                   onChanged: (_) {
                     _commit();
+                    // Reevalúa el ajuste de fuente {Q} mientras se escribe
+                    _update();
                   },
                   onSubmitted: (_) {
                     _commit();
