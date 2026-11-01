@@ -626,7 +626,7 @@ class MarkLiveChordChangeCommand implements AccordionCommand<LiveMarkerResult> {
 
 /// Comando para reproducir el chasquido acústico del metrónomo sincronizado al compás.
 /// {P}: beatIndex >= 0, volume in [0.0, 1.0].
-/// {Q}: Chasquido percusivo emitido con acento en beat 0 y pulsos secundarios en beats 1..3.
+/// {Q}: emite un chasquido; `accented` explícito prevalece sobre el acento métrico.
 class PlayMetronomeTickCommand implements AccordionCommand<int> {
   @override
   String get commandName => 'PlayMetronomeTickCommand';

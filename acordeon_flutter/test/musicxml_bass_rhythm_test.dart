@@ -42,7 +42,7 @@ const _musicXml = '''
       <attributes><time><beats>6</beats><beat-type>8</beat-type></time></attributes>
       <direction><direction-type><words>Merengue</words></direction-type></direction>
       <note><pitch><step>G</step><octave>4</octave></pitch><duration>1</duration></note>
-      <note><pitch><step>A</step><octave>4</octave></pitch><duration>1</duration></note>
+      <note><pitch><step>A</step><octave>4</octave></pitch><duration>1</duration><notations><articulations><accent/></articulations></notations></note>
     </measure>
   </part>
 </score-partwise>
@@ -87,13 +87,10 @@ void main() {
       final score = File(
         '../patrones_ritmicos_estructurados.musicxml',
       ).readAsStringSync();
-      final patterns = MusicXmlRhythmImporter()
-          .importPatterns(score)
-          .patterns;
+      final patterns = MusicXmlRhythmImporter().importPatterns(score).patterns;
 
-      BassRhythmPattern patternNamed(String name) => patterns.firstWhere(
-        (pattern) => pattern.name == name,
-      );
+      BassRhythmPattern patternNamed(String name) =>
+          patterns.firstWhere((pattern) => pattern.name == name);
 
       final merengue = patternNamed('II. MERENGUE VALLENATO');
       expect(merengue.hits, hasLength(4));
@@ -103,10 +100,12 @@ void main() {
         BassRhythmButtonType.chord,
         BassRhythmButtonType.fundamental,
       ]);
-      expect(
-        merengue.hits.map((hit) => hit.onsetQuarterBeats),
-        [0, 0.75, 1.5, 2.25],
-      );
+      expect(merengue.hits.map((hit) => hit.onsetQuarterBeats), [
+        0,
+        0.75,
+        1.5,
+        2.25,
+      ]);
       expect(merengue.hits.map((hit) => hit.fingerNumber), [2, 3, 2, 2]);
       expect(merengue.hits.map((hit) => hit.isAccented), [
         false,
@@ -298,10 +297,12 @@ void main() {
           isTrue,
         );
         expect(audioEngine.clickCount, 1);
+        expect(audioEngine.clickAccents, [false]);
 
         await tester.pump(const Duration(milliseconds: 375));
         state = container.read(accordionSimulatorProvider);
         expect(state.bassRhythmElapsedSeconds, greaterThan(0));
+        expect(audioEngine.clickAccents, [false, true]);
         expect(state.activeBassRhythmButtonIndexes, contains(1));
         final renderedButtons = tester
             .widgetList<AccordionButton3D>(find.byType(AccordionButton3D))
@@ -340,6 +341,7 @@ class _MemoryFileStorage implements FileStorageService {
 
 class _RecordingAudioEngine implements AudioEngine {
   int clickCount = 0;
+  final List<bool> clickAccents = [];
 
   @override
   Future<void> init({double sampleRate = 44100}) async {}
@@ -356,6 +358,7 @@ class _RecordingAudioEngine implements AudioEngine {
   @override
   void playPercussiveClick({bool isDownbeat = true, double volume = 0.8}) {
     clickCount++;
+    clickAccents.add(isDownbeat);
   }
 
   @override

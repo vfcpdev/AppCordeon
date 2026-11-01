@@ -229,10 +229,15 @@ class AccordionSimulatorState {
   double get bassRhythmPositionQuarterBeats {
     final pattern = selectedBassRhythmPattern;
     if (pattern == null || pattern.durationQuarterBeats <= 0) return 0;
-    final bpm =
-        pattern.quarterNotesPerMinute ?? audioReport?.bpm.toDouble() ?? 120.0;
+    final bpm = isPlayingAudio
+        ? audioReport?.bpm.toDouble() ??
+              pattern.quarterNotesPerMinute ??
+              120.0
+        : pattern.quarterNotesPerMinute ??
+              audioReport?.bpm.toDouble() ??
+              120.0;
     final elapsedSeconds = isPlayingAudio
-        ? compasTime
+        ? math.max(0.0, compasTime - effectiveAudioStartOffset)
         : bassRhythmElapsedSeconds;
     return (elapsedSeconds * bpm / 60.0) % pattern.durationQuarterBeats;
   }

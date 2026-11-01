@@ -134,7 +134,7 @@
             <forward><duration>6</duration></forward>
             <note><pitch><step>G</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><technical><fingering>3</fingering></technical></notations></note>
             <forward><duration>6</duration></forward>
-            <note><pitch><step>C</step><octave>4</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-CHORD"/><notations><accent/><technical><fingering>2</fingering></technical></notations></note>
+            <note><pitch><step>C</step><octave>4</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-CHORD"/><notations><articulations><accent/></articulations><technical><fingering>2</fingering></technical></notations></note>
             <forward><duration>6</duration></forward>
             <note><pitch><step>G</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><technical><fingering>2</fingering></technical></notations></note>
             <forward><duration>6</duration></forward>
@@ -180,13 +180,13 @@
             <barline location="left">
                 <repeat direction="forward"/>
             </barline>
-            <note><pitch><step>G</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><accent/><staccato/><technical><fingering>2</fingering></technical></notations></note>
+            <note><pitch><step>G</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><articulations><accent/><staccato/></articulations><technical><fingering>2</fingering></technical></notations></note>
             <forward><duration>6</duration></forward>
-            <note><pitch><step>G</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><staccato/><technical><fingering>3</fingering></technical></notations></note>
+            <note><pitch><step>G</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><articulations><staccato/></articulations><technical><fingering>3</fingering></technical></notations></note>
             <forward><duration>6</duration></forward>
-            <note><pitch><step>C</step><octave>4</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-CHORD"/><notations><staccato/><technical><fingering>2</fingering></technical></notations></note>
+            <note><pitch><step>C</step><octave>4</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-CHORD"/><notations><articulations><staccato/></articulations><technical><fingering>2</fingering></technical></notations></note>
             <forward><duration>6</duration></forward>
-            <note><pitch><step>F</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><staccato/><technical><fingering>2</fingering></technical></notations></note>
+            <note><pitch><step>F</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><articulations><staccato/></articulations><technical><fingering>2</fingering></technical></notations></note>
             <forward><duration>6</duration></forward>
         </measure>
         <measure number="8">
