@@ -5,12 +5,18 @@ class BassRhythmHit {
   final double durationQuarterBeats;
   final int buttonIndex;
   final BassRhythmButtonType? buttonType;
+  final int? fingerNumber;
+  final bool isAccented;
+  final bool isStaccato;
 
   const BassRhythmHit({
     required this.onsetQuarterBeats,
     required this.durationQuarterBeats,
     required this.buttonIndex,
     this.buttonType,
+    this.fingerNumber,
+    this.isAccented = false,
+    this.isStaccato = false,
   });
 }
 

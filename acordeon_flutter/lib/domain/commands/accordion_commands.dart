@@ -637,6 +637,7 @@ class PlayMetronomeTickCommand implements AccordionCommand<int> {
   final int beatIndex;
   final double volume;
   final int beatsPerMeasure;
+  final bool? accented;
 
   const PlayMetronomeTickCommand({
     this.onNoteOn,
@@ -645,6 +646,7 @@ class PlayMetronomeTickCommand implements AccordionCommand<int> {
     required this.beatIndex,
     this.volume = 0.8,
     this.beatsPerMeasure = 4,
+    this.accented,
   });
 
   @override
@@ -670,7 +672,7 @@ class PlayMetronomeTickCommand implements AccordionCommand<int> {
   int execute() {
     assertPreconditions();
 
-    final isDownbeat = (beatIndex % beatsPerMeasure) == 0;
+    final isDownbeat = accented ?? ((beatIndex % beatsPerMeasure) == 0);
     final midiNote = isDownbeat ? 84 : 76;
     final safeVolume = volume.clamp(0.0, 1.0);
 

@@ -249,6 +249,18 @@ class AccordionSimulatorState {
     };
   }
 
+  Map<int, BassRhythmHit> get activeBassRhythmHits {
+    final pattern = selectedBassRhythmPattern;
+    if (pattern == null) return const {};
+    final position = bassRhythmPositionQuarterBeats;
+    return {
+      for (final hit in pattern.hits)
+        if (position >= hit.onsetQuarterBeats &&
+            position < hit.onsetQuarterBeats + hit.durationQuarterBeats)
+          hit.buttonIndex: hit,
+    };
+  }
+
   final bool? _isLiveChordMarkerActive;
   bool get isLiveChordMarkerActive => _isLiveChordMarkerActive ?? false;
 
@@ -1465,6 +1477,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     );
     _lastPlayedBar = null;
     _lastPlayedBeat = null;
+    _lastPlaybackRhythmPosition = 0;
+    final startingPattern = state.selectedBassRhythmPattern;
+    if (startingPattern != null &&
+        (state.isMetronomeActive || state.isBassMetronomeActive)) {
+      _playBassRhythmHitsBetween(0, 0, startingPattern, includeStart: true);
+    }
 
     // El archivo siempre se reproduce si está cargado; el acoplamiento solo
     // decide si su posición gobierna también el compás.
@@ -1570,13 +1588,36 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         _lastPlayedBar = currentBar;
         _lastPlayedBeat = currentBeat;
         _playBeatChord(currentBar, currentBeat);
-        if (state.isMetronomeActive || state.isBassMetronomeActive) {
+        if (state.selectedBassRhythmPattern == null &&
+            (state.isMetronomeActive || state.isBassMetronomeActive)) {
           final pattern = state.selectedBassRhythmPattern;
           playMetronomeTick(
             pattern == null ? currentBeat : totalBeats,
             beatsPerMeasure: pattern?.beatsPerMeasureInQuarterNotes ?? 4,
           );
         }
+      }
+      if (state.selectedBassRhythmPattern != null &&
+          (state.isMetronomeActive || state.isBassMetronomeActive)) {
+        final pattern = state.selectedBassRhythmPattern!;
+        final currentRhythmPosition = effectiveTime * bpm / 60.0;
+        final previousRhythmPosition =
+            _lastPlaybackRhythmPosition ?? currentRhythmPosition;
+        if (currentRhythmPosition < previousRhythmPosition) {
+          _playBassRhythmHitsBetween(
+            0,
+            currentRhythmPosition,
+            pattern,
+            includeStart: true,
+          );
+        } else {
+          _playBassRhythmHitsBetween(
+            previousRhythmPosition,
+            currentRhythmPosition,
+            pattern,
+          );
+        }
+        _lastPlaybackRhythmPosition = currentRhythmPosition;
       }
     });
   }
@@ -1603,6 +1644,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   Timer? _standaloneMetronomeTimer;
   int _standaloneBeat = 0;
   double _standaloneElapsedQuarterBeats = 0;
+  double? _lastPlaybackRhythmPosition;
   final MusicXmlRhythmImporter _rhythmImporter = MusicXmlRhythmImporter();
 
   /// {P}: el selector de archivos puede devolver un MusicXML de texto o cancelar.
@@ -1667,7 +1709,11 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   /// Ejecuta un chasquido de metrónomo (acento en beat 0, secundario en beats 1..3).
-  void playMetronomeTick(int beatIndex, {int beatsPerMeasure = 4}) {
+  void playMetronomeTick(
+    int beatIndex, {
+    int beatsPerMeasure = 4,
+    bool? accented,
+  }) {
     PlayMetronomeTickCommand(
       onPercussiveClick: ({bool isDownbeat = true, double volume = 0.8}) {
         _audioBridge.playPercussiveClick(
@@ -1681,7 +1727,38 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       beatIndex: beatIndex,
       volume: state.metronomeVolume,
       beatsPerMeasure: beatsPerMeasure,
+      accented: accented,
     ).execute();
+  }
+
+  void _playBassRhythmHitsBetween(
+    double previousPosition,
+    double currentPosition,
+    BassRhythmPattern pattern,
+    {bool includeStart = false}
+  ) {
+    if (pattern.durationQuarterBeats <= 0 ||
+        currentPosition < previousPosition) {
+      return;
+    }
+    final firstCycle = (previousPosition / pattern.durationQuarterBeats).floor();
+    final lastCycle = (currentPosition / pattern.durationQuarterBeats).floor();
+    for (var cycle = firstCycle; cycle <= lastCycle; cycle++) {
+      for (final hit in pattern.hits) {
+        final absoluteOnset =
+            cycle * pattern.durationQuarterBeats + hit.onsetQuarterBeats;
+        final isAfterPrevious = includeStart
+            ? absoluteOnset >= previousPosition
+            : absoluteOnset > previousPosition;
+        if (isAfterPrevious && absoluteOnset <= currentPosition) {
+          playMetronomeTick(
+            (hit.onsetQuarterBeats * 4).round(),
+            beatsPerMeasure: pattern.beatsPerMeasureInQuarterNotes * 4,
+            accented: hit.isAccented,
+          );
+        }
+      }
+    }
   }
 
   double get _standaloneMetronomeBpm =>
@@ -1731,7 +1808,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     _standaloneBeat = 0;
     _standaloneElapsedQuarterBeats = 0;
     state = state.copyWith(bassRhythmElapsedSeconds: 0);
-    playMetronomeTick(_standaloneBeat, beatsPerMeasure: beatsPerMeasure);
+    final pattern = state.selectedBassRhythmPattern;
+    if (pattern == null) {
+      playMetronomeTick(_standaloneBeat, beatsPerMeasure: beatsPerMeasure);
+    } else {
+      _playBassRhythmHitsBetween(0, 0, pattern, includeStart: true);
+    }
 
     _standaloneMetronomeTimer = Timer.periodic(
       Duration(milliseconds: intervalMs),
@@ -1743,12 +1825,20 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         }
         final currentBeatsPerMeasure = _standaloneMetronomeBeatsPerMeasure;
         final previousBeat = _standaloneElapsedQuarterBeats.floor();
+        final previousPosition = _standaloneElapsedQuarterBeats;
         _standaloneElapsedQuarterBeats += quarterBeatStep;
         final currentBeat = _standaloneElapsedQuarterBeats.floor();
         state = state.copyWith(
           bassRhythmElapsedSeconds: _standaloneElapsedQuarterBeats * 60 / bpm,
         );
-        if (currentBeat > previousBeat) {
+        final currentPattern = state.selectedBassRhythmPattern;
+        if (currentPattern != null) {
+          _playBassRhythmHitsBetween(
+            previousPosition,
+            _standaloneElapsedQuarterBeats,
+            currentPattern,
+          );
+        } else if (currentBeat > previousBeat) {
           _standaloneBeat = currentBeat % currentBeatsPerMeasure;
           playMetronomeTick(
             _standaloneBeat,

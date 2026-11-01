@@ -83,6 +83,68 @@ void main() {
       },
     );
 
+    test('imports Vallenato grooves with row fingering and articulations', () {
+      final score = File(
+        '../patrones_ritmicos_estructurados.musicxml',
+      ).readAsStringSync();
+      final patterns = MusicXmlRhythmImporter()
+          .importPatterns(score)
+          .patterns;
+
+      BassRhythmPattern patternNamed(String name) => patterns.firstWhere(
+        (pattern) => pattern.name == name,
+      );
+
+      final merengue = patternNamed('II. MERENGUE VALLENATO');
+      expect(merengue.hits, hasLength(4));
+      expect(merengue.hits.map((hit) => hit.buttonType), [
+        BassRhythmButtonType.fundamental,
+        BassRhythmButtonType.fundamental,
+        BassRhythmButtonType.chord,
+        BassRhythmButtonType.fundamental,
+      ]);
+      expect(
+        merengue.hits.map((hit) => hit.onsetQuarterBeats),
+        [0, 0.75, 1.5, 2.25],
+      );
+      expect(merengue.hits.map((hit) => hit.fingerNumber), [2, 3, 2, 2]);
+      expect(merengue.hits.map((hit) => hit.isAccented), [
+        false,
+        false,
+        true,
+        false,
+      ]);
+
+      final puya = patternNamed('III. PUYA VALLENATA');
+      expect(puya.hits, hasLength(4));
+      expect(puya.hits.every((hit) => hit.isStaccato), isTrue);
+      expect(puya.hits.map((hit) => hit.onsetQuarterBeats), [
+        0,
+        0.75,
+        1.5,
+        2.25,
+      ]);
+
+      final chande = patternNamed('V. CHANDÉ');
+      expect(chande.hits, hasLength(4));
+      expect(chande.hits.map((hit) => hit.onsetQuarterBeats), [
+        0,
+        0.75,
+        2,
+        2.75,
+      ]);
+
+      final cumbia = patternNamed('VI. CUMBIA COLOMBIANA');
+      expect(cumbia.hits, hasLength(4));
+      expect(cumbia.hits.map((hit) => hit.buttonType), [
+        BassRhythmButtonType.fundamental,
+        BassRhythmButtonType.chord,
+        BassRhythmButtonType.fundamental,
+        BassRhythmButtonType.chord,
+      ]);
+      expect(cumbia.hits.map((hit) => hit.fingerNumber), [2, 2, 3, 2]);
+    });
+
     test('preserves meter, tempo, rests, timing, and button order', () {
       final result = MusicXmlRhythmImporter().importPatterns(_musicXml);
       final paseo = result.patterns.first;

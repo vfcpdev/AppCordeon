@@ -54,28 +54,33 @@
                 <duration>2</duration><voice>1</voice><type>eighth</type>
                 <time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>
                 <instrument id="P1-BASS"/>
+                <notations><technical><fingering>2</fingering></technical></notations>
             </note>
             <note>
                 <pitch><step>C</step><octave>2</octave></pitch>
                 <duration>2</duration><voice>1</voice><type>eighth</type>
                 <time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>
                 <instrument id="P1-BASS"/>
+                <notations><technical><fingering>3</fingering></technical></notations>
             </note>
             <note>
                 <pitch><step>C</step><octave>4</octave></pitch>
                 <duration>2</duration><voice>1</voice><type>eighth</type>
                 <time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>
                 <instrument id="P1-CHORD"/>
+                <notations><technical><fingering>2</fingering></technical></notations>
             </note>
             <note>
                 <pitch><step>G</step><octave>2</octave></pitch>
                 <duration>3</duration><voice>1</voice><type>eighth</type>
                 <instrument id="P1-BASS"/>
+                <notations><technical><fingering>2</fingering></technical></notations>
             </note>
             <note>
                 <pitch><step>C</step><octave>4</octave></pitch>
                 <duration>3</duration><voice>1</voice><type>eighth</type>
                 <instrument id="P1-CHORD"/>
+                <notations><technical><fingering>2</fingering></technical></notations>
             </note>
             <note><rest/><duration>12</duration><voice>1</voice><type>half</type></note>
         </measure>
@@ -106,6 +111,7 @@
         <!-- SECCIÓN 2: MERENGUE VALLENATO (138 BPM) -->
         <measure number="4">
             <attributes>
+                <divisions>12</divisions>
                 <time><beats>6</beats><beat-type>8</beat-type></time>
             </attributes>
             <direction placement="above">
@@ -124,8 +130,14 @@
             <barline location="left">
                 <repeat direction="forward"/>
             </barline>
-            <note><pitch><step>E</step><octave>4</octave></pitch><duration>3</duration><voice>1</voice><type>quarter</type><dot/></note>
-            <note><pitch><step>G</step><octave>4</octave></pitch><duration>3</duration><voice>1</voice><type>quarter</type><dot/></note>
+            <note><pitch><step>E</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><technical><fingering>2</fingering></technical></notations></note>
+            <forward><duration>6</duration></forward>
+            <note><pitch><step>G</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><technical><fingering>3</fingering></technical></notations></note>
+            <forward><duration>6</duration></forward>
+            <note><pitch><step>C</step><octave>4</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-CHORD"/><notations><accent/><technical><fingering>2</fingering></technical></notations></note>
+            <forward><duration>6</duration></forward>
+            <note><pitch><step>G</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><technical><fingering>2</fingering></technical></notations></note>
+            <forward><duration>6</duration></forward>
         </measure>
         <measure number="5">
             <barline location="left">
@@ -151,6 +163,7 @@
 
         <!-- SECCIÓN 3: PUYA VALLENATA (155 BPM) -->
         <measure number="7">
+            <attributes><divisions>12</divisions></attributes>
             <direction placement="above">
                 <direction-type>
                     <metronome>
@@ -167,10 +180,14 @@
             <barline location="left">
                 <repeat direction="forward"/>
             </barline>
-            <note><pitch><step>G</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><type>eighth</type><notations><accent/></notations></note>
-            <note><pitch><step>G</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><type>eighth</type></note>
-            <note><pitch><step>G</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><type>eighth</type></note>
-            <note><pitch><step>F</step><octave>4</octave></pitch><duration>3</duration><voice>1</voice><type>quarter</type><dot/></note>
+            <note><pitch><step>G</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><accent/><staccato/><technical><fingering>2</fingering></technical></notations></note>
+            <forward><duration>6</duration></forward>
+            <note><pitch><step>G</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><staccato/><technical><fingering>3</fingering></technical></notations></note>
+            <forward><duration>6</duration></forward>
+            <note><pitch><step>C</step><octave>4</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-CHORD"/><notations><staccato/><technical><fingering>2</fingering></technical></notations></note>
+            <forward><duration>6</duration></forward>
+            <note><pitch><step>F</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><staccato/><technical><fingering>2</fingering></technical></notations></note>
+            <forward><duration>6</duration></forward>
         </measure>
         <measure number="8">
             <barline location="left">
@@ -241,6 +258,7 @@
         <!-- SECCIÓN 5: CHANDÉ (145 BPM) -->
         <measure number="13">
             <attributes>
+                <divisions>12</divisions>
                 <time><beats>4</beats><beat-type>4</beat-type></time>
             </attributes>
             <direction placement="above">
@@ -258,10 +276,14 @@
             <barline location="left">
                 <repeat direction="forward"/>
             </barline>
-            <note><pitch><step>G</step><octave>4</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
-            <note><pitch><step>A</step><octave>4</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
-            <note><pitch><step>G</step><octave>4</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
-            <note><pitch><step>E</step><octave>4</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
+            <note><pitch><step>G</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><technical><fingering>2</fingering></technical></notations></note>
+            <forward><duration>6</duration></forward>
+            <note><pitch><step>A</step><octave>4</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-CHORD"/><notations><technical><fingering>2</fingering></technical></notations></note>
+            <forward><duration>12</duration></forward>
+            <note><pitch><step>G</step><octave>2</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-BASS"/><notations><technical><fingering>3</fingering></technical></notations></note>
+            <forward><duration>6</duration></forward>
+            <note><pitch><step>E</step><octave>4</octave></pitch><duration>3</duration><voice>1</voice><type>16th</type><instrument id="P1-CHORD"/><notations><technical><fingering>2</fingering></technical></notations></note>
+            <forward><duration>12</duration></forward>
         </measure>
         <measure number="14">
             <barline location="left">
@@ -282,6 +304,20 @@
             <barline location="right">
                 <ending number="2" type="stop"/>
             </barline>
+        </measure>
+        <measure number="16">
+            <attributes>
+                <divisions>12</divisions>
+                <time><beats>4</beats><beat-type>4</beat-type></time>
+            </attributes>
+            <direction placement="above">
+                <direction-type><words font-weight="bold">VI. CUMBIA COLOMBIANA</words></direction-type>
+            </direction>
+            <barline location="left"><repeat direction="forward"/></barline>
+            <note><pitch><step>C</step><octave>2</octave></pitch><duration>12</duration><voice>1</voice><type>quarter</type><instrument id="P1-BASS"/><notations><technical><fingering>2</fingering></technical></notations></note>
+            <note><pitch><step>C</step><octave>4</octave></pitch><duration>12</duration><voice>1</voice><type>quarter</type><instrument id="P1-CHORD"/><notations><technical><fingering>2</fingering></technical></notations></note>
+            <note><pitch><step>G</step><octave>2</octave></pitch><duration>12</duration><voice>1</voice><type>quarter</type><instrument id="P1-BASS"/><notations><technical><fingering>3</fingering></technical></notations></note>
+            <note><pitch><step>C</step><octave>4</octave></pitch><duration>12</duration><voice>1</voice><type>quarter</type><instrument id="P1-CHORD"/><notations><technical><fingering>2</fingering></technical></notations></note>
         </measure>
     </part>
     

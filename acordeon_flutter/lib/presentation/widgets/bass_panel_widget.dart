@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/models/accordion_data.dart';
+import '../../domain/models/bass_rhythm_pattern.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../../domain/theory/music_theory.dart';
 import '../controllers/accordion_controller.dart';
@@ -89,6 +90,7 @@ class BassPanelWidget extends ConsumerWidget {
       activeChordPitchClassesProvider(accordionNumber),
     );
     final rhythmButtonIndexes = state.activeBassRhythmButtonIndexes;
+    final rhythmHits = state.activeBassRhythmHits;
 
     return Container(
       key: ValueKey('bass_panel_container_$accordionNumber'),
@@ -182,6 +184,7 @@ class BassPanelWidget extends ConsumerWidget {
                       state: state,
                       notifier: notifier,
                       activeChordPitchClasses: activeChordPitchClasses,
+                      rhythmHits: rhythmHits,
                       rhythmButtonIndexes: rhythmButtonIndexes,
                       rhythmButtonOffset: 0,
                     ),
@@ -193,6 +196,7 @@ class BassPanelWidget extends ConsumerWidget {
                       state: state,
                       notifier: notifier,
                       activeChordPitchClasses: activeChordPitchClasses,
+                      rhythmHits: rhythmHits,
                       rhythmButtonIndexes: rhythmButtonIndexes,
                       rhythmButtonOffset: 6,
                     ),
@@ -267,6 +271,7 @@ class BassPanelWidget extends ConsumerWidget {
     required AccordionSimulatorState state,
     required AccordionSimulatorNotifier notifier,
     required Set<int> activeChordPitchClasses,
+    required Map<int, BassRhythmHit> rhythmHits,
     required Set<int> rhythmButtonIndexes,
     required int rhythmButtonOffset,
   }) {
@@ -362,6 +367,8 @@ class BassPanelWidget extends ConsumerWidget {
 
           final isChordPull = pullMatch.isMatch;
           final isChordPush = pushMatch.isMatch;
+          final rhythmHit = rhythmHits[rhythmButtonOffset + entry.key];
+          final fingerNumber = rhythmHit?.fingerNumber;
 
           String tooltipMsg;
           if (currentBellows == BellowsMode.push) {
@@ -393,6 +400,18 @@ class BassPanelWidget extends ConsumerWidget {
             tooltipMsg = parts.isNotEmpty
                 ? '${btn.label} (${parts.join(' · ')})'
                 : btn.label;
+          }
+          if (fingerNumber != null) {
+            final fingerName = switch (fingerNumber) {
+              2 => 'índice',
+              3 => 'medio',
+              4 => 'anular',
+              _ => 'dedo $fingerNumber',
+            };
+            tooltipMsg = '$tooltipMsg · Dedo $fingerNumber ($fingerName)';
+          }
+          if (rhythmHit?.isStaccato ?? false) {
+            tooltipMsg = '$tooltipMsg · Staccato';
           }
 
           return Padding(
@@ -447,6 +466,29 @@ class BassPanelWidget extends ConsumerWidget {
                       currentBellows,
                     ),
                   ),
+                  if (fingerNumber != null)
+                    Positioned(
+                      top: -3,
+                      right: -3,
+                      child: Container(
+                        width: 17,
+                        height: 17,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0E7490),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.2),
+                        ),
+                        child: Text(
+                          '$fingerNumber',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
 
                   // Insignia flotante Abre / Cierra al presionar bajo
                   if (isPressed &&

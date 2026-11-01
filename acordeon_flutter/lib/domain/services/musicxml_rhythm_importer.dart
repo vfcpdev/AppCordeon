@@ -124,6 +124,9 @@ class MusicXmlRhythmImporter {
                 double duration,
                 int order,
                 BassRhythmButtonType? buttonType,
+                int? fingerNumber,
+                bool isAccented,
+                bool isStaccato,
               })
             >[];
         for (final child in measure.children.whereType<XmlElement>()) {
@@ -162,6 +165,11 @@ class MusicXmlRhythmImporter {
               duration: noteDuration,
               order: sourceOrder++,
               buttonType: _buttonTypeForInstrument(instruments[instrumentId]),
+              fingerNumber: int.tryParse(
+                _descendant(child, 'fingering')?.innerText.trim() ?? '',
+              ),
+              isAccented: _descendant(child, 'accent') != null,
+              isStaccato: _descendant(child, 'staccato') != null,
             ));
           }
           if (!isChordTone) {
@@ -179,6 +187,14 @@ class MusicXmlRhythmImporter {
         var chordHitIndex = 0;
         final hits = <BassRhythmHit>[];
         for (final hit in pendingHits) {
+          final fingerNumber =
+              hit.fingerNumber ??
+              switch (hit.buttonType) {
+                BassRhythmButtonType.fundamental =>
+                  fundamentalHitIndex.isEven ? 2 : 3,
+                BassRhythmButtonType.chord => 2,
+                null => null,
+              };
           final buttonIndex = switch (hit.buttonType) {
             BassRhythmButtonType.fundamental => [
               1,
@@ -204,6 +220,9 @@ class MusicXmlRhythmImporter {
               durationQuarterBeats: hit.duration,
               buttonIndex: buttonIndex,
               buttonType: hit.buttonType,
+              fingerNumber: fingerNumber,
+              isAccented: hit.isAccented,
+              isStaccato: hit.isStaccato,
             ),
           );
         }
