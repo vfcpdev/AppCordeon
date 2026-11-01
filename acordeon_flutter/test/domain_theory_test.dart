@@ -9,12 +9,33 @@ void main() {
     test('MIDI 60 should be Do / C in octave 4', () {
       expect(MusicTheory.midiToName(60, notation: NotationMode.latina), 'Do4');
       expect(MusicTheory.midiToName(60, notation: NotationMode.alemana), 'C4');
-      expect(MusicTheory.midiToName(60, notation: NotationMode.latina, ignoreOctave: true), 'Do');
+      expect(
+        MusicTheory.midiToName(
+          60,
+          notation: NotationMode.latina,
+          ignoreOctave: true,
+        ),
+        'Do',
+      );
     });
 
     test('MIDI 58 in Cinco Letras should be Si♭3', () {
-      expect(MusicTheory.midiToName(58, notation: NotationMode.latina, tuningOffset: 0), 'Si♭3');
-      expect(MusicTheory.midiToName(58, notation: NotationMode.alemana, tuningOffset: 0), 'Bb3');
+      expect(
+        MusicTheory.midiToName(
+          58,
+          notation: NotationMode.latina,
+          tuningOffset: 0,
+        ),
+        'Si♭3',
+      );
+      expect(
+        MusicTheory.midiToName(
+          58,
+          notation: NotationMode.alemana,
+          tuningOffset: 0,
+        ),
+        'Bb3',
+      );
     });
 
     test('MIDI 69 (A4) frequency should be 440 Hz', () {
@@ -37,13 +58,22 @@ void main() {
       // B2 in row1 base push is 58 (Bb3), in Rey Vallenato should be 55 (G3)
       expect(baseTreble['row1']![1].push, 58);
       expect(reyTreble['row1']![1].push, 55);
-      expect(MusicTheory.midiToName(reyTreble['row1']![1].push, notation: NotationMode.latina, tuningOffset: -3), 'Sol3');
+      expect(
+        MusicTheory.midiToName(
+          reyTreble['row1']![1].push,
+          notation: NotationMode.latina,
+          tuningOffset: -3,
+        ),
+        'Sol3',
+      );
     });
 
     test('Bass buttons should have 12 buttons (6 fund, 6 chord)', () {
       final basses = AccordionData.getTransposedBasses(0);
       expect(basses.length, 12);
-      final funds = basses.where((b) => b.type == ButtonType.fundamental).toList();
+      final funds = basses
+          .where((b) => b.type == ButtonType.fundamental)
+          .toList();
       final chords = basses.where((b) => b.type == ButtonType.chord).toList();
       expect(funds.length, 6);
       expect(chords.length, 6);
@@ -52,24 +82,37 @@ void main() {
 
   group('TuningRegistry Tests', () {
     test('Contains 8 traditional Vallenato tunings including Lluvia', () {
-      expect(TuningRegistry.defaultTunings.length, 8);
+      expect(TuningRegistry.defaultTunings.length, 9);
       expect(TuningRegistry.getById('cinco_letras').offset, 0);
       expect(TuningRegistry.getById('rey_vallenato').offset, -3);
       expect(TuningRegistry.getById('sabanera').offset, 2);
       expect(TuningRegistry.getById('lluvia').offset, 3);
       expect(TuningRegistry.getById('lluvia').name, contains('Lluvia'));
-      expect(TuningRegistry.getById('lluvia').rowsDescription, 'Do♯ - Fa♯ - Si');
+      expect(
+        TuningRegistry.getById('lluvia').rowsDescription,
+        'Do♯ - Fa♯ - Si',
+      );
+      expect(TuningRegistry.getById('colibri').offset, 4);
+      expect(
+        TuningRegistry.getById('colibri').rowsDescription,
+        'Re - Sol - Do',
+      );
     });
 
-    test('sortByPitchAscending ordena las afinaciones de menor a mayor tono (-7 a +3)', () {
-      TuningRegistry.sortByPitchAscending();
-      final offsets = TuningRegistry.orderedTunings.map((t) => t.offset).toList();
-      expect(offsets, [-7, -5, -3, -1, 0, 1, 2, 3]);
-      expect(TuningRegistry.orderedTunings.first.id, 'anisada');
-      expect(TuningRegistry.orderedTunings.last.id, 'lluvia');
+    test(
+      'sortByPitchAscending ordena las afinaciones de menor a mayor tono (-7 a +4)',
+      () {
+        TuningRegistry.sortByPitchAscending();
+        final offsets = TuningRegistry.orderedTunings
+            .map((t) => t.offset)
+            .toList();
+        expect(offsets, [-7, -5, -3, -1, 0, 1, 2, 3, 4]);
+        expect(TuningRegistry.orderedTunings.first.id, 'anisada');
+        expect(TuningRegistry.orderedTunings.last.id, 'colibri');
 
-      TuningRegistry.resetToDefaultOrder();
-      expect(TuningRegistry.orderedTunings.first.id, 'cinco_letras');
-    });
+        TuningRegistry.resetToDefaultOrder();
+        expect(TuningRegistry.orderedTunings.first.id, 'cinco_letras');
+      },
+    );
   });
 }

@@ -73,12 +73,20 @@ class TuningRegistry {
       offset: 3,
       preferFlats: false,
     ),
+    TuningDefinition(
+      id: 'colibri',
+      name: 'Colibrí (D - G - C)',
+      rowsDescription: 'Re - Sol - Do',
+      offset: 4,
+      preferFlats: false,
+    ),
   ];
 
   static List<TuningDefinition> _orderedTunings = List.from(defaultTunings);
 
   /// Lista ordenada actual de afinaciones (personalizada o por tono).
-  static List<TuningDefinition> get orderedTunings => List.unmodifiable(_orderedTunings);
+  static List<TuningDefinition> get orderedTunings =>
+      List.unmodifiable(_orderedTunings);
 
   /// Actualiza la lista con un orden personalizado (por ejemplo mediante Drag & Drop).
   static void setOrderedTunings(List<TuningDefinition> tunings) {

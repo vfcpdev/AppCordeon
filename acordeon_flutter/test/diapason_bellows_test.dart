@@ -383,7 +383,7 @@ void main() {
 
       // Verificamos que Anisada (-7) ahora está en primera posición
       expect(TuningRegistry.orderedTunings.first.id, 'anisada');
-      expect(TuningRegistry.orderedTunings.last.id, 'lluvia');
+      expect(TuningRegistry.orderedTunings.last.id, 'colibri');
 
       // Pulsamos "Restablecer"
       await tester.tap(find.byKey(const ValueKey('btn_reset_tuning_order')));

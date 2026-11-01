@@ -1973,8 +1973,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
   bool _isEditing = false;
 
   String get _nodeKey => '${widget.measureIndex}_${widget.beatIndex}';
-  bool get _isSelected =>
-      _selectedKey != null ? (_selectedKey == _nodeKey) : widget.isSelected;
+  bool get _isSelected => widget.isSelected;
   bool get _isCellHighlighted => _isSelected && !_isEditing;
 
   /// Deselecciona de forma exclusiva todos los demás cuadros y textboxes del acordeón.
@@ -2012,7 +2011,6 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
         }
         _selectedKey = _nodeKey;
         _deselectOtherCells();
-        widget.onSelected?.call();
         if (!_isEditing) {
           _isEditing = true;
           _controller.selection = TextSelection(
@@ -2042,13 +2040,12 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
           _deselectOtherCells();
           _update();
         }
-        widget.onSelected?.call();
       } else {
         _update();
       }
     });
 
-    if (_selectedKey == _nodeKey || widget.isSelected) {
+    if (widget.isSelected) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _activateEdit();
       });
@@ -2088,7 +2085,9 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     if (widget.isSelected && !oldWidget.isSelected && !_isEditing) {
       _selectedKey = _nodeKey;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && widget.isSelected && !_isEditing) _activateEdit();
+        if (mounted && widget.isSelected && !_isEditing) {
+          _activateEdit(notifySelection: false);
+        }
       });
     } else if (!widget.isSelected && oldWidget.isSelected) {
       if (_selectedKey == _nodeKey) {
@@ -2177,11 +2176,11 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     if (mounted) setState(() {});
   }
 
-  void _activateEdit() {
+  void _activateEdit({bool notifySelection = true}) {
     if (widget.isMultiBeatAssignmentMode) return;
     _selectedKey = _nodeKey;
     _deselectOtherCells();
-    widget.onSelected?.call();
+    if (notifySelection) widget.onSelected?.call();
     _isEditing = true;
     _focusNode.requestFocus();
     _controller.selection = TextSelection(

@@ -1,0 +1,15 @@
+﻿Tonalidad,Escala (Notas),Grados Armónicos (Acordes),Círculo Armónico Común
+C Mayor,"C, D, E, F, G, A, B",C (I) | Dm (ii) | Em (iii) | F (IV) | G (V) | Am (vi) | Bdim (vii°),C → Am → Dm → G
+G Mayor,"G, A, B, C, D, E, F#",G (I) | Am (ii) | Bm (iii) | C (IV) | D (V) | Em (vi) | F#dim (vii°),G → Em → Am → D
+D Mayor,"D, E, F#, G, A, B, C#",D (I) | Em (ii) | F#m (iii) | G (IV) | A (V) | Bm (vi) | C#dim (vii°),D → Bm → Em → A
+A Mayor,"A, B, C#, D, E, F#, G#",A (I) | Bm (ii) | C#m (iii) | D (IV) | E (V) | F#m (vi) | G#dim (vii°),A → F#m → Bm → E
+E Mayor,"E, F#, G#, A, B, C#, D#",E (I) | F#m (ii) | G#m (iii) | A (IV) | B (V) | C#m (vi) | D#dim (vii°),E → C#m → F#m → B
+F Mayor,"F, G, A, Bb, C, D, E",F (I) | Gm (ii) | Am (iii) | Bb (IV) | C (V) | Dm (vi) | Edim (vii°),F → Dm → Gm → C
+Bb Mayor,"Bb, C, D, Eb, F, G, A",Bb (I) | Cm (ii) | Dm (iii) | Eb (IV) | F (V) | Gm (vi) | Adim (vii°),Bb → Gm → Cm → F
+A Menor,"A, B, C, D, E, F, G",Am (i) | Bdim (ii°) | C (III) | Dm (iv) | Em (v) | F (VI) | G (VII),Am → F → C → G
+E Menor,"E, F#, G, A, B, C, D",Em (i) | F#dim (ii°) | G (III) | Am (iv) | Bm (v) | C (VI) | D (VII),Em → C → G → D
+B Menor,"B, C#, D, E, F#, G, A",Bm (i) | C#dim (ii°) | D (III) | Em (iv) | F#m (v) | G (VI) | A (VII),Bm → G → D → A
+F# Menor,"F#, G#, A, B, C#, D, E",F#m (i) | G#dim (ii°) | A (III) | Bm (iv) | C#m (v) | D (VI) | E (VII),F#m → D → A → E
+D Menor,"D, E, F, G, A, A#, C",Dm (i) | Edim (ii°) | F (III) | Gm (iv) | Am (v) | A# (VI) | C (VII),Dm → A# → F → C
+G Menor,"G, A, A#, C, D, D#, F",Gm (i) | Adim (ii°) | A# (III) | Cm (iv) | Dm (v) | D# (VI) | F (VII),Gm → D# → A# → F
+C Menor,"C, D, D#, F, G, G#, A#",Cm (i) | Ddim (ii°) | D# (III) | Fm (iv) | Gm (v) | G# (VI) | A# (VII),Cm → G# → D# → A#
