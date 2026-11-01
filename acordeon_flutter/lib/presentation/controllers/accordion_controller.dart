@@ -1478,8 +1478,16 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       state = state.copyWith(currentCompasTime: state.currentAudioTime);
     }
 
-    final bpm = state.audioReport?.bpm ?? 120.0;
-    final intervalMs = ((60.0 / bpm / 2.0) * 1000).toInt().clamp(50, 1000);
+    final bpm =
+        state.audioReport?.bpm.toDouble() ??
+        state.selectedBassRhythmPattern?.quarterNotesPerMinute ??
+        120.0;
+    final rhythmClockStep = _rhythmClockStep(state.selectedBassRhythmPattern);
+    final timerQuarterStep = math.min(0.5, rhythmClockStep);
+    final intervalMs = ((60.0 / bpm * timerQuarterStep) * 1000).toInt().clamp(
+      50,
+      1000,
+    );
 
     _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), (
       timer,
@@ -1594,6 +1602,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
   Timer? _standaloneMetronomeTimer;
   int _standaloneBeat = 0;
+  double _standaloneElapsedQuarterBeats = 0;
   final MusicXmlRhythmImporter _rhythmImporter = MusicXmlRhythmImporter();
 
   /// {P}: el selector de archivos puede devolver un MusicXML de texto o cancelar.
@@ -1683,6 +1692,24 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   int get _standaloneMetronomeBeatsPerMeasure =>
       state.selectedBassRhythmPattern?.beatsPerMeasureInQuarterNotes ?? 4;
 
+  double _rhythmClockStep(BassRhythmPattern? pattern) {
+    if (pattern == null || pattern.hits.isEmpty) return 1;
+    final onsets =
+        pattern.hits.map((hit) => hit.onsetQuarterBeats).toSet().toList()
+          ..sort();
+    final intervals = <double>[
+      for (final hit in pattern.hits)
+        if (hit.durationQuarterBeats > 0) hit.durationQuarterBeats,
+      for (var index = 1; index < onsets.length; index++)
+        onsets[index] - onsets[index - 1],
+    ]..removeWhere((interval) => interval <= 0);
+    if (intervals.isEmpty) return 1;
+    return intervals
+        .reduce((first, second) => first < second ? first : second)
+        .clamp(0.125, 1.0)
+        .toDouble();
+  }
+
   void _syncStandaloneMetronome() {
     if (state.isPlayingAudio ||
         (!state.isMetronomeActive && !state.isBassMetronomeActive)) {
@@ -1695,9 +1722,14 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   void _startStandaloneMetronome() {
     _standaloneMetronomeTimer?.cancel();
     final bpm = _standaloneMetronomeBpm;
-    final intervalMs = ((60.0 / bpm) * 1000).toInt().clamp(100, 3000);
+    final quarterBeatStep = _rhythmClockStep(state.selectedBassRhythmPattern);
+    final intervalMs = ((60.0 / bpm * quarterBeatStep) * 1000).toInt().clamp(
+      50,
+      3000,
+    );
     final beatsPerMeasure = _standaloneMetronomeBeatsPerMeasure;
     _standaloneBeat = 0;
+    _standaloneElapsedQuarterBeats = 0;
     state = state.copyWith(bassRhythmElapsedSeconds: 0);
     playMetronomeTick(_standaloneBeat, beatsPerMeasure: beatsPerMeasure);
 
@@ -1710,15 +1742,20 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
           return;
         }
         final currentBeatsPerMeasure = _standaloneMetronomeBeatsPerMeasure;
-        _standaloneBeat = (_standaloneBeat + 1) % currentBeatsPerMeasure;
+        final previousBeat = _standaloneElapsedQuarterBeats.floor();
+        _standaloneElapsedQuarterBeats += quarterBeatStep;
+        final currentBeat = _standaloneElapsedQuarterBeats.floor();
         state = state.copyWith(
           bassRhythmElapsedSeconds:
               state.bassRhythmElapsedSeconds + intervalMs / 1000.0,
         );
-        playMetronomeTick(
-          _standaloneBeat,
-          beatsPerMeasure: currentBeatsPerMeasure,
-        );
+        if (currentBeat > previousBeat) {
+          _standaloneBeat = currentBeat % currentBeatsPerMeasure;
+          playMetronomeTick(
+            _standaloneBeat,
+            beatsPerMeasure: currentBeatsPerMeasure,
+          );
+        }
       },
     );
   }

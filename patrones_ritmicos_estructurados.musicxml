@@ -9,6 +9,12 @@
     <part-list>
         <score-part id="P1">
             <part-name>Acordeón</part-name>
+            <score-instrument id="P1-BASS">
+                <instrument-name>Bajo Principal</instrument-name>
+            </score-instrument>
+            <score-instrument id="P1-CHORD">
+                <instrument-name>Acorde Acompañante</instrument-name>
+            </score-instrument>
         </score-part>
         <score-part id="P2">
             <part-name>Caja Vallenata</part-name>
@@ -23,7 +29,7 @@
         <!-- SECCIÓN 1: PASEO VALLENATO (130 BPM) -->
         <measure number="1">
             <attributes>
-                <divisions>4</divisions>
+                <divisions>6</divisions>
                 <key><fifths>0</fifths></key>
                 <time><beats>4</beats><beat-type>4</beat-type></time>
                 <clef><sign>G</sign><line>2</line></clef>
@@ -43,10 +49,35 @@
             <barline location="left">
                 <repeat direction="forward"/>
             </barline>
-            <note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
-            <note><pitch><step>E</step><octave>4</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
-            <note><pitch><step>G</step><octave>4</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
-            <note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
+            <note>
+                <pitch><step>C</step><octave>2</octave></pitch>
+                <duration>2</duration><voice>1</voice><type>eighth</type>
+                <time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>
+                <instrument id="P1-BASS"/>
+            </note>
+            <note>
+                <pitch><step>C</step><octave>2</octave></pitch>
+                <duration>2</duration><voice>1</voice><type>eighth</type>
+                <time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>
+                <instrument id="P1-BASS"/>
+            </note>
+            <note>
+                <pitch><step>C</step><octave>4</octave></pitch>
+                <duration>2</duration><voice>1</voice><type>eighth</type>
+                <time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>
+                <instrument id="P1-CHORD"/>
+            </note>
+            <note>
+                <pitch><step>G</step><octave>2</octave></pitch>
+                <duration>3</duration><voice>1</voice><type>eighth</type>
+                <instrument id="P1-BASS"/>
+            </note>
+            <note>
+                <pitch><step>C</step><octave>4</octave></pitch>
+                <duration>3</duration><voice>1</voice><type>eighth</type>
+                <instrument id="P1-CHORD"/>
+            </note>
+            <note><rest/><duration>12</duration><voice>1</voice><type>half</type></note>
         </measure>
         <measure number="2">
             <barline location="left">

@@ -36,6 +36,7 @@ class MusicXmlRhythmImporter {
     }
 
     final partNames = <String, String>{};
+    final partInstruments = <String, Map<String, String>>{};
     final partList = _child(root, 'part-list');
     if (partList != null) {
       for (final scorePart in _children(partList, 'score-part')) {
@@ -43,6 +44,16 @@ class MusicXmlRhythmImporter {
         final name = _child(scorePart, 'part-name')?.innerText.trim();
         if (id != null && name != null && name.isNotEmpty) {
           partNames[id] = name;
+        }
+        if (id != null) {
+          final instruments = <String, String>{};
+          for (final instrument in _children(scorePart, 'score-instrument')) {
+            final instrumentId = instrument.getAttribute('id');
+            if (instrumentId == null) continue;
+            instruments[instrumentId] =
+                _child(instrument, 'instrument-name')?.innerText.trim() ?? '';
+          }
+          partInstruments[id] = instruments;
         }
       }
     }
@@ -53,6 +64,7 @@ class MusicXmlRhythmImporter {
       if (partId == null || partId.isEmpty) continue;
 
       final partName = partNames[partId] ?? partId;
+      final instruments = partInstruments[partId] ?? const <String, String>{};
       var divisions = 1;
       var beatsPerMeasure = 4;
       var beatType = 4;
@@ -105,7 +117,15 @@ class MusicXmlRhythmImporter {
         var cursor = 0.0;
         var previousOnset = 0.0;
         var sourceOrder = 0;
-        final pendingHits = <({double onset, double duration, int order})>[];
+        final pendingHits =
+            <
+              ({
+                double onset,
+                double duration,
+                int order,
+                BassRhythmButtonType? buttonType,
+              })
+            >[];
         for (final child in measure.children.whereType<XmlElement>()) {
           if (child.name.local == 'backup' || child.name.local == 'forward') {
             final duration = _integerChild(child, 'duration');
@@ -133,10 +153,15 @@ class MusicXmlRhythmImporter {
           final onset = isChordTone ? previousOnset : cursor;
           final isRest = _child(child, 'rest') != null;
           if (!isRest) {
+            final instrumentId = _child(
+              child,
+              'instrument',
+            )?.getAttribute('id');
             pendingHits.add((
               onset: onset,
               duration: noteDuration,
               order: sourceOrder++,
+              buttonType: _buttonTypeForInstrument(instruments[instrumentId]),
             ));
           }
           if (!isChordTone) {
@@ -149,14 +174,39 @@ class MusicXmlRhythmImporter {
           final onsetOrder = a.onset.compareTo(b.onset);
           return onsetOrder == 0 ? a.order.compareTo(b.order) : onsetOrder;
         });
-        final hits = <BassRhythmHit>[
-          for (var index = 0; index < pendingHits.length; index++)
+        var untypedHitIndex = 0;
+        var fundamentalHitIndex = 0;
+        var chordHitIndex = 0;
+        final hits = <BassRhythmHit>[];
+        for (final hit in pendingHits) {
+          final buttonIndex = switch (hit.buttonType) {
+            BassRhythmButtonType.fundamental => [
+              1,
+              3,
+              5,
+              7,
+              9,
+              11,
+            ][fundamentalHitIndex++ % 6],
+            BassRhythmButtonType.chord => [
+              0,
+              2,
+              4,
+              6,
+              8,
+              10,
+            ][chordHitIndex++ % 6],
+            null => untypedHitIndex++ % 12,
+          };
+          hits.add(
             BassRhythmHit(
-              onsetQuarterBeats: pendingHits[index].onset,
-              durationQuarterBeats: pendingHits[index].duration,
-              buttonIndex: index % 12,
+              onsetQuarterBeats: hit.onset,
+              durationQuarterBeats: hit.duration,
+              buttonIndex: buttonIndex,
+              buttonType: hit.buttonType,
             ),
-        ];
+          );
+        }
         if (hits.isEmpty) continue;
 
         final measureNumber =
@@ -224,6 +274,17 @@ class MusicXmlRhythmImporter {
       dotValue /= 2;
     }
     return perMinute * quarterNotesPerBeat;
+  }
+
+  static BassRhythmButtonType? _buttonTypeForInstrument(String? name) {
+    final normalizedName = name?.toLowerCase() ?? '';
+    if (normalizedName.contains('bajo') || normalizedName.contains('bass')) {
+      return BassRhythmButtonType.fundamental;
+    }
+    if (normalizedName.contains('acorde') || normalizedName.contains('chord')) {
+      return BassRhythmButtonType.chord;
+    }
+    return null;
   }
 
   static int? _integerChild(XmlElement element, String name) =>

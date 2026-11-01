@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:acordeon_flutter/core/audio/audio_engine_bridge.dart';
 import 'package:acordeon_flutter/core/di/providers.dart';
 import 'package:acordeon_flutter/core/storage/file_storage_interface.dart';
+import 'package:acordeon_flutter/domain/models/bass_rhythm_pattern.dart';
 import 'package:acordeon_flutter/domain/services/musicxml_rhythm_importer.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/accordion_button_3d.dart';
@@ -47,6 +50,39 @@ const _musicXml = '''
 
 void main() {
   group('MusicXML bass rhythm import', () {
+    test(
+      'imports the five Paseo Vallenato events from the structured score',
+      () {
+        final score = File(
+          '../patrones_ritmicos_estructurados.musicxml',
+        ).readAsStringSync();
+        final result = MusicXmlRhythmImporter().importPatterns(score);
+        final paseo = result.patterns.firstWhere(
+          (pattern) => pattern.name == 'I. PASEO VALLENATO',
+        );
+
+        expect(paseo.beatsPerMeasure, 4);
+        expect(paseo.beatType, 4);
+        expect(paseo.quarterNotesPerMinute, 130);
+        expect(paseo.hits, hasLength(5));
+        expect(paseo.hits.map((hit) => hit.buttonType), [
+          BassRhythmButtonType.fundamental,
+          BassRhythmButtonType.fundamental,
+          BassRhythmButtonType.chord,
+          BassRhythmButtonType.fundamental,
+          BassRhythmButtonType.chord,
+        ]);
+        expect(paseo.hits.map((hit) => hit.buttonIndex), [1, 3, 0, 5, 2]);
+        expect(paseo.hits.map((hit) => hit.onsetQuarterBeats), [
+          0,
+          1 / 3,
+          2 / 3,
+          1,
+          1.5,
+        ]);
+      },
+    );
+
     test('preserves meter, tempo, rests, timing, and button order', () {
       final result = MusicXmlRhythmImporter().importPatterns(_musicXml);
       final paseo = result.patterns.first;
@@ -95,7 +131,8 @@ void main() {
             '<note><pitch><step>C</step><octave>4</octave></pitch>'
             '<duration>1</duration></note>',
       ).join();
-      final xml = '''
+      final xml =
+          '''
 <score-partwise>
   <part-list><score-part id="P1"><part-name>Bajos</part-name></score-part></part-list>
   <part id="P1"><measure number="1"><attributes><divisions>1</divisions></attributes>$notes</measure></part>
@@ -104,10 +141,10 @@ void main() {
 
       final result = MusicXmlRhythmImporter().importPatterns(xml);
 
-      expect(
-        result.patterns.single.hits.map((hit) => hit.buttonIndex),
-        [...List<int>.generate(12, (index) => index), 0],
-      );
+      expect(result.patterns.single.hits.map((hit) => hit.buttonIndex), [
+        ...List<int>.generate(12, (index) => index),
+        0,
+      ]);
     });
 
     test('rejects malformed XML outside the documented recovery case', () {
@@ -147,6 +184,27 @@ void main() {
         );
         await tester.pumpAndSettle();
 
+        final headerRect = tester.getRect(
+          find.byKey(const ValueKey('bass_panel_header_1')),
+        );
+        final panelRect = tester.getRect(
+          find.byKey(const ValueKey('bass_panel_container_1')),
+        );
+        final closeRect = tester.getRect(
+          find.byKey(const ValueKey('bass_panel_collapse_btn_1')),
+        );
+        final importRect = tester.getRect(
+          find.byKey(const ValueKey('bass_rhythm_import_btn_1')),
+        );
+        final boardRect = tester.getRect(
+          find.byKey(const ValueKey('bass_panel_board_1')),
+        );
+        expect(headerRect.width, greaterThan(boardRect.width));
+        expect(headerRect.width, closeTo(panelRect.width - 10, 1));
+        expect(headerRect.right - closeRect.right, lessThan(12));
+        expect(importRect.top, greaterThanOrEqualTo(headerRect.bottom));
+        expect(boardRect.top, greaterThan(importRect.bottom));
+
         await tester.tap(
           find.byKey(const ValueKey('bass_rhythm_import_btn_1')),
         );
@@ -179,7 +237,7 @@ void main() {
         );
         expect(audioEngine.clickCount, 1);
 
-        await tester.pump(const Duration(seconds: 1));
+        await tester.pump(const Duration(milliseconds: 375));
         state = container.read(accordionSimulatorProvider);
         expect(state.bassRhythmElapsedSeconds, greaterThan(0));
         expect(state.activeBassRhythmButtonIndexes, contains(1));

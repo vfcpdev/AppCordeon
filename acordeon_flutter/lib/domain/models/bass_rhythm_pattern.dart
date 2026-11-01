@@ -1,12 +1,16 @@
+enum BassRhythmButtonType { fundamental, chord }
+
 class BassRhythmHit {
   final double onsetQuarterBeats;
   final double durationQuarterBeats;
   final int buttonIndex;
+  final BassRhythmButtonType? buttonType;
 
   const BassRhythmHit({
     required this.onsetQuarterBeats,
     required this.durationQuarterBeats,
     required this.buttonIndex,
+    this.buttonType,
   });
 }
 

@@ -91,6 +91,7 @@ class BassPanelWidget extends ConsumerWidget {
     final rhythmButtonIndexes = state.activeBassRhythmButtonIndexes;
 
     return Container(
+      key: ValueKey('bass_panel_container_$accordionNumber'),
       margin: const EdgeInsets.only(right: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
@@ -104,140 +105,150 @@ class BassPanelWidget extends ConsumerWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Cabecera del panel de bajos
-          Container(
-            key: ValueKey('bass_panel_header_$accordionNumber'),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: const BoxDecoration(
-              color: Color(0xFFE2E8F0),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(13),
-                topRight: Radius.circular(13),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Bajos',
-                  key: ValueKey('bass_panel_title_$accordionNumber'),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF059669),
-                  ),
+      child: IntrinsicWidth(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Cabecera del panel de bajos
+            Container(
+              key: ValueKey('bass_panel_header_$accordionNumber'),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              decoration: const BoxDecoration(
+                color: Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(13),
+                  topRight: Radius.circular(13),
                 ),
-                const SizedBox(width: 8),
-                InkWell(
-                  key: ValueKey('bass_panel_collapse_btn_$accordionNumber'),
-                  onTap: () {
-                    _toggleCollapsed(notifier, isPrimary);
-                  },
-                  child: const Icon(
-                    Icons.close,
-                    size: 14,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Cuerpo: Tablero de bajos
-          Padding(
-            padding: const EdgeInsets.fromLTRB(2.2, 4.4, 6.5, 4.4),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(19.6, 8.7, 6.5, 8.7),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 10,
-                  ),
-                ],
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize: MainAxisSize.max,
                 children: [
-                  _buildBassColumn(
-                    title: 'Exterior',
-                    buttons: exteriorButtons,
-                    state: state,
-                    notifier: notifier,
-                    activeChordPitchClasses: activeChordPitchClasses,
-                    rhythmButtonIndexes: rhythmButtonIndexes,
-                    rhythmButtonOffset: 0,
+                  Text(
+                    'Bajos',
+                    key: ValueKey('bass_panel_title_$accordionNumber'),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF059669),
+                    ),
                   ),
-                  // Espacio suficiente para los números de la columna interior.
-                  const SizedBox(width: 18.0),
-                  _buildBassColumn(
-                    title: 'Interior',
-                    buttons: interiorButtons,
-                    state: state,
-                    notifier: notifier,
-                    activeChordPitchClasses: activeChordPitchClasses,
-                    rhythmButtonIndexes: rhythmButtonIndexes,
-                    rhythmButtonOffset: 6,
+                  const Spacer(),
+                  IconButton(
+                    key: ValueKey('bass_panel_collapse_btn_$accordionNumber'),
+                    tooltip: 'Ocultar bajos',
+                    onPressed: () => _toggleCollapsed(notifier, isPrimary),
+                    constraints: const BoxConstraints.tightFor(
+                      width: 24,
+                      height: 24,
+                    ),
+                    padding: EdgeInsets.zero,
+                    splashRadius: 14,
+                    icon: const Icon(
+                      Icons.close,
+                      size: 14,
+                      color: Color(0xFF64748B),
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
 
-          // Leyenda inferior de acompañamiento de bajos
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: const BoxDecoration(color: Color(0xFFE2E8F0)),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEF4444),
-                    shape: BoxShape.circle,
-                  ),
+            _buildRhythmControls(context, state, notifier),
+
+            // Cuerpo: Tablero de bajos
+            Padding(
+              padding: const EdgeInsets.fromLTRB(2.2, 4.4, 6.5, 4.4),
+              child: Container(
+                key: ValueKey('bass_panel_board_$accordionNumber'),
+                padding: const EdgeInsets.fromLTRB(19.6, 8.7, 6.5, 8.7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 3),
-                const Text(
-                  'Exacto',
-                  style: TextStyle(
-                    fontSize: 8.5,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildBassColumn(
+                      title: 'Exterior',
+                      buttons: exteriorButtons,
+                      state: state,
+                      notifier: notifier,
+                      activeChordPitchClasses: activeChordPitchClasses,
+                      rhythmButtonIndexes: rhythmButtonIndexes,
+                      rhythmButtonOffset: 0,
+                    ),
+                    // Espacio suficiente para los números de la columna interior.
+                    const SizedBox(width: 18.0),
+                    _buildBassColumn(
+                      title: 'Interior',
+                      buttons: interiorButtons,
+                      state: state,
+                      notifier: notifier,
+                      activeChordPitchClasses: activeChordPitchClasses,
+                      rhythmButtonIndexes: rhythmButtonIndexes,
+                      rhythmButtonOffset: 6,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF59E0B),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 3),
-                const Text(
-                  'Cercano',
-                  style: TextStyle(
-                    fontSize: 8.5,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF475569),
-                  ),
-                ),
-                _buildRhythmControls(context, state, notifier),
-              ],
+              ),
             ),
-          ),
-        ],
+
+            // Leyenda inferior de acompañamiento de bajos
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: const BoxDecoration(color: Color(0xFFE2E8F0)),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEF4444),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 3),
+                  const Text(
+                    'Exacto',
+                    style: TextStyle(
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF59E0B),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 3),
+                  const Text(
+                    'Cercano',
+                    style: TextStyle(
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -503,16 +514,16 @@ class BassPanelWidget extends ConsumerWidget {
   ) {
     final selectedPattern = state.selectedBassRhythmPattern;
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: const BoxDecoration(
         color: Color(0xFFE2E8F0),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(13),
-          bottomRight: Radius.circular(13),
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFCBD5E1), width: 0.6),
         ),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
           IconButton(
             key: ValueKey('bass_rhythm_import_btn_$accordionNumber'),

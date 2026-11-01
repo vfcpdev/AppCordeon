@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:js_interop';
+
+import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
 import 'web_audio_synth_interface.dart';
 
@@ -8,11 +12,7 @@ class _ActiveNote {
   final web.OscillatorNode osc2;
   final web.GainNode gainNode;
 
-  _ActiveNote({
-    required this.osc1,
-    required this.osc2,
-    required this.gainNode,
-  });
+  _ActiveNote({required this.osc1, required this.osc2, required this.gainNode});
 }
 
 class WebAudioSynthImpl implements WebAudioSynth {
@@ -35,8 +35,9 @@ class WebAudioSynthImpl implements WebAudioSynth {
       master.connect(ctx.destination);
       _ctx = ctx;
       _masterGain = master;
-    } catch (e) {
-      // Ignorar o registrar error de inicialización
+    } catch (error, stackTrace) {
+      debugPrint('WebAudioSynth no pudo inicializar AudioContext: $error');
+      debugPrintStack(stackTrace: stackTrace);
     }
   }
 
@@ -145,43 +146,63 @@ class WebAudioSynthImpl implements WebAudioSynth {
   void playPercussiveClick({bool isDownbeat = true, double volume = 0.8}) {
     _ensureContext();
     final ctx = _ctx;
-    final master = _masterGain;
-    if (ctx == null || master == null) return;
-
-    if (ctx.state == 'suspended') {
-      ctx.resume();
+    if (ctx == null || _masterGain == null || volume <= 0 || _volume <= 0) {
+      return;
     }
 
+    unawaited(_resumeAndPlayClick(ctx, isDownbeat, volume));
+  }
+
+  Future<void> _resumeAndPlayClick(
+    web.AudioContext context,
+    bool isDownbeat,
+    double volume,
+  ) async {
     try {
-      final now = ctx.currentTime;
-      final effectiveVolume = (volume * _volume).clamp(0.01, 1.0);
+      if (context.state != 'running') {
+        await context.resume().toDart;
+      }
+      if (context.state != 'running') {
+        throw StateError('AudioContext permanece en estado ${context.state}.');
+      }
 
-      // Envolvente de chasquido percusivo
-      final clickGain = ctx.createGain();
-      clickGain.gain.setValueAtTime(effectiveVolume * (isDownbeat ? 0.95 : 0.65), now);
-      clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.012);
+      final master = _masterGain;
+      if (master == null) {
+        throw StateError('El volumen maestro de Web Audio no está disponible.');
+      }
 
-      // Oscilador con caída rápida de tono (pitch drop: chasquido seco)
-      final osc = ctx.createOscillator();
-      osc.type = isDownbeat ? 'sine' : 'triangle';
-      final startFreq = isDownbeat ? 2400.0 : 1750.0;
-      final endFreq = isDownbeat ? 140.0 : 90.0;
-      osc.frequency.setValueAtTime(startFreq, now);
-      osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.008);
+      final now = context.currentTime;
+      final effectiveVolume = (volume * _volume).clamp(0.0, 1.0);
+      if (effectiveVolume == 0) return;
 
-      // Filtro pasa-altas para aislar el chasquido y suprimir frecuencias armónicas sostenidas
-      final filter = ctx.createBiquadFilter();
+      final clickGain = context.createGain();
+      clickGain.gain.setValueAtTime(0.0001, now);
+      clickGain.gain.linearRampToValueAtTime(
+        effectiveVolume * (isDownbeat ? 0.95 : 0.72),
+        now + 0.002,
+      );
+      clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+
+      final osc = context.createOscillator();
+      osc.type = isDownbeat ? 'triangle' : 'sine';
+      osc.frequency.setValueAtTime(isDownbeat ? 1900 : 1350, now);
+      osc.frequency.exponentialRampToValueAtTime(
+        isDownbeat ? 520 : 380,
+        now + 0.035,
+      );
+
+      final filter = context.createBiquadFilter();
       filter.type = 'highpass';
-      filter.frequency.setValueAtTime(isDownbeat ? 850.0 : 1100.0, now);
+      filter.frequency.setValueAtTime(isDownbeat ? 350 : 450, now);
 
       osc.connect(clickGain);
       clickGain.connect(filter);
       filter.connect(master);
-
       osc.start(now);
-      osc.stop(now + 0.018);
-    } catch (e) {
-      // Ignorar fallo de contexto Web Audio
+      osc.stop(now + 0.05);
+    } catch (error, stackTrace) {
+      debugPrint('WebAudioSynth no pudo reproducir el click: $error');
+      debugPrintStack(stackTrace: stackTrace);
     }
   }
 }
