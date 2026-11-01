@@ -88,6 +88,28 @@ void main() {
       expect(paseo.durationQuarterBeats, 4);
     });
 
+    test('cycles sequential hits across all twelve physical bass buttons', () {
+      final notes = List.generate(
+        13,
+        (_) =>
+            '<note><pitch><step>C</step><octave>4</octave></pitch>'
+            '<duration>1</duration></note>',
+      ).join();
+      final xml = '''
+<score-partwise>
+  <part-list><score-part id="P1"><part-name>Bajos</part-name></score-part></part-list>
+  <part id="P1"><measure number="1"><attributes><divisions>1</divisions></attributes>$notes</measure></part>
+</score-partwise>
+''';
+
+      final result = MusicXmlRhythmImporter().importPatterns(xml);
+
+      expect(
+        result.patterns.single.hits.map((hit) => hit.buttonIndex),
+        [...List<int>.generate(12, (index) => index), 0],
+      );
+    });
+
     test('rejects malformed XML outside the documented recovery case', () {
       const invalidXml =
           '<score-partwise><part id="P1"><measure><note></node></measure>'
