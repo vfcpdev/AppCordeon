@@ -49,6 +49,31 @@ class AudioLoadFailure extends AudioLoadResult {
   const AudioLoadFailure(this.message);
 }
 
+String _findChordForTime(List<DetectedChordSegment> chords, double timeSeconds) {
+  if (chords.isEmpty) return '';
+  var low = 0;
+  var high = chords.length - 1;
+  while (low <= high) {
+    final mid = (low + high) ~/ 2;
+    final segment = chords[mid];
+    if (segment.startTime <= timeSeconds && timeSeconds < segment.endTime) {
+      return segment.chordSymbol;
+    }
+    if (timeSeconds < segment.startTime) {
+      high = mid - 1;
+    } else {
+      low = mid + 1;
+    }
+  }
+  if (low >= chords.length) return chords.last.chordSymbol;
+  if (high < 0) return chords.first.chordSymbol;
+  final distanceToNext = (chords[low].startTime - timeSeconds).abs();
+  final distanceToPrevious = (timeSeconds - chords[high].endTime).abs();
+  return distanceToNext < distanceToPrevious
+      ? chords[low].chordSymbol
+      : chords[high].chordSymbol;
+}
+
 /// Estado global del simulador de Acordeón
 class AccordionSimulatorState {
   // Configuración General
@@ -201,13 +226,16 @@ class AccordionSimulatorState {
 
   /// Acorde de la casilla seleccionada, sin heredar acordes de otras casillas.
   String get activeCompasChord {
-    if (selectedBarIndex == null || selectedBarIndex! < 0 || selectedBarIndex! >= measures.length) {
-      return '';
+    final barIndex = selectedBarIndex;
+    final beatIndex = selectedBeatIndex ?? 0;
+    if (barIndex != null && barIndex >= 0 && barIndex < measures.length) {
+      final beats = measures[barIndex].beats;
+      if (beatIndex >= 0 && beatIndex < beats.length) {
+        final chord = beats[beatIndex].chord.trim();
+        if (chord.isNotEmpty) return chord;
+      }
     }
-    final row = measures[selectedBarIndex!];
-    final beatIdx = selectedBeatIndex ?? 0;
-    if (beatIdx < 0 || beatIdx >= row.beats.length) return '';
-    return row.beats[beatIdx].chord.trim();
+    return _findChordForTime(audioReport?.chords ?? const [], currentAudioTime);
   }
 
   const AccordionSimulatorState({
@@ -1148,29 +1176,6 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     state = state.copyWith(measures: updatedMeasures);
   }
 
-  /// Busca el acorde activo en una posición de tiempo en segundos.
-  String _findChordForTime(List<DetectedChordSegment> chords, double timeSeconds) {
-    if (chords.isEmpty) return '';
-    int low = 0;
-    int high = chords.length - 1;
-    while (low <= high) {
-      final mid = (low + high) ~/ 2;
-      final seg = chords[mid];
-      if (seg.startTime <= timeSeconds && timeSeconds < seg.endTime) {
-        return seg.chordSymbol;
-      } else if (timeSeconds < seg.startTime) {
-        high = mid - 1;
-      } else {
-        low = mid + 1;
-      }
-    }
-    if (low >= chords.length) return chords.last.chordSymbol;
-    if (high < 0) return chords.first.chordSymbol;
-    final diffLow = (chords[low].startTime - timeSeconds).abs();
-    final diffHigh = (timeSeconds - chords[high].endTime).abs();
-    return diffLow < diffHigh ? chords[low].chordSymbol : chords[high].chordSymbol;
-  }
-
   // Controles Diapasón 1
   void setTuning1(TuningDefinition t) => state = state.copyWith(tuning1: t);
   void setBellows1(BellowsMode m) {
@@ -1234,91 +1239,20 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   int? _lastPlayedBeat;
   String? _lastPlaybackDetectedChord;
 
-  /// Mapa raíz → semitono (MIDI pitch class, base Do = 60 - 12 = 48 + pitchClass)
-  static const Map<String, int> _rootPitchClass = {
-    // Latina
-    'Do#': 1, 'Do♯': 1, 'Dob': 11, 'Do♭': 11, 'Do': 0,
-    'Re#': 3, 'Re♯': 3, 'Reb': 1, 'Re♭': 1, 'Re': 2,
-    'Mi#': 5, 'Mi♯': 5, 'Mib': 3, 'Mi♭': 3, 'Mi': 4,
-    'Fa#': 6, 'Fa♯': 6, 'Fab': 4, 'Fa♭': 4, 'Fa': 5,
-    'Sol#': 8, 'Sol♯': 8, 'Solb': 6, 'Sol♭': 6, 'Sol': 7,
-    'La#': 10, 'La♯': 10, 'Lab': 8, 'La♭': 8, 'La': 9,
-    'Si#': 0, 'Si♯': 0, 'Sib': 10, 'Si♭': 10, 'Si': 11,
-    // Alemana
-    'C#': 1, 'Db': 1, 'C': 0,
-    'D#': 3, 'Eb': 3, 'D': 2,
-    'E#': 5, 'Fb': 4, 'E': 4,
-    'F#': 6, 'Gb': 6, 'F': 5,
-    'G#': 8, 'Ab': 8, 'G': 7,
-    'A#': 10, 'Bb': 10, 'A': 9,
-    'B#': 0, 'Cb': 11, 'B': 11,
-  };
-
   /// Convierte un símbolo de acorde textual en notas MIDI (octava 4, base 60=Do4)
   List<int> _chordSymbolToMidi(String chord) {
     final trimmed = chord.trim();
     if (trimmed.isEmpty) return [];
 
-    // Encontrar la raíz más larga que coincida
-    int? pitchClass;
-    String rest = '';
-    for (final entry in _rootPitchClass.entries) {
-      if (trimmed.startsWith(entry.key)) {
-        if (rest.isEmpty || entry.key.length > (trimmed.length - rest.length)) {
-          pitchClass = entry.value;
-          rest = trimmed.substring(entry.key.length);
-        }
-      }
-    }
-    if (pitchClass == null) return [];
+    final root = ChordCatalog.rootPitchClassForChordSymbol(trimmed);
+    final pitchClasses = ChordCatalog.pitchClassesForChordSymbol(trimmed);
+    if (root == null || pitchClasses.isEmpty) return [];
 
-    // Nota raíz en octava 4
-    final rootMidi = 48 + pitchClass; // C4 = 60 → C3 = 48, usar octava 3 para que suene natural
-
-    final has7 = rest.contains('7');
-    final isMaj7 = rest.contains('maj7');
-    final isMinor = rest.contains('m') && !rest.contains('maj') && !rest.contains('dim');
-    final isDim = rest.contains('dim');
-    final isAug = rest.contains('aug');
-    final isSus2 = rest.contains('sus2');
-    final isSus4 = rest.contains('sus4') || (rest.contains('4') && !isSus2);
-
-    final notes = <int>[rootMidi + 12]; // tónica en octava 4
-    if (isDim) {
-      notes.add(rootMidi + 12 + 3); // tercera menor
-      notes.add(rootMidi + 12 + 6); // quinta disminuida
-    } else if (isAug) {
-      notes.add(rootMidi + 12 + 4); // tercera mayor
-      notes.add(rootMidi + 12 + 8); // quinta aumentada
-    } else if (isSus2) {
-      notes.add(rootMidi + 12 + 2); // segunda mayor
-      notes.add(rootMidi + 12 + 7); // quinta justa
-    } else if (isSus4 || rest.contains('sus')) {
-      notes.add(rootMidi + 12 + 5); // cuarta justa
-      notes.add(rootMidi + 12 + 7); // quinta justa
-    } else if (isMinor) {
-      notes.add(rootMidi + 12 + 3); // tercera menor
-      notes.add(rootMidi + 12 + 7); // quinta justa
-    } else {
-      // Mayor
-      notes.add(rootMidi + 12 + 4); // tercera mayor
-      notes.add(rootMidi + 12 + 7); // quinta justa
-    }
-
-    // Extensiones: séptima según la cualidad, sexta, novena añadida y octava.
-    if (has7) {
-      notes.add(rootMidi + 12 + (isDim ? 9 : (isMaj7 ? 11 : 10)));
-    }
-    if (rest.contains('6') && !rest.contains('add9')) {
-      notes.add(rootMidi + 12 + 9);
-    }
-    if (rest.contains('add9')) {
-      notes.add(rootMidi + 12 + 14);
-    }
-    if (rest.contains('8')) {
-      notes.add(rootMidi + 12 + 12);
-    }
-    return notes;
+    final intervals = pitchClasses
+        .map((pitchClass) => (pitchClass - root + 12) % 12)
+        .toList()
+      ..sort();
+    return intervals.map((interval) => 60 + root + interval).toList();
   }
 
   List<int> _currentBeatNotes = [];
@@ -1348,7 +1282,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
 
     final beat = row.beats[beatIndex];
-    final chord = beat.chord.trim();
+    final chord = beat.chord.trim().isNotEmpty
+        ? beat.chord.trim()
+        : _findChordForTime(
+            state.audioReport?.chords ?? const [],
+            state.currentAudioTime,
+          );
     if (chord.isEmpty) {
       state = state.copyWith(playingChordNotes: const {});
       return;
@@ -1624,7 +1563,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final secondsPerBar = (60.0 / bpm) * 4.0;
     final currentBar = state.selectedBarIndex ?? 0;
     final targetBar = (currentBar - 1).clamp(0, state.measures.isNotEmpty ? state.measures.length - 1 : 0);
-    seekAudio(state.effectiveAudioStartOffset + targetBar * secondsPerBar);
+    seekAudio(
+      state.effectiveAudioStartOffset + targetBar * secondsPerBar,
+      audition: true,
+    );
   }
 
   /// Avanza al siguiente compás y sincroniza la posición del audio y de la cuadrícula.
@@ -1634,7 +1576,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final currentBar = state.selectedBarIndex ?? 0;
     final maxBar = state.measures.isNotEmpty ? state.measures.length - 1 : 0;
     final targetBar = (currentBar + 1).clamp(0, maxBar);
-    seekAudio(state.effectiveAudioStartOffset + targetBar * secondsPerBar);
+    seekAudio(
+      state.effectiveAudioStartOffset + targetBar * secondsPerBar,
+      audition: true,
+    );
   }
 
   /// Posiciona la reproducción de audio en el segundo indicado y sincroniza la cuadrícula de compases.
@@ -1643,7 +1588,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   /// - {P}: `time.isFinite`.
   /// - {Q}: `0.0 <= state.currentAudioTime <= totalDur && 0 <= state.selectedBarIndex < measures.length && 0 <= state.selectedBeatIndex < 4`.
   /// - {I}: `_lastPlaybackDetectedChord == null` (garantiza re-detección limpia del acorde tras el salto temporal).
-  void seekAudio(double time) {
+  void seekAudio(double time, {bool audition = false}) {
     final clamped = time.clamp(
       0.0,
       state.totalAudioDuration > 0 ? state.totalAudioDuration : time,
@@ -1668,6 +1613,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       selectedBarIndex: currentBar,
       selectedBeatIndex: currentBeat,
     );
+    if (audition || state.isPlayingAudio) {
+      _playBeatChord(currentBar, currentBeat);
+    }
   }
 
   /// Conmuta la detección automática de acordes durante la reproducción de audio.

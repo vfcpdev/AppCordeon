@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:acordeon_flutter/core/audio/audio_engine_bridge.dart';
 import 'package:acordeon_flutter/core/constants/enums.dart';
+import 'package:acordeon_flutter/core/di/providers.dart';
 import 'package:acordeon_flutter/domain/commands/accordion_commands.dart';
 import 'package:acordeon_flutter/domain/models/audio_analysis_models.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
@@ -71,6 +73,33 @@ List<MeasureRow> _generateMeasures(int count) {
 }
 
 void main() {
+  test('al avanzar, ejecuta el acorde detectado y lo muestra en el diapasón', () {
+    final engine = _RecordingAudioEngine();
+    final container = ProviderContainer(
+      overrides: [audioEngineProvider.overrideWithValue(engine)],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(accordionSimulatorProvider.notifier);
+    notifier.setAudioReport(_report);
+
+    notifier.nextBar();
+
+    var state = container.read(accordionSimulatorProvider);
+    expect(state.currentAudioTime, 2.0);
+    expect(state.activeCompasChord, 'C');
+    expect(state.playingChordNotes, {60, 64, 67});
+    expect(engine.noteOns, [60, 64, 67]);
+
+    engine.noteOns.clear();
+    notifier.updateMeasureBeat(1, 0, 'Do7');
+    notifier.seekAudio(2.0, audition: true);
+
+    state = container.read(accordionSimulatorProvider);
+    expect(state.activeCompasChord, 'Do7');
+    expect(state.playingChordNotes, {60, 64, 67, 70});
+    expect(engine.noteOns, [60, 64, 67, 70]);
+  });
+
   group('AdjustBeatOffsetCommand {P} C {Q}', () {
     test(
       '{Q}: micro-ajuste de beat positivo y negativo con precisión a ms',
@@ -282,4 +311,26 @@ void main() {
       },
     );
   });
+}
+
+class _RecordingAudioEngine implements AudioEngine {
+  final List<int> noteOns = [];
+
+  @override
+  Future<void> init({double sampleRate = 44100.0}) async {}
+
+  @override
+  void noteOn(int midiNote, {double velocity = 0.8}) => noteOns.add(midiNote);
+
+  @override
+  void noteOff(int midiNote) {}
+
+  @override
+  void allNotesOff() {}
+
+  @override
+  void setVolume(double volume) {}
+
+  @override
+  void playPercussiveClick({bool isDownbeat = true, double volume = 0.8}) {}
 }
