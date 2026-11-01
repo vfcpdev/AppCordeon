@@ -144,14 +144,14 @@ class AccordionSimulatorState {
   // Sección 5: Acorde Libre y Escalas
   final int freeChordRoot; // 0=Do, 1=Do#, etc.
   final String freeChordType; // maj, min, dim, aug, sus2, sus4
-  final String freeChordFourth; // power5, octave, dom7, maj7, maj6, add9
+  final String freeChordFourth; // five, octave, dom7, maj7, maj6, add9
   final String freeChordOctave; // all, 3, 4, 5
   final String freeChordMode; // harmonic, melodic
   final bool isFreeChordFixed;
   final bool? _isFreeChordBeingEdited;
   bool get isFreeChordBeingEdited => _isFreeChordBeingEdited ?? false;
   final BellowsMode freeChordBellows;
-  final String freeChordScaleHarmonicMode; // triad, seventh
+  final String freeChordScaleHarmonicMode; // triad, seventh, five
 
   // Sección 3: Detector Inteligente de Acordes
   final bool detectorMode;
@@ -1168,8 +1168,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   /// marcando automáticamente cada beat donde ocurre un cambio armónico con precisión algorítmica.
   ApplyMeasureChordsResult? applyDetectedChordChangesToGrid() {
     final report = state.audioReport;
-    if (report == null || report.chords.isEmpty || state.measures.isEmpty)
+    if (report == null || report.chords.isEmpty || state.measures.isEmpty) {
       return null;
+    }
 
     final command = ApplyMeasureChordsFromAudioCommand(
       measures: state.measures,
@@ -1815,8 +1816,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   void _checkPlaybackAutoChordChange(double audioTime) {
     if (!state.isPlaybackAutoChordDetectEnabled) return;
     final report = state.audioReport;
-    if (report == null || report.chords.isEmpty || state.measures.isEmpty)
+    if (report == null || report.chords.isEmpty || state.measures.isEmpty) {
       return;
+    }
 
     final bpm = report.bpm.toDouble();
     final effectiveOffset = state.effectiveAudioStartOffset;
@@ -2918,8 +2920,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void playDetectorChord() {
-    if (state.detectorSelectedButtons.isEmpty && state.detectedChord == null)
+    if (state.detectorSelectedButtons.isEmpty && state.detectedChord == null) {
       return;
+    }
     final notes = <int>[];
     if (state.detectedChord != null && state.detectedChord!.notes.isNotEmpty) {
       notes.addAll(state.detectedChord!.notes);
@@ -2948,8 +2951,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void arpeggioDetectorChord() async {
-    if (state.detectorSelectedButtons.isEmpty && state.detectedChord == null)
+    if (state.detectorSelectedButtons.isEmpty && state.detectedChord == null) {
       return;
+    }
     final notes = <int>[];
     if (state.detectedChord != null && state.detectedChord!.notes.isNotEmpty) {
       notes.addAll(state.detectedChord!.notes);

@@ -111,8 +111,10 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     required double targetOffset,
     required Duration duration,
   }) async {
-    if (!_compasScrollController.hasClients || _autoScrollTargetBar != null)
+    if (!_compasScrollController.hasClients ||
+        _autoScrollTargetBar != null) {
       return;
+    }
     _autoScrollTargetBar = targetBar;
     try {
       await _compasScrollController.animateTo(
@@ -568,8 +570,9 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                         ? () {
                                             final targetChord = chordToEdit;
                                             if (targetChord == null ||
-                                                targetChord.isEmpty)
+                                                targetChord.isEmpty) {
                                               return;
+                                            }
                                             final positions = <String>[];
                                             for (
                                               var m = 0;

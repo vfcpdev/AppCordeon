@@ -18,7 +18,7 @@ class ChordCatalog {
     'sus2': [0, 2, 7],
   };
 
-  /// Nota adicional (cuarta voz) por tipo de extensión.
+  /// Intervalo adicional por extensión; la estructura de cinco notas añade séptima y novena.
   static const Map<String, int> extensionIntervals = {
     'octave': 12,
     'dom7': 10,
