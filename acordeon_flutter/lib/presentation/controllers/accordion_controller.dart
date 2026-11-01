@@ -695,6 +695,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     if (bytes.isEmpty || fileName.trim().isEmpty) {
       return const AudioLoadFailure('El archivo de audio está vacío o no tiene nombre.');
     }
+    if (state.isAnalyzingAudio) {
+      return const AudioLoadFailure('Espera a que termine el análisis actual antes de cargar otra pista.');
+    }
 
     // Detener cualquier reproducción anterior antes de cargar la nueva pista.
     _playbackTimer?.cancel();

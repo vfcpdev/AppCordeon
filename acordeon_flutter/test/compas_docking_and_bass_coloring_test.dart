@@ -185,8 +185,9 @@ void main() {
     );
     final notifier = container.read(accordionSimulatorProvider.notifier);
 
-    // Cargar la pista demo para activar la barra de la canción
+    // Cargar y analizar explícitamente la pista demo para activar la barra de la canción
     await notifier.loadDemoAudioTrack();
+    await notifier.analyzeLoadedAudio();
     await tester.pumpAndSettle();
 
     // La barra de la canción debe estar visible

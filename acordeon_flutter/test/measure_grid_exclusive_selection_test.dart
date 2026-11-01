@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:acordeon_flutter/core/constants/enums.dart';
@@ -78,6 +79,50 @@ void main() {
       final secondFieldWidget = tester.widget<TextField>(secondBeatTextField);
       expect(secondFieldWidget.focusNode?.hasFocus, isTrue);
     });
+
+    testWidgets('copia el acorde de una casilla y lo pega en otra con Ctrl+C y Ctrl+V',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+      notifier.updateMeasureBeat(0, 0, 'Do7');
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(body: MeasureGridWidget(width: 600)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final chordFields = find.byType(TextField);
+      final sourceField = chordFields.at(1);
+      final targetField = chordFields.at(2);
+
+      await tester.tap(sourceField);
+      await tester.pumpAndSettle();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.keyC);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.keyC);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+      expect(container.read(accordionSimulatorProvider).copiedChord, 'Do7');
+
+      await tester.tap(targetField);
+      await tester.pumpAndSettle();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.keyV);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.keyV);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+
+      expect(container.read(accordionSimulatorProvider).measures[0].beats[1].chord, 'Do7');
+    });
   });
 }
-

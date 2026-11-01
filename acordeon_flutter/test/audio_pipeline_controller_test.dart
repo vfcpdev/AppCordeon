@@ -1,8 +1,14 @@
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:acordeon_flutter/core/audio/audio_analyzer.dart';
+import 'package:acordeon_flutter/core/audio/audio_file_player_interface.dart';
+import 'package:acordeon_flutter/core/di/providers.dart';
+import 'package:acordeon_flutter/domain/models/audio_analysis_models.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/core/audio/audio_analyzer_service.dart';
+import 'package:acordeon_flutter/presentation/widgets/app_header_widget.dart';
 
 void main() {
   group('Audio Loading & Analysis Controller Pipeline Tests', () {
@@ -84,6 +90,44 @@ void main() {
       expect(clearedState.loadedAudioFileName, isNull);
     });
 
+    testWidgets('el botón Analizar inicia el análisis de la pista cargada',
+        (WidgetTester tester) async {
+      final analyzer = _CountingAudioAnalyzer();
+      final player = _TestAudioFilePlayer();
+      final widgetContainer = ProviderContainer(
+        overrides: [
+          audioAnalyzerProvider.overrideWithValue(analyzer),
+          audioFilePlayerProvider.overrideWithValue(player),
+        ],
+      );
+      addTearDown(widgetContainer.dispose);
+
+      final notifier = widgetContainer.read(accordionSimulatorProvider.notifier);
+      expect(
+        notifier.loadAudioBytes(Uint8List.fromList([1, 2, 3]), 'test.wav'),
+        isA<AudioLoadSuccess>(),
+      );
+      expect(analyzer.calls, 0);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: widgetContainer,
+          child: const MaterialApp(
+            home: Scaffold(body: AppHeaderWidget()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final analyzeButton = find.byKey(const ValueKey('analyze_loaded_audio_btn'));
+      expect(analyzeButton, findsOneWidget);
+      await tester.tap(analyzeButton);
+      await tester.pumpAndSettle();
+
+      expect(analyzer.calls, 1);
+      expect(widgetContainer.read(accordionSimulatorProvider).audioReport, isNotNull);
+    });
+
     test('AudioAnalyzerService correctly identifies key signature and recommended accordion tuning', () async {
       final service = AudioAnalyzerService();
       final testAudio = Uint8List(44100 * 2 * 4); // 4 segundos
@@ -100,4 +144,63 @@ void main() {
       expect(report.engine, contains('Rust'));
     });
   });
+}
+
+class _CountingAudioAnalyzer implements AudioAnalyzer {
+  int calls = 0;
+
+  @override
+  Future<AudioAnalysisReport> analyzeAudio(Uint8List bytes, String fileName) async {
+    calls++;
+    return const AudioAnalysisReport(
+      duration: 6,
+      bpm: 120,
+      mainKey: KeyDetectionResult(
+        rootMod: 0,
+        mode: 'major',
+        keyNameLat: 'Do Mayor',
+        keyNameAle: 'C Major',
+        recommendedTuning: 'Cinco Letras (Bb-Eb-Ab)',
+        recommendedOffset: 0,
+        recommendedRow: 'row1',
+        correlation: 0.9,
+      ),
+      chords: [],
+    );
+  }
+}
+
+class _TestAudioFilePlayer implements AudioFilePlayer {
+  bool _isLoaded = false;
+
+  @override
+  double get durationSeconds => 6;
+
+  @override
+  bool get isLoaded => _isLoaded;
+
+  @override
+  double get positionSeconds => 0;
+
+  @override
+  void load(Uint8List bytes, String mimeType) {
+    _isLoaded = true;
+  }
+
+  @override
+  void pause() {}
+
+  @override
+  void play() {}
+
+  @override
+  void seek(double seconds) {}
+
+  @override
+  void setVolume(double volume) {}
+
+  @override
+  void stop() {
+    _isLoaded = false;
+  }
 }
