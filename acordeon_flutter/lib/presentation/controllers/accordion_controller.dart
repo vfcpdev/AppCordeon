@@ -1484,7 +1484,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         120.0;
     final rhythmClockStep = _rhythmClockStep(state.selectedBassRhythmPattern);
     final timerQuarterStep = math.min(0.5, rhythmClockStep);
-    final intervalMs = ((60.0 / bpm * timerQuarterStep) * 1000).toInt().clamp(
+    final intervalMs = ((60.0 / bpm * timerQuarterStep) * 1000).round().clamp(
       50,
       1000,
     );
@@ -1723,7 +1723,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     _standaloneMetronomeTimer?.cancel();
     final bpm = _standaloneMetronomeBpm;
     final quarterBeatStep = _rhythmClockStep(state.selectedBassRhythmPattern);
-    final intervalMs = ((60.0 / bpm * quarterBeatStep) * 1000).toInt().clamp(
+    final intervalMs = ((60.0 / bpm * quarterBeatStep) * 1000).round().clamp(
       50,
       3000,
     );
@@ -1746,8 +1746,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         _standaloneElapsedQuarterBeats += quarterBeatStep;
         final currentBeat = _standaloneElapsedQuarterBeats.floor();
         state = state.copyWith(
-          bassRhythmElapsedSeconds:
-              state.bassRhythmElapsedSeconds + intervalMs / 1000.0,
+          bassRhythmElapsedSeconds: _standaloneElapsedQuarterBeats * 60 / bpm,
         );
         if (currentBeat > previousBeat) {
           _standaloneBeat = currentBeat % currentBeatsPerMeasure;
