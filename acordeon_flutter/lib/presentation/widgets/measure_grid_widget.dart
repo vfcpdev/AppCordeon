@@ -1819,8 +1819,9 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          // Altura un 5% mayor para los cuadros de compás {P} C {Q}
-          height: CompasCardMetrics.beatCellHeight,
+          // Altura mínima un 5% mayor; se permite crecer si el contenido interno
+          // (ej. flechas de fuelle en modo compacto) supera el mínimo. {P} C {Q}
+          constraints: const BoxConstraints(minHeight: CompasCardMetrics.beatCellHeight),
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
           decoration: BoxDecoration(
             // Radio condicional: bordes "Stateful" no ocasionan problemas; el
