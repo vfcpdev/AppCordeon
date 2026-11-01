@@ -10,6 +10,11 @@ import '../models/bass_rhythm_pattern.dart';
 /// {Q}: cada nota no-pausa produce un golpe con índice 0..11 y tiempo en
 /// negras; las pausas avanzan el reloj sin resaltar botones.
 class MusicXmlRhythmImporter {
+  static final RegExp _rhythmSectionName = RegExp(
+    r'(paseo|merengue|puya|son|chand[eé]|cumbia)',
+    caseSensitive: false,
+  );
+
   static final RegExp _recoverableRest = RegExp(
     r'<note>\s*<pitch>\s*<step>[A-G]</node>\s*<rest>\s*(<duration>\d+</duration>\s*<voice>[^<]+</voice>\s*<type>[^<]+</type>\s*)</rest>',
   );
@@ -34,6 +39,10 @@ class MusicXmlRhythmImporter {
         'El archivo debe ser un MusicXML de tipo score-partwise.',
       );
     }
+    final hasNamedRhythmSections = _descendants(
+      root,
+      'words',
+    ).any((words) => _rhythmSectionName.hasMatch(words.innerText));
 
     final partNames = <String, String>{};
     final partInstruments = <String, Map<String, String>>{};
@@ -113,6 +122,10 @@ class MusicXmlRhythmImporter {
             if (value.isNotEmpty) measureWords.add(value);
           }
         }
+        final rhythmSectionWords = measureWords
+            .where((words) => _rhythmSectionName.hasMatch(words))
+            .toList();
+        if (hasNamedRhythmSections && rhythmSectionWords.isEmpty) continue;
 
         var cursor = 0.0;
         var previousOnset = 0.0;
@@ -227,7 +240,9 @@ class MusicXmlRhythmImporter {
         patterns.add(
           BassRhythmPattern(
             id: '$partId:$measureNumber',
-            name: measureWords.isEmpty
+            name: rhythmSectionWords.isNotEmpty
+                ? rhythmSectionWords.join(' · ')
+                : measureWords.isEmpty
                 ? '$partName · Compás $measureNumber'
                 : measureWords.join(' · '),
             partName: partName,

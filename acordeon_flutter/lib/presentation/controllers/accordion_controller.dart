@@ -19,6 +19,7 @@ import '../../domain/models/bass_rhythm_pattern.dart';
 import '../../domain/models/measure_json_serializer.dart';
 import '../../domain/models/measure_models.dart';
 import '../../domain/models/tuning.dart';
+import '../../domain/services/bass_rhythm_catalog.dart';
 import '../../domain/services/musicxml_rhythm_importer.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../../domain/theory/chord_detector_engine.dart';
@@ -721,6 +722,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       detectorDirection: 'auto',
       detectorSelectedButtons: const [],
       detectedChord: null,
+      bassRhythmPatterns: BassRhythmCatalog.patterns,
     );
   }
 
@@ -1662,8 +1664,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     if (content == null) return null;
 
     final summary = _rhythmImporter.importPatterns(content);
+    final builtInPatterns = state.bassRhythmPatterns
+        .where((pattern) => pattern.id.startsWith('builtin:'));
     state = state.copyWith(
-      bassRhythmPatterns: summary.patterns,
+      bassRhythmPatterns: [...builtInPatterns, ...summary.patterns],
       selectedBassRhythmPatternId: summary.patterns.first.id,
       bassRhythmElapsedSeconds: 0,
     );
@@ -1685,6 +1689,23 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     state = state.copyWith(
       selectedBassRhythmPatternId: patternId,
       clearSelectedBassRhythmPattern: patternId == null,
+      bassRhythmElapsedSeconds: 0,
+    );
+    _syncStandaloneMetronome();
+  }
+
+  /// Selecciona un ritmo del catálogo y comienza a ejecutarlo inmediatamente.
+  void playBassRhythmPattern(String patternId) {
+    if (!state.bassRhythmPatterns.any((pattern) => pattern.id == patternId)) {
+      throw ArgumentError.value(
+        patternId,
+        'patternId',
+        'No corresponde a un patrón rítmico disponible.',
+      );
+    }
+    state = state.copyWith(
+      selectedBassRhythmPatternId: patternId,
+      isBassMetronomeActive: true,
       bassRhythmElapsedSeconds: 0,
     );
     _syncStandaloneMetronome();

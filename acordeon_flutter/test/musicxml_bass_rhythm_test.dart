@@ -87,6 +87,24 @@ void main() {
       },
     );
 
+    test('lists each named rhythm once, excluding repeat measures', () {
+      final score = File(
+        '../patrones_ritmicos_estructurados.musicxml',
+      ).readAsStringSync();
+
+      final patterns = MusicXmlRhythmImporter().importPatterns(score).patterns;
+
+      expect(patterns, hasLength(6));
+      expect(patterns.map((pattern) => pattern.name), [
+        'I. PASEO VALLENATO',
+        'II. MERENGUE VALLENATO',
+        'III. PUYA VALLENATA',
+        'IV. SON VALLENATO (Bajo Arrastrado)',
+        'V. CHANDÉ',
+        'VI. CUMBIA COLOMBIANA',
+      ]);
+    });
+
     test('imports Vallenato grooves with row fingering and articulations', () {
       final score = File(
         '../patrones_ritmicos_estructurados.musicxml',
@@ -178,7 +196,7 @@ void main() {
           '<voice>1</voice><type>quarter</type></rest>';
       final xml = _musicXml.replaceFirst(
         '<note><pitch><step>E</step><octave>4</octave></pitch>'
-            '<duration>4</duration></note>',
+        '<duration>4</duration></note>',
         malformedEvent,
       );
 
@@ -272,13 +290,46 @@ void main() {
         expect(importRect.top, greaterThanOrEqualTo(headerRect.bottom));
         expect(boardRect.top, greaterThan(importRect.bottom));
 
+        expect(
+          container
+              .read(accordionSimulatorProvider)
+              .bassRhythmPatterns
+              .map((pattern) => pattern.name),
+          [
+            'Paseo Vallenato',
+            'Merengue Vallenato',
+            'Puya Vallenata',
+            'Son Vallenato (Bajo Arrastrado)',
+            'Chandé',
+            'Cumbia Colombiana',
+          ],
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('bass_rhythm_pattern_picker_1')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const ValueKey('bass_rhythm_option_builtin:merengue')),
+        );
+        await tester.pumpAndSettle();
+        var state = container.read(accordionSimulatorProvider);
+        expect(state.selectedBassRhythmPattern?.name, 'Merengue Vallenato');
+        expect(state.isBassMetronomeActive, isTrue);
+        expect(audioEngine.clickCount, 1);
+        await tester.tap(
+          find.byKey(const ValueKey('bass_metronome_toggle_btn_1')),
+        );
+        await tester.pump();
+        audioEngine.clickCount = 0;
+        audioEngine.clickAccents.clear();
+
         await tester.tap(
           find.byKey(const ValueKey('bass_rhythm_import_btn_1')),
         );
         await tester.pumpAndSettle();
         expect(
           container.read(accordionSimulatorProvider).bassRhythmPatterns,
-          hasLength(2),
+          hasLength(8),
         );
 
         final patternPicker = find.byKey(
@@ -286,22 +337,20 @@ void main() {
         );
         await tester.tap(patternPicker);
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Merengue · Acordeón · C2'));
+        expect(find.text('Selecciona un ritmo'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('bass_rhythm_option_P1:2')),
+          findsOneWidget,
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('bass_rhythm_option_P1:2')),
+        );
         await tester.pumpAndSettle();
 
-        var state = container.read(accordionSimulatorProvider);
+        state = container.read(accordionSimulatorProvider);
         expect(state.selectedBassRhythmPattern?.name, 'Merengue');
         expect(state.activeBassRhythmButtonIndexes, contains(1));
-
-        await tester.tap(
-          find.byKey(const ValueKey('bass_metronome_toggle_btn_1')),
-        );
-        await tester.pump();
-        expect(state.isBassMetronomeActive, isFalse);
-        expect(
-          container.read(accordionSimulatorProvider).isBassMetronomeActive,
-          isTrue,
-        );
+        expect(state.isBassMetronomeActive, isTrue);
         expect(audioEngine.clickCount, 1);
         expect(audioEngine.clickAccents, [false]);
 

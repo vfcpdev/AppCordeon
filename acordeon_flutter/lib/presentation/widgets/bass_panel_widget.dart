@@ -581,56 +581,33 @@ class BassPanelWidget extends ConsumerWidget {
             ),
           ),
           SizedBox(
-            width: 84,
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                key: ValueKey('bass_rhythm_pattern_picker_$accordionNumber'),
-                value: selectedPattern?.id,
-                isDense: true,
-                isExpanded: true,
-                hint: const Text(
-                  'Patrón',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 9, color: Color(0xFF475569)),
-                ),
-                selectedItemBuilder: (context) => state.bassRhythmPatterns
-                    .map(
-                      (pattern) => Align(
-                        alignment: Alignment.centerLeft,
-                        child: Tooltip(
-                          message:
-                              '${pattern.name} · ${pattern.partName} · Compás ${pattern.measureNumber}',
-                          child: Text(
-                            pattern.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF0F172A),
-                            ),
-                          ),
-                        ),
+            width: 116,
+            height: 28,
+            child: TextButton(
+              key: ValueKey('bass_rhythm_pattern_picker_$accordionNumber'),
+              onPressed: () => _showRhythmPicker(context, state, notifier),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                foregroundColor: const Color(0xFF0F172A),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.music_note, size: 13),
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text(
+                      selectedPattern?.name ?? 'Ritmo',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
                       ),
-                    )
-                    .toList(),
-                items: state.bassRhythmPatterns
-                    .map(
-                      (pattern) => DropdownMenuItem(
-                        value: pattern.id,
-                        child: Text(
-                          '${pattern.name} · ${pattern.partName} · C${pattern.measureNumber}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 10),
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: state.bassRhythmPatterns.isEmpty
-                    ? null
-                    : notifier.selectBassRhythmPattern,
+                    ),
+                  ),
+                  const Icon(Icons.expand_more, size: 14),
+                ],
               ),
             ),
           ),
@@ -656,6 +633,70 @@ class BassPanelWidget extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _showRhythmPicker(
+    BuildContext context,
+    AccordionSimulatorState state,
+    AccordionSimulatorNotifier notifier,
+  ) async {
+    final selectedId = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (modalContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(modalContext).height * 0.72,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Text(
+                  'Selecciona un ritmo',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+              ),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: state.bassRhythmPatterns.length,
+                  itemBuilder: (context, index) {
+                    final pattern = state.bassRhythmPatterns[index];
+                    final isSelected = pattern.id == state.selectedBassRhythmPatternId;
+                    return ListTile(
+                      key: ValueKey('bass_rhythm_option_${pattern.id}'),
+                      leading: Icon(
+                        isSelected
+                            ? Icons.graphic_eq
+                            : Icons.music_note_outlined,
+                        color: isSelected
+                            ? const Color(0xFF059669)
+                            : const Color(0xFF475569),
+                      ),
+                      title: Text(pattern.name),
+                      subtitle: Text(
+                        '${pattern.beatsPerMeasure}/${pattern.beatType} · '
+                        '${pattern.quarterNotesPerMinute?.round() ?? 120} BPM · '
+                        '${pattern.hits.length} golpes',
+                      ),
+                      trailing: const Icon(Icons.play_arrow),
+                      onTap: () => Navigator.pop(modalContext, pattern.id),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selectedId != null && context.mounted) {
+      notifier.playBassRhythmPattern(selectedId);
+    }
   }
 
   Future<void> _importRhythmPatterns(
