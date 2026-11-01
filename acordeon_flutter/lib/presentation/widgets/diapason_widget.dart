@@ -461,8 +461,7 @@ class DiapasonWidget extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (topOffset > 0) SizedBox(height: topOffset),
-        // Todos los botones permanecen visibles. En Abrir/Cerrar solo se
-        // colorean los que producen una nota del acorde vigente.
+        // Se resalta un botón por cada nota, priorizando la octava y el fuelle seleccionados.
         ...buttons.map((btn) {
           final isPressed =
               activeButtons.contains('a${accordionNumber}_${btn.id}') ||
@@ -474,6 +473,7 @@ class DiapasonWidget extends ConsumerWidget {
 
           // `btn.pull`/`btn.push` ya incluyen la transposición de la afinación.
           bool matchesOctave(int midi) {
+            if (selectedChordButtonIds.contains(btn.id)) return true;
             if (!isFreeChordFixed &&
                 !isFreeChordBeingEdited &&
                 compasChord.isNotEmpty) {
@@ -541,41 +541,70 @@ class DiapasonWidget extends ConsumerWidget {
     final availableButtons = buttons.toList();
 
     for (final pitchClass in pitchClasses) {
-      bool matchesNote(int midi) {
+      bool matchesNote(int midi, {required bool checkOctave}) {
         if (midi % 12 != pitchClass) return false;
-        if (!respectOctave || octave == 'all' || octave.isEmpty) return true;
+        if (!checkOctave || octave == 'all' || octave.isEmpty) return true;
         return '${(midi / 12).floor() - 1}' == octave;
       }
 
-      bool matchesPreferredDirection(TrebleButtonModel button) {
+      bool matchesPreferredDirection(
+        TrebleButtonModel button, {
+        required bool checkOctave,
+      }) {
         return switch (bellowsMode) {
-          BellowsMode.push => matchesNote(button.push),
-          BellowsMode.pull => matchesNote(button.pull),
+          BellowsMode.push => matchesNote(
+            button.push,
+            checkOctave: checkOctave,
+          ),
+          BellowsMode.pull => matchesNote(
+            button.pull,
+            checkOctave: checkOctave,
+          ),
           BellowsMode.both =>
-            matchesNote(button.push) || matchesNote(button.pull),
+            matchesNote(button.push, checkOctave: checkOctave) ||
+                matchesNote(button.pull, checkOctave: checkOctave),
         };
       }
 
-      bool matchesOtherDirection(TrebleButtonModel button) {
+      bool matchesOtherDirection(
+        TrebleButtonModel button, {
+        required bool checkOctave,
+      }) {
         return switch (bellowsMode) {
-          BellowsMode.push => matchesNote(button.pull),
-          BellowsMode.pull => matchesNote(button.push),
+          BellowsMode.push => matchesNote(
+            button.pull,
+            checkOctave: checkOctave,
+          ),
+          BellowsMode.pull => matchesNote(
+            button.push,
+            checkOctave: checkOctave,
+          ),
           BellowsMode.both => false,
         };
       }
 
-      TrebleButtonModel? findButton(bool Function(TrebleButtonModel) matches) {
+      TrebleButtonModel? findButton(
+        bool Function(TrebleButtonModel, {required bool checkOctave}) matches, {
+        required bool checkOctave,
+      }) {
         for (final button in availableButtons) {
-          if (!selectedButtonIds.contains(button.id) && matches(button)) {
+          if (!selectedButtonIds.contains(button.id) &&
+              matches(button, checkOctave: checkOctave)) {
             return button;
           }
         }
         return null;
       }
 
+      final inOctaveButton =
+          findButton(matchesPreferredDirection, checkOctave: respectOctave) ??
+          findButton(matchesOtherDirection, checkOctave: respectOctave);
       final matchingButton =
-          findButton(matchesPreferredDirection) ??
-          findButton(matchesOtherDirection);
+          inOctaveButton ??
+          (respectOctave
+              ? findButton(matchesPreferredDirection, checkOctave: false) ??
+                    findButton(matchesOtherDirection, checkOctave: false)
+              : null);
       if (matchingButton != null) {
         selectedButtonIds.add(matchingButton.id);
       }

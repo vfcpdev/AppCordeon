@@ -13,7 +13,7 @@ import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
 void main() {
   testWidgets(
-    'Octava resalta en el diapasón solo las notas del registro seleccionado',
+    'Octava mantiene un botón resaltado por cada nota del acorde',
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1200, 1000);
       tester.view.devicePixelRatio = 1.0;
@@ -49,7 +49,9 @@ void main() {
         await tester.pumpAndSettle();
 
         final buttons = tester
-            .widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget))
+            .widgetList<DiapasonButtonWidget>(
+              find.byType(DiapasonButtonWidget),
+            )
             .toList();
         expect(
           buttons
@@ -57,18 +59,14 @@ void main() {
               .length,
           chordPitchClasses.length,
         );
-        final highlightedMidis = <int>[
-          for (final button in buttons) ...[
-            if (button.isChordPush) button.pushMidi,
-            if (button.isChordPull) button.pullMidi,
-          ],
-        ];
+        final highlightedPitchClasses = <int>{
+          for (final button in buttons)
+            if (button.isChordPush) button.pushMidi % 12,
+          for (final button in buttons)
+            if (button.isChordPull) button.pullMidi % 12,
+        };
 
-        expect(highlightedMidis, isNotEmpty);
-        for (final midi in highlightedMidis) {
-          expect((midi ~/ 12) - 1, int.parse(octave));
-          expect(chordPitchClasses, contains(midi % 12));
-        }
+        expect(highlightedPitchClasses, containsAll(chordPitchClasses));
       }
     },
   );
@@ -361,18 +359,16 @@ void main() {
           .toList();
 
       expect(diapason1Buttons.isNotEmpty, isTrue);
-      final sol7Buttons = diapason1Buttons.where(
-        (btn) =>
-            activePcs.contains(btn.pullMidi % 12) ||
-            activePcs.contains(btn.pushMidi % 12),
-      );
-      expect(sol7Buttons.isNotEmpty, isTrue);
+      final sol7Buttons = diapason1Buttons
+          .where((btn) => btn.isChordPull || btn.isChordPush)
+          .toList();
+      expect(sol7Buttons.length, activePcs.length);
       for (final btn in sol7Buttons) {
-        if (activePcs.contains(btn.pullMidi % 12)) {
-          expect(btn.isChordPull, isTrue);
+        if (btn.isChordPull) {
+          expect(activePcs, contains(btn.pullMidi % 12));
         }
-        if (activePcs.contains(btn.pushMidi % 12)) {
-          expect(btn.isChordPush, isTrue);
+        if (btn.isChordPush) {
+          expect(activePcs, contains(btn.pushMidi % 12));
         }
       }
 
