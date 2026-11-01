@@ -1454,7 +1454,7 @@ class _ChordTools {
 /// ningún diálogo modal.
 ///
 /// Independencia por cuadro: cada celda tiene identidad estable
-/// (ValueKey 'beat_cell_<compás>_<tiempo>'), de modo que su selección, su foco
+/// (`ValueKey('beat_cell_compas_tiempo')`), de modo que su selección, su foco
 /// y su contenido jamás se mezclan con otro cuadro del mismo compás o de la
 /// cuadrícula. Con el cuadro seleccionado (sin editar), Backspace/Delete lo
 /// resetea a vacío sin extender el acorde de cuadros vecinos.
@@ -1778,21 +1778,37 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     return KeyEventResult.ignored;
   }
 
+  /// Teclas del textbox **en edición** (adjunto al FocusNode del propio
+  /// TextField, por lo que solo corre cuando el control tiene foco).
+  ///
+  /// Tripla de Hoare {P} C {Q}:
+  /// - Precondición {P}: el evento llega con `_focusNode` como foco primario
+  ///   (el textbox está siendo editado).
+  /// - Ejecución {C}: se interceptan únicamente Escape y Tab/Shift+Tab.
+  /// - Poscondición {Q}:
+  ///   - Las **flechas de dirección no se interceptan**: conservan el
+  ///     comportamiento por defecto del TextBox (mover el cursor dentro del
+  ///     texto; hacia arriba/abajo desplazan a inicio/fin según la plataforma).
+  ///   - Enter no se intercepta: lo procesa `onSubmitted` del TextBox por el
+  ///     canal por defecto (commit + avance al cuadro siguiente).
+  ///   - Escape sale de la edición manteniendo el cuadro seleccionado.
+  ///   - Tab / Shift+Tab confirman y navegan al cuadro siguiente / anterior.
+  ///
+  /// La navegación por flechas entre cuadros vive en `_handleCellKeyEvent`
+  /// (modo selección, sin edición); nunca interfiere con el texto en edición.
   KeyEventResult _handleTextFieldKeyEvent(FocusNode node, KeyEvent event) {
     if (event is KeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-        // Flecha derecha: saca de foco de edición, pero permanece el cuadro seleccionado
-        _commit();
-        _setSelected();
-        return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        // Flecha abajo: sube/baja y cambia al compás/cuadro siguiente
-        _moveSelection(1);
-        return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        // Flecha arriba: sube al compás/cuadro anterior
-        _moveSelection(-1);
-        return KeyEventResult.handled;
+      // Flechas de dirección: NO se interceptan mientras se edita — el
+      // TextBox conserva su comportamiento por defecto (movimiento del
+      // cursor). `return ignored` permite que el evento burbujee hasta los
+      // manejadores nativos de EditableText.
+      if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
+          event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+          event.logicalKey == LogicalKeyboardKey.arrowDown ||
+          event.logicalKey == LogicalKeyboardKey.arrowUp ||
+          event.logicalKey == LogicalKeyboardKey.enter ||
+          event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+        return KeyEventResult.ignored;
       } else if (event.logicalKey == LogicalKeyboardKey.tab) {
         // Tab / Shift+Tab para navegar adelante / atrás
         final isShift = HardwareKeyboard.instance.isShiftPressed;
@@ -1803,11 +1819,6 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
         // Escape: saca de foco de edición pero mantiene cuadro seleccionado
         _commit();
         _setSelected();
-        return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.enter ||
-          event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-        _commit();
-        _moveSelection(1);
         return KeyEventResult.handled;
       }
     }
