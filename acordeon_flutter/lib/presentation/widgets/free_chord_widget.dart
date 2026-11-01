@@ -2,14 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../controllers/accordion_controller.dart';
-import 'tonic_bar_widget.dart';
 
 class FreeChordWidget extends ConsumerWidget {
   const FreeChordWidget({super.key});
-
-  static const List<String> roots = [
-    'Do', 'Do#', 'Re', 'Mi♭', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'Si♭', 'Si'
-  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -128,16 +123,12 @@ class FreeChordWidget extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Barra vertical de Tónica (Desacoplable / En Columnas)
-              const TonicBarWidget(),
-              const SizedBox(height: 8),
-
               // Cualidad
               _buildMatrixSection(
                 title: 'Cualidad',
                 color: const Color(0xFF059669),
                 child: _buildMatrixGrid(
-                  columns: 5,
+                  columns: 3,
                   cells: [
                     _buildOptionButton(
                       sigla: 'M',
@@ -173,6 +164,13 @@ class FreeChordWidget extends ConsumerWidget {
                       isActive: state.freeChordType == 'sus4',
                       activeColor: const Color(0xFF059669),
                       onTap: () => notifier.setFreeChordType('sus4'),
+                    ),
+                    _buildOptionButton(
+                      sigla: 'sus2',
+                      tooltip: 'Suspendido 2',
+                      isActive: state.freeChordType == 'sus2',
+                      activeColor: const Color(0xFF059669),
+                      onTap: () => notifier.setFreeChordType('sus2'),
                     ),
                   ],
                 ),

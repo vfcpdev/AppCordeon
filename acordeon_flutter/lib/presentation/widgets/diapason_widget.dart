@@ -65,6 +65,9 @@ class DiapasonWidget extends ConsumerWidget {
       latin: notation != NotationMode.alemana,
       display: true,
     );
+    final chordLabel = (!isFreeChordFixed && formattedCompasChord.isNotEmpty)
+        ? formattedCompasChord
+        : formattedFreeChord;
 
     final rowList = [
       _RowDef(
@@ -211,17 +214,16 @@ class DiapasonWidget extends ConsumerWidget {
                   ),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: Text(
-                      (!isFreeChordFixed && formattedCompasChord.isNotEmpty)
-                          ? formattedCompasChord
-                          : (formattedFreeChord.isEmpty ? '—' : formattedFreeChord),
+                    child: Text.rich(
+                      chordLabel.isEmpty
+                          ? const TextSpan(text: '—')
+                          : ChordCatalog.buildChordLabelSpans(
+                              chord: chordLabel,
+                              notation: notation,
+                              fontSize: 9.5,
+                            ),
                       key: ValueKey('diapason_chord_label_$accordionNumber'),
                       maxLines: 1,
-                      style: const TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.black,
-                      ),
                     ),
                   ),
                 ),

@@ -448,6 +448,8 @@ class TransferDetectedChordCommand implements AccordionCommand<TransferredChordP
       type = 'dim';
     } else if (f.contains('♯5')) {
       type = 'aug';
+    } else if (f.contains('2') && f.contains('5') && !f.contains('3')) {
+      type = 'sus2';
     } else if (f.contains('4') && f.contains('5') && !f.contains('3')) {
       type = 'sus4';
     } else if (f.contains('♭3') || (sym.contains('m') && !sym.contains('maj'))) {
@@ -1320,5 +1322,4 @@ class DeleteGridChordsCommand implements AccordionCommand<GridChordsDeletionResu
         'Violación {Q}: deletedCount $deletedCount fuera de rango.');
   }
 }
-
 

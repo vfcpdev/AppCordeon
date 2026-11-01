@@ -169,7 +169,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final insertTargetLabel = markedCount > 0
         ? '$markedCount tiempo${markedCount == 1 ? '' : 's'} marcado${markedCount == 1 ? '' : 's'}'
         : (hasSelectedCell
-            ? 'Compás ${selectedBar! + 1} · Tiempo ${selectedBeat! + 1}'
+            ? 'Compás ${selectedBar + 1} · Tiempo ${selectedBeat + 1}'
             : 'sin casilla seleccionada');
     final canInsertChord =
         constructorChord.isNotEmpty && (markedCount > 0 || hasSelectedCell);
@@ -374,7 +374,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: SizedBox(
-                  width: effectiveWidth > 150 ? effectiveWidth : 150,
+                  width: effectiveWidth > 150 ? effectiveWidth : 180,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

@@ -41,6 +41,7 @@ class HarmonicChordSegmenter implements ChordSegmenter {
     ChordProfileModel('min', 'm', 'Menor', [0, 3, 7], [1, 2, 4, 5, 6, 8, 9, 10, 11]),
     ChordProfileModel('dom7', '7', '7ma', [0, 4, 7, 10], [1, 2, 3, 5, 6, 8, 9, 11]),
     ChordProfileModel('min7', 'm7', 'Menor 7ma', [0, 3, 7, 10], [1, 2, 4, 5, 6, 8, 9, 11]),
+    ChordProfileModel('sus2', 'sus2', 'Sus2', [0, 2, 7], [1, 3, 4, 5, 6, 8, 9, 10, 11]),
     ChordProfileModel('sus4', 'sus4', 'Sus4', [0, 5, 7], [1, 2, 3, 4, 6, 8, 9, 10, 11]),
   ];
 
@@ -54,6 +55,8 @@ class HarmonicChordSegmenter implements ChordSegmenter {
         return [root, (root + 4) % 12, (root + 7) % 12, (root + 10) % 12];
       case 'min7':
         return [root, (root + 3) % 12, (root + 7) % 12, (root + 10) % 12];
+      case 'sus2':
+        return [root, (root + 2) % 12, (root + 7) % 12];
       case 'sus4':
         return [root, (root + 5) % 12, (root + 7) % 12];
       case 'maj':
@@ -71,6 +74,8 @@ class HarmonicChordSegmenter implements ChordSegmenter {
         return [baseMidi, baseMidi + 4, baseMidi + 7, baseMidi + 10];
       case 'min7':
         return [baseMidi, baseMidi + 3, baseMidi + 7, baseMidi + 10];
+      case 'sus2':
+        return [baseMidi, baseMidi + 2, baseMidi + 7];
       case 'sus4':
         return [baseMidi, baseMidi + 5, baseMidi + 7];
       case 'maj':

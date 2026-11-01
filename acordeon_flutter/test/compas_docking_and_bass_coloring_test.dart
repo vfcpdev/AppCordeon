@@ -249,7 +249,10 @@ void main() {
     final labelFinder = find.byKey(const ValueKey('diapason_chord_label_1'));
     expect(labelFinder, findsOneWidget);
     final labelWidget = tester.widget<Text>(labelFinder);
-    expect(labelWidget.data, 'Sol7');
+    expect(
+      labelWidget.textSpan?.toPlainText(),
+      'Sol7   (Sol - Si - Re - Fa)',
+    );
 
     // 3. Comprobamos que activeChordPitchClassesProvider(1) contenga las clases de altura de Sol7 (7, 11, 2, 5)
     final activePcs = container.read(activeChordPitchClassesProvider(1));
@@ -284,7 +287,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final labelWidgetGerman = tester.widget<Text>(labelFinder);
-    expect(labelWidgetGerman.data, 'G7');
+    expect(
+      labelWidgetGerman.textSpan?.toPlainText(),
+      'G7   (G - B - D - F)',
+    );
 
     // 6. Si se asigna dirección de fuelle 'Cierra' (push) al beat del compás, el fuelle del diapasón 1 se sincroniza
     notifier.setBeatBellows(0, 0, BellowsMode.push);

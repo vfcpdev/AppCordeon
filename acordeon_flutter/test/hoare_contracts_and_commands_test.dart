@@ -180,6 +180,26 @@ void main() {
       expect(params.bass, equals('7')); // Bajo alterado en séptima
       expect(params.isFixed, isTrue);
     });
+
+    test('TransferDetectedChordCommand conserva la cualidad Sus2', () {
+      const detected = DetectedChordModel(
+        name: 'Do Suspendido 2',
+        root: 'C',
+        bass: 'C',
+        formula: '1 - 2 - 5',
+        type: 'sus2',
+        inversion: 'Estado Fundamental',
+        alternatives: [],
+        chordSymbol: 'Csus2',
+        pitchClasses: {0, 2, 7},
+        rootPitchClass: 0,
+        bassPitchClass: 0,
+        notes: [60, 62, 67],
+      );
+
+      final params = const TransferDetectedChordCommand(detected).execute();
+      expect(params?.type, 'sus2');
+    });
   });
 
   group('Patrón Memento: Historial de Cuadrícula (Undo / Redo)', () {

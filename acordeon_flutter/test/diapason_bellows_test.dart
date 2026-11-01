@@ -107,8 +107,11 @@ void main() {
           find.byKey(const ValueKey('diapason_chord_label_1')),
         );
 
-    // Latina por defecto: el acorde mayor se muestra solo con su tónica.
-    expect(label().data, 'Do');
+    // Latina por defecto: el acorde y sus notas se muestran en notación latina.
+    expect(
+      label().textSpan?.toPlainText(),
+      'Do   (Do - Mi - Sol)',
+    );
 
     final labelBox = tester.widget<Container>(
       find
@@ -126,12 +129,18 @@ void main() {
     notifier.setFreeChordType('dim');
     notifier.setFreeChordFourth('dim7');
     await tester.pumpAndSettle();
-    expect(label().data, 'Do°7');
+    expect(
+      label().textSpan?.toPlainText(),
+      'Do°7   (Do - Mi♭ - Fa# - La)',
+    );
 
-    // Al cambiar a notación alemana cambia la tónica y las notas, no la cualidad.
+    // Al cambiar a notación alemana se actualizan la tónica y las notas.
     notifier.setNotation(NotationMode.alemana);
     await tester.pumpAndSettle();
-    expect(label().data, 'C°7');
+    expect(
+      label().textSpan?.toPlainText(),
+      'C°7   (C - Eb - F# - A)',
+    );
   });
 
   testWidgets('el botón de tonalidad es funcional y abre el selector de afinación',

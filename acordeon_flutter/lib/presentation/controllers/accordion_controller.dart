@@ -104,7 +104,7 @@ class AccordionSimulatorState {
 
   // Sección 5: Acorde Libre y Escalas
   final int freeChordRoot; // 0=Do, 1=Do#, etc.
-  final String freeChordType; // maj, min, dim, aug, sus4
+  final String freeChordType; // maj, min, dim, aug, sus2, sus4
   final String freeChordFourth; // none, octave, dom7, maj7, maj6, add9
   final String freeChordOctave; // all, 3, 4, 5
   final String freeChordMode; // harmonic, melodic
@@ -1239,8 +1239,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final isMinor = rest.contains('m') && !rest.contains('maj') && !rest.contains('dim');
     final isDim = rest.contains('dim');
     final isAug = rest.contains('aug');
-    final isSus4 = rest.contains('sus4') || rest.contains('4');
-    final isSus = rest.contains('sus') && !isSus4;
+    final isSus2 = rest.contains('sus2');
+    final isSus4 = rest.contains('sus4') || (rest.contains('4') && !isSus2);
 
     final notes = <int>[rootMidi + 12]; // tónica en octava 4
     if (isDim) {
@@ -1249,12 +1249,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     } else if (isAug) {
       notes.add(rootMidi + 12 + 4); // tercera mayor
       notes.add(rootMidi + 12 + 8); // quinta aumentada
-    } else if (isSus4) {
+    } else if (isSus2) {
+      notes.add(rootMidi + 12 + 2); // segunda mayor
+      notes.add(rootMidi + 12 + 7); // quinta justa
+    } else if (isSus4 || rest.contains('sus')) {
       notes.add(rootMidi + 12 + 5); // cuarta justa
       notes.add(rootMidi + 12 + 7); // quinta justa
-    } else if (isSus) {
-      notes.add(rootMidi + 12 + 5); // cuarta suspendida
-      notes.add(rootMidi + 12 + 7);
     } else if (isMinor) {
       notes.add(rootMidi + 12 + 3); // tercera menor
       notes.add(rootMidi + 12 + 7); // quinta justa

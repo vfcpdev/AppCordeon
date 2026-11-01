@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:acordeon_flutter/domain/theory/chord_catalog.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/free_chord_widget.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
 void main() {
-  testWidgets('la sección de acordes no muestra botones de tónica',
-      (WidgetTester tester) async {
+  testWidgets('la sección de acordes no muestra botones de tónica', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1600, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -15,21 +17,78 @@ void main() {
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(child: FreeChordWidget()),
-          ),
+          home: Scaffold(body: SingleChildScrollView(child: FreeChordWidget())),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.byTooltip(RegExp(r'^Tónica ')), findsNothing);
-    expect(find.byKey(const ValueKey('insert_chord_to_compas_btn')), findsNothing);
-    expect(find.byKey(const ValueKey('multi_beat_modal_checkbox')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('insert_chord_to_compas_btn')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('multi_beat_modal_checkbox')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('tonic_bar_full_chord_name')),
+      findsNothing,
+    );
+    for (final section in [
+      'Cualidad',
+      'Estructura',
+      'Octava',
+      'Extensión',
+      'Bajo (/)',
+    ]) {
+      expect(find.text(section), findsOneWidget);
+    }
+    expect(find.byTooltip('Suspendido 2'), findsOneWidget);
   });
 
-  testWidgets('el botón Compás inserta el acorde en la celda seleccionada',
-      (WidgetTester tester) async {
+  testWidgets('Sus2 selecciona la cualidad y genera sus notas correctas', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(body: SingleChildScrollView(child: FreeChordWidget())),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(FreeChordWidget)),
+    );
+    await tester.tap(find.byTooltip('Suspendido 2'));
+    await tester.pumpAndSettle();
+
+    final state = container.read(accordionSimulatorProvider);
+    expect(state.freeChordType, 'sus2');
+    expect(
+      ChordCatalog.notesFor(
+        root: 0,
+        type: state.freeChordType,
+        extension: 'none',
+      ),
+      [60, 62, 67],
+    );
+    expect(
+      ChordCatalog.symbolFor(
+        root: 0,
+        type: state.freeChordType,
+        extension: 'none',
+      ),
+      'Dosus2',
+    );
+  });
+
+  testWidgets('el botón Compás inserta el acorde en la celda seleccionada', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1600, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -41,11 +100,11 @@ void main() {
             body: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(
+                SizedBox(
                   width: 280,
                   child: SingleChildScrollView(child: FreeChordWidget()),
                 ),
-                const MeasureGridWidget(width: 185),
+                MeasureGridWidget(width: 185),
               ],
             ),
           ),
@@ -68,8 +127,6 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('insert_chord_to_compas_btn')));
     await tester.pumpAndSettle();
-
-    expect(find.text('Sol   menor   Séptima   (Sol - Si♭ - Re - Fa)'), findsOneWidget);
 
     final state = container.read(accordionSimulatorProvider);
     expect(state.measures[1].beats[3].chord, 'Solm7');
@@ -116,17 +173,16 @@ void main() {
     );
   });
 
-  testWidgets('el checkbox del Compás marca y desmarca tiempos',
-      (WidgetTester tester) async {
+  testWidgets('el checkbox del Compás marca y desmarca tiempos', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1200, 1000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
 
     await tester.pumpWidget(
       const ProviderScope(
-        child: MaterialApp(
-          home: Scaffold(body: MeasureGridWidget()),
-        ),
+        child: MaterialApp(home: Scaffold(body: MeasureGridWidget())),
       ),
     );
     await tester.pumpAndSettle();

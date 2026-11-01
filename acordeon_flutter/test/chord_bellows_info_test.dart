@@ -24,10 +24,15 @@ void main() {
       final amPcs = ChordCatalog.pitchClassesForChordSymbol('Am');
       expect(amPcs, containsAll([9, 0, 4]));
       expect(amPcs.length, 3);
+
+      // Dosus2 = Do (0), Re (2), Sol (7).
+      final sus2Pcs = ChordCatalog.pitchClassesForChordSymbol('Dosus2');
+      expect(sus2Pcs, containsAll([0, 2, 7]));
+      expect(sus2Pcs.length, 3);
     });
 
     test('ChordCatalog.maxChordName es la cadena de texto más grande generable (12 caracteres)', () {
-      expect(ChordCatalog.maxChordName, 'Sol#sus4maj7');
+      expect(ChordCatalog.maxChordName, 'Sol#sus2maj7');
       expect(ChordCatalog.maxChordName.length, 12);
 
       // Generado directamente por symbolFor
@@ -42,7 +47,7 @@ void main() {
       // Comprobar exhaustivamente todas las combinaciones posibles en ChordCatalog
       var longestFound = '';
       for (var r = 0; r < 12; r++) {
-        for (final t in ['', 'min', 'dim', 'aug', 'sus4']) {
+        for (final t in ['', 'min', 'dim', 'aug', 'sus2', 'sus4']) {
           for (final ext in ['', 'octave', 'dom7', 'maj7', 'maj6', 'add9', 'min7', 'dim7']) {
             final latinSym = ChordCatalog.symbolFor(root: r, type: t, extension: ext, latin: true);
             if (latinSym.length > longestFound.length) {
@@ -57,7 +62,7 @@ void main() {
       }
 
       expect(longestFound.length, 12);
-      expect(longestFound, 'Sol#sus4maj7');
+      expect(longestFound, 'Sol#sus2maj7');
     });
 
     test('MeasureJsonSerializer preserva la propiedad bellows de MeasureBeat', () {

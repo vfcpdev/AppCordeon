@@ -6,7 +6,7 @@ import '../../domain/theory/chord_catalog.dart';
 
 class FreeChordState {
   final int root; // 0=Do, 1=Do#, etc.
-  final String type; // maj, min, dim, aug, sus4
+  final String type; // maj, min, dim, aug, sus2, sus4
   final String fourth; // none, octave, dom7, maj7, maj6, add9
   final String octave; // all, 3, 4, 5
   final String mode; // harmonic, melodic

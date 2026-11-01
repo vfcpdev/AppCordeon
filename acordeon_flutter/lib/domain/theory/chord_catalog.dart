@@ -13,6 +13,7 @@ class ChordCatalog {
     'dim': [0, 3, 6],
     'aug': [0, 4, 8],
     'sus4': [0, 5, 7],
+    'sus2': [0, 2, 7],
   };
 
   /// Nota adicional (cuarta voz) por tipo de extensión.
@@ -77,14 +78,14 @@ class ChordCatalog {
   ];
 
   /// Cadena de texto más larga que puede generarse para un nombre de acorde
-  /// en el sistema ('Sol#' [4] + 'sus4' [4] + 'maj7' [4] = 'Sol#sus4maj7' [12 caracteres]).
-  static const String maxChordName = 'Sol#sus4maj7';
+  /// en el sistema ('Sol#' [4] + 'sus2' [4] + 'maj7' [4] = 'Sol#sus2maj7' [12 caracteres]).
+  static const String maxChordName = 'Sol#sus2maj7';
 
   /// Símbolo textual del acorde (p. ej. `Dom7`, `Sol°7`, `Cadd9`, `Do/Mi`) listo para
   /// guardarse en una celda del Compás. Devuelve vacío si no hay tónica.
   ///
   /// Se usan los sufijos que entiende el reproductor del Compás (`m`, `dim`,
-  /// `aug`, `sus4`, `7`, `maj7`, `6`, `add9`), no las siglas abreviadas que
+  /// `aug`, `sus2`, `sus4`, `7`, `maj7`, `6`, `add9`), no las siglas abreviadas que
   /// muestra el constructor (° y +).
   static String symbolFor({
     required int root,
@@ -103,6 +104,7 @@ class ChordCatalog {
       'dim' => display ? '°' : 'dim',
       'aug' => display ? '+' : 'aug',
       'sus4' => 'sus4',
+      'sus2' => 'sus2',
       _ => '',
     };
 
@@ -405,8 +407,8 @@ class ChordCatalog {
 
     final isDim = rest.contains('dim') || rest.contains('°');
     final isAug = rest.contains('aug') || rest.contains('+');
-    final isSus4 = rest.contains('sus4') || rest.contains('4');
-    final isSus = rest.contains('sus') && !isSus4;
+    final isSus2 = rest.contains('sus2');
+    final isSus4 = rest.contains('sus4') || (rest.contains('4') && !isSus2);
     final isMinor = (rest.contains('m') && !rest.contains('maj') && !rest.contains('dim'));
     final has7 = rest.contains('7');
     final isMaj7 = rest.contains('maj7');
@@ -418,7 +420,10 @@ class ChordCatalog {
     } else if (isAug) {
       pcs.add((rootPc + 4) % 12);
       pcs.add((rootPc + 8) % 12);
-    } else if (isSus4 || isSus) {
+    } else if (isSus2) {
+      pcs.add((rootPc + 2) % 12);
+      pcs.add((rootPc + 7) % 12);
+    } else if (isSus4 || rest.contains('sus')) {
       pcs.add((rootPc + 5) % 12);
       pcs.add((rootPc + 7) % 12);
     } else if (isMinor) {
@@ -571,4 +576,3 @@ class ChordBellowsAnalysis {
     required this.missingPullNames,
   });
 }
-

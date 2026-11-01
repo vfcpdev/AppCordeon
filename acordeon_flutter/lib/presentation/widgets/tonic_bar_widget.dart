@@ -53,6 +53,7 @@ class TonicBarWidget extends ConsumerStatefulWidget {
       'min' => 'menor',
       'dim' => 'Disminuido',
       'aug' => 'Aumentado',
+      'sus2' => 'Suspendido 2',
       'sus4' => 'Suspendido 4',
       _ => 'Mayor',
     };
@@ -452,6 +453,7 @@ class _TonicBarWidgetState extends ConsumerState<TonicBarWidget> {
       'min' => 'menor',
       'dim' => 'Disminuido',
       'aug' => 'Aumentado',
+      'sus2' => 'Suspendido 2',
       'sus4' => 'Suspendido 4',
       _ => 'Mayor',
     };
