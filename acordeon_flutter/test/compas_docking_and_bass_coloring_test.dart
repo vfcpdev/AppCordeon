@@ -13,7 +13,7 @@ import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
 void main() {
   testWidgets(
-    'Octava mantiene un botón resaltado por cada nota del acorde',
+    'Hoare: {P acorde y octava} C resaltado {Q todas y solo las posiciones coinciden}',
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1200, 1000);
       tester.view.devicePixelRatio = 1.0;
@@ -43,6 +43,7 @@ void main() {
       final notifier = container.read(accordionSimulatorProvider.notifier);
       notifier.setFreeChordRoot(9);
       final chordPitchClasses = {9, 1, 4};
+      expect(chordPitchClasses.length, 3);
 
       for (final octave in ['3', '4', '5']) {
         notifier.setFreeChordOctave(octave);
@@ -51,20 +52,17 @@ void main() {
         final buttons = tester
             .widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget))
             .toList();
-        expect(
-          buttons
-              .where((button) => button.isChordPush || button.isChordPull)
-              .length,
-          chordPitchClasses.length,
-        );
-        final highlightedPitchClasses = <int>{
-          for (final button in buttons)
-            if (button.isChordPush) button.pushMidi % 12,
-          for (final button in buttons)
-            if (button.isChordPull) button.pullMidi % 12,
-        };
+        for (final button in buttons) {
+          final pushMatchesChord =
+              chordPitchClasses.contains(button.pushMidi % 12) &&
+              (button.pushMidi ~/ 12) - 1 == int.parse(octave);
+          final pullMatchesChord =
+              chordPitchClasses.contains(button.pullMidi % 12) &&
+              (button.pullMidi ~/ 12) - 1 == int.parse(octave);
 
-        expect(highlightedPitchClasses, containsAll(chordPitchClasses));
+          expect(button.isChordPush, pushMatchesChord);
+          expect(button.isChordPull, pullMatchesChord);
+        }
       }
     },
   );
@@ -340,9 +338,9 @@ void main() {
         'Sol7   (Sol - Si - Re - Fa)',
       );
 
-      // 3. Comprobamos que activeChordPitchClassesProvider(1) contenga las clases de altura de Sol7 (7, 11, 2, 5)
+      // 3. Verificamos la poscondición del acorde Sol7.
       final activePcs = container.read(activeChordPitchClassesProvider(1));
-      expect(activePcs, containsAll(<int>{7, 11, 2, 5}));
+      expect(activePcs, equals(<int>{7, 11, 2, 5}));
 
       // 4. Verificamos que los botones correspondientes a Sol7 en el Diapasón 1 estén coloreados/marcados
       final diapason1Buttons = tester
@@ -357,18 +355,17 @@ void main() {
           .toList();
 
       expect(diapason1Buttons.isNotEmpty, isTrue);
-      final sol7Buttons = diapason1Buttons
-          .where((btn) => btn.isChordPull || btn.isChordPush)
-          .toList();
-      expect(sol7Buttons.length, activePcs.length);
-      for (final btn in sol7Buttons) {
-        if (btn.isChordPull) {
-          expect(activePcs, contains(btn.pullMidi % 12));
-        }
-        if (btn.isChordPush) {
-          expect(activePcs, contains(btn.pushMidi % 12));
+      var highlightedSol7Positions = 0;
+      for (final button in diapason1Buttons) {
+        final pushMatchesChord = activePcs.contains(button.pushMidi % 12);
+        final pullMatchesChord = activePcs.contains(button.pullMidi % 12);
+        expect(button.isChordPush, pushMatchesChord);
+        expect(button.isChordPull, pullMatchesChord);
+        if (pushMatchesChord || pullMatchesChord) {
+          highlightedSol7Positions++;
         }
       }
+      expect(highlightedSol7Positions, greaterThan(activePcs.length));
 
       // 5. Verificamos que al cambiar la notación a alemana, la etiqueta del compás se actualice a G7
       notifier.setNotation(NotationMode.alemana);

@@ -78,21 +78,9 @@ class DiapasonWidget extends ConsumerWidget {
     final isFreeChordBeingEdited = ref.watch(
       accordionSimulatorProvider.select((s) => s.isFreeChordBeingEdited),
     );
-    final freeChordOctave = ref.watch(
-      accordionSimulatorProvider.select((s) => s.freeChordOctave),
-    );
-
     // Acorde activo en el Compás (seleccionado o reproduciéndose)
     final compasChord = ref.watch(
       accordionSimulatorProvider.select((s) => s.activeCompasChord),
-    );
-    final selectedChordButtonIds = _selectChordButtonIds(
-      buttons: trebleData.values.expand((row) => row),
-      pitchClasses: activeChordPitchClasses,
-      bellowsMode: bellowsMode,
-      octave: freeChordOctave,
-      respectOctave:
-          isFreeChordFixed || isFreeChordBeingEdited || compasChord.isEmpty,
     );
     final formattedCompasChord = compasChord.isNotEmpty
         ? ChordCatalog.formatChordForNotation(compasChord, notation)
@@ -281,7 +269,6 @@ class DiapasonWidget extends ConsumerWidget {
                                 topOffset: rDef.topOffset,
                                 activeChordPitchClasses:
                                     activeChordPitchClasses,
-                                selectedChordButtonIds: selectedChordButtonIds,
                                 compasChord: compasChord,
                                 isFreeChordBeingEdited: isFreeChordBeingEdited,
                               ),
@@ -443,7 +430,6 @@ class DiapasonWidget extends ConsumerWidget {
     required List<TrebleButtonModel> buttons,
     required double topOffset,
     required Set<int> activeChordPitchClasses,
-    required Set<String> selectedChordButtonIds,
     required String compasChord,
     required bool isFreeChordBeingEdited,
   }) {
@@ -482,7 +468,7 @@ class DiapasonWidget extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (topOffset > 0) SizedBox(height: topOffset),
-        // Se resalta un botón por cada nota, priorizando la octava y el fuelle seleccionados.
+        // Resalta todas las posiciones de cada nota del acorde en el fuelle activo.
         ...buttons.map((btn) {
           final isPressed =
               activeButtons.contains('a${accordionNumber}_${btn.id}') ||
@@ -494,7 +480,6 @@ class DiapasonWidget extends ConsumerWidget {
 
           // `btn.pull`/`btn.push` ya incluyen la transposición de la afinación.
           bool matchesOctave(int midi) {
-            if (selectedChordButtonIds.contains(btn.id)) return true;
             if (!isFreeChordFixed &&
                 !isFreeChordBeingEdited &&
                 compasChord.isNotEmpty) {
@@ -509,11 +494,9 @@ class DiapasonWidget extends ConsumerWidget {
           }
 
           final isChordPull =
-              selectedChordButtonIds.contains(btn.id) &&
               activeChordPitchClasses.contains(btn.pull % 12) &&
               matchesOctave(btn.pull);
           final isChordPush =
-              selectedChordButtonIds.contains(btn.id) &&
               activeChordPitchClasses.contains(btn.push % 12) &&
               matchesOctave(btn.push);
 
@@ -549,89 +532,6 @@ class DiapasonWidget extends ConsumerWidget {
         }),
       ],
     );
-  }
-
-  Set<String> _selectChordButtonIds({
-    required Iterable<TrebleButtonModel> buttons,
-    required Set<int> pitchClasses,
-    required BellowsMode bellowsMode,
-    required String octave,
-    required bool respectOctave,
-  }) {
-    final selectedButtonIds = <String>{};
-    final availableButtons = buttons.toList();
-
-    for (final pitchClass in pitchClasses) {
-      bool matchesNote(int midi, {required bool checkOctave}) {
-        if (midi % 12 != pitchClass) return false;
-        if (!checkOctave || octave == 'all' || octave.isEmpty) return true;
-        return '${(midi / 12).floor() - 1}' == octave;
-      }
-
-      bool matchesPreferredDirection(
-        TrebleButtonModel button, {
-        required bool checkOctave,
-      }) {
-        return switch (bellowsMode) {
-          BellowsMode.push => matchesNote(
-            button.push,
-            checkOctave: checkOctave,
-          ),
-          BellowsMode.pull => matchesNote(
-            button.pull,
-            checkOctave: checkOctave,
-          ),
-          BellowsMode.both =>
-            matchesNote(button.push, checkOctave: checkOctave) ||
-                matchesNote(button.pull, checkOctave: checkOctave),
-        };
-      }
-
-      bool matchesOtherDirection(
-        TrebleButtonModel button, {
-        required bool checkOctave,
-      }) {
-        return switch (bellowsMode) {
-          BellowsMode.push => matchesNote(
-            button.pull,
-            checkOctave: checkOctave,
-          ),
-          BellowsMode.pull => matchesNote(
-            button.push,
-            checkOctave: checkOctave,
-          ),
-          BellowsMode.both => false,
-        };
-      }
-
-      TrebleButtonModel? findButton(
-        bool Function(TrebleButtonModel, {required bool checkOctave}) matches, {
-        required bool checkOctave,
-      }) {
-        for (final button in availableButtons) {
-          if (!selectedButtonIds.contains(button.id) &&
-              matches(button, checkOctave: checkOctave)) {
-            return button;
-          }
-        }
-        return null;
-      }
-
-      final inOctaveButton =
-          findButton(matchesPreferredDirection, checkOctave: respectOctave) ??
-          findButton(matchesOtherDirection, checkOctave: respectOctave);
-      final matchingButton =
-          inOctaveButton ??
-          (respectOctave
-              ? findButton(matchesPreferredDirection, checkOctave: false) ??
-                    findButton(matchesOtherDirection, checkOctave: false)
-              : null);
-      if (matchingButton != null) {
-        selectedButtonIds.add(matchingButton.id);
-      }
-    }
-
-    return selectedButtonIds;
   }
 }
 

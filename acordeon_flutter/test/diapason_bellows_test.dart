@@ -37,10 +37,6 @@ void main() {
     final chordLabelTop = tester
         .getTopLeft(find.byKey(const ValueKey('diapason_chord_info_1')))
         .dy;
-    int highlightedButtonCount() => tester
-        .widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget))
-        .where((button) => button.isChordPull || button.isChordPush)
-        .length;
     bool isStructureSelected(String structure) {
       final button = tester.widget<AnimatedContainer>(
         find.descendant(
@@ -81,7 +77,6 @@ void main() {
       ),
     );
     expect(find.byKey(const ValueKey('diapason_chord_info_1')), findsOneWidget);
-    expect(highlightedButtonCount(), 3);
     expect(isStructureSelected('triad'), isTrue);
 
     await tester.tap(find.byKey(const ValueKey('diapason_structure_seventh')));
@@ -90,7 +85,6 @@ void main() {
       container.read(accordionSimulatorProvider).freeChordScaleHarmonicMode,
       'seventh',
     );
-    expect(highlightedButtonCount(), 4);
     expect(isStructureSelected('seventh'), isTrue);
 
     await tester.tap(find.byKey(const ValueKey('diapason_structure_triad')));
@@ -99,7 +93,6 @@ void main() {
       container.read(accordionSimulatorProvider).freeChordScaleHarmonicMode,
       'triad',
     );
-    expect(highlightedButtonCount(), 3);
     expect(isStructureSelected('triad'), isTrue);
 
     await tester.tap(find.byKey(const ValueKey('diapason_structure_five')));
@@ -113,7 +106,6 @@ void main() {
       ),
       [60, 64, 67, 70, 74],
     );
-    expect(highlightedButtonCount(), 5);
     expect(isStructureSelected('five'), isTrue);
     expect(tester.getSize(find.byType(DiapasonWidget)).width, diapasonWidth);
     expect(
@@ -139,90 +131,116 @@ void main() {
     notifier.setFreeChordFourth('dom7');
     await tester.pumpAndSettle();
     expect(isStructureSelected('seventh'), isTrue);
-    expect(highlightedButtonCount(), 4);
 
     notifier.setFreeChordFourth('five');
     await tester.pumpAndSettle();
     expect(isStructureSelected('five'), isTrue);
-    expect(highlightedButtonCount(), 5);
 
     final fiveNoteChordPcs = ChordCatalog.pitchClassesForChordSymbol('Do9');
-    expect(highlightedButtonCount(), fiveNoteChordPcs.length);
+    expect(fiveNoteChordPcs.length, 5);
     expect(find.textContaining('completo'), findsNothing);
     expect(find.textContaining('incompleto'), findsNothing);
   });
 
-  testWidgets('Abrir/Cerrar no ocultan botones; solo marcan los del acorde', (
-    WidgetTester tester,
-  ) async {
-    tester.view.physicalSize = const Size(1600, 1200);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+  testWidgets(
+    'Hoare: {P acorde activo} Abre/Cierra {Q todas y solo las notas coinciden}',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
 
-    await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp(
-          home: Scaffold(
-            body: DiapasonWidget(
-              currentTuning: TuningRegistry.defaultTunings[0],
-              onTuningChanged: (_) {},
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: DiapasonWidget(
+                currentTuning: TuningRegistry.defaultTunings[0],
+                onTuningChanged: (_) {},
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(DiapasonWidget)),
-    );
-    final notifier = container.read(accordionSimulatorProvider.notifier);
-    final state = container.read(accordionSimulatorProvider);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(DiapasonWidget)),
+      );
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+      final state = container.read(accordionSimulatorProvider);
 
-    final allButtons = state.trebleData1.values.expand((row) => row).toList();
-    final chordPitchClasses = ChordCatalog.notesFor(
-      root: state.freeChordRoot,
-      type: state.freeChordType,
-      extension: state.freeChordFourth,
-    ).map((n) => n % 12).toSet();
+      final allButtons = state.trebleData1.values.expand((row) => row).toList();
+      final chordPitchClasses = ChordCatalog.notesFor(
+        root: state.freeChordRoot,
+        type: state.freeChordType,
+        extension: state.freeChordFourth,
+      ).map((n) => n % 12).toSet();
+      expect(chordPitchClasses, isNotEmpty);
 
-    // Ambos: todos los botones visibles.
-    expect(find.byType(DiapasonButtonWidget), findsNWidgets(allButtons.length));
+      // Ambos: las notas de las dos direcciones cumplen el contrato.
+      expect(
+        find.byType(DiapasonButtonWidget),
+        findsNWidgets(allButtons.length),
+      );
+      final bothWidgets = tester.widgetList<DiapasonButtonWidget>(
+        find.byType(DiapasonButtonWidget),
+      );
+      for (final button in bothWidgets) {
+        expect(
+          button.isChordPull,
+          chordPitchClasses.contains(button.pullMidi % 12),
+        );
+        expect(
+          button.isChordPush,
+          chordPitchClasses.contains(button.pushMidi % 12),
+        );
+      }
 
-    // Abrir: siguen visibles todos; solo se marcan los del acorde.
-    notifier.setBellows1(BellowsMode.pull);
-    await tester.pumpAndSettle();
-    expect(find.byType(DiapasonButtonWidget), findsNWidgets(allButtons.length));
+      // Abre: se colorean todas las posiciones cuyas notas pull están en el acorde.
+      notifier.setBellows1(BellowsMode.pull);
+      await tester.pumpAndSettle();
+      expect(
+        find.byType(DiapasonButtonWidget),
+        findsNWidgets(allButtons.length),
+      );
 
-    final pullWidgets = tester.widgetList<DiapasonButtonWidget>(
-      find.byType(DiapasonButtonWidget),
-    );
-    final pullChordButton = pullWidgets.firstWhere(
-      (btn) => chordPitchClasses.contains(btn.pullMidi % 12),
-    );
-    final pullOtherButton = pullWidgets.firstWhere(
-      (btn) => !chordPitchClasses.contains(btn.pullMidi % 12),
-    );
-    expect(pullChordButton.isChordPull, isTrue);
-    expect(pullOtherButton.isChordPull, isFalse);
+      final pullWidgets = tester.widgetList<DiapasonButtonWidget>(
+        find.byType(DiapasonButtonWidget),
+      );
+      for (final button in pullWidgets) {
+        expect(
+          button.isChordPull,
+          chordPitchClasses.contains(button.pullMidi % 12),
+        );
+        expect(
+          button.isChordPush,
+          chordPitchClasses.contains(button.pushMidi % 12),
+        );
+      }
 
-    // Cerrar: siguen visibles todos; solo se marcan los del acorde.
-    notifier.setBellows1(BellowsMode.push);
-    await tester.pumpAndSettle();
-    expect(find.byType(DiapasonButtonWidget), findsNWidgets(allButtons.length));
+      // Cierra: se colorean todas las posiciones cuyas notas push están en el acorde.
+      notifier.setBellows1(BellowsMode.push);
+      await tester.pumpAndSettle();
+      expect(
+        find.byType(DiapasonButtonWidget),
+        findsNWidgets(allButtons.length),
+      );
 
-    final pushWidgets = tester.widgetList<DiapasonButtonWidget>(
-      find.byType(DiapasonButtonWidget),
-    );
-    final pushChordButton = pushWidgets.firstWhere(
-      (btn) => chordPitchClasses.contains(btn.pushMidi % 12),
-    );
-    final pushOtherButton = pushWidgets.firstWhere(
-      (btn) => !chordPitchClasses.contains(btn.pushMidi % 12),
-    );
-    expect(pushChordButton.isChordPush, isTrue);
-    expect(pushOtherButton.isChordPush, isFalse);
-  });
+      final pushWidgets = tester.widgetList<DiapasonButtonWidget>(
+        find.byType(DiapasonButtonWidget),
+      );
+      for (final button in pushWidgets) {
+        expect(
+          button.isChordPush,
+          chordPitchClasses.contains(button.pushMidi % 12),
+        );
+        expect(
+          button.isChordPull,
+          chordPitchClasses.contains(button.pullMidi % 12),
+        );
+      }
+    },
+  );
 
   testWidgets('la etiqueta bajo la tonalidad usa la notación seleccionada', (
     WidgetTester tester,
