@@ -111,6 +111,18 @@ class DiapasonWidget extends ConsumerWidget {
             formattedCompasChord.isNotEmpty)
         ? formattedCompasChord
         : formattedFreeChord;
+    final storedChordStructure = ref.watch(
+      accordionSimulatorProvider.select((s) => s.freeChordScaleHarmonicMode),
+    );
+    final chordNoteCount = ChordCatalog.pitchClassesForChordSymbol(
+      chordLabel,
+    ).length;
+    final displayedChordStructure = switch (chordNoteCount) {
+      3 => 'triad',
+      4 => 'seventh',
+      5 => 'five',
+      _ => storedChordStructure,
+    };
     final rowList = [
       _RowDef(
         rowKey: 'row3',
@@ -359,7 +371,9 @@ class DiapasonWidget extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        _ChordStructureSelector(),
+                        _ChordStructureSelector(
+                          selectedStructure: displayedChordStructure,
+                        ),
                       ],
                     ),
                   ),
@@ -622,15 +636,12 @@ class DiapasonWidget extends ConsumerWidget {
 }
 
 class _ChordStructureSelector extends ConsumerWidget {
-  const _ChordStructureSelector();
+  final String selectedStructure;
+
+  const _ChordStructureSelector({required this.selectedStructure});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedStructure = ref.watch(
-      accordionSimulatorProvider.select(
-        (state) => state.freeChordScaleHarmonicMode,
-      ),
-    );
     final notifier = ref.read(accordionSimulatorProvider.notifier);
 
     return Row(

@@ -41,6 +41,16 @@ void main() {
         .widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget))
         .where((button) => button.isChordPull || button.isChordPush)
         .length;
+    bool isStructureSelected(String structure) {
+      final button = tester.widget<AnimatedContainer>(
+        find.descendant(
+          of: find.byKey(ValueKey('diapason_structure_$structure')),
+          matching: find.byType(AnimatedContainer),
+        ),
+      );
+      return (button.decoration as BoxDecoration).color ==
+          const Color(0xFFEA580C);
+    }
 
     expect(
       find.byKey(const ValueKey('diapason_structure_selector')),
@@ -72,6 +82,7 @@ void main() {
     );
     expect(find.byKey(const ValueKey('diapason_chord_info_1')), findsOneWidget);
     expect(highlightedButtonCount(), 3);
+    expect(isStructureSelected('triad'), isTrue);
 
     await tester.tap(find.byKey(const ValueKey('diapason_structure_seventh')));
     await tester.pumpAndSettle();
@@ -80,6 +91,7 @@ void main() {
       'seventh',
     );
     expect(highlightedButtonCount(), 4);
+    expect(isStructureSelected('seventh'), isTrue);
 
     await tester.tap(find.byKey(const ValueKey('diapason_structure_triad')));
     await tester.pumpAndSettle();
@@ -88,6 +100,7 @@ void main() {
       'triad',
     );
     expect(highlightedButtonCount(), 3);
+    expect(isStructureSelected('triad'), isTrue);
 
     await tester.tap(find.byKey(const ValueKey('diapason_structure_five')));
     await tester.pumpAndSettle();
@@ -101,6 +114,7 @@ void main() {
       [60, 64, 67, 70, 74],
     );
     expect(highlightedButtonCount(), 5);
+    expect(isStructureSelected('five'), isTrue);
     expect(tester.getSize(find.byType(DiapasonWidget)).width, diapasonWidth);
     expect(
       tester.getTopLeft(find.byKey(const ValueKey('diapason_chord_info_1'))).dy,
@@ -121,6 +135,17 @@ void main() {
           ?.toPlainText(),
       'Do9   (Do - Mi - Sol - Si♭ - Re)',
     );
+    final notifier = container.read(accordionSimulatorProvider.notifier);
+    notifier.setFreeChordFourth('dom7');
+    await tester.pumpAndSettle();
+    expect(isStructureSelected('seventh'), isTrue);
+    expect(highlightedButtonCount(), 4);
+
+    notifier.setFreeChordFourth('five');
+    await tester.pumpAndSettle();
+    expect(isStructureSelected('five'), isTrue);
+    expect(highlightedButtonCount(), 5);
+
     final fiveNoteChordPcs = ChordCatalog.pitchClassesForChordSymbol('Do9');
     expect(highlightedButtonCount(), fiveNoteChordPcs.length);
     expect(find.textContaining('completo'), findsNothing);
