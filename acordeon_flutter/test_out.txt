@@ -70,11 +70,11 @@ When the exception was thrown, this was the stack:
 The test description was:
   captura un patrón desde la matriz 2×2 de bajos (7, 8, 4, 5)
 ════════════════════════════════════════════════════════════════════════════════════════════════════
-00:01 +7 -1: MusicXML bass rhythm import captura un patrón desde la matriz 2×2 de bajos (7, 8, 4, 5) [E]
+00:02 +7 -1: MusicXML bass rhythm import captura un patrón desde la matriz 2×2 de bajos (7, 8, 4, 5) [E]
   Test failed. See exception logs above.
   The test description was: captura un patrón desde la matriz 2×2 de bajos (7, 8, 4, 5)
   
-00:01 +7 -1: Some tests failed.
+00:02 +7 -1: Some tests failed.
 
 Failing tests:
   d:/Documents/SideProjects/AppCordeon/acordeon_flutter/test/musicxml_bass_rhythm_test.dart: MusicXML bass rhythm import captura un patrón desde la matriz 2×2 de bajos (7, 8, 4, 5)

@@ -727,6 +727,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     ref.onDispose(() {
       _playbackTimer?.cancel();
       _standaloneMetronomeTimer?.cancel();
+      _bassCaptureTimer?.cancel();
     });
 
     // Generar compases iniciales por defecto (8 compases con 4 tiempos)
@@ -1992,6 +1993,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       isBassMetronomeActive: false,
       bassRhythmElapsedSeconds: 0,
     );
+    _startBassCaptureClock();
     ensure(
       'startBassRhythmCapture',
       'la captura queda activa',
@@ -1999,16 +2001,53 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     );
   }
 
+  Timer? _bassCaptureTimer;
+
+  /// Arranca el reloj de captura (25 Hz). Cada tick avanza el recorder y
+  /// publica el tiempo transcurrido en `bassRhythmElapsedSeconds`.
+  ///
+  /// {P}: existe una captura activa.
+  /// {Q}: hay un único `Timer` vivo mientras la captura esté activa.
+  void _startBassCaptureClock() {
+    _bassCaptureTimer?.cancel();
+    _bassCaptureTimer = Timer.periodic(
+      const Duration(milliseconds: 40),
+      (timer) {
+        final recorder = state.bassRhythmRecorder;
+        if (recorder == null || !recorder.isRecording) {
+          timer.cancel();
+          _bassCaptureTimer = null;
+          return;
+        }
+        // 40 ms ≈ 4 ticks de 10 ms del reloj del recorder.
+        recorder.tick(ticks: 4);
+        state = state.copyWith(
+          bassRhythmRecorder: recorder,
+          bassRhythmElapsedSeconds: recorder.elapsedSeconds,
+        );
+      },
+    );
+  }
+
+  void _stopBassCaptureClock() {
+    _bassCaptureTimer?.cancel();
+    _bassCaptureTimer = null;
+  }
+
   /// Registra un golpe de la matriz en el instante actual de la captura.
   ///
-  /// {Q}: el reloj de captura avanza y el golpe queda en la lista del recorder
-  ///      cuando el botón pertenece a la selección.
+  /// {P}: `buttonNumber` ∈ `{7, 8, 4, 5}`.
+  /// {Q}: el golpe queda en el recorder sólo si la captura está activa y el
+  ///      botón pertenece a la selección.
   void captureBassMatrixHit(int buttonNumber) {
     final recorder = state.bassRhythmRecorder;
     if (recorder == null || !recorder.isRecording) return;
-    recorder.captureDuration = Duration(
-      milliseconds: (state.bassRhythmElapsedSeconds * 1000).round(),
+    require(
+      'captureBassMatrixHit',
+      'botón dentro de la matriz 2×2',
+      BassMatrixLayout.buttonNumbers.contains(buttonNumber),
     );
+    // El reloj del recorder ya está al día gracias a _startBassCaptureClock.
     recorder.recordButton(buttonNumber);
     state = state.copyWith(bassRhythmRecorder: recorder);
   }
@@ -2029,7 +2068,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
   BassRhythmPattern? stopBassRhythmCapture() {
     final recorder = state.bassRhythmRecorder;
     if (recorder == null || !recorder.isRecording) return null;
-    final totalSeconds = state.bassRhythmElapsedSeconds;
+    _stopBassCaptureClock();
+    final totalSeconds = recorder.elapsedSeconds;
     recorder.stop();
     final pattern = recorder.buildPattern(totalSeconds: totalSeconds);
 
@@ -2053,6 +2093,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
 
   /// Cancela la captura sin registrar el patrón.
   void cancelBassRhythmCapture() {
+    _stopBassCaptureClock();
     state = state.copyWith(
       clearBassRhythmRecorder: true,
       bassRhythmElapsedSeconds: 0,

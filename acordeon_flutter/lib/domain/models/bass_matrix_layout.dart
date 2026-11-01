@@ -43,6 +43,11 @@ abstract final class BassMatrixLayout {
   /// Números de botón en el orden de recorrido de la matriz.
   static const List<int> buttonNumbers = [7, 8, 4, 5];
 
+  /// Índice del botón físico (1-based) para una caja de la matriz.
+  /// Alias documental de [buttonNumberFor].
+  static int bassButtonNumberFor({required int row, required int column}) =>
+      buttonNumberFor(row: row, column: column);
+
   /// Tabla fila-mayor: `_lookup[fila][columna]`.
   static const List<List<int>> _lookup = [
     [7, 4], // Fila 1: externo 7, interno 4
@@ -74,6 +79,19 @@ class BassRhythmRecorder {
 
   final List<BassRhythmHit> _hits = [];
 
+  /// Ticks del reloj de captura (1 tick = 10 ms). El reloj lo avanza el
+  /// controlador, así el recorder no depende de `DateTime` ni de `Timer`.
+  int _clockTicks = 0;
+  bool _clockRunning = false;
+
+  static const int _ticksPerSecond = 100;
+
+  /// `true` mientras el reloj de captura avanza.
+  bool get isClockRunning => _clockRunning;
+
+  /// Tiempo transcurrido desde el inicio de la captura.
+  double get elapsedSeconds => _clockTicks / _ticksPerSecond;
+
   /// Nombre que tendrá el patrón al detener la captura.
   String name = '';
 
@@ -85,6 +103,18 @@ class BassRhythmRecorder {
 
   Set<int> get selectedButtons => Set.unmodifiable(_selectedButtons);
   List<BassRhythmHit> get hits => List.unmodifiable(_hits);
+
+  /// Avanza el reloj de captura si está corriendo.
+  void tick({int ticks = 1}) {
+    if (!_isRecording || !_clockRunning) return;
+    _clockTicks += ticks;
+  }
+
+  /// Pausa el reloj (los golpes dejan de registrarse con nuevo tiempo).
+  void pauseClock() => _clockRunning = false;
+
+  /// Reanuda el reloj de captura.
+  void resumeClock() => _clockRunning = _isRecording;
 
   /// Inicia la captura.
   ///
@@ -113,6 +143,8 @@ class BassRhythmRecorder {
     _hits.clear();
     captureDuration = Duration.zero;
     _lastRecordedQuarterBeat = -1;
+    _clockTicks = 0;
+    _clockRunning = true;
     _isRecording = true;
   }
 
@@ -131,6 +163,9 @@ class BassRhythmRecorder {
   bool recordButton(int buttonNumber) {
     if (!_isRecording) return false;
     if (!_selectedButtons.contains(buttonNumber)) return false;
+    captureDuration = Duration(
+      microseconds: _clockTicks * 1000000 ~/ _ticksPerSecond,
+    );
     final onset = captureDuration.inMicroseconds / 1e6 / _beatSeconds;
     if ((onset - _lastRecordedQuarterBeat).abs() < 1e-6) return false;
     _lastRecordedQuarterBeat = onset;
@@ -199,6 +234,9 @@ class BassRhythmRecorder {
     );
   }
 
-  /// Detiene la captura y libera el registro.
-  void stop() => _isRecording = false;
+  /// Detiene la captura, el reloj y libera el registro.
+  void stop() {
+    _isRecording = false;
+    _clockRunning = false;
+  }
 }
