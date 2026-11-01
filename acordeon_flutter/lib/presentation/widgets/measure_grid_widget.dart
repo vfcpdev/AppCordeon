@@ -778,6 +778,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       onChanged: (newChord) {
                                         notifier.updateMeasureBeat(mIdx, entry.key, newChord);
                                       },
+                                      onCopy: () => notifier.copyChordFromBeat(mIdx, entry.key),
+                                      onPaste: () => notifier.copiedChord,
                                       onSelected: () {
                                         notifier.selectBeat(mIdx, entry.key);
                                       },
@@ -1523,6 +1525,8 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final bool isSelected;
   final NotationMode notation;
   final ValueChanged<String> onChanged;
+  final String? Function()? onCopy;
+  final String? Function()? onPaste;
   final VoidCallback? onSelected;
   final void Function(int bar, int beat)? onNavigate;
   final ValueChanged<BellowsMode>? onBellowsChanged;
@@ -1542,6 +1546,8 @@ class _InlineBeatChordEditor extends StatefulWidget {
     this.isSelected = false,
     this.notation = NotationMode.latina,
     required this.onChanged,
+    this.onCopy,
+    this.onPaste,
     this.onSelected,
     this.onNavigate,
     this.onBellowsChanged,
@@ -1776,7 +1782,29 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     if (mounted) setState(() {});
   }
 
+  KeyEventResult _handleChordClipboardKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent ||
+        !(HardwareKeyboard.instance.isControlPressed ||
+            HardwareKeyboard.instance.isMetaPressed)) {
+      return KeyEventResult.ignored;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.keyC) {
+      final copied = widget.onCopy?.call();
+      return copied == null ? KeyEventResult.ignored : KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.keyV) {
+      final chord = widget.onPaste?.call();
+      if (chord == null) return KeyEventResult.ignored;
+      _applyChord(chord);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   KeyEventResult _handleCellKeyEvent(FocusNode node, KeyEvent event) {
+    final clipboardResult = _handleChordClipboardKeyEvent(event);
+    if (clipboardResult == KeyEventResult.handled) return clipboardResult;
     if (_isEditing) {
       return KeyEventResult.ignored;
     }
@@ -1827,6 +1855,8 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
   }
 
   KeyEventResult _handleTextFieldKeyEvent(FocusNode node, KeyEvent event) {
+    final clipboardResult = _handleChordClipboardKeyEvent(event);
+    if (clipboardResult == KeyEventResult.handled) return clipboardResult;
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
         // Flecha derecha: saca de foco de edición, pero permanece el cuadro seleccionado
@@ -1955,7 +1985,9 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
               final showTime = constraints.maxWidth >= 155;
 
               final chordField = Tooltip(
-                message: hasChord ? 'Acorde: ${widget.chord}' : '',
+                message: hasChord
+                    ? 'Acorde: ${widget.chord} · Ctrl+C copiar · Ctrl+V pegar'
+                    : 'Ctrl+V pegar acorde copiado',
                 waitDuration: const Duration(milliseconds: 600),
                 child: TextField(
                   controller: _controller,

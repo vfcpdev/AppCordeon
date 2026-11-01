@@ -175,6 +175,8 @@ class AccordionSimulatorState {
   final bool? _isLiveChordMarkerActive;
   bool get isLiveChordMarkerActive => _isLiveChordMarkerActive ?? false;
 
+  final String copiedChord;
+
   /// Marca temporal (s) del primer toque de Control para calibrar el BPM.
   /// Valor negativo = calibración inactiva.
   final double? _bpmCalibrationStart;
@@ -271,6 +273,7 @@ class AccordionSimulatorState {
     bool? isMetronomeActive,
     double? metronomeVolume,
     bool? isLiveChordMarkerActive,
+    this.copiedChord = '',
     double? bpmCalibrationStart,
     double? audioStartOffset,
     bool? isPlaybackAutoChordDetectEnabled,
@@ -361,6 +364,7 @@ class AccordionSimulatorState {
     bool? isMetronomeActive,
     double? metronomeVolume,
     bool? isLiveChordMarkerActive,
+    String? copiedChord,
     double? bpmCalibrationStart,
     double? audioStartOffset,
     bool? isPlaybackAutoChordDetectEnabled,
@@ -439,6 +443,7 @@ class AccordionSimulatorState {
       metronomeVolume: metronomeVolume ?? this.metronomeVolume,
       isLiveChordMarkerActive:
           isLiveChordMarkerActive ?? this.isLiveChordMarkerActive,
+      copiedChord: copiedChord ?? this.copiedChord,
     );
   }
 
@@ -1820,6 +1825,24 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       bellows1: nextBellows,
     );
   }
+
+  /// Copia el acorde de una casilla válida al portapapeles interno.
+  ///
+  /// {P}: los índices apuntan a una casilla existente.
+  /// {Q}: devuelve y conserva el acorde no vacío; para una casilla vacía,
+  /// devuelve `null` y el portapapeles permanece intacto.
+  String? copyChordFromBeat(int barIndex, int beatIndex) {
+    if (barIndex < 0 || barIndex >= state.measures.length) return null;
+    final beats = state.measures[barIndex].beats;
+    if (beatIndex < 0 || beatIndex >= beats.length) return null;
+    final chord = beats[beatIndex].chord.trim();
+    if (chord.isEmpty) return null;
+    state = state.copyWith(copiedChord: chord);
+    return chord;
+  }
+
+  String? get copiedChord =>
+      state.copiedChord.isEmpty ? null : state.copiedChord;
 
   /// Clave plana de un tiempo. La cuadrícula usa 4 tiempos por compás.
   static int beatKey(int barIndex, int beatIndex) => barIndex * 4 + beatIndex;
