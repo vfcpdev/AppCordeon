@@ -222,8 +222,9 @@ class FreeChordWidget extends ConsumerWidget {
                       sigla: '—',
                       tooltip: 'Sin extensión',
                       isActive:
-                          state.freeChordFourth == 'none' ||
-                          state.freeChordFourth.isEmpty,
+                          state.freeChordRoot >= 0 &&
+                          (state.freeChordFourth == 'none' ||
+                              state.freeChordFourth.isEmpty),
                       activeColor: const Color(0xFF7C3AED),
                       onTap: () => notifier.setFreeChordFourth('none'),
                     ),
@@ -243,8 +244,9 @@ class FreeChordWidget extends ConsumerWidget {
                       sigla: '—',
                       tooltip: 'Fundamental (sin bajo alterado)',
                       isActive:
-                          state.freeChordBass.isEmpty ||
-                          state.freeChordBass == 'none',
+                          state.freeChordRoot >= 0 &&
+                          (state.freeChordBass.isEmpty ||
+                              state.freeChordBass == 'none'),
                       activeColor: const Color(0xFF0D9488),
                       onTap: () => notifier.setFreeChordBass(''),
                     ),

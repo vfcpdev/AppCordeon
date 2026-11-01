@@ -2,6 +2,22 @@ import 'package:flutter/painting.dart';
 import '../../core/constants/enums.dart';
 import 'bass_matching_strategy.dart';
 
+class ChordConstructorSelection {
+  final int root;
+  final String type;
+  final String extension;
+  final String bass;
+  final String structure;
+
+  const ChordConstructorSelection({
+    required this.root,
+    required this.type,
+    required this.extension,
+    required this.bass,
+    required this.structure,
+  });
+}
+
 /// Catálogo de intervalos de acordes (Open/Closed: añadir un tipo = añadir una entrada).
 class ChordCatalog {
   ChordCatalog._();
@@ -28,6 +44,133 @@ class ChordCatalog {
     'min7': 10,
     'dim7': 9,
   };
+
+  /// Convierte un símbolo de la cuadrícula en las opciones equivalentes del constructor.
+  static ChordConstructorSelection? constructorSelectionForSymbol(
+    String chord,
+  ) {
+    final trimmed = chord.trim();
+    if (trimmed.isEmpty) return null;
+
+    final chordParts = trimmed.split('/');
+    if (chordParts.length > 2) return null;
+    final chordBody = chordParts.first.trim();
+    final sortedRoots = rootPitchClasses.keys.toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+    String? matchedRoot;
+    for (final rootName in sortedRoots) {
+      if (chordBody.startsWith(rootName)) {
+        matchedRoot = rootName;
+        break;
+      }
+    }
+    if (matchedRoot == null) return null;
+
+    final root = rootPitchClasses[matchedRoot]!;
+    var suffix = chordBody.substring(matchedRoot.length);
+    var type = 'maj';
+    if (suffix.startsWith('dim')) {
+      type = 'dim';
+      suffix = suffix.substring(3);
+    } else if (suffix.startsWith('°')) {
+      type = 'dim';
+      suffix = suffix.substring(1);
+    } else if (suffix.startsWith('aug')) {
+      type = 'aug';
+      suffix = suffix.substring(3);
+    } else if (suffix.startsWith('+')) {
+      type = 'aug';
+      suffix = suffix.substring(1);
+    } else if (suffix.startsWith('sus2')) {
+      type = 'sus2';
+      suffix = suffix.substring(4);
+    } else if (suffix.startsWith('sus4')) {
+      type = 'sus4';
+      suffix = suffix.substring(4);
+    } else if (suffix.startsWith('m') && !suffix.startsWith('maj')) {
+      type = 'min';
+      suffix = suffix.substring(1);
+    }
+
+    final String extension;
+    if (suffix.startsWith('maj7')) {
+      extension = 'maj7';
+    } else if (suffix.startsWith('add9')) {
+      extension = 'add9';
+    } else if (suffix.startsWith('dim7') ||
+        (type == 'dim' && suffix.startsWith('7'))) {
+      extension = 'dim7';
+    } else if (suffix.startsWith('7')) {
+      extension = 'dom7';
+    } else if (suffix.startsWith('9')) {
+      extension = 'five';
+    } else if (suffix.startsWith('6')) {
+      extension = 'maj6';
+    } else if (suffix.startsWith('8')) {
+      extension = 'octave';
+    } else if (suffix.startsWith('5')) {
+      extension = powerChordExtension;
+    } else if (suffix.isEmpty) {
+      extension = 'none';
+    } else {
+      return null;
+    }
+
+    var bass = '';
+    if (chordParts.length == 2) {
+      final bassSymbol = chordParts[1].trim();
+      final bassPitchClass = rootPitchClassForChordSymbol(bassSymbol);
+      if (bassPitchClass == null) return null;
+
+      final bassInterval = (bassPitchClass - root + 12) % 12;
+      if (bassInterval != 0) {
+        final thirdInterval = switch (type) {
+          'min' || 'dim' => 3,
+          'sus2' => 2,
+          'sus4' => 5,
+          _ => 4,
+        };
+        final fifthInterval = switch (type) {
+          'dim' => 6,
+          'aug' => 8,
+          'sus2' || 'sus4' || 'maj' || 'min' => 7,
+          _ => 7,
+        };
+        final seventhInterval = switch (extension) {
+          'maj7' => 11,
+          'dim7' => 9,
+          'dom7' || 'five' => 10,
+          _ => -1,
+        };
+        bass = switch (bassInterval) {
+          _ when bassInterval == thirdInterval => '3',
+          _ when bassInterval == fifthInterval => '5',
+          _ when bassInterval == seventhInterval => '7',
+          _ => bassSymbol,
+        };
+      }
+    }
+
+    final noteCount = notesFor(
+      root: root,
+      type: type,
+      extension: extension,
+    ).map((note) => note % 12).toSet().length;
+    final structure = switch (noteCount) {
+      3 => 'triad',
+      4 => 'seventh',
+      5 => 'five',
+      _ => '',
+    };
+
+    return ChordConstructorSelection(
+      root: root,
+      type: type,
+      extension: extension,
+      bass: bass,
+      structure: structure,
+    );
+  }
 
   /// Calcula las notas MIDI del acorde a partir de la raíz (0-11) en la octava 4.
   /// Si la raíz es negativa (sin tónica) devuelve una lista vacía.

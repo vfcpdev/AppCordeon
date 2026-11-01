@@ -255,6 +255,11 @@ void main() {
       expect(secondTextField.readOnly, isFalse);
       expect(secondTextField.focusNode!.hasFocus, isTrue);
 
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MeasureGridWidget)),
+      );
+      container.read(accordionSimulatorProvider.notifier).setFreeChordRoot(0);
+      await tester.pumpAndSettle();
       await tester.tap(
         find.byKey(const ValueKey('multi_beat_assignment_mode_btn')),
       );
@@ -270,9 +275,6 @@ void main() {
       expect(
         tester.widget<TextField>(textFieldFor(secondCell)).readOnly,
         isTrue,
-      );
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(MeasureGridWidget)),
       );
       expect(
         container.read(accordionSimulatorProvider).multiBeatAssignmentTargets,
@@ -313,11 +315,12 @@ void main() {
     );
     final notifier = container.read(accordionSimulatorProvider.notifier);
 
-    // Prepara un acorde (Sol menor séptima) y selecciona el compás 2, tiempo 4.
+    // Selecciona la casilla vacía, que limpia el constructor, y luego prepara
+    // Sol menor séptima para insertarlo ahí.
+    notifier.selectBeat(1, 3);
     notifier.setFreeChordRoot(7);
     notifier.setFreeChordType('min');
     notifier.setFreeChordFourth('dom7');
-    notifier.selectBeat(1, 3);
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('insert_chord_to_compas_btn')));
@@ -385,6 +388,7 @@ void main() {
       container.read(accordionSimulatorProvider).multiBeatAssignmentTargets,
       {0, 11},
     );
+    expect(container.read(accordionSimulatorProvider).freeChordRoot, 7);
     expect(container.read(accordionSimulatorProvider).markedBeats, {0, 11});
 
     await tester.tap(find.byKey(const ValueKey('beat_cell_0_0')));

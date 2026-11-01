@@ -244,8 +244,7 @@ class AccordionSimulatorState {
     if (barIndex != null && barIndex >= 0 && barIndex < measures.length) {
       final beats = measures[barIndex].beats;
       if (beatIndex >= 0 && beatIndex < beats.length) {
-        final chord = beats[beatIndex].chord.trim();
-        if (chord.isNotEmpty) return chord;
+        return beats[beatIndex].chord.trim();
       }
     }
     if (!isAudioCoupled) return '';
@@ -399,6 +398,7 @@ class AccordionSimulatorState {
     String? loadedAudioFileName,
     bool clearAudio = false,
     bool clearAudioReport = false,
+    bool clearDetectedChord = false,
     bool? showMultiBeatModal,
     String? multiBeatPattern,
     String? multiBeatChord,
@@ -480,7 +480,9 @@ class AccordionSimulatorState {
       detectorDirection: detectorDirection ?? this.detectorDirection,
       detectorSelectedButtons:
           detectorSelectedButtons ?? this.detectorSelectedButtons,
-      detectedChord: detectedChord ?? this.detectedChord,
+      detectedChord: clearDetectedChord
+          ? null
+          : (detectedChord ?? this.detectedChord),
       audioReport: clearAudio || clearAudioReport
           ? null
           : (audioReport ?? this.audioReport),
@@ -1908,19 +1910,54 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void selectBeat(int barIdx, int beatIdx) {
-    BellowsMode nextBellows = state.bellows1;
-    if (barIdx >= 0 && barIdx < state.measures.length) {
-      final beats = state.measures[barIdx].beats;
-      if (beatIdx >= 0 && beatIdx < beats.length) {
-        final b = beats[beatIdx].bellows;
-        if (b != BellowsMode.both) nextBellows = b;
-      }
+    if (barIdx < 0 || barIdx >= state.measures.length) {
+      state = state.copyWith(
+        selectedBarIndex: barIdx,
+        selectedBeatIndex: beatIdx,
+        isFreeChordBeingEdited: false,
+      );
+      return;
     }
+    final beats = state.measures[barIdx].beats;
+    if (beatIdx < 0 || beatIdx >= beats.length) {
+      state = state.copyWith(
+        selectedBarIndex: barIdx,
+        selectedBeatIndex: beatIdx,
+        isFreeChordBeingEdited: false,
+      );
+      return;
+    }
+
+    final beat = beats[beatIdx];
+    final chordSelection = ChordCatalog.constructorSelectionForSymbol(
+      beat.chord,
+    );
+    BellowsMode nextBellows = state.bellows1;
+    if (beat.bellows != BellowsMode.both) {
+      nextBellows = beat.bellows;
+    }
+
+    _currentBeatNotes = [];
+    _audioBridge.allNotesOff();
     state = state.copyWith(
       selectedBarIndex: barIdx,
       selectedBeatIndex: beatIdx,
       bellows1: nextBellows,
+      activeButtons: const {},
+      playingChordNotes: const {},
+      freeChordRoot: chordSelection?.root ?? -1,
+      freeChordType: chordSelection?.type ?? '',
+      freeChordFourth: chordSelection?.extension ?? '',
+      freeChordOctave: chordSelection == null ? '' : 'all',
+      freeChordMode: chordSelection == null ? '' : 'harmonic',
+      freeChordBellows: BellowsMode.both,
+      freeChordBass: chordSelection?.bass ?? '',
+      freeChordScaleHarmonicMode: chordSelection?.structure ?? '',
+      isFreeChordFixed: false,
       isFreeChordBeingEdited: false,
+      detectorMode: false,
+      detectorSelectedButtons: const [],
+      clearDetectedChord: true,
     );
   }
 

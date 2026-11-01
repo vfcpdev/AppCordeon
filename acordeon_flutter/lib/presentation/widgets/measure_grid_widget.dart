@@ -111,8 +111,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     required double targetOffset,
     required Duration duration,
   }) async {
-    if (!_compasScrollController.hasClients ||
-        _autoScrollTargetBar != null) {
+    if (!_compasScrollController.hasClients || _autoScrollTargetBar != null) {
       return;
     }
     _autoScrollTargetBar = targetBar;
@@ -146,22 +145,24 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     );
 
     // Escucha cambios de compás durante reproducción/audio para scroll automático
-    ref.listen<int?>(
-      accordionSimulatorProvider.select((s) => s.selectedBarIndex),
-      (prevBar, currentBar) {
-        if (currentBar != null && currentBar != prevBar) {
-          // Deja que termine el desplazamiento de edición antes del de reproducción.
-          Future<void>.delayed(const Duration(milliseconds: 120), () {
-            if (!mounted ||
-                ref.read(accordionSimulatorProvider).selectedBarIndex !=
-                    currentBar) {
-              return;
-            }
-            _handlePlaybackAutoScroll(currentBar);
-          });
-        }
-      },
-    );
+    ref.listen<
+      int?
+    >(accordionSimulatorProvider.select((s) => s.selectedBarIndex), (
+      prevBar,
+      currentBar,
+    ) {
+      if (currentBar != null && currentBar != prevBar) {
+        // Deja que termine el desplazamiento de edición antes del de reproducción.
+        Future<void>.delayed(const Duration(milliseconds: 120), () {
+          if (!mounted ||
+              ref.read(accordionSimulatorProvider).selectedBarIndex !=
+                  currentBar) {
+            return;
+          }
+          _handlePlaybackAutoScroll(currentBar);
+        });
+      }
+    });
 
     final bpm = state.audioReport?.bpm ?? 120;
     final totalBeats = state.measures.length * 4;
@@ -2005,6 +2006,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     _focusNode.addListener(() {
       final hasFocus = _focusNode.hasFocus;
       if (hasFocus) {
+        if (widget.isMultiBeatAssignmentMode) {
+          _focusNode.unfocus();
+          return;
+        }
         _selectedKey = _nodeKey;
         _deselectOtherCells();
         widget.onSelected?.call();
@@ -2028,6 +2033,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
 
     _cellFocusNode.addListener(() {
       if (_cellFocusNode.hasFocus) {
+        if (widget.isMultiBeatAssignmentMode) {
+          _cellFocusNode.unfocus();
+          return;
+        }
         if (_selectedKey != _nodeKey) {
           _selectedKey = _nodeKey;
           _deselectOtherCells();

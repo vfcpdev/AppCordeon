@@ -12,6 +12,71 @@ import 'package:acordeon_flutter/presentation/widgets/diapason_widget.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
 void main() {
+  test(
+    'Hoare: {P casilla vacía} C seleccionar {Q constructor y diapasón limpios}',
+    () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      notifier.setFreeChordRoot(7);
+      notifier.setFreeChordType('min');
+      notifier.setFreeChordFourth('dom7');
+      notifier.setFreeChordOctave('4');
+      notifier.setFreeChordBass('3');
+      notifier.setFreeChordScaleHarmonicMode('seventh');
+      notifier.state = notifier.state.copyWith(
+        freeChordMode: 'melodic',
+        freeChordBellows: BellowsMode.pull,
+        isFreeChordFixed: true,
+        activeButtons: {'button-1'},
+        playingChordNotes: {60},
+        detectorMode: true,
+        detectorSelectedButtons: ['button-2'],
+      );
+
+      notifier.selectBeat(0, 0);
+
+      final state = container.read(accordionSimulatorProvider);
+      expect(state.activeCompasChord, isEmpty);
+      expect(state.freeChordRoot, -1);
+      expect(state.freeChordType, isEmpty);
+      expect(state.freeChordFourth, isEmpty);
+      expect(state.freeChordOctave, isEmpty);
+      expect(state.freeChordMode, isEmpty);
+      expect(state.freeChordBass, isEmpty);
+      expect(state.freeChordScaleHarmonicMode, isEmpty);
+      expect(state.isFreeChordFixed, isFalse);
+      expect(state.activeButtons, isEmpty);
+      expect(state.playingChordNotes, isEmpty);
+      expect(state.detectorMode, isFalse);
+      expect(state.detectorSelectedButtons, isEmpty);
+      expect(container.read(activeChordPitchClassesProvider(1)), isEmpty);
+    },
+  );
+
+  test(
+    'Hoare: {P casilla con Solm7/Si♭} C seleccionar {Q constructor sincronizado}',
+    () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      notifier.updateMeasureBeat(0, 0, 'Solm7/Si♭');
+      notifier.selectBeat(0, 0);
+
+      final state = container.read(accordionSimulatorProvider);
+      expect(state.activeCompasChord, 'Solm7/Si♭');
+      expect(state.freeChordRoot, 7);
+      expect(state.freeChordType, 'min');
+      expect(state.freeChordFourth, 'dom7');
+      expect(state.freeChordBass, '3');
+      expect(state.freeChordOctave, 'all');
+      expect(state.freeChordScaleHarmonicMode, 'seventh');
+      expect(container.read(activeChordPitchClassesProvider(1)), {2, 5, 7, 10});
+    },
+  );
+
   testWidgets(
     'Hoare: {P acorde y octava} C resaltado {Q todas y solo las posiciones coinciden}',
     (WidgetTester tester) async {
