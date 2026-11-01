@@ -3,13 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
-import '../../core/constants/layout_constants.dart';
 import '../../core/di/providers.dart';
-import '../../core/text/chord_text_fitter.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
 import 'chord_detector_widget.dart';
-import 'tonic_notes_matrix_widget.dart';
 
 class MeasureGridWidget extends ConsumerStatefulWidget {
   final int accordionNumber;
@@ -135,7 +132,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final totalBeats = state.measures.length * 4;
     final allMarked = totalBeats > 0 && state.markedBeats.length == totalBeats;
     final hasMarks = state.markedBeats.isNotEmpty;
-    final effectiveWidth = widget.width ?? CompasCardMetrics.width;
+    final effectiveWidth = widget.width ?? 185.0;
     final isUndocked = widget.isUndocked || (widget.accordionNumber == 1
         ? state.isCompas1Undocked
         : state.isCompas2Undocked);
@@ -548,9 +545,6 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
           ),
         ),
 
-          // Matriz de botones de Tónica: 2 filas por 6 columnas (debajo de guardar / importar compás)
-          const TonicNotesMatrixWidget(),
-
           if (state.yellowDecisionBeats.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
@@ -624,7 +618,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 4.0),
             child: Container(
-              constraints: BoxConstraints(maxHeight: CompasCardMetrics.gridMaxHeight),
+              constraints: const BoxConstraints(maxHeight: 330),
               child: RawScrollbar(
                 controller: _compasScrollController,
                 thumbVisibility: true,
@@ -656,7 +650,6 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                           // número: marca o desmarca los 4 tiempos del compás.
                           Container(
                             width: 15,
-                            height: CompasCardMetrics.beatCellHeight,
                             decoration: const BoxDecoration(
                               color: Color(0xFFF1F5F9),
                               border: Border(
@@ -675,7 +668,6 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                           // Número de compás
                           Container(
                             width: 18,
-                            height: CompasCardMetrics.beatCellHeight,
                             decoration: const BoxDecoration(
                               color: Color(0xFFF1F5F9),
                               border: Border(right: BorderSide(color: Color(0xFFCBD5E1))),
@@ -701,14 +693,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                 for (final entry in measure.beats.asMap().entries) ...[
                                   if (entry.key > 0) const SizedBox(width: 1),
                                   Expanded(
-                                    // Identidad estable por cuadro: evita que
-                                    // ListView.builder recicle el State de una
-                                    // celda en otra y "extienda" el acorde de
-                                    // un cuadro al vecino del mismo compás.
                                     child: _InlineBeatChordEditor(
-                                      key: ValueKey(
-                                        'beat_cell_${mIdx}_${entry.key}',
-                                      ),
                                       accordionId: widget.accordionNumber,
                                       measureIndex: mIdx,
                                       beatIndex: entry.key,
@@ -1455,15 +1440,8 @@ class _ChordTools {
   }
 }
 
-/// Celda de tiempo/acorde editable en línea: al hacer clic recibe foco de forma
-/// inmediata (en tap-down, sin esperar al ciclo de clic completo) sin abrir
-/// ningún diálogo modal.
-///
-/// Independencia por cuadro: cada celda tiene identidad estable
-/// (`ValueKey('beat_cell_compas_tiempo')`), de modo que su selección, su foco
-/// y su contenido jamás se mezclan con otro cuadro del mismo compás o de la
-/// cuadrícula. Con el cuadro seleccionado (sin editar), Backspace/Delete lo
-/// resetea a vacío sin extender el acorde de cuadros vecinos.
+/// Celda de tiempo/acorde editable en línea: al hacer clic recibe foco directamente
+/// sin abrir ningún diálogo modal.
 class _InlineBeatChordEditor extends StatefulWidget {
   final int accordionId;
   final int measureIndex;
@@ -1484,7 +1462,6 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final VoidCallback? onLiveMarker;
 
   const _InlineBeatChordEditor({
-    super.key, // identidad estable por cuadro (ValueKey 'beat_cell_b_t')
     required this.accordionId,
     required this.measureIndex,
     required this.beatIndex,
@@ -1560,10 +1537,9 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
         widget.onSelected?.call();
         if (!_isEditing) {
           _isEditing = true;
-          // Coloca el cursor al final con selección colapsada para que el cursor
-          // quede parpadeando sin seleccionar todo el texto.
-          _controller.selection = TextSelection.collapsed(
-            offset: _controller.text.length,
+          _controller.selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: _controller.text.length,
           );
         }
         _update();
@@ -1683,11 +1659,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     widget.onSelected?.call();
     if (mounted) {
       setState(() {});
-      // Scroll/foco inmediato: sin animación (selección instantánea).
       Scrollable.ensureVisible(
         context,
         alignment: 0.5,
-        duration: Duration.zero,
+        duration: const Duration(milliseconds: 100),
       );
     }
   }
@@ -1710,18 +1685,16 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     widget.onSelected?.call();
     _isEditing = true;
     _focusNode.requestFocus();
-    // Coloca el cursor al final con selección colapsada para que el cursor
-    // quede parpadeando sin seleccionar todo el texto.
-    _controller.selection = TextSelection.collapsed(
-      offset: _controller.text.length,
+    _controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _controller.text.length,
     );
     if (mounted) {
       setState(() {});
-      // Foco inmediato al seleccionar: sin demora de animación.
       Scrollable.ensureVisible(
         context,
         alignment: 0.5,
-        duration: Duration.zero,
+        duration: const Duration(milliseconds: 100),
       );
     }
   }
@@ -1786,37 +1759,21 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     return KeyEventResult.ignored;
   }
 
-  /// Teclas del textbox **en edición** (adjunto al FocusNode del propio
-  /// TextField, por lo que solo corre cuando el control tiene foco).
-  ///
-  /// Tripla de Hoare {P} C {Q}:
-  /// - Precondición {P}: el evento llega con `_focusNode` como foco primario
-  ///   (el textbox está siendo editado).
-  /// - Ejecución {C}: se interceptan únicamente Escape y Tab/Shift+Tab.
-  /// - Poscondición {Q}:
-  ///   - Las **flechas de dirección no se interceptan**: conservan el
-  ///     comportamiento por defecto del TextBox (mover el cursor dentro del
-  ///     texto; hacia arriba/abajo desplazan a inicio/fin según la plataforma).
-  ///   - Enter no se intercepta: lo procesa `onSubmitted` del TextBox por el
-  ///     canal por defecto (commit + avance al cuadro siguiente).
-  ///   - Escape sale de la edición manteniendo el cuadro seleccionado.
-  ///   - Tab / Shift+Tab confirman y navegan al cuadro siguiente / anterior.
-  ///
-  /// La navegación por flechas entre cuadros vive en `_handleCellKeyEvent`
-  /// (modo selección, sin edición); nunca interfiere con el texto en edición.
   KeyEventResult _handleTextFieldKeyEvent(FocusNode node, KeyEvent event) {
     if (event is KeyDownEvent) {
-      // Flechas de dirección: NO se interceptan mientras se edita — el
-      // TextBox conserva su comportamiento por defecto (movimiento del
-      // cursor). `return ignored` permite que el evento burbujee hasta los
-      // manejadores nativos de EditableText.
-      if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
-          event.logicalKey == LogicalKeyboardKey.arrowLeft ||
-          event.logicalKey == LogicalKeyboardKey.arrowDown ||
-          event.logicalKey == LogicalKeyboardKey.arrowUp ||
-          event.logicalKey == LogicalKeyboardKey.enter ||
-          event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-        return KeyEventResult.ignored;
+      if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        // Flecha derecha: saca de foco de edición, pero permanece el cuadro seleccionado
+        _commit();
+        _setSelected();
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        // Flecha abajo: sube/baja y cambia al compás/cuadro siguiente
+        _moveSelection(1);
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        // Flecha arriba: sube al compás/cuadro anterior
+        _moveSelection(-1);
+        return KeyEventResult.handled;
       } else if (event.logicalKey == LogicalKeyboardKey.tab) {
         // Tab / Shift+Tab para navegar adelante / atrás
         final isShift = HardwareKeyboard.instance.isShiftPressed;
@@ -1827,6 +1784,11 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
         // Escape: saca de foco de edición pero mantiene cuadro seleccionado
         _commit();
         _setSelected();
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.enter ||
+          event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+        _commit();
+        _moveSelection(1);
         return KeyEventResult.handled;
       }
     }
@@ -1845,18 +1807,11 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     return Focus(
       focusNode: _cellFocusNode,
       child: GestureDetector(
-        // Foco inmediato: la selección y el foco del textbox ocurren en
-        // tap-down, sin esperar al ciclo completo de tap (tap-up/clic).
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => _activateEdit(),
         onTap: () {
-          // Fallback por si el tap-down fue consumido por un gesto competidor.
-          if (!_isEditing) _activateEdit();
+          _activateEdit();
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          // Altura un 5% mayor para los cuadros de compás {P} C {Q}
-          height: CompasCardMetrics.beatCellHeight,
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
           decoration: BoxDecoration(
             // Radio condicional: bordes "Stateful" no ocasionan problemas; el
@@ -1929,23 +1884,6 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
               final showCompactArrows = constraints.maxWidth >= 52;
               final showTime = constraints.maxWidth >= 155;
 
-              // Ajuste {P} C {Q} del tamaño de la fuente del acorde: la cadena
-              // se muestra completa, reduciendo el tamaño de forma monótona
-              // hasta la cota mínima cuando es demasiado larga para la celda.
-              // En modo clásico se reserva el ancho del fuelle (y del tiempo);
-              // en modo compacto el texto usa el ancho completo de la celda.
-              final controlsWidth = showArrows ? (showTime ? 72.0 : 33.0) : 0.0;
-              final availableTextWidth = showArrows
-                  ? (constraints.maxWidth - controlsWidth).clamp(0.0, double.infinity)
-                  : constraints.maxWidth;
-              final fittedFontSize = ChordTextFitter.fitFontSize(
-                text: _controller.text,
-                availableWidth: availableTextWidth,
-                baseFontSize: 10.0,
-                minFontSize: 6.0,
-                horizontalPadding: 8.0,
-              );
-
               final chordField = Tooltip(
                 message: hasChord ? 'Acorde: ${widget.chord}' : '',
                 waitDuration: const Duration(milliseconds: 600),
@@ -1961,7 +1899,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     }
                   },
                   style: TextStyle(
-                    fontSize: fittedFontSize,
+                    fontSize: 10.0,
                     letterSpacing: -0.2,
                     fontWeight: (isFocusedOrSelected || hasChord)
                         ? FontWeight.w900
@@ -1987,8 +1925,6 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                   ),
                   onChanged: (_) {
                     _commit();
-                    // Reevalúa el ajuste de fuente {Q} mientras se escribe
-                    _update();
                   },
                   onSubmitted: (_) {
                     _commit();

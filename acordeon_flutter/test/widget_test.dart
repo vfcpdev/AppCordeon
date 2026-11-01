@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:acordeon_flutter/main.dart';
-import 'package:acordeon_flutter/core/constants/layout_constants.dart';
 import 'package:acordeon_flutter/presentation/widgets/free_chord_widget.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
@@ -28,12 +27,11 @@ void main() {
     expect(find.text('Exterior'), findsWidgets);
     expect(find.text('Interior'), findsWidgets);
 
-    // Verificar tamaños actuales de los widgets de compás y acordes
-    // (ambos compases con estructura completa seg�ún CompasCardMetrics)
+    // Verificar tamaños actuales de los widgets de compás y acordes (ambos compases con estructura completa de 185 px)
     final grids = find.byType(MeasureGridWidget);
     expect(grids, findsNWidgets(2));
-    expect(tester.getSize(grids.first).width, CompasCardMetrics.width);
-    expect(tester.getSize(grids.last).width, CompasCardMetrics.width);
+    expect(tester.getSize(grids.first).width, 185.0);
+    expect(tester.getSize(grids.last).width, 185.0);
     expect(tester.getSize(find.byType(FreeChordWidget)).width, 150.0);
   });
 }

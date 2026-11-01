@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
 void main() {
-  testWidgets('Las flechas son nativas del TextBox en edición (no roban el foco); Escape sale de edición; navegación entre cuadros solo en modo selección',
+  testWidgets('MeasureGrid arrow navigation: Arrow Right unfocuses, Arrow Left focuses, Arrow Down/Up navigates',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
@@ -37,47 +37,33 @@ void main() {
     final editableText1 = tester.widget<EditableText>(find.byType(EditableText).at(1));
     expect(editableText1.focusNode.hasFocus, isTrue, reason: 'TextField should have focus after tap');
 
-    // 2. Arrow Right during editing: comportamiento NATIVO del TextBox
-    //    (mueve el cursor); NO abandona la edición ni roba el foco.
+    // 2. Press Arrow Right -> exits edit mode, but cell remains selected
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
-    expect(editableText1.focusNode.hasFocus, isTrue,
-        reason: 'Arrow Right must not exit edit mode: default TextBox behavior');
 
-    // 3. Escape -> exits edit mode, but cell remains selected
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-    await tester.pumpAndSettle();
-    expect(editableText1.focusNode.hasFocus, isFalse,
-        reason: 'Escape should leave edit mode');
+    expect(editableText1.focusNode.hasFocus, isFalse, reason: 'TextField should lose edit focus after Arrow Right');
 
-    // 4. Arrow Down in selection mode -> moves to the next beat (cell 0_1)
+    // 3. Press Arrow Down -> moves to the next beat (cell 0_1)
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
 
-    // 5. Arrow Left in selection mode -> enters edit mode for the newly
-    //    selected beat (cell 0_1)
+    // 4. Press Arrow Left -> enters edit mode for the newly selected beat (cell 0_1)
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
 
     final secondEditableText = tester.widget<EditableText>(find.byType(EditableText).at(2));
     expect(secondEditableText.focusNode.hasFocus, isTrue, reason: 'Second beat should have edit focus after Arrow Left');
 
-    // 6. Arrow Left during editing: NATIVO (cursor dentro del texto); no navega.
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    // 5. Press Arrow Right -> exits edit mode, keeping cell 0_1 selected
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
-    expect(secondEditableText.focusNode.hasFocus, isTrue,
-        reason: 'Arrow Left must not navigate while editing: default TextBox behavior');
+    expect(secondEditableText.focusNode.hasFocus, isFalse, reason: 'Second beat should lose edit focus after Arrow Right');
 
-    // 7. Escape again -> exits edit mode, keeping cell 0_1 selected
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-    await tester.pumpAndSettle();
-    expect(secondEditableText.focusNode.hasFocus, isFalse, reason: 'Second beat should lose edit focus after Escape');
-
-    // 8. Arrow Up in selection mode -> moves back to first beat (cell 0_0)
+    // 6. Press Arrow Up -> moves back to first beat (cell 0_0)
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
     await tester.pumpAndSettle();
 
-    // 9. Arrow Left in selection mode -> enters edit mode for first beat
+    // 7. Press Arrow Left -> enters edit mode for first beat
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
     expect(editableText1.focusNode.hasFocus, isTrue, reason: 'First beat should regain edit focus after Arrow Up + Arrow Left');
@@ -102,26 +88,26 @@ void main() {
 
     final firstBeatFinder = find.byType(TextField).at(1);
 
-    // 1. Click first beat to edit, then Escape to exit edit mode leaving it selected
+    // 1. Click first beat to edit, then Arrow Right to exit edit mode leaving it selected
     await tester.tap(firstBeatFinder);
     await tester.pumpAndSettle();
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
 
     // 2. Press 1 -> Should NOT set to 'Do' (numeric keys have no scale degree effect)
     await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
     await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(firstBeatFinder).controller?.text, isNot(equals('Do')));
+    expect(find.text('Do'), findsNothing);
 
     // 3. Press 5 -> Should NOT set to 'Sol'
     await tester.sendKeyEvent(LogicalKeyboardKey.digit5);
     await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(firstBeatFinder).controller?.text, isNot(equals('Sol')));
+    expect(find.text('Sol'), findsNothing);
 
     // 4. Press 7 (numpad) -> Should NOT set to 'Si'
     await tester.sendKeyEvent(LogicalKeyboardKey.numpad7);
     await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(firstBeatFinder).controller?.text, isNot(equals('Si')));
+    expect(find.text('Si'), findsNothing);
   });
 
   testWidgets('Typing inside TextField writes chord directly without number translation (1 is not Do)',
@@ -155,7 +141,7 @@ void main() {
     // 3. Enter 'Do' directly
     await tester.enterText(firstBeatFinder, 'Do');
     await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(firstBeatFinder).controller?.text, equals('Do'));
+    expect(find.text('Do'), findsOneWidget);
   });
 
   testWidgets('MeasureGrid chord modifiers (.=Menor, /=7ma, +=Aumentada, -=Disminuida) in selection mode',
@@ -183,11 +169,10 @@ void main() {
     await tester.enterText(firstBeatFinder, 'Do');
     await tester.pumpAndSettle();
 
-    // Escape to exit edit mode leaving it selected (las flechas permanecen
-    // nativas del TextBox durante la edición)
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    // Arrow Right to exit edit mode leaving it selected
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(firstBeatFinder).controller?.text, equals('Do'));
+    expect(find.text('Do'), findsOneWidget);
 
     // 1. Press '.' -> Menor ('Dom')
     await tester.sendKeyEvent(LogicalKeyboardKey.period);

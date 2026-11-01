@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:acordeon_flutter/core/constants/enums.dart';
-import 'package:acordeon_flutter/core/constants/layout_constants.dart';
 import 'package:acordeon_flutter/main.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/accordion_button_3d.dart';
@@ -118,7 +117,7 @@ void main() {
     expect(find.text('Compás (Móvil)'), findsNothing);
   });
 
-  testWidgets('Acordeón 2 tiene cuadro de compás completo cuadrado por métricas y todas las opciones',
+  testWidgets('Acordeón 2 tiene cuadro de compás completo con 185px y todas las opciones',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1400, 900);
     tester.view.devicePixelRatio = 1.0;
@@ -134,9 +133,9 @@ void main() {
     final grids = find.byType(MeasureGridWidget);
     expect(grids, findsNWidgets(2));
 
-    // Ambos usan el ancho de CompasCardMetrics (fuente única de verdad)
-    expect(tester.getSize(grids.at(0)).width, CompasCardMetrics.width);
-    expect(tester.getSize(grids.at(1)).width, CompasCardMetrics.width);
+    // Ambos tienen 185 px
+    expect(tester.getSize(grids.at(0)).width, 185.0);
+    expect(tester.getSize(grids.at(1)).width, 185.0);
 
     // El título de Acordeón 2 dice 'Compás A2'
     expect(find.text('Compás A2'), findsOneWidget);
