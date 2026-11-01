@@ -9,8 +9,150 @@ import 'package:acordeon_flutter/presentation/widgets/diapason_button_widget.dar
 import 'package:acordeon_flutter/presentation/widgets/diapason_widget.dart';
 
 void main() {
-  testWidgets('Abrir/Cerrar no ocultan botones; solo marcan los del acorde',
-      (WidgetTester tester) async {
+  testWidgets('el selector del diapasón controla la estructura del acorde', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: DiapasonWidget(
+              currentTuning: TuningRegistry.defaultTunings[0],
+              onTuningChanged: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(DiapasonWidget)),
+    );
+
+    expect(
+      find.byKey(const ValueKey('diapason_structure_selector')),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget(find.byKey(const ValueKey('diapason_structure_selector'))),
+      isA<Row>(),
+    );
+    expect(
+      find.byKey(const ValueKey('diapason_extension_selector')),
+      findsNothing,
+    );
+    final triadButton = tester.getRect(
+      find.byKey(const ValueKey('diapason_structure_triad')),
+    );
+    final seventhButton = tester.getRect(
+      find.byKey(const ValueKey('diapason_structure_seventh')),
+    );
+    expect(triadButton.top, closeTo(seventhButton.top, 0.1));
+    expect(
+      triadButton.top,
+      closeTo(
+        tester
+            .getTopLeft(find.byKey(const ValueKey('diapason_structure_five')))
+            .dy,
+        0.1,
+      ),
+    );
+    expect(
+      find.ancestor(
+        of: find.byKey(const ValueKey('diapason_structure_selector')),
+        matching: find.byKey(const ValueKey('diapason_chord_info_1')),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('diapason_structure_seventh')));
+    await tester.pumpAndSettle();
+    expect(
+      container.read(accordionSimulatorProvider).freeChordScaleHarmonicMode,
+      'seventh',
+    );
+
+    await tester.tap(find.byKey(const ValueKey('diapason_structure_triad')));
+    await tester.pumpAndSettle();
+    expect(
+      container.read(accordionSimulatorProvider).freeChordScaleHarmonicMode,
+      'triad',
+    );
+
+    await tester.tap(find.byKey(const ValueKey('diapason_structure_five')));
+    await tester.pumpAndSettle();
+    expect(container.read(accordionSimulatorProvider).freeChordFourth, 'five');
+    expect(
+      ChordCatalog.notesFor(
+        root: 0,
+        type: 'maj',
+        extension: container.read(accordionSimulatorProvider).freeChordFourth,
+      ),
+      [60, 64, 67, 70, 74],
+    );
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('diapason_chord_label_1')))
+          .textSpan
+          ?.toPlainText(),
+      'Do9   (Do - Mi - Sol - Si♭ - Re)',
+    );
+    final fiveNoteChordPcs = ChordCatalog.pitchClassesForChordSymbol('Do9');
+    final fiveNoteChordState = container.read(accordionSimulatorProvider);
+    final pushPcs = fiveNoteChordState.trebleData1.values
+        .expand((row) => row)
+        .map((button) => button.push % 12)
+        .toSet();
+    final pullPcs = fiveNoteChordState.trebleData1.values
+        .expand((row) => row)
+        .map((button) => button.pull % 12)
+        .toSet();
+    final expectedPushMissing = fiveNoteChordPcs.difference(pushPcs).toList()
+      ..sort();
+    final expectedPullMissing = fiveNoteChordPcs.difference(pullPcs).toList()
+      ..sort();
+    final pushStatus = tester.widget<Text>(
+      find.byKey(const ValueKey('diapason_chord_status_push_1')),
+    );
+    final pullStatus = tester.widget<Text>(
+      find.byKey(const ValueKey('diapason_chord_status_pull_1')),
+    );
+    expect(
+      pushStatus.data,
+      expectedPushMissing.isEmpty
+          ? 'Cierra: —'
+          : 'Cierra, faltan: ${expectedPushMissing.map((pc) => ChordCatalog.latinRootNames[pc]).join('·')}',
+    );
+    expect(
+      pullStatus.data,
+      expectedPullMissing.isEmpty
+          ? 'Abre: —'
+          : 'Abre, faltan: ${expectedPullMissing.map((pc) => ChordCatalog.latinRootNames[pc]).join('·')}',
+    );
+    expect(
+      pushStatus.style?.color,
+      expectedPushMissing.isEmpty
+          ? const Color(0xFF15803D)
+          : const Color(0xFFDC2626),
+    );
+    expect(
+      pullStatus.style?.color,
+      expectedPullMissing.isEmpty
+          ? const Color(0xFF15803D)
+          : const Color(0xFFDC2626),
+    );
+    expect(find.textContaining('completo'), findsNothing);
+    expect(find.textContaining('incompleto'), findsNothing);
+  });
+
+  testWidgets('Abrir/Cerrar no ocultan botones; solo marcan los del acorde', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1600, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -50,8 +192,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(DiapasonButtonWidget), findsNWidgets(allButtons.length));
 
-    final pullWidgets =
-        tester.widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget));
+    final pullWidgets = tester.widgetList<DiapasonButtonWidget>(
+      find.byType(DiapasonButtonWidget),
+    );
     final pullChordButton = pullWidgets.firstWhere(
       (btn) => chordPitchClasses.contains(btn.pullMidi % 12),
     );
@@ -66,8 +209,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(DiapasonButtonWidget), findsNWidgets(allButtons.length));
 
-    final pushWidgets =
-        tester.widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget));
+    final pushWidgets = tester.widgetList<DiapasonButtonWidget>(
+      find.byType(DiapasonButtonWidget),
+    );
     final pushChordButton = pushWidgets.firstWhere(
       (btn) => chordPitchClasses.contains(btn.pushMidi % 12),
     );
@@ -78,8 +222,9 @@ void main() {
     expect(pushOtherButton.isChordPush, isFalse);
   });
 
-  testWidgets('la etiqueta bajo la tonalidad usa la notación seleccionada',
-      (WidgetTester tester) async {
+  testWidgets('la etiqueta bajo la tonalidad usa la notación seleccionada', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1600, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -104,14 +249,11 @@ void main() {
     final notifier = container.read(accordionSimulatorProvider.notifier);
 
     Text label() => tester.widget<Text>(
-          find.byKey(const ValueKey('diapason_chord_label_1')),
-        );
+      find.byKey(const ValueKey('diapason_chord_label_1')),
+    );
 
     // Latina por defecto: el acorde y sus notas se muestran en notación latina.
-    expect(
-      label().textSpan?.toPlainText(),
-      'Do   (Do - Mi - Sol)',
-    );
+    expect(label().textSpan?.toPlainText(), 'Do   (Do - Mi - Sol)');
 
     final labelBox = tester.widget<Container>(
       find
@@ -121,194 +263,193 @@ void main() {
           )
           .first,
     );
-    expect(
-      (labelBox.decoration as BoxDecoration).color,
-      Colors.white,
-    );
+    expect((labelBox.decoration as BoxDecoration).color, Colors.white);
 
     notifier.setFreeChordType('dim');
     notifier.setFreeChordFourth('dim7');
     await tester.pumpAndSettle();
-    expect(
-      label().textSpan?.toPlainText(),
-      'Do°7   (Do - Mi♭ - Fa# - La)',
-    );
+    expect(label().textSpan?.toPlainText(), 'Do°7   (Do - Mi♭ - Fa# - La)');
 
     // Al cambiar a notación alemana se actualizan la tónica y las notas.
     notifier.setNotation(NotationMode.alemana);
     await tester.pumpAndSettle();
-    expect(
-      label().textSpan?.toPlainText(),
-      'C°7   (C - Eb - F# - A)',
-    );
-  });
-
-  testWidgets('el botón de tonalidad es funcional y abre el selector de afinación',
-      (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1600, 1200);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
-
-    TuningDefinition? selectedTuning;
-
-    await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp(
-          home: Scaffold(
-            body: DiapasonWidget(
-              currentTuning: TuningRegistry.defaultTunings[0],
-              onTuningChanged: (t) => selectedTuning = t,
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    // El botón existe con la key asignada
-    final tuningBtn = find.byKey(const ValueKey('diapason_tuning_btn_1'));
-    expect(tuningBtn, findsOneWidget);
-
-    // Al pulsarlo, se abre el diálogo de afinaciones
-    await tester.tap(tuningBtn);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Seleccionar acordeón'), findsOneWidget);
-
-    // Seleccionamos otra afinación de la lista
-    final secondTuning = TuningRegistry.defaultTunings[1];
-    await tester.tap(find.text(secondTuning.name).first);
-    await tester.pumpAndSettle();
-
-    expect(selectedTuning, isNotNull);
-    expect(selectedTuning?.id, secondTuning.id);
-    // El diálogo permanece abierto para permitir probar o comparar afinaciones
-    expect(find.text('Seleccionar acordeón'), findsOneWidget);
-  });
-
-  testWidgets('el diálogo de afinación permite ordenar por tono ascendente y restablecer',
-      (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1600, 1200);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      TuningRegistry.resetToDefaultOrder();
-      tester.view.resetPhysicalSize();
-    });
-
-    await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp(
-          home: Scaffold(
-            body: DiapasonWidget(
-              currentTuning: TuningRegistry.defaultTunings[0],
-              onTuningChanged: (_) {},
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    // Abrir diálogo
-    await tester.tap(find.byKey(const ValueKey('diapason_tuning_btn_1')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Tono ascendente'), findsOneWidget);
-    // Verificamos que se expresen en tonos y semitonos (ej. Base, +1½ T)
-    expect(find.text('Base'), findsOneWidget);
-    expect(find.text('+1½ T'), findsOneWidget);
-
-    // Pulsamos "Tono ascendente"
-    await tester.tap(find.byKey(const ValueKey('btn_sort_pitch_asc')));
-    await tester.pumpAndSettle();
-
-    // Verificamos que Anisada (-7 -> -3½ T) ahora está presente
-    expect(find.text('-3½ T'), findsOneWidget);
-
-    // Verificamos que Anisada (-7) ahora está en primera posición
-    expect(TuningRegistry.orderedTunings.first.id, 'anisada');
-    expect(TuningRegistry.orderedTunings.last.id, 'lluvia');
-
-    // Pulsamos "Restablecer"
-    await tester.tap(find.byKey(const ValueKey('btn_reset_tuning_order')));
-    await tester.pumpAndSettle();
-
-    expect(TuningRegistry.orderedTunings.first.id, 'cinco_letras');
+    expect(label().textSpan?.toPlainText(), 'C°7   (C - Eb - F# - A)');
   });
 
   testWidgets(
-      'Al dar play al acorde, solo se muestran presionados los botones según está el fuelle',
-      (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1600, 1200);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+    'el botón de tonalidad es funcional y abre el selector de afinación',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
 
-    await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp(
-          home: Scaffold(
-            body: DiapasonWidget(
-              accordionNumber: 1,
-              currentTuning: TuningRegistry.defaultTunings[0],
-              onTuningChanged: (_) {},
+      TuningDefinition? selectedTuning;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: DiapasonWidget(
+                currentTuning: TuningRegistry.defaultTunings[0],
+                onTuningChanged: (t) => selectedTuning = t,
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(DiapasonWidget)),
-    );
-    final notifier = container.read(accordionSimulatorProvider.notifier);
+      // El botón existe con la key asignada
+      final tuningBtn = find.byKey(const ValueKey('diapason_tuning_btn_1'));
+      expect(tuningBtn, findsOneWidget);
 
-    // 1. Cerrar (Push): solo los botones cuya nota push pertenece al acorde se muestran presionados
-    notifier.setBellows1(BellowsMode.push);
-    notifier.playFreeChord();
-    await tester.pump();
+      // Al pulsarlo, se abre el diálogo de afinaciones
+      await tester.tap(tuningBtn);
+      await tester.pumpAndSettle();
 
-    final pushButtons =
-        tester.widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget));
-    final pressedInPush = pushButtons.where((btn) => btn.isPressed).toList();
-    expect(pressedInPush, isNotEmpty);
-    for (final btn in pressedInPush) {
-      expect(btn.isChordPush, isTrue);
-    }
+      expect(find.text('Seleccionar acordeón'), findsOneWidget);
 
-    // Esperar a que se liberen los botones del acorde anterior
-    await tester.pump(const Duration(milliseconds: 1000));
+      // Seleccionamos otra afinación de la lista
+      final secondTuning = TuningRegistry.defaultTunings[1];
+      await tester.tap(find.text(secondTuning.name).first);
+      await tester.pumpAndSettle();
 
-    // 2. Abrir (Pull): solo los botones cuya nota pull pertenece al acorde se muestran presionados
-    notifier.setBellows1(BellowsMode.pull);
-    notifier.playFreeChord();
-    await tester.pump();
+      expect(selectedTuning, isNotNull);
+      expect(selectedTuning?.id, secondTuning.id);
+      // El diálogo permanece abierto para permitir probar o comparar afinaciones
+      expect(find.text('Seleccionar acordeón'), findsOneWidget);
+    },
+  );
 
-    final pullButtons =
-        tester.widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget));
-    final pressedInPull = pullButtons.where((btn) => btn.isPressed).toList();
-    expect(pressedInPull, isNotEmpty);
-    for (final btn in pressedInPull) {
-      expect(btn.isChordPull, isTrue);
-    }
+  testWidgets(
+    'el diálogo de afinación permite ordenar por tono ascendente y restablecer',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        TuningRegistry.resetToDefaultOrder();
+        tester.view.resetPhysicalSize();
+      });
 
-    // Esperar a que se liberen los botones del acorde anterior
-    await tester.pump(const Duration(milliseconds: 1000));
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: DiapasonWidget(
+                currentTuning: TuningRegistry.defaultTunings[0],
+                onTuningChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    // 3. Arpegio: durante la reproducción del arpegio, los botones presionados corresponden al fuelle
-    notifier.setBellows1(BellowsMode.push);
-    notifier.arpeggioFreeChord();
-    await tester.pump();
+      // Abrir diálogo
+      await tester.tap(find.byKey(const ValueKey('diapason_tuning_btn_1')));
+      await tester.pumpAndSettle();
 
-    final arpButtons =
-        tester.widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget));
-    final pressedInArp = arpButtons.where((btn) => btn.isPressed).toList();
-    expect(pressedInArp, isNotEmpty);
-    for (final btn in pressedInArp) {
-      expect(btn.isChordPush, isTrue);
-    }
+      expect(find.text('Tono ascendente'), findsOneWidget);
+      // Verificamos que se expresen en tonos y semitonos (ej. Base, +1½ T)
+      expect(find.text('Base'), findsOneWidget);
+      expect(find.text('+1½ T'), findsOneWidget);
 
-    // Limpieza de temporizadores de Future.delayed en el test
-    await tester.pump(const Duration(milliseconds: 1500));
-  });
+      // Pulsamos "Tono ascendente"
+      await tester.tap(find.byKey(const ValueKey('btn_sort_pitch_asc')));
+      await tester.pumpAndSettle();
+
+      // Verificamos que Anisada (-7 -> -3½ T) ahora está presente
+      expect(find.text('-3½ T'), findsOneWidget);
+
+      // Verificamos que Anisada (-7) ahora está en primera posición
+      expect(TuningRegistry.orderedTunings.first.id, 'anisada');
+      expect(TuningRegistry.orderedTunings.last.id, 'lluvia');
+
+      // Pulsamos "Restablecer"
+      await tester.tap(find.byKey(const ValueKey('btn_reset_tuning_order')));
+      await tester.pumpAndSettle();
+
+      expect(TuningRegistry.orderedTunings.first.id, 'cinco_letras');
+    },
+  );
+
+  testWidgets(
+    'Al dar play al acorde, solo se muestran presionados los botones según está el fuelle',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: DiapasonWidget(
+                accordionNumber: 1,
+                currentTuning: TuningRegistry.defaultTunings[0],
+                onTuningChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(DiapasonWidget)),
+      );
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      // 1. Cerrar (Push): solo los botones cuya nota push pertenece al acorde se muestran presionados
+      notifier.setBellows1(BellowsMode.push);
+      notifier.playFreeChord();
+      await tester.pump();
+
+      final pushButtons = tester.widgetList<DiapasonButtonWidget>(
+        find.byType(DiapasonButtonWidget),
+      );
+      final pressedInPush = pushButtons.where((btn) => btn.isPressed).toList();
+      expect(pressedInPush, isNotEmpty);
+      for (final btn in pressedInPush) {
+        expect(btn.isChordPush, isTrue);
+      }
+
+      // Esperar a que se liberen los botones del acorde anterior
+      await tester.pump(const Duration(milliseconds: 1000));
+
+      // 2. Abrir (Pull): solo los botones cuya nota pull pertenece al acorde se muestran presionados
+      notifier.setBellows1(BellowsMode.pull);
+      notifier.playFreeChord();
+      await tester.pump();
+
+      final pullButtons = tester.widgetList<DiapasonButtonWidget>(
+        find.byType(DiapasonButtonWidget),
+      );
+      final pressedInPull = pullButtons.where((btn) => btn.isPressed).toList();
+      expect(pressedInPull, isNotEmpty);
+      for (final btn in pressedInPull) {
+        expect(btn.isChordPull, isTrue);
+      }
+
+      // Esperar a que se liberen los botones del acorde anterior
+      await tester.pump(const Duration(milliseconds: 1000));
+
+      // 3. Arpegio: durante la reproducción del arpegio, los botones presionados corresponden al fuelle
+      notifier.setBellows1(BellowsMode.push);
+      notifier.arpeggioFreeChord();
+      await tester.pump();
+
+      final arpButtons = tester.widgetList<DiapasonButtonWidget>(
+        find.byType(DiapasonButtonWidget),
+      );
+      final pressedInArp = arpButtons.where((btn) => btn.isPressed).toList();
+      expect(pressedInArp, isNotEmpty);
+      for (final btn in pressedInArp) {
+        expect(btn.isChordPush, isTrue);
+      }
+
+      // Limpieza de temporizadores de Future.delayed en el test
+      await tester.pump(const Duration(milliseconds: 1500));
+    },
+  );
 }

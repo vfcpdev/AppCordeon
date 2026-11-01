@@ -177,8 +177,6 @@ class FreeChordWidget extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
 
-              // Extensión: matriz 4 columnas × 2 filas
-              // Fila 1: séptimas y sexta · Fila 2: añadidas y sin extensión
               _buildMatrixSection(
                 title: 'Extensión',
                 color: const Color(0xFF7C3AED),
@@ -223,7 +221,9 @@ class FreeChordWidget extends ConsumerWidget {
                     _buildOptionButton(
                       sigla: '—',
                       tooltip: 'Sin extensión',
-                      isActive: state.freeChordFourth == 'none',
+                      isActive:
+                          state.freeChordFourth == 'none' ||
+                          state.freeChordFourth.isEmpty,
                       activeColor: const Color(0xFF7C3AED),
                       onTap: () => notifier.setFreeChordFourth('none'),
                     ),

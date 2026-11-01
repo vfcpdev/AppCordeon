@@ -152,30 +152,15 @@ void main() {
       );
       expect(
         find.byKey(const ValueKey('chord_structure_container')),
-        findsOneWidget,
+        findsNothing,
       );
       final qualityContainer = tester.getRect(
         find.byKey(const ValueKey('chord_qualities_container')),
-      );
-      final structureContainer = tester.getRect(
-        find.byKey(const ValueKey('chord_structure_container')),
-      );
-      final sus4Rect = tester.getRect(
-        find.byKey(const ValueKey('chord_quality_sus4')),
-      );
-      final triadRect = tester.getRect(
-        find.byKey(const ValueKey('chord_structure_triad')),
-      );
-      final seventhRect = tester.getRect(
-        find.byKey(const ValueKey('chord_structure_seventh')),
       );
       final firstTonic = tester.getTopLeft(
         find.byKey(const ValueKey('tonic_matrix_btn_0')),
       );
       expect(qualityContainer.top, closeTo(firstTonic.dy, 1));
-      expect(structureContainer.top, greaterThan(qualityContainer.bottom));
-      expect(triadRect.top, greaterThan(sus4Rect.bottom));
-      expect(seventhRect.top, greaterThan(triadRect.bottom));
       final compasCardRect = tester.getRect(
         find.byKey(const ValueKey('measure_grid_section_card')),
       );
@@ -207,13 +192,6 @@ void main() {
               .getTopLeft(find.byKey(const ValueKey('chord_quality_sus2')))
               .dy,
         ),
-      );
-
-      await tester.tap(find.byKey(const ValueKey('chord_structure_seventh')));
-      await tester.pumpAndSettle();
-      expect(
-        container.read(accordionSimulatorProvider).freeChordScaleHarmonicMode,
-        'seventh',
       );
 
       await tester.tap(find.byKey(const ValueKey('chord_quality_sus2')));

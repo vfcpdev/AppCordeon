@@ -29,31 +29,60 @@ class DiapasonWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isPrimary = accordionNumber == 1;
     final notifier = ref.read(accordionSimulatorProvider.notifier);
-    final trebleData = ref.watch(accordionSimulatorProvider.select(
-      (s) => isPrimary ? s.trebleData1 : s.trebleData2,
-    ));
-    final isMirror = ref.watch(accordionSimulatorProvider.select(
-      (s) => isPrimary ? s.mirror1 : s.mirror2,
-    ));
-    final bellowsMode = ref.watch(accordionSimulatorProvider.select(
-      (s) => isPrimary ? s.bellows1 : s.bellows2,
-    ));
-    final onBellowsChanged = isPrimary ? notifier.setBellows1 : notifier.setBellows2;
-    final onToggleMirror = isPrimary ? notifier.toggleMirror1 : notifier.toggleMirror2;
+    final trebleData = ref.watch(
+      accordionSimulatorProvider.select(
+        (s) => isPrimary ? s.trebleData1 : s.trebleData2,
+      ),
+    );
+    final isMirror = ref.watch(
+      accordionSimulatorProvider.select(
+        (s) => isPrimary ? s.mirror1 : s.mirror2,
+      ),
+    );
+    final bellowsMode = ref.watch(
+      accordionSimulatorProvider.select(
+        (s) => isPrimary ? s.bellows1 : s.bellows2,
+      ),
+    );
+    final onBellowsChanged = isPrimary
+        ? notifier.setBellows1
+        : notifier.setBellows2;
+    final onToggleMirror = isPrimary
+        ? notifier.toggleMirror1
+        : notifier.toggleMirror2;
 
     // Selector memoizado para no recalcular acordes en cada frame ni provocar rebuilds innecesarios
-    final activeChordPitchClasses = ref.watch(activeChordPitchClassesProvider(accordionNumber));
+    final activeChordPitchClasses = ref.watch(
+      activeChordPitchClassesProvider(accordionNumber),
+    );
 
     // Nombre del acorde del constructor en la notación activa (Latina/Alemana).
-    final freeChordRoot = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordRoot));
-    final freeChordType = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordType));
-    final freeChordFourth = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordFourth));
-    final freeChordBass = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordBass));
-    final notation = ref.watch(accordionSimulatorProvider.select((s) => s.notation));
-    final isFreeChordFixed = ref.watch(accordionSimulatorProvider.select((s) => s.isFreeChordFixed));
+    final freeChordRoot = ref.watch(
+      accordionSimulatorProvider.select((s) => s.freeChordRoot),
+    );
+    final freeChordType = ref.watch(
+      accordionSimulatorProvider.select((s) => s.freeChordType),
+    );
+    final freeChordFourth = ref.watch(
+      accordionSimulatorProvider.select((s) => s.freeChordFourth),
+    );
+    final freeChordBass = ref.watch(
+      accordionSimulatorProvider.select((s) => s.freeChordBass),
+    );
+    final notation = ref.watch(
+      accordionSimulatorProvider.select((s) => s.notation),
+    );
+    final isFreeChordFixed = ref.watch(
+      accordionSimulatorProvider.select((s) => s.isFreeChordFixed),
+    );
+    final isFreeChordBeingEdited = ref.watch(
+      accordionSimulatorProvider.select((s) => s.isFreeChordBeingEdited),
+    );
 
     // Acorde activo en el Compás (seleccionado o reproduciéndose)
-    final compasChord = ref.watch(accordionSimulatorProvider.select((s) => s.activeCompasChord));
+    final compasChord = ref.watch(
+      accordionSimulatorProvider.select((s) => s.activeCompasChord),
+    );
     final formattedCompasChord = compasChord.isNotEmpty
         ? ChordCatalog.formatChordForNotation(compasChord, notation)
         : '';
@@ -65,9 +94,30 @@ class DiapasonWidget extends ConsumerWidget {
       latin: notation != NotationMode.alemana,
       display: true,
     );
-    final chordLabel = (!isFreeChordFixed && formattedCompasChord.isNotEmpty)
+    final chordLabel =
+        (!isFreeChordFixed &&
+            !isFreeChordBeingEdited &&
+            formattedCompasChord.isNotEmpty)
         ? formattedCompasChord
         : formattedFreeChord;
+    final chordPitchClasses = ChordCatalog.pitchClassesForChordSymbol(
+      chordLabel,
+    );
+    final availablePush = <int>{};
+    final availablePull = <int>{};
+    for (final row in trebleData.values) {
+      for (final button in row) {
+        availablePush.add(button.push % 12);
+        availablePull.add(button.pull % 12);
+      }
+    }
+    final missingPush = chordPitchClasses.difference(availablePush).toList()
+      ..sort();
+    final missingPull = chordPitchClasses.difference(availablePull).toList()
+      ..sort();
+    final noteNames = notation == NotationMode.alemana
+        ? ChordCatalog.germanRootNames
+        : ChordCatalog.latinRootNames;
 
     final rowList = [
       _RowDef(
@@ -124,11 +174,17 @@ class DiapasonWidget extends ConsumerWidget {
                 // ── Barra unificada: Fuelle (Ambos / Abrir / Cerrar) + Intercambiar Hileras ──
                 Center(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E293B),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF334155), width: 1.0),
+                      border: Border.all(
+                        color: const Color(0xFF334155),
+                        width: 1.0,
+                      ),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x33000000),
@@ -197,13 +253,18 @@ class DiapasonWidget extends ConsumerWidget {
 
                 // ── Etiqueta que ocupa todo el ancho del diapasón ──
                 Container(
-                  height: 24,
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  key: ValueKey('diapason_chord_info_$accordionNumber'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: const Color(0xFFCBD5E1), width: 1.0),
+                    border: Border.all(
+                      color: const Color(0xFFCBD5E1),
+                      width: 1.0,
+                    ),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x33000000),
@@ -212,19 +273,65 @@ class DiapasonWidget extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text.rich(
-                      chordLabel.isEmpty
-                          ? const TextSpan(text: '—')
-                          : ChordCatalog.buildChordLabelSpans(
-                              chord: chordLabel,
-                              notation: notation,
-                              fontSize: 9.5,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text.rich(
+                                  chordLabel.isEmpty
+                                      ? const TextSpan(text: '—')
+                                      : ChordCatalog.buildChordLabelSpans(
+                                          chord: chordLabel,
+                                          notation: notation,
+                                          fontSize: 9.5,
+                                        ),
+                                  key: ValueKey(
+                                    'diapason_chord_label_$accordionNumber',
+                                  ),
+                                  maxLines: 1,
+                                ),
+                              ),
                             ),
-                      key: ValueKey('diapason_chord_label_$accordionNumber'),
-                      maxLines: 1,
-                    ),
+                          ),
+                          const SizedBox(width: 6),
+                          _ChordStructureSelector(),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _MissingChordNotes(
+                              label: 'Cierra',
+                              keyName:
+                                  'diapason_chord_status_push_$accordionNumber',
+                              missingNotes: missingPush
+                                  .map((pitchClass) => noteNames[pitchClass])
+                                  .toList(),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: _MissingChordNotes(
+                              label: 'Abre',
+                              keyName:
+                                  'diapason_chord_status_pull_$accordionNumber',
+                              missingNotes: missingPull
+                                  .map((pitchClass) => noteNames[pitchClass])
+                                  .toList(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -247,24 +354,39 @@ class DiapasonWidget extends ConsumerWidget {
                             topOffset: rDef.topOffset,
                             activeChordPitchClasses: activeChordPitchClasses,
                             compasChord: compasChord,
+                            isFreeChordBeingEdited: isFreeChordBeingEdited,
                           ),
                         );
                       }).toList(),
                     ),
                     const SizedBox(width: 4),
                     _VerticalVolumeControl(
-                      volume: ref.watch(accordionSimulatorProvider.select(
-                        (s) => isPrimary ? s.volume1 : s.volume2,
-                      )),
-                      isMuted: ref.watch(accordionSimulatorProvider.select(
-                        (s) => isPrimary ? s.isMuted1 : s.isMuted2,
-                      )),
-                      onVolumeChanged: isPrimary ? notifier.setVolume1 : notifier.setVolume2,
-                      onToggleMute: isPrimary ? notifier.toggleMute1 : notifier.toggleMute2,
+                      volume: ref.watch(
+                        accordionSimulatorProvider.select(
+                          (s) => isPrimary ? s.volume1 : s.volume2,
+                        ),
+                      ),
+                      isMuted: ref.watch(
+                        accordionSimulatorProvider.select(
+                          (s) => isPrimary ? s.isMuted1 : s.isMuted2,
+                        ),
+                      ),
+                      onVolumeChanged: isPrimary
+                          ? notifier.setVolume1
+                          : notifier.setVolume2,
+                      onToggleMute: isPrimary
+                          ? notifier.toggleMute1
+                          : notifier.toggleMute2,
                       syncVolume: isPrimary
-                          ? ref.watch(accordionSimulatorProvider.select((s) => s.syncVolume))
+                          ? ref.watch(
+                              accordionSimulatorProvider.select(
+                                (s) => s.syncVolume,
+                              ),
+                            )
                           : null,
-                      onToggleSyncVolume: isPrimary ? notifier.toggleSyncVolume : null,
+                      onToggleSyncVolume: isPrimary
+                          ? notifier.toggleSyncVolume
+                          : null,
                     ),
                   ],
                 ),
@@ -294,7 +416,10 @@ class DiapasonWidget extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFF0284C7),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFF38BDF8), width: 1.2),
+                    border: Border.all(
+                      color: const Color(0xFF38BDF8),
+                      width: 1.2,
+                    ),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x55000000),
@@ -331,21 +456,38 @@ class DiapasonWidget extends ConsumerWidget {
     required double topOffset,
     required Set<int> activeChordPitchClasses,
     required String compasChord,
+    required bool isFreeChordBeingEdited,
   }) {
     final notifier = ref.read(accordionSimulatorProvider.notifier);
     final isPrimary = accordionNumber == 1;
-    final currentTuning = ref.watch(accordionSimulatorProvider.select(
-      (s) => isPrimary ? s.tuning1 : s.tuning2,
-    ));
-    final currentBellows = ref.watch(accordionSimulatorProvider.select(
-      (s) => isPrimary ? s.bellows1 : s.bellows2,
-    ));
-    final activeButtons = ref.watch(accordionSimulatorProvider.select((s) => s.activeButtons));
-    final detectorSelectedButtons = ref.watch(accordionSimulatorProvider.select((s) => s.detectorSelectedButtons));
-    final notation = ref.watch(accordionSimulatorProvider.select((s) => s.notation));
-    final detectorMode = ref.watch(accordionSimulatorProvider.select((s) => s.detectorMode));
-    final freeChordOctave = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordOctave));
-    final isFreeChordFixed = ref.watch(accordionSimulatorProvider.select((s) => s.isFreeChordFixed));
+    final currentTuning = ref.watch(
+      accordionSimulatorProvider.select(
+        (s) => isPrimary ? s.tuning1 : s.tuning2,
+      ),
+    );
+    final currentBellows = ref.watch(
+      accordionSimulatorProvider.select(
+        (s) => isPrimary ? s.bellows1 : s.bellows2,
+      ),
+    );
+    final activeButtons = ref.watch(
+      accordionSimulatorProvider.select((s) => s.activeButtons),
+    );
+    final detectorSelectedButtons = ref.watch(
+      accordionSimulatorProvider.select((s) => s.detectorSelectedButtons),
+    );
+    final notation = ref.watch(
+      accordionSimulatorProvider.select((s) => s.notation),
+    );
+    final detectorMode = ref.watch(
+      accordionSimulatorProvider.select((s) => s.detectorMode),
+    );
+    final freeChordOctave = ref.watch(
+      accordionSimulatorProvider.select((s) => s.freeChordOctave),
+    );
+    final isFreeChordFixed = ref.watch(
+      accordionSimulatorProvider.select((s) => s.isFreeChordFixed),
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -354,7 +496,8 @@ class DiapasonWidget extends ConsumerWidget {
         // Todos los botones permanecen visibles. En Abrir/Cerrar solo se
         // colorean los que producen una nota del acorde vigente.
         ...buttons.map((btn) {
-          final isPressed = activeButtons.contains('a${accordionNumber}_${btn.id}') ||
+          final isPressed =
+              activeButtons.contains('a${accordionNumber}_${btn.id}') ||
               activeButtons.contains(btn.id);
           final isDetector = detectorSelectedButtons.contains(btn.id);
           final midiToPlay = currentBellows == BellowsMode.pull
@@ -363,15 +506,25 @@ class DiapasonWidget extends ConsumerWidget {
 
           // `btn.pull`/`btn.push` ya incluyen la transposición de la afinación.
           bool matchesOctave(int midi) {
-            if (!isFreeChordFixed && compasChord.isNotEmpty) return true;
-            if (freeChordOctave == 'all' || freeChordOctave.isEmpty) return true;
+            if (!isFreeChordFixed &&
+                !isFreeChordBeingEdited &&
+                compasChord.isNotEmpty) {
+              return true;
+            }
+            if (freeChordOctave == 'all' || freeChordOctave.isEmpty) {
+              return true;
+            }
             // Octava 3: 48 a 59, Octava 4: 60 a 71, Octava 5: 72 a 83
             final oct = (midi / 12).floor() - 1;
             return '$oct' == freeChordOctave;
           }
 
-          final isChordPull = activeChordPitchClasses.contains(btn.pull % 12) && matchesOctave(btn.pull);
-          final isChordPush = activeChordPitchClasses.contains(btn.push % 12) && matchesOctave(btn.push);
+          final isChordPull =
+              activeChordPitchClasses.contains(btn.pull % 12) &&
+              matchesOctave(btn.pull);
+          final isChordPush =
+              activeChordPitchClasses.contains(btn.push % 12) &&
+              matchesOctave(btn.push);
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
@@ -404,6 +557,134 @@ class DiapasonWidget extends ConsumerWidget {
           );
         }),
       ],
+    );
+  }
+}
+
+class _ChordStructureSelector extends ConsumerWidget {
+  const _ChordStructureSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedStructure = ref.watch(
+      accordionSimulatorProvider.select(
+        (state) => state.freeChordScaleHarmonicMode,
+      ),
+    );
+    final notifier = ref.read(accordionSimulatorProvider.notifier);
+
+    return Row(
+      key: const ValueKey('diapason_structure_selector'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildButton(
+          label: '3',
+          tooltip: 'Tríada: 3 notas',
+          key: 'diapason_structure_triad',
+          isSelected: selectedStructure == 'triad',
+          onTap: () => notifier.setFreeChordScaleHarmonicMode('triad'),
+        ),
+        const SizedBox(width: 2),
+        _buildButton(
+          label: '4',
+          tooltip: 'Cuatríada: 4 notas',
+          key: 'diapason_structure_seventh',
+          isSelected: selectedStructure == 'seventh',
+          onTap: () => notifier.setFreeChordScaleHarmonicMode('seventh'),
+        ),
+        const SizedBox(width: 2),
+        _buildButton(
+          label: '5',
+          tooltip: 'Acorde de cinco notas: 1, 3, 5, 7 y 9',
+          key: 'diapason_structure_five',
+          isSelected: selectedStructure == 'five',
+          onTap: () => notifier.setFreeChordScaleHarmonicMode('five'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildButton({
+    required String label,
+    required String tooltip,
+    required String key,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        key: ValueKey(key),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(3),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 90),
+          width: 25,
+          height: 20,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFFEA580C) : Colors.white,
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFFC2410C)
+                  : const Color(0xFFFDBA74),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 8,
+              fontWeight: FontWeight.w900,
+              color: isSelected ? Colors.white : const Color(0xFF9A3412),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MissingChordNotes extends StatelessWidget {
+  const _MissingChordNotes({
+    required this.label,
+    required this.keyName,
+    required this.missingNotes,
+  });
+
+  final String label;
+  final String keyName;
+  final List<String> missingNotes;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasMissingNotes = missingNotes.isNotEmpty;
+    final color = hasMissingNotes
+        ? const Color(0xFFDC2626)
+        : const Color(0xFF15803D);
+    final status = hasMissingNotes
+        ? '$label, faltan: ${missingNotes.join('·')}'
+        : '$label: —';
+
+    return Tooltip(
+      message: status,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            status,
+            key: ValueKey(keyName),
+            maxLines: 1,
+            style: TextStyle(
+              color: color,
+              fontSize: 7.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -445,7 +726,9 @@ class _BellowsBtn extends StatelessWidget {
             icon,
             size: 12,
             color: isActive
-                ? (activeColor.computeLuminance() > 0.45 ? const Color(0xFF0F172A) : Colors.white)
+                ? (activeColor.computeLuminance() > 0.45
+                      ? const Color(0xFF0F172A)
+                      : Colors.white)
                 : const Color(0xFF94A3B8),
           ),
         ),
@@ -545,7 +828,9 @@ class _VerticalVolumeControl extends StatelessWidget {
                 data: SliderThemeData(
                   trackHeight: 3,
                   trackShape: const RectangularSliderTrackShape(),
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                  thumbShape: const RoundSliderThumbShape(
+                    enabledThumbRadius: 5,
+                  ),
                   overlayShape: const RoundSliderOverlayShape(overlayRadius: 9),
                   activeTrackColor: const Color(0xFF38BDF8),
                   inactiveTrackColor: Colors.white24,
@@ -572,7 +857,9 @@ class _VerticalVolumeControl extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(3),
                 child: FaIcon(
-                  isMuted ? FontAwesomeIcons.volumeXmark : FontAwesomeIcons.volumeHigh,
+                  isMuted
+                      ? FontAwesomeIcons.volumeXmark
+                      : FontAwesomeIcons.volumeHigh,
                   size: 10,
                   color: isMuted ? const Color(0xFFF87171) : Colors.white70,
                 ),

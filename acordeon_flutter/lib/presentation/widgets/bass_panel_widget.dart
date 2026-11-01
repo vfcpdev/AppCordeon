@@ -263,7 +263,9 @@ class BassPanelWidget extends ConsumerWidget {
     final int activeChordRoot;
     if (state.detectedChord != null) {
       activeChordRoot = state.detectedChord!.rootPitchClass;
-    } else if (!state.isFreeChordFixed && state.activeCompasChord.isNotEmpty) {
+    } else if (!state.isFreeChordFixed &&
+        !state.isFreeChordBeingEdited &&
+        state.activeCompasChord.isNotEmpty) {
       activeChordRoot =
           ChordCatalog.rootPitchClassForChordSymbol(state.activeCompasChord) ??
           state.freeChordRoot;

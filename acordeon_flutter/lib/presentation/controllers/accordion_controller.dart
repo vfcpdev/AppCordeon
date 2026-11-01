@@ -144,10 +144,12 @@ class AccordionSimulatorState {
   // Sección 5: Acorde Libre y Escalas
   final int freeChordRoot; // 0=Do, 1=Do#, etc.
   final String freeChordType; // maj, min, dim, aug, sus2, sus4
-  final String freeChordFourth; // none, octave, dom7, maj7, maj6, add9
+  final String freeChordFourth; // power5, octave, dom7, maj7, maj6, add9
   final String freeChordOctave; // all, 3, 4, 5
   final String freeChordMode; // harmonic, melodic
   final bool isFreeChordFixed;
+  final bool? _isFreeChordBeingEdited;
+  bool get isFreeChordBeingEdited => _isFreeChordBeingEdited ?? false;
   final BellowsMode freeChordBellows;
   final String freeChordScaleHarmonicMode; // triad, seventh
 
@@ -291,6 +293,7 @@ class AccordionSimulatorState {
     required this.freeChordOctave,
     required this.freeChordMode,
     required this.isFreeChordFixed,
+    bool? isFreeChordBeingEdited,
     required this.freeChordBellows,
     required this.freeChordScaleHarmonicMode,
     required this.detectorMode,
@@ -328,6 +331,7 @@ class AccordionSimulatorState {
        _markedBeats = markedBeats ?? const {},
        _multiBeatAssignmentTargets = multiBeatAssignmentTargets ?? const {},
        _yellowDecisionBeats = yellowDecisionBeats ?? const {},
+       _isFreeChordBeingEdited = isFreeChordBeingEdited ?? false,
        _multiBeatPattern = multiBeatPattern ?? '',
        _freeChordBass = freeChordBass ?? '',
        _isCompas1Undocked = isCompas1Undocked ?? false,
@@ -383,6 +387,7 @@ class AccordionSimulatorState {
     String? freeChordOctave,
     String? freeChordMode,
     bool? isFreeChordFixed,
+    bool? isFreeChordBeingEdited,
     BellowsMode? freeChordBellows,
     String? freeChordScaleHarmonicMode,
     bool? detectorMode,
@@ -465,6 +470,8 @@ class AccordionSimulatorState {
       freeChordOctave: freeChordOctave ?? this.freeChordOctave,
       freeChordMode: freeChordMode ?? this.freeChordMode,
       isFreeChordFixed: isFreeChordFixed ?? this.isFreeChordFixed,
+      isFreeChordBeingEdited:
+          isFreeChordBeingEdited ?? this.isFreeChordBeingEdited,
       freeChordBellows: freeChordBellows ?? this.freeChordBellows,
       freeChordScaleHarmonicMode:
           freeChordScaleHarmonicMode ?? this.freeChordScaleHarmonicMode,
@@ -680,7 +687,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void setFreeChordBass(String bass) {
-    state = state.copyWith(freeChordBass: bass);
+    state = state.copyWith(freeChordBass: bass, isFreeChordBeingEdited: true);
   }
 
   void setNotation(NotationMode notation) {
@@ -1384,7 +1391,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
 
     _stopStandaloneMetronome();
-    state = state.copyWith(isPlayingAudio: true);
+    state = state.copyWith(isPlayingAudio: true, isFreeChordBeingEdited: false);
     _lastPlayedBar = null;
     _lastPlayedBeat = null;
 
@@ -1911,6 +1918,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       selectedBarIndex: barIdx,
       selectedBeatIndex: beatIdx,
       bellows1: nextBellows,
+      isFreeChordBeingEdited: false,
     );
   }
 
@@ -2621,15 +2629,19 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   // desactiva (valor neutro) y al pulsarla de nuevo se vuelve a activar.
   void setFreeChordRoot(int root) => state = state.copyWith(
     freeChordRoot: state.freeChordRoot == root ? -1 : root,
+    isFreeChordBeingEdited: true,
   );
   void setFreeChordType(String type) => state = state.copyWith(
     freeChordType: state.freeChordType == type ? '' : type,
+    isFreeChordBeingEdited: true,
   );
   void setFreeChordFourth(String fourth) => state = state.copyWith(
     freeChordFourth: state.freeChordFourth == fourth ? '' : fourth,
+    isFreeChordBeingEdited: true,
   );
   void setFreeChordOctave(String oct) => state = state.copyWith(
     freeChordOctave: state.freeChordOctave == oct ? '' : oct,
+    isFreeChordBeingEdited: true,
   );
   void setFreeChordMode(String mode) =>
       state = state.copyWith(freeChordMode: mode);
@@ -2639,30 +2651,38 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       state = state.copyWith(freeChordBellows: m);
   void setFreeChordScaleHarmonicMode(String mode) {
     if (state.freeChordScaleHarmonicMode == mode) {
-      state = state.copyWith(freeChordScaleHarmonicMode: '');
+      if (mode == 'five') return;
+      state = state.copyWith(
+        freeChordScaleHarmonicMode: '',
+        isFreeChordBeingEdited: true,
+      );
       return;
     }
     // Si selecciona 'triad', se limpia la 7ma/extensión.
     // Si selecciona 'seventh', se activa la 7ma según la cualidad si no hay extensión.
     String updatedFourth = state.freeChordFourth;
     if (mode == 'triad') {
-      if (['dom7', 'maj7', 'min7', 'dim7'].contains(updatedFourth)) {
+      if (['dom7', 'maj7', 'min7', 'dim7', 'five'].contains(updatedFourth)) {
         updatedFourth = '';
       }
     } else if (mode == 'seventh') {
       if (updatedFourth.isEmpty ||
           updatedFourth == 'none' ||
-          updatedFourth == 'octave') {
+          updatedFourth == 'octave' ||
+          updatedFourth == 'five') {
         updatedFourth = switch (state.freeChordType) {
           'min' => 'min7',
           'dim' => 'dim7',
           _ => 'dom7',
         };
       }
+    } else if (mode == 'five') {
+      updatedFourth = 'five';
     }
     state = state.copyWith(
       freeChordScaleHarmonicMode: mode,
       freeChordFourth: updatedFourth,
+      isFreeChordBeingEdited: true,
     );
   }
 
@@ -2676,6 +2696,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       freeChordRoot: newRoot,
       freeChordType: newType,
       freeChordBellows: BellowsMode.push,
+      isFreeChordBeingEdited: true,
     );
     playFreeChord();
   }
@@ -2981,6 +3002,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       freeChordFourth: params.fourth,
       freeChordBass: params.bass,
       isFreeChordFixed: params.isFixed,
+      isFreeChordBeingEdited: true,
     );
   }
 
@@ -3123,6 +3145,9 @@ final activeChordPitchClassesProvider = Provider.family<Set<int>, int>((
   final isFreeChordFixed = ref.watch(
     accordionSimulatorProvider.select((s) => s.isFreeChordFixed),
   );
+  final isFreeChordBeingEdited = ref.watch(
+    accordionSimulatorProvider.select((s) => s.isFreeChordBeingEdited),
+  );
 
   final generated = freeChordRoot >= 0
       ? ChordCatalog.notesFor(
@@ -3162,7 +3187,9 @@ final activeChordPitchClassesProvider = Provider.family<Set<int>, int>((
   final Set<int> baseChordPcs;
   if (detectorMode) {
     baseChordPcs = const <int>{};
-  } else if (!isFreeChordFixed && compasPcs.isNotEmpty) {
+  } else if (!isFreeChordFixed &&
+      !isFreeChordBeingEdited &&
+      compasPcs.isNotEmpty) {
     baseChordPcs = compasPcs;
   } else {
     baseChordPcs =

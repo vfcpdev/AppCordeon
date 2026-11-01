@@ -19,12 +19,7 @@ class ChordQualitySelectorWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedValues = ref.watch(
-      accordionSimulatorProvider.select(
-        (state) => (
-          quality: state.freeChordType,
-          structure: state.freeChordScaleHarmonicMode,
-        ),
-      ),
+      accordionSimulatorProvider.select((state) => state.freeChordType),
     );
     final notifier = ref.read(accordionSimulatorProvider.notifier);
 
@@ -60,12 +55,12 @@ class ChordQualitySelectorWidget extends ConsumerWidget {
                           height: 19,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: selectedValues.quality == quality.value
+                            color: selectedValues == quality.value
                                 ? const Color(0xFF059669)
                                 : Colors.white,
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(
-                              color: selectedValues.quality == quality.value
+                              color: selectedValues == quality.value
                                   ? const Color(0xFF059669)
                                   : const Color(0xFFCBD5E1),
                             ),
@@ -77,7 +72,7 @@ class ChordQualitySelectorWidget extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: quality.symbol.length > 1 ? 8 : 10,
                                 fontWeight: FontWeight.w900,
-                                color: selectedValues.quality == quality.value
+                                color: selectedValues == quality.value
                                     ? Colors.white
                                     : const Color(0xFF334155),
                               ),
@@ -90,90 +85,7 @@ class ChordQualitySelectorWidget extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 4),
-            Container(
-              key: const ValueKey('chord_structure_container'),
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: const Color(0xFFFDBA74)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 2),
-                    child: Text(
-                      'Estructura',
-                      style: TextStyle(
-                        fontSize: 7,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF9A3412),
-                      ),
-                    ),
-                  ),
-                  _buildStructureButton(
-                    key: 'chord_structure_triad',
-                    label: '3',
-                    tooltip: 'Tríada: 3 notas',
-                    isSelected: selectedValues.structure == 'triad',
-                    onTap: () =>
-                        notifier.setFreeChordScaleHarmonicMode('triad'),
-                  ),
-                  const SizedBox(height: 2),
-                  _buildStructureButton(
-                    key: 'chord_structure_seventh',
-                    label: '4',
-                    tooltip: 'Cuatríada: 4 notas',
-                    isSelected: selectedValues.structure == 'seventh',
-                    onTap: () =>
-                        notifier.setFreeChordScaleHarmonicMode('seventh'),
-                  ),
-                ],
-              ),
-            ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStructureButton({
-    required String key,
-    required String label,
-    required String tooltip,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        key: ValueKey(key),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 90),
-          width: 45,
-          height: 19,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFEA580C) : Colors.white,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: isSelected
-                  ? const Color(0xFFC2410C)
-                  : const Color(0xFFFDBA74),
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w900,
-              color: isSelected ? Colors.white : const Color(0xFF9A3412),
-            ),
-          ),
         ),
       ),
     );

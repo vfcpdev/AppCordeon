@@ -6,6 +6,8 @@ import 'bass_matching_strategy.dart';
 class ChordCatalog {
   ChordCatalog._();
 
+  static const String powerChordExtension = 'power5';
+
   /// Intervalos (semitonos desde la raíz) por tipo de tríada.
   static const Map<String, List<int>> triadIntervals = {
     'maj': [0, 4, 7],
@@ -36,14 +38,21 @@ class ChordCatalog {
     int baseMidi = 60,
   }) {
     if (root < 0) return const [];
-    final intervals = <int>[
-      if (type.isEmpty)
-        0
-      else
-        ...(triadIntervals[type] ?? triadIntervals['maj']!),
-    ];
+    final intervals = extension == powerChordExtension
+        ? <int>[0, 7]
+        : <int>[
+            if (type.isEmpty)
+              0
+            else
+              ...(triadIntervals[type] ?? triadIntervals['maj']!),
+          ];
+    if (extension == 'five') {
+      intervals
+        ..add(type == 'dim' ? 9 : 10)
+        ..add(14);
+    }
     final ext = extensionIntervals[extension];
-    if (ext != null) intervals.add(ext);
+    if (extension != powerChordExtension && ext != null) intervals.add(ext);
     final base = baseMidi + root;
     return intervals.map((i) => base + i).toList();
   }
@@ -69,12 +78,32 @@ class ChordCatalog {
   /// Nombres de tónica en notación latina (Do, Re, Mi…) y alemana (C, D, E…).
   /// El índice corresponde a la clase de altura (0 = Do/C).
   static const List<String> latinRootNames = [
-    'Do', 'Do#', 'Re', 'Mi♭', 'Mi', 'Fa',
-    'Fa#', 'Sol', 'Sol#', 'La', 'Si♭', 'Si',
+    'Do',
+    'Do#',
+    'Re',
+    'Mi♭',
+    'Mi',
+    'Fa',
+    'Fa#',
+    'Sol',
+    'Sol#',
+    'La',
+    'Si♭',
+    'Si',
   ];
   static const List<String> germanRootNames = [
-    'C', 'C#', 'D', 'Eb', 'E', 'F',
-    'F#', 'G', 'Ab', 'A', 'Bb', 'B',
+    'C',
+    'C#',
+    'D',
+    'Eb',
+    'E',
+    'F',
+    'F#',
+    'G',
+    'Ab',
+    'A',
+    'Bb',
+    'B',
   ];
 
   /// Cadena de texto más larga que puede generarse para un nombre de acorde
@@ -99,16 +128,20 @@ class ChordCatalog {
     final rootNames = latin ? latinRootNames : germanRootNames;
     final rootName = rootNames[root];
 
-    final typeSymbol = switch (type) {
-      'min' => 'm',
-      'dim' => display ? '°' : 'dim',
-      'aug' => display ? '+' : 'aug',
-      'sus4' => 'sus4',
-      'sus2' => 'sus2',
-      _ => '',
-    };
+    final typeSymbol = extension == powerChordExtension
+        ? ''
+        : switch (type) {
+            'min' => 'm',
+            'dim' => display ? '°' : 'dim',
+            'aug' => display ? '+' : 'aug',
+            'sus4' => 'sus4',
+            'sus2' => 'sus2',
+            _ => '',
+          };
 
     final extensionSymbol = switch (extension) {
+      powerChordExtension => '5',
+      'five' => '9',
       'octave' => '8',
       'dom7' => '7',
       'maj7' => 'maj7',
@@ -160,10 +193,50 @@ class ChordCatalog {
   }
 
   static const Map<String, int> rootPitchClasses = {
-    'Do#': 1, 'Reb': 1, 'Re♭': 1, 'Re#': 3, 'Mib': 3, 'Mi♭': 3, 'Fa#': 6, 'Solb': 6, 'Sol♭': 6, 'Sol#': 8, 'Lab': 8, 'La♭': 8, 'La#': 10, 'Sib': 10, 'Si♭': 10,
-    'Do': 0, 'Re': 2, 'Mi': 4, 'Fa': 5, 'Sol': 7, 'La': 9, 'Si': 11,
-    'C#': 1, 'Db': 1, 'D♭': 1, 'D#': 3, 'Eb': 3, 'E♭': 3, 'F#': 6, 'Gb': 6, 'G♭': 6, 'G#': 8, 'Ab': 8, 'A♭': 8, 'A#': 10, 'Bb': 10, 'B♭': 10,
-    'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
+    'Do#': 1,
+    'Reb': 1,
+    'Re♭': 1,
+    'Re#': 3,
+    'Mib': 3,
+    'Mi♭': 3,
+    'Fa#': 6,
+    'Solb': 6,
+    'Sol♭': 6,
+    'Sol#': 8,
+    'Lab': 8,
+    'La♭': 8,
+    'La#': 10,
+    'Sib': 10,
+    'Si♭': 10,
+    'Do': 0,
+    'Re': 2,
+    'Mi': 4,
+    'Fa': 5,
+    'Sol': 7,
+    'La': 9,
+    'Si': 11,
+    'C#': 1,
+    'Db': 1,
+    'D♭': 1,
+    'D#': 3,
+    'Eb': 3,
+    'E♭': 3,
+    'F#': 6,
+    'Gb': 6,
+    'G♭': 6,
+    'G#': 8,
+    'Ab': 8,
+    'A♭': 8,
+    'A#': 10,
+    'Bb': 10,
+    'B♭': 10,
+    'C': 0,
+    'D': 2,
+    'E': 4,
+    'F': 5,
+    'G': 7,
+    'A': 9,
+    'B': 11,
   };
 
   /// Convierte el símbolo de un acorde a la notación especificada (latina o alemana),
@@ -251,8 +324,16 @@ class ChordCatalog {
     if (trimmed.contains('/')) {
       final parts = trimmed.split('/');
       if (parts.length == 2) {
-        final main = transposeChordSymbol(parts[0], semitoneOffset, preferFlats: preferFlats);
-        final bass = transposeChordSymbol(parts[1], semitoneOffset, preferFlats: preferFlats);
+        final main = transposeChordSymbol(
+          parts[0],
+          semitoneOffset,
+          preferFlats: preferFlats,
+        );
+        final bass = transposeChordSymbol(
+          parts[1],
+          semitoneOffset,
+          preferFlats: preferFlats,
+        );
         return '$main/$bass';
       }
     }
@@ -276,7 +357,8 @@ class ChordCatalog {
     }
 
     final rest = trimmed.substring(matchedRoot.length);
-    final isLatin = matchedRoot.startsWith('Do') ||
+    final isLatin =
+        matchedRoot.startsWith('Do') ||
         matchedRoot.startsWith('Re') ||
         matchedRoot.startsWith('Mi') ||
         matchedRoot.startsWith('Fa') ||
@@ -290,21 +372,65 @@ class ChordCatalog {
     if (isLatin) {
       if (preferFlats) {
         newRootName = const [
-          'Do', 'Re♭', 'Re', 'Mi♭', 'Mi', 'Fa', 'Sol♭', 'Sol', 'La♭', 'La', 'Si♭', 'Si'
+          'Do',
+          'Re♭',
+          'Re',
+          'Mi♭',
+          'Mi',
+          'Fa',
+          'Sol♭',
+          'Sol',
+          'La♭',
+          'La',
+          'Si♭',
+          'Si',
         ][newPitchClass];
       } else {
         newRootName = const [
-          'Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'
+          'Do',
+          'Do#',
+          'Re',
+          'Re#',
+          'Mi',
+          'Fa',
+          'Fa#',
+          'Sol',
+          'Sol#',
+          'La',
+          'La#',
+          'Si',
         ][newPitchClass];
       }
     } else {
       if (preferFlats) {
         newRootName = const [
-          'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'
+          'C',
+          'Db',
+          'D',
+          'Eb',
+          'E',
+          'F',
+          'Gb',
+          'G',
+          'Ab',
+          'A',
+          'Bb',
+          'B',
         ][newPitchClass];
       } else {
         newRootName = const [
-          'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
+          'C',
+          'C#',
+          'D',
+          'D#',
+          'E',
+          'F',
+          'F#',
+          'G',
+          'G#',
+          'A',
+          'A#',
+          'B',
         ][newPitchClass];
       }
     }
@@ -341,7 +467,8 @@ class ChordCatalog {
     }
 
     final rest = trimmed.substring(matchedRoot.length);
-    final isLatin = matchedRoot.startsWith('Do') ||
+    final isLatin =
+        matchedRoot.startsWith('Do') ||
         matchedRoot.startsWith('Re') ||
         matchedRoot.startsWith('Mi') ||
         matchedRoot.startsWith('Fa') ||
@@ -355,21 +482,65 @@ class ChordCatalog {
     if (isLatin) {
       if (preferFlats) {
         newRootName = const [
-          'Do', 'Re♭', 'Re', 'Mi♭', 'Mi', 'Fa', 'Sol♭', 'Sol', 'La♭', 'La', 'Si♭', 'Si'
+          'Do',
+          'Re♭',
+          'Re',
+          'Mi♭',
+          'Mi',
+          'Fa',
+          'Sol♭',
+          'Sol',
+          'La♭',
+          'La',
+          'Si♭',
+          'Si',
         ][newPitchClass];
       } else {
         newRootName = const [
-          'Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'
+          'Do',
+          'Do#',
+          'Re',
+          'Re#',
+          'Mi',
+          'Fa',
+          'Fa#',
+          'Sol',
+          'Sol#',
+          'La',
+          'La#',
+          'Si',
         ][newPitchClass];
       }
     } else {
       if (preferFlats) {
         newRootName = const [
-          'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'
+          'C',
+          'Db',
+          'D',
+          'Eb',
+          'E',
+          'F',
+          'Gb',
+          'G',
+          'Ab',
+          'A',
+          'Bb',
+          'B',
         ][newPitchClass];
       } else {
         newRootName = const [
-          'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
+          'C',
+          'C#',
+          'D',
+          'D#',
+          'E',
+          'F',
+          'F#',
+          'G',
+          'G#',
+          'A',
+          'A#',
+          'B',
         ][newPitchClass];
       }
     }
@@ -397,7 +568,8 @@ class ChordCatalog {
     String rest = '';
     for (final entry in rootPitchClasses.entries) {
       if (chordToParse.startsWith(entry.key)) {
-        if (rootPc == null || entry.key.length > (chordToParse.length - rest.length)) {
+        if (rootPc == null ||
+            entry.key.length > (chordToParse.length - rest.length)) {
           rootPc = entry.value;
           rest = chordToParse.substring(entry.key.length);
         }
@@ -405,16 +577,20 @@ class ChordCatalog {
     }
     if (rootPc == null) return const {};
 
+    final isPowerChord = rest == '5';
     final isDim = rest.contains('dim') || rest.contains('°');
     final isAug = rest.contains('aug') || rest.contains('+');
     final isSus2 = rest.contains('sus2');
     final isSus4 = rest.contains('sus4') || (rest.contains('4') && !isSus2);
-    final isMinor = (rest.contains('m') && !rest.contains('maj') && !rest.contains('dim'));
-    final has7 = rest.contains('7');
+    final isMinor =
+        (rest.contains('m') && !rest.contains('maj') && !rest.contains('dim'));
+    final has7 = rest.contains('7') || rest.contains('9');
     final isMaj7 = rest.contains('maj7');
 
     final pcs = <int>{rootPc};
-    if (isDim) {
+    if (isPowerChord) {
+      pcs.add((rootPc + 7) % 12);
+    } else if (isDim) {
       pcs.add((rootPc + 3) % 12);
       pcs.add((rootPc + 6) % 12);
     } else if (isAug) {
@@ -442,6 +618,8 @@ class ChordCatalog {
       pcs.add((rootPc + 9) % 12);
     }
     if (rest.contains('add9')) {
+      pcs.add((rootPc + 2) % 12);
+    } else if (rest.contains('9')) {
       pcs.add((rootPc + 2) % 12);
     }
 
@@ -500,7 +678,9 @@ class ChordCatalog {
   static int? rootPitchClassForChordSymbol(String chord) {
     final trimmed = chord.trim();
     if (trimmed.isEmpty) return null;
-    final chordToParse = trimmed.contains('/') ? trimmed.split('/')[0].trim() : trimmed;
+    final chordToParse = trimmed.contains('/')
+        ? trimmed.split('/')[0].trim()
+        : trimmed;
     int? rootPc;
     int longestMatch = 0;
     for (final entry in rootPitchClasses.entries) {
@@ -531,7 +711,8 @@ class ChordCatalog {
   }
 
   /// Estrategia polimórfica configurable para evaluación de bajos (Strategy Pattern + OCP).
-  static IBassMatchingStrategy bassMatchingStrategy = const StandardModalBassMatchingStrategy();
+  static IBassMatchingStrategy bassMatchingStrategy =
+      const StandardModalBassMatchingStrategy();
 
   /// Evalúa si las notas de un botón de bajo acompañan al acorde activo,
   /// delegando a la estrategia armónica configurada.
