@@ -7,6 +7,7 @@ import '../../core/constants/layout_constants.dart';
 import '../../core/di/providers.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
+import 'chord_quality_selector_widget.dart';
 import 'chord_detector_widget.dart';
 import 'tonic_notes_matrix_widget.dart';
 
@@ -28,6 +29,7 @@ class MeasureGridWidget extends ConsumerStatefulWidget {
 
 class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
   late final ScrollController _compasScrollController;
+  int? _autoScrollTargetBar;
 
   @override
   void initState() {
@@ -43,7 +45,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
 
   void _scrollToBar(int barIndex) {
     if (_compasScrollController.hasClients) {
-      final target = (barIndex * 92.0).clamp(
+      final target = (barIndex * CompasCardMetrics.measureRowHeight).clamp(
         0.0,
         _compasScrollController.position.maxScrollExtent,
       );
@@ -55,21 +57,23 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     }
   }
 
-  /// Desplaza verticalmente el scroll cuando la reproducción o selección llega al
-  /// penúltimo compás visible, llevando ese cuadro de compás al inicio de la sección.
+  /// Cuando el compás activo llega al 80 % del viewport, desplaza lentamente
+  /// para dejar el siguiente compás alineado en la parte superior.
   void _handlePlaybackAutoScroll(int currentBar) {
     if (!_compasScrollController.hasClients) return;
+    final state = ref.read(accordionSimulatorProvider);
+    if (!state.isPlayingAudio) return;
 
-    const itemHeight = 92.0;
+    const itemHeight = CompasCardMetrics.measureRowHeight;
     final currentOffset = _compasScrollController.offset;
     final maxScroll = _compasScrollController.position.maxScrollExtent;
 
     if (currentBar == 0) {
       if (currentOffset > 0) {
-        _compasScrollController.animateTo(
-          0.0,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOutCubic,
+        _animatePlaybackScroll(
+          targetBar: 0,
+          targetOffset: 0.0,
+          duration: _playbackScrollDuration(state),
         );
       }
       return;
@@ -77,28 +81,45 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
 
     final viewportHeight = _compasScrollController.position.viewportDimension;
     final effectiveViewport = viewportHeight > 100 ? viewportHeight : 330.0;
-    final visibleCount = (effectiveViewport / itemHeight).floor().clamp(2, 6);
-    final topVisibleBar = (currentOffset / itemHeight).floor();
-    final penultimateVisibleBar = topVisibleBar + visibleCount - 1;
+    final activeBarBottom = ((currentBar + 1) * itemHeight) - currentOffset;
+    if (activeBarBottom < effectiveViewport * 0.8) return;
 
-    if (currentBar >= penultimateVisibleBar && currentBar > topVisibleBar) {
-      final target = (currentBar * itemHeight).clamp(0.0, maxScroll);
-      if ((target - currentOffset).abs() > 4.0) {
-        _compasScrollController.animateTo(
-          target,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOutCubic,
+    final nextBar = currentBar + 1;
+    final target = (nextBar * itemHeight).clamp(0.0, maxScroll);
+    if ((target - currentOffset).abs() <= 4.0 ||
+        _autoScrollTargetBar != null ||
+        nextBar >= state.measures.length) {
+      return;
+      }
+    _animatePlaybackScroll(
+      targetBar: nextBar,
+      targetOffset: target,
+      duration: _playbackScrollDuration(state),
         );
       }
-    } else if (currentBar < topVisibleBar) {
-      final target = (currentBar * itemHeight).clamp(0.0, maxScroll);
-      if ((target - currentOffset).abs() > 4.0) {
-        _compasScrollController.animateTo(
-          target,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOutCubic,
-        );
-      }
+
+  Duration _playbackScrollDuration(AccordionSimulatorState state) {
+    final bpm = state.audioReport?.bpm ?? 120;
+    final durationMs = (4 * 60 / bpm * 1000).round().clamp(800, 3000);
+    return Duration(milliseconds: durationMs);
+  }
+
+  Future<void> _animatePlaybackScroll({
+    required int targetBar,
+    required double targetOffset,
+    required Duration duration,
+  }) async {
+    if (!_compasScrollController.hasClients || _autoScrollTargetBar != null)
+      return;
+    _autoScrollTargetBar = targetBar;
+    try {
+      await _compasScrollController.animateTo(
+        targetOffset,
+        duration: duration,
+        curve: Curves.linear,
+      );
+    } finally {
+      if (mounted) _autoScrollTargetBar = null;
     }
   }
 
@@ -135,7 +156,9 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final allMarked = totalBeats > 0 && state.markedBeats.length == totalBeats;
     final hasMarks = state.markedBeats.isNotEmpty;
     final effectiveWidth = widget.width ?? 185.0;
-    final isUndocked = widget.isUndocked || (widget.accordionNumber == 1
+    final isUndocked =
+        widget.isUndocked ||
+        (widget.accordionNumber == 1
         ? state.isCompas1Undocked
         : state.isCompas2Undocked);
 
@@ -143,8 +166,10 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final selectedBar = state.selectedBarIndex;
     final selectedBeat = state.selectedBeatIndex;
     String? selectedChord;
-    if (selectedBar != null && selectedBeat != null &&
-        selectedBar >= 0 && selectedBar < state.measures.length) {
+    if (selectedBar != null &&
+        selectedBeat != null &&
+        selectedBar >= 0 &&
+        selectedBar < state.measures.length) {
       final row = state.measures[selectedBar];
       if (selectedBeat >= 0 && selectedBeat < row.beats.length) {
         final c = row.beats[selectedBeat].chord.trim();
@@ -159,28 +184,32 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
       bass: state.freeChordBass,
       latin: state.notation != NotationMode.alemana,
     );
-    final hasSelectedCell = selectedBar != null &&
+    final hasSelectedCell =
+        selectedBar != null &&
         selectedBeat != null &&
         selectedBar >= 0 &&
         selectedBar < state.measures.length &&
         selectedBeat >= 0 &&
         selectedBeat < state.measures[selectedBar].beats.length;
     final markedCount = state.markedBeats.length;
-    final insertTargetLabel = markedCount > 0
-        ? '$markedCount tiempo${markedCount == 1 ? '' : 's'} marcado${markedCount == 1 ? '' : 's'}'
-        : (hasSelectedCell
+    final insertTargetLabel = hasSelectedCell
             ? 'Compás ${selectedBar + 1} · Tiempo ${selectedBeat + 1}'
-            : 'sin casilla seleccionada');
-    final canInsertChord =
-        constructorChord.isNotEmpty && (markedCount > 0 || hasSelectedCell);
+        : 'sin casilla seleccionada';
+    final canInsertChord = constructorChord.isNotEmpty && hasSelectedCell;
+    final canAssignToMarkedBeats =
+        constructorChord.isNotEmpty && markedCount > 0;
 
-    final chordToEdit = selectedChord ??
+    final chordToEdit =
+        selectedChord ??
         ((state.multiBeatChord != null && state.multiBeatChord!.isNotEmpty)
             ? state.multiBeatChord
             : (constructorChord.isNotEmpty ? constructorChord : null));
 
-    final hasOccurrences = chordToEdit != null &&
-        state.measures.any((m) => m.beats.any((b) => b.chord.trim() == chordToEdit));
+    final hasOccurrences =
+        chordToEdit != null &&
+        state.measures.any(
+          (m) => m.beats.any((b) => b.chord.trim() == chordToEdit),
+        );
     final isEditActive = selectedChord != null || hasOccurrences;
 
     return SizedBox(
@@ -192,8 +221,11 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
           Focus(
             autofocus: false,
             onKeyEvent: (node, event) {
-              if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.space) {
-                final isAnyEditing = FocusManager.instance.primaryFocus?.context?.widget is EditableText;
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.space) {
+                final isAnyEditing =
+                    FocusManager.instance.primaryFocus?.context?.widget
+                        is EditableText;
                 if (!isAnyEditing) {
                   final res = notifier.markLiveChordChange();
                   if (res != null) {
@@ -222,20 +254,29 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 1. Cabecera superior: Título "Compás" (sobre los botones, homólogo a Acorde)
+                  // 1. Cabecera superior: título del Compás, con la misma tipografía que Acorde.
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: isPrimary ? const Color(0xFFF8FAFC) : const Color(0xFFECFDF5),
+                      color: isPrimary
+                          ? const Color(0xFFF8FAFC)
+                          : const Color(0xFFECFDF5),
                       border: Border(
                         bottom: BorderSide(
-                          color: isPrimary ? const Color(0xFFE2E8F0) : const Color(0xFFA7F3D0),
+                          color: isPrimary
+                              ? const Color(0xFFE2E8F0)
+                              : const Color(0xFFA7F3D0),
                         ),
                       ),
                     ),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final naturalWidth = constraints.maxWidth > 230.0 ? constraints.maxWidth : 230.0;
+                        final naturalWidth = constraints.maxWidth > 230.0
+                            ? constraints.maxWidth
+                            : 230.0;
                         return FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
@@ -247,28 +288,27 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    FaIcon(
-                                      isPrimary ? FontAwesomeIcons.music : FontAwesomeIcons.link,
-                                      size: 10,
-                                      color: isPrimary ? const Color(0xFF0284C7) : const Color(0xFF059669),
-                                    ),
-                                    const SizedBox(width: 4),
                                     Text(
                                       isPrimary ? 'Compás' : 'Compás A2',
+                                      key: ValueKey(
+                                        'compas_title_${widget.accordionNumber}',
+                                      ),
                                       style: TextStyle(
-                                        fontSize: 11.5,
+                                        fontSize: 13,
                                         fontWeight: FontWeight.w900,
-                                        color: isPrimary ? const Color(0xFF0F172A) : const Color(0xFF059669),
-                                        letterSpacing: 0.2,
+                                        color: isPrimary
+                                            ? const Color(0xFF0F172A)
+                                            : const Color(0xFF059669),
                                       ),
                                     ),
                                     const SizedBox(width: 5),
                                     _BpmInputControl(
                                       bpm: bpm,
                                       compact: true,
-                                      onChanged: (newVal) => notifier.updateAudioBpm(newVal),
+                                      onChanged: (newVal) =>
+                                          notifier.updateAudioBpm(newVal),
                                     ),
-                                    const SizedBox(width: 4),
+                                    const SizedBox(width: 3),
                                     _MetronomeButton(
                                       accordionNumber: widget.accordionNumber,
                                       isActive: state.isMetronomeActive,
@@ -282,23 +322,36 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       ? 'Acoplar ventana de Compás'
                                       : 'Desacoplar ventana de Compás (mover libremente)',
                                   child: InkWell(
-                                    key: ValueKey('undock_compas_${widget.accordionNumber}'),
-                                    onTap: () => notifier.toggleUndockCompas(widget.accordionNumber),
+                                    key: ValueKey(
+                                      'undock_compas_${widget.accordionNumber}',
+                                    ),
+                                    onTap: () => notifier.toggleUndockCompas(
+                                      widget.accordionNumber,
+                                    ),
                                     borderRadius: BorderRadius.circular(4),
                                     child: Container(
                                       padding: const EdgeInsets.all(3.0),
                                       decoration: BoxDecoration(
-                                        color: isUndocked ? const Color(0xFFEFF6FF) : Colors.white,
+                                        color: isUndocked
+                                            ? const Color(0xFFEFF6FF)
+                                            : Colors.white,
                                         borderRadius: BorderRadius.circular(4),
                                         border: Border.all(
-                                          color: isUndocked ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
+                                          color: isUndocked
+                                              ? const Color(0xFF3B82F6)
+                                              : const Color(0xFFCBD5E1),
                                           width: 0.8,
                                         ),
                                       ),
                                       child: FaIcon(
-                                        isUndocked ? FontAwesomeIcons.compress : FontAwesomeIcons.arrowUpRightFromSquare,
+                                        isUndocked
+                                            ? FontAwesomeIcons.compress
+                                            : FontAwesomeIcons
+                                                  .arrowUpRightFromSquare,
                                         size: 8.5,
-                                        color: isUndocked ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                                        color: isUndocked
+                                            ? const Color(0xFF2563EB)
+                                            : const Color(0xFF64748B),
                                       ),
                                     ),
                                   ),
@@ -313,12 +366,19 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
 
                   // 2. Fila de controles rítmicos: BPM + Metrónomo + Marcador Espacio + Acordes Completos
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
-                      color: isPrimary ? const Color(0xFFF1F5F9) : const Color(0xFFD1FAE5),
+                      color: isPrimary
+                          ? const Color(0xFFF1F5F9)
+                          : const Color(0xFFD1FAE5),
                       border: Border(
                         bottom: BorderSide(
-                          color: isPrimary ? const Color(0xFFE2E8F0) : const Color(0xFFA7F3D0),
+                          color: isPrimary
+                              ? const Color(0xFFE2E8F0)
+                              : const Color(0xFFA7F3D0),
                         ),
                       ),
                     ),
@@ -339,7 +399,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                               const SizedBox(width: 3),
                               _AutoChordDetectButton(
                                 accordionNumber: widget.accordionNumber,
-                                isActive: state.isPlaybackAutoChordDetectEnabled,
+                                isActive:
+                                    state.isPlaybackAutoChordDetectEnabled,
                                 onTap: notifier.togglePlaybackAutoChordDetect,
                               ),
                               const SizedBox(width: 3),
@@ -353,8 +414,10 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                               const SizedBox(width: 3),
                               _CompleteChordsButton(
                                 accordionNumber: widget.accordionNumber,
-                                hasYellowDecisions: state.yellowDecisionBeats.isNotEmpty,
-                                yellowDecisionsCount: state.yellowDecisionBeats.length,
+                                hasYellowDecisions:
+                                    state.yellowDecisionBeats.isNotEmpty,
+                                yellowDecisionsCount:
+                                    state.yellowDecisionBeats.length,
                               ),
                             ],
                           ),
@@ -368,7 +431,9 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                     padding: const EdgeInsets.fromLTRB(4, 3, 4, 3),
                     decoration: const BoxDecoration(
                       color: Color(0xFFF8FAFC),
-                      border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                      border: Border(
+                        bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
                     ),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -383,20 +448,29 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Tooltip(
-                            message: 'Guardar compases en JSON (Exportar)',
+                                  message:
+                                      'Guardar compases en JSON (Exportar)',
                             child: InkWell(
                               onTap: () async {
-                                final jsonStr = notifier.exportMeasuresToJson();
-                                final storage = ref.read(fileStorageProvider);
-                                final timestamp = DateTime.now().millisecondsSinceEpoch;
+                                      final jsonStr = notifier
+                                          .exportMeasuresToJson();
+                                      final storage = ref.read(
+                                        fileStorageProvider,
+                                      );
+                                      final timestamp =
+                                          DateTime.now().millisecondsSinceEpoch;
                                 await storage.saveFile(
                                   fileName: 'compases_$timestamp.json',
                                   content: jsonStr,
                                 );
                                 if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Compases guardados en formato JSON.'),
+                                            content: Text(
+                                              'Compases guardados en formato JSON.',
+                                            ),
                                       duration: Duration(seconds: 2),
                                     ),
                                   );
@@ -404,7 +478,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                               },
                               borderRadius: BorderRadius.circular(5),
                               child: Container(
-                                padding: const EdgeInsets.all(6),
+                                      padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF0284C7),
                                   borderRadius: BorderRadius.circular(5),
@@ -417,24 +491,36 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 4),
+                                const SizedBox(width: 3),
                           Tooltip(
-                            message: 'Importar compases desde archivo JSON',
+                                  message:
+                                      'Importar compases desde archivo JSON',
                             child: InkWell(
                               onTap: () async {
-                                final storage = ref.read(fileStorageProvider);
-                                final content = await storage.pickTextFile(allowedExtensions: ['json']);
-                                if (content != null && content.isNotEmpty) {
-                                  final success = notifier.loadMeasuresFromJson(content);
+                                      final storage = ref.read(
+                                        fileStorageProvider,
+                                      );
+                                      final content = await storage
+                                          .pickTextFile(
+                                            allowedExtensions: ['json'],
+                                          );
+                                      if (content != null &&
+                                          content.isNotEmpty) {
+                                        final success = notifier
+                                            .loadMeasuresFromJson(content);
                                   if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                       SnackBar(
                                         content: Text(
                                           success
                                               ? 'Compases restaurados exitosamente desde JSON.'
                                               : 'Error al importar: archivo JSON no válido.',
                                         ),
-                                        duration: const Duration(seconds: 2),
+                                              duration: const Duration(
+                                                seconds: 2,
+                                              ),
                                       ),
                                     );
                                   }
@@ -442,7 +528,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                               },
                               borderRadius: BorderRadius.circular(5),
                               child: Container(
-                                padding: const EdgeInsets.all(6),
+                                      padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF059669),
                                   borderRadius: BorderRadius.circular(5),
@@ -455,23 +541,46 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 4),
+                                const SizedBox(width: 3),
                           // Botón de edición a la derecha de importar compás
                           Tooltip(
                             message: isEditActive
                                 ? 'Editar asignación múltiple de $chordToEdit'
                                 : 'Selecciona un acorde en el compás para editarlo',
                             child: InkWell(
-                              key: const ValueKey('edit_multi_beat_chord_btn'),
+                                    key: const ValueKey(
+                                      'edit_multi_beat_chord_btn',
+                                    ),
                               onTap: isEditActive
                                   ? () {
                                       final targetChord = chordToEdit;
-                                      if (targetChord == null || targetChord.isEmpty) return;
+                                            if (targetChord == null ||
+                                                targetChord.isEmpty)
+                                              return;
                                       final positions = <String>[];
-                                      for (var m = 0; m < state.measures.length; m++) {
-                                        for (var b = 0; b < state.measures[m].beats.length; b++) {
-                                          if (state.measures[m].beats[b].chord.trim() == targetChord) {
-                                            positions.add('${m + 1}.${b + 1}');
+                                            for (
+                                              var m = 0;
+                                              m < state.measures.length;
+                                              m++
+                                            ) {
+                                              for (
+                                                var b = 0;
+                                                b <
+                                                    state
+                                                        .measures[m]
+                                                        .beats
+                                                        .length;
+                                                b++
+                                              ) {
+                                                if (state
+                                                        .measures[m]
+                                                        .beats[b]
+                                                        .chord
+                                                        .trim() ==
+                                                    targetChord) {
+                                                  positions.add(
+                                                    '${m + 1}.${b + 1}',
+                                                  );
                                           }
                                         }
                                       }
@@ -483,7 +592,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                   : null,
                               borderRadius: BorderRadius.circular(5),
                               child: Container(
-                                padding: const EdgeInsets.all(6),
+                                      padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   color: isEditActive
                                       ? const Color(0xFF8B5CF6)
@@ -499,36 +608,44 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                 child: FaIcon(
                                   FontAwesomeIcons.penToSquare,
                                   size: 13.5,
-                                  color: isEditActive ? Colors.white : const Color(0xFF94A3B8),
+                                        color: isEditActive
+                                            ? Colors.white
+                                            : const Color(0xFF94A3B8),
                                 ),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 4),
+                                const SizedBox(width: 3),
                           Tooltip(
                             message: canInsertChord
                                 ? 'Agregar $constructorChord a $insertTargetLabel'
                                 : 'Selecciona un acorde y una casilla del Compás',
                             child: InkWell(
-                              key: const ValueKey('insert_chord_to_compas_btn'),
+                                    key: const ValueKey(
+                                      'insert_chord_to_compas_btn',
+                                    ),
                               onTap: canInsertChord
                                   ? () {
-                                      final symbol =
-                                          notifier.insertFreeChordIntoSelectedBeat();
+                                            final symbol = notifier
+                                                .insertFreeChordIntoSelectedCell();
                                       if (symbol == null) return;
                                       ScaffoldMessenger.of(context)
                                         ..hideCurrentSnackBar()
                                         ..showSnackBar(
                                           SnackBar(
-                                            content: Text('$symbol → $insertTargetLabel'),
-                                            duration: const Duration(milliseconds: 1400),
+                                                  content: Text(
+                                                    '$symbol → $insertTargetLabel',
+                                                  ),
+                                                  duration: const Duration(
+                                                    milliseconds: 1400,
+                                                  ),
                                           ),
                                         );
                                     }
                                   : null,
                               borderRadius: BorderRadius.circular(5),
                               child: Container(
-                                padding: const EdgeInsets.all(6),
+                                      padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   color: canInsertChord
                                       ? const Color(0xFF16A34A)
@@ -550,6 +667,58 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                               ),
                             ),
                           ),
+                                const SizedBox(width: 3),
+                                Tooltip(
+                                  message: canAssignToMarkedBeats
+                                      ? 'Asignar $constructorChord a $markedCount casilla${markedCount == 1 ? '' : 's'} seleccionada${markedCount == 1 ? '' : 's'}'
+                                      : 'Marca una o más casillas para asignarles $constructorChord',
+                                  child: InkWell(
+                                    key: const ValueKey(
+                                      'assign_chord_to_marked_beats_btn',
+                                    ),
+                                    onTap: canAssignToMarkedBeats
+                                        ? () {
+                                            final symbol = notifier
+                                                .assignFreeChordToMarkedBeats();
+                                            if (symbol == null) return;
+                                            ScaffoldMessenger.of(context)
+                                              ..hideCurrentSnackBar()
+                                              ..showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    '$symbol asignado a $markedCount casilla${markedCount == 1 ? '' : 's'}',
+                                                  ),
+                                                  duration: const Duration(
+                                                    milliseconds: 1400,
+                                                  ),
+                                                ),
+                                              );
+                                          }
+                                        : null,
+                                    borderRadius: BorderRadius.circular(5),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: canAssignToMarkedBeats
+                                            ? const Color(0xFF7C3AED)
+                                            : const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(5),
+                                        border: Border.all(
+                                          color: canAssignToMarkedBeats
+                                              ? const Color(0xFF6D28D9)
+                                              : const Color(0xFFCBD5E1),
+                                        ),
+                                      ),
+                                      child: FaIcon(
+                                        FontAwesomeIcons.squareCheck,
+                                        size: 13.5,
+                                        color: canAssignToMarkedBeats
+                                            ? Colors.white
+                                            : const Color(0xFF94A3B8),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                         ],
                       ),
 
@@ -568,7 +737,9 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                             final deleted = allMarked
                                 ? notifier.deleteAllGridChords()
                                 : notifier.deleteMarkedGridChords();
-                            ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                               SnackBar(
                                 content: Text(
                                   allMarked
@@ -608,18 +779,33 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         ),
 
           // Matriz de botones de Tónica: 2 filas por 6 columnas (debajo de guardar / importar compás)
-          const TonicNotesMatrixWidget(),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Expanded(child: TonicNotesMatrixWidget()),
+              ChordQualitySelectorWidget(),
+            ],
+          ),
 
           if (state.yellowDecisionBeats.isNotEmpty)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 3,
+                      ),
               decoration: const BoxDecoration(
                 color: Color(0xFFFEF9C3),
-                border: Border(bottom: BorderSide(color: Color(0xFFFDE047))),
+                        border: Border(
+                          bottom: BorderSide(color: Color(0xFFFDE047)),
+                        ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded, size: 11, color: Color(0xFFB45309)),
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            size: 11,
+                            color: Color(0xFFB45309),
+                          ),
                   const SizedBox(width: 3),
                   Expanded(
                     child: Text(
@@ -633,47 +819,85 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                     ),
                   ),
                   InkWell(
-                    key: ValueKey('apply_yellow_pull_quick_${widget.accordionNumber}'),
+                            key: ValueKey(
+                              'apply_yellow_pull_quick_${widget.accordionNumber}',
+                            ),
                     onTap: () {
-                      final n = notifier.applyYellowDecision(BellowsMode.pull);
+                              final n = notifier.applyYellowDecision(
+                                BellowsMode.pull,
+                              );
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('$n acordes asignados a Abre (←)'), duration: const Duration(seconds: 2)),
+                                SnackBar(
+                                  content: Text(
+                                    '$n acordes asignados a Abre (←)',
+                                  ),
+                                  duration: const Duration(seconds: 2),
+                                ),
                       );
                     },
                     borderRadius: BorderRadius.circular(3),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 1.5,
+                              ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(3),
-                        border: Border.all(color: const Color(0xFF3B82F6), width: 0.8),
+                                border: Border.all(
+                                  color: const Color(0xFF3B82F6),
+                                  width: 0.8,
+                                ),
                       ),
                       child: const Text(
                         'Abre',
-                        style: TextStyle(fontSize: 7.5, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+                                style: TextStyle(
+                                  fontSize: 7.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1D4ED8),
+                                ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 3),
                   InkWell(
-                    key: ValueKey('apply_yellow_push_quick_${widget.accordionNumber}'),
+                            key: ValueKey(
+                              'apply_yellow_push_quick_${widget.accordionNumber}',
+                            ),
                     onTap: () {
-                      final n = notifier.applyYellowDecision(BellowsMode.push);
+                              final n = notifier.applyYellowDecision(
+                                BellowsMode.push,
+                              );
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('$n acordes asignados a Cierra (→)'), duration: const Duration(seconds: 2)),
+                                SnackBar(
+                                  content: Text(
+                                    '$n acordes asignados a Cierra (→)',
+                                  ),
+                                  duration: const Duration(seconds: 2),
+                                ),
                       );
                     },
                     borderRadius: BorderRadius.circular(3),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 1.5,
+                              ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFEF2F2),
                         borderRadius: BorderRadius.circular(3),
-                        border: Border.all(color: const Color(0xFFEF4444), width: 0.8),
+                                border: Border.all(
+                                  color: const Color(0xFFEF4444),
+                                  width: 0.8,
+                                ),
                       ),
                       child: const Text(
                         'Cierra',
-                        style: TextStyle(fontSize: 7.5, fontWeight: FontWeight.bold, color: Color(0xFFB91C1C)),
+                                style: TextStyle(
+                                  fontSize: 7.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFB91C1C),
+                                ),
                       ),
                     ),
                   ),
@@ -681,14 +905,18 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
               ),
             ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 4.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 3.0,
+                      vertical: 4.0,
+                    ),
             child: Container(
               constraints: const BoxConstraints(maxHeight: 330),
               child: RawScrollbar(
                 controller: _compasScrollController,
                 thumbVisibility: true,
                 trackVisibility: true,
-                thickness: 8.0, // Aumentado ~30% sobre el grosor estándar (6.0px -> 8.0px)
+                        thickness:
+                            8.0, // Aumentado ~30% sobre el grosor estándar (6.0px -> 8.0px)
                 radius: const Radius.circular(4),
                 thumbColor: const Color(0xFF94A3B8),
                 trackColor: const Color(0xFFF1F5F9),
@@ -707,7 +935,9 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                       decoration: BoxDecoration(
                         color: const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                                border: Border.all(
+                                  color: const Color(0xFFCBD5E1),
+                                ),
                       ),
                       child: Row(
                         children: [
@@ -719,14 +949,19 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                             decoration: const BoxDecoration(
                               color: Color(0xFFF1F5F9),
                               border: Border(
-                                right: BorderSide(color: Color(0xFFE2E8F0)),
+                                        right: BorderSide(
+                                          color: Color(0xFFE2E8F0),
+                                        ),
                               ),
                             ),
                             child: Center(
                               child: _BeatMarkCheckbox(
                                 key: ValueKey('measure_checkbox_$mIdx'),
-                                isChecked: notifier.isMeasureMarked(mIdx),
-                                onTap: () => notifier.toggleMeasureMark(mIdx),
+                                        isChecked: notifier.isMeasureMarked(
+                                          mIdx,
+                                        ),
+                                        onTap: () =>
+                                            notifier.toggleMeasureMark(mIdx),
                               ),
                             ),
                           ),
@@ -737,7 +972,11 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                             height: CompasCardMetrics.beatCellHeight,
                             decoration: const BoxDecoration(
                               color: Color(0xFFF1F5F9),
-                              border: Border(right: BorderSide(color: Color(0xFFCBD5E1))),
+                                      border: Border(
+                                        right: BorderSide(
+                                          color: Color(0xFFCBD5E1),
+                                        ),
+                                      ),
                             ),
                             child: Center(
                               child: Text(
@@ -757,40 +996,77 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                           Expanded(
                             child: Row(
                               children: [
-                                for (final entry in measure.beats.asMap().entries) ...[
-                                  if (entry.key > 0) const SizedBox(width: 1),
+                                        for (final entry
+                                            in measure.beats
+                                                .asMap()
+                                                .entries) ...[
+                                          if (entry.key > 0)
+                                            const SizedBox(width: 1),
                                   Expanded(
                                     child: _InlineBeatChordEditor(
-                                      accordionId: widget.accordionNumber,
+                                              accordionId:
+                                                  widget.accordionNumber,
                                       measureIndex: mIdx,
                                       beatIndex: entry.key,
-                                      totalMeasures: state.measures.length,
+                                              totalMeasures:
+                                                  state.measures.length,
                                       chord: entry.value.chord,
                                       timeText: entry.value.timeText,
                                       bellows: entry.value.bellows,
-                                      isCurrentPlayhead: state.isPlayingAudio &&
-                                          state.selectedBarIndex == mIdx &&
-                                          state.selectedBeatIndex == entry.key,
-                                      isMarked: notifier.isBeatMarked(mIdx, entry.key),
-                                      isYellowDecision: state.yellowDecisionBeats.contains(mIdx * 4 + entry.key),
-                                      isSelected: state.selectedBarIndex == mIdx && state.selectedBeatIndex == entry.key,
+                                              isCurrentPlayhead:
+                                                  state.isPlayingAudio &&
+                                                  state.selectedBarIndex ==
+                                                      mIdx &&
+                                                  state.selectedBeatIndex ==
+                                                      entry.key,
+                                              isMarked: notifier.isBeatMarked(
+                                                mIdx,
+                                                entry.key,
+                                              ),
+                                              isYellowDecision: state
+                                                  .yellowDecisionBeats
+                                                  .contains(
+                                                    mIdx * 4 + entry.key,
+                                                  ),
+                                              isSelected:
+                                                  state.selectedBarIndex ==
+                                                      mIdx &&
+                                                  state.selectedBeatIndex ==
+                                                      entry.key,
                                       notation: state.notation,
                                       onChanged: (newChord) {
-                                        notifier.updateMeasureBeat(mIdx, entry.key, newChord);
+                                                notifier.updateMeasureBeat(
+                                                  mIdx,
+                                                  entry.key,
+                                                  newChord,
+                                                );
                                       },
-                                      onCopy: () => notifier.copyChordFromBeat(mIdx, entry.key),
-                                      onPaste: () => notifier.copiedChord,
+                                              onCopy: () =>
+                                                  notifier.copyChordFromBeat(
+                                                    mIdx,
+                                                    entry.key,
+                                                  ),
+                                              onPaste: () =>
+                                                  notifier.copiedChord,
                                       onSelected: () {
-                                        notifier.selectBeat(mIdx, entry.key);
+                                                notifier.selectBeat(
+                                                  mIdx,
+                                                  entry.key,
+                                                );
                                       },
                                       onNavigate: (bar, beat) {
                                         notifier.selectBeat(bar, beat);
                                         _scrollToBar(bar);
                                       },
                                       onBellowsChanged: (bellows) {
-                                        notifier.setBeatBellows(mIdx, entry.key, bellows);
+                                                notifier.setBeatBellows(
+                                                  mIdx,
+                                                  entry.key,
+                                                  bellows,
+                                                );
                                       },
-                                      onLiveMarker: () => notifier.markLiveChordChange(),
+                                              onLiveMarker: () => notifier
+                                                  .markLiveChordChange(),
                                     ),
                                   ),
                                 ],
@@ -879,8 +1155,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         _buildDetectorDockPlaceholder(context, effectiveWidth, notifier),
     ],
   ],
-),
-);
+      ),
+    );
   }
 
   /// Marcador de posición cuando el Detector de Acordes está desacoplado (flotante).
@@ -906,7 +1182,11 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
             const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                FaIcon(FontAwesomeIcons.microchip, size: 9, color: Color(0xFF7C3AED)),
+                FaIcon(
+                  FontAwesomeIcons.microchip,
+                  size: 9,
+                  color: Color(0xFF7C3AED),
+                ),
                 SizedBox(width: 4),
                 Text(
                   'Detector (Móvil)',
@@ -928,7 +1208,10 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                 decoration: BoxDecoration(
                   color: const Color(0xFFEDE9FE),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: const Color(0xFFC4B5FD), width: 0.8),
+                  border: Border.all(
+                    color: const Color(0xFFC4B5FD),
+                    width: 0.8,
+                  ),
                 ),
                 child: const Text(
                   'Acoplar',
@@ -1013,7 +1296,9 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final isCompletePush = hasTarget && missingPush.isEmpty;
     final isCompletePull = hasTarget && missingPull.isEmpty;
 
-    final namesList = isLatin ? ChordCatalog.latinRootNames : ChordCatalog.germanRootNames;
+    final namesList = isLatin
+        ? ChordCatalog.latinRootNames
+        : ChordCatalog.germanRootNames;
     final chordNoteNames = chordPcs.map((pc) => namesList[pc]).toList();
     final missingPushNames = missingPush.map((pc) => namesList[pc]).toList();
     final missingPullNames = missingPull.map((pc) => namesList[pc]).toList();
@@ -1022,7 +1307,9 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final isSelectedPush = targetBellows == BellowsMode.push;
     final currentIsComplete = isSelectedPull
         ? isCompletePull
-        : (isSelectedPush ? isCompletePush : (isCompletePush || isCompletePull));
+        : (isSelectedPush
+              ? isCompletePush
+              : (isCompletePush || isCompletePull));
 
     return Container(
       width: cardWidth,
@@ -1033,7 +1320,9 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         border: Border.all(
           color: !hasTarget
               ? const Color(0xFFCBD5E1)
-              : (currentIsComplete ? const Color(0xFF86EFAC) : const Color(0xFFFCA5A5)),
+              : (currentIsComplete
+                    ? const Color(0xFF86EFAC)
+                    : const Color(0xFFFCA5A5)),
           width: 1.2,
         ),
         boxShadow: [
@@ -1059,7 +1348,9 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                   size: 9.5,
                   color: !hasTarget
                       ? const Color(0xFF64748B)
-                      : (currentIsComplete ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+                      : (currentIsComplete
+                            ? const Color(0xFF16A34A)
+                            : const Color(0xFFDC2626)),
                 ),
                 const SizedBox(width: 4),
                 const Text(
@@ -1073,7 +1364,10 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                 if (contextLabel.isNotEmpty) ...[
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(4),
@@ -1163,9 +1457,15 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     required List<String> missingNames,
     required int totalNotes,
   }) {
-    final accentColor = isPush ? const Color(0xFFDC2626) : const Color(0xFF2563EB);
-    final badgeBg = isComplete ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2);
-    final badgeFg = isComplete ? const Color(0xFF15803D) : const Color(0xFFB91C1C);
+    final accentColor = isPush
+        ? const Color(0xFFDC2626)
+        : const Color(0xFF2563EB);
+    final badgeBg = isComplete
+        ? const Color(0xFFDCFCE7)
+        : const Color(0xFFFEE2E2);
+    final badgeFg = isComplete
+        ? const Color(0xFF15803D)
+        : const Color(0xFFB91C1C);
     final presentCount = totalNotes - missingNames.length;
 
     return Container(
@@ -1211,13 +1511,17 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   FaIcon(
-                    isComplete ? FontAwesomeIcons.check : FontAwesomeIcons.xmark,
+                    isComplete
+                        ? FontAwesomeIcons.check
+                        : FontAwesomeIcons.xmark,
                     size: 6.5,
                     color: badgeFg,
                   ),
                   const SizedBox(width: 2),
                   Text(
-                    isComplete ? 'Completo' : 'Incompleto ($presentCount/$totalNotes)',
+                    isComplete
+                        ? 'Completo'
+                        : 'Incompleto ($presentCount/$totalNotes)',
                     style: TextStyle(
                       fontSize: 7.5,
                       fontWeight: FontWeight.w800,
@@ -1399,20 +1703,62 @@ enum _ChordModKey {
 
 class _ChordTools {
   static const roots = [
-    'Do#', 'Dob', 'Do♭', 'Do',
-    'Re#', 'Reb', 'Re♭', 'Re',
-    'Mi#', 'Mib', 'Mi♭', 'Mi',
-    'Fa#', 'Fab', 'Fa♭', 'Fa',
-    'Sol#', 'Solb', 'Sol♭', 'Sol',
-    'La#', 'Lab', 'La♭', 'La',
-    'Si#', 'Sib', 'Si♭', 'Si',
-    'C#', 'Db', 'C♭', 'C',
-    'D#', 'Eb', 'D♭', 'D',
-    'E#', 'Eb', 'E♭', 'E',
-    'F#', 'Fb', 'F♭', 'F',
-    'G#', 'Gb', 'G♭', 'G',
-    'A#', 'Ab', 'A♭', 'A',
-    'B#', 'Bb', 'B♭', 'B'
+    'Do#',
+    'Dob',
+    'Do♭',
+    'Do',
+    'Re#',
+    'Reb',
+    'Re♭',
+    'Re',
+    'Mi#',
+    'Mib',
+    'Mi♭',
+    'Mi',
+    'Fa#',
+    'Fab',
+    'Fa♭',
+    'Fa',
+    'Sol#',
+    'Solb',
+    'Sol♭',
+    'Sol',
+    'La#',
+    'Lab',
+    'La♭',
+    'La',
+    'Si#',
+    'Sib',
+    'Si♭',
+    'Si',
+    'C#',
+    'Db',
+    'C♭',
+    'C',
+    'D#',
+    'Eb',
+    'D♭',
+    'D',
+    'E#',
+    'Eb',
+    'E♭',
+    'E',
+    'F#',
+    'Fb',
+    'F♭',
+    'F',
+    'G#',
+    'Gb',
+    'G♭',
+    'G',
+    'A#',
+    'Ab',
+    'A♭',
+    'A',
+    'B#',
+    'Bb',
+    'B♭',
+    'B',
   ];
 
   static (String, String) splitChord(String chord) {
@@ -1438,19 +1784,25 @@ class _ChordTools {
         key == LogicalKeyboardKey.comma) {
       return _ChordModKey.menor;
     }
-    if (key == LogicalKeyboardKey.slash || key == LogicalKeyboardKey.numpadDivide) {
+    if (key == LogicalKeyboardKey.slash ||
+        key == LogicalKeyboardKey.numpadDivide) {
       return _ChordModKey.septima;
     }
     if (key == LogicalKeyboardKey.add || key == LogicalKeyboardKey.numpadAdd) {
       return _ChordModKey.aumentada;
     }
-    if (key == LogicalKeyboardKey.minus || key == LogicalKeyboardKey.numpadSubtract) {
+    if (key == LogicalKeyboardKey.minus ||
+        key == LogicalKeyboardKey.numpadSubtract) {
       return _ChordModKey.disminuida;
     }
     return null;
   }
 
-  static String applyModifier(String chord, _ChordModKey mod, NotationMode notation) {
+  static String applyModifier(
+    String chord,
+    _ChordModKey mod,
+    NotationMode notation,
+  ) {
     var (root, rest) = splitChord(chord);
     if (root.isEmpty) {
       root = notation == NotationMode.alemana ? 'C' : 'Do';
@@ -1560,7 +1912,8 @@ class _InlineBeatChordEditor extends StatefulWidget {
 
 class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
   // Registro separado por accordionId para evitar interferencia entre acordeones
-  static final Map<int, Map<String, _InlineBeatChordEditorState>> _registries = {};
+  static final Map<int, Map<String, _InlineBeatChordEditorState>> _registries =
+      {};
   static final Map<int, String?> _selectedKeys = {};
 
   Map<String, _InlineBeatChordEditorState> get _registry =>
@@ -1593,7 +1946,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
   void initState() {
     super.initState();
     _registry[_nodeKey] = this;
-    final initialChord = ChordCatalog.formatChordForNotation(widget.chord, widget.notation);
+    final initialChord = ChordCatalog.formatChordForNotation(
+      widget.chord,
+      widget.notation,
+    );
     _controller = TextEditingController(text: initialChord);
 
     _cellFocusNode = FocusNode(debugLabel: 'beat_cell_$_nodeKey');
@@ -1653,12 +2009,18 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
   @override
   void didUpdateWidget(covariant _InlineBeatChordEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.measureIndex != widget.measureIndex || oldWidget.beatIndex != widget.beatIndex) {
+    if (oldWidget.measureIndex != widget.measureIndex ||
+        oldWidget.beatIndex != widget.beatIndex) {
       _registry.remove('${oldWidget.measureIndex}_${oldWidget.beatIndex}');
       _registry[_nodeKey] = this;
     }
-    final formattedChord = ChordCatalog.formatChordForNotation(widget.chord, widget.notation);
-    if ((oldWidget.chord != widget.chord || oldWidget.notation != widget.notation) && !_isEditing) {
+    final formattedChord = ChordCatalog.formatChordForNotation(
+      widget.chord,
+      widget.notation,
+    );
+    if ((oldWidget.chord != widget.chord ||
+            oldWidget.notation != widget.notation) &&
+        !_isEditing) {
       _controller.value = TextEditingValue(
         text: formattedChord,
         selection: const TextSelection.collapsed(offset: -1),
@@ -1689,7 +2051,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
 
   void _commit() {
     final trimmed = _controller.text.trim();
-    final formatted = ChordCatalog.formatChordForNotation(trimmed, widget.notation);
+    final formatted = ChordCatalog.formatChordForNotation(
+      trimmed,
+      widget.notation,
+    );
     if (formatted != widget.chord) {
       widget.onChanged(formatted);
     }
@@ -1773,7 +2138,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
   }
 
   void _applyChord(String chord) {
-    final formatted = ChordCatalog.formatChordForNotation(chord, widget.notation);
+    final formatted = ChordCatalog.formatChordForNotation(
+      chord,
+      widget.notation,
+    );
     _controller.value = TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
@@ -1812,7 +2180,11 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
       // Modificadores armónicos: . Menor, / 7ma, + Aumentada, - Disminuida
       final mod = _ChordTools.parseModifierKey(event);
       if (mod != null) {
-        final updated = _ChordTools.applyModifier(_controller.text, mod, widget.notation);
+        final updated = _ChordTools.applyModifier(
+          _controller.text,
+          mod,
+          widget.notation,
+        );
         _applyChord(updated);
         return KeyEventResult.handled;
       }
@@ -1892,7 +2264,6 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     return KeyEventResult.ignored;
   }
 
-
   @override
   Widget build(BuildContext context) {
     final hasChord = widget.chord.isNotEmpty;
@@ -1911,7 +2282,9 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
           duration: const Duration(milliseconds: 120),
           // Altura mínima un 5% mayor; se permite crecer si el contenido interno
           // (ej. flechas de fuelle en modo compacto) supera el mínimo. {P} C {Q}
-          constraints: const BoxConstraints(minHeight: CompasCardMetrics.beatCellHeight),
+          constraints: const BoxConstraints(
+            minHeight: CompasCardMetrics.beatCellHeight,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
           decoration: BoxDecoration(
             // Radio condicional: bordes "Stateful" no ocasionan problemas; el
@@ -1919,24 +2292,43 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
             // radio siempre se admite sobre bordes uniformes.
             borderRadius: BorderRadius.circular(4),
             color: isCellSelected
-                ? const Color(0xFFDBEAFE) // Resaltado azul suave y vivo para cuadro seleccionado
+                ? const Color(
+                    0xFFDBEAFE,
+                  ) // Resaltado azul suave y vivo para cuadro seleccionado
                 : (_isEditing
-                    ? Colors.white // Fondo blanco limpio al editar
+                      ? Colors
+                            .white // Fondo blanco limpio al editar
                     : (isPlaying
                         ? const Color(0xFFFEF3C7)
                         : (widget.isYellowDecision
-                            ? const Color(0xFFFEF08A) // Resaltado amarillo para decidir fuelle
+                                  ? const Color(
+                                      0xFFFEF08A,
+                                    ) // Resaltado amarillo para decidir fuelle
                             : (isMarked
-                                ? const Color(0xFFF0FDF4) // Tiempo marcado con el checkbox
+                                        ? const Color(
+                                            0xFFF0FDF4,
+                                          ) // Tiempo marcado con el checkbox
                                 : Colors.white)))),
             border: isCellSelected
-                ? Border.all(color: const Color(0xFF2563EB), width: 1.8) // Cuadro resaltado nítido con borde completo
+                ? Border.all(
+                    color: const Color(0xFF2563EB),
+                    width: 1.8,
+                  ) // Cuadro resaltado nítido con borde completo
                 : (_isEditing
-                    ? Border.all(color: const Color(0xFF3B82F6), width: 1.8) // Borde activo de edición
+                      ? Border.all(
+                          color: const Color(0xFF3B82F6),
+                          width: 1.8,
+                        ) // Borde activo de edición
                     : (isPlaying
-                        ? Border.all(color: const Color(0xFFF59E0B), width: 1.8)
+                            ? Border.all(
+                                color: const Color(0xFFF59E0B),
+                                width: 1.8,
+                              )
                         : (widget.isYellowDecision
-                            ? Border.all(color: const Color(0xFFEAB308), width: 1.8) // Borde amarillo dorado
+                                  ? Border.all(
+                                      color: const Color(0xFFEAB308),
+                                      width: 1.8,
+                                    ) // Borde amarillo dorado
                             : (isMarked
                                 ? Border.all(
                                     color: const Color(0xFF059669),
@@ -1957,7 +2349,9 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                 : (widget.isYellowDecision
                     ? [
                         BoxShadow(
-                          color: const Color(0xFFEAB308).withValues(alpha: 0.35),
+                            color: const Color(
+                              0xFFEAB308,
+                            ).withValues(alpha: 0.35),
                           blurRadius: 4,
                           spreadRadius: 0.8,
                         ),
@@ -1965,7 +2359,9 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     : (_isEditing
                         ? [
                             BoxShadow(
-                              color: const Color(0xFF3B82F6).withValues(alpha: 0.20),
+                                  color: const Color(
+                                    0xFF3B82F6,
+                                  ).withValues(alpha: 0.20),
                               blurRadius: 3,
                               spreadRadius: 0.5,
                             ),
@@ -2131,7 +2527,9 @@ class _BeatBellowsArrows extends StatelessWidget {
                 : 'Asigna un acorde al tiempo para definir el fuelle',
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: isEnabled ? () => onBellowsChanged?.call(BellowsMode.pull) : null,
+              onTap: isEnabled
+                  ? () => onBellowsChanged?.call(BellowsMode.pull)
+                  : null,
               child: Container(
                 width: 13.5,
                 height: 13.5,
@@ -2139,7 +2537,9 @@ class _BeatBellowsArrows extends StatelessWidget {
                   color: isPull ? const Color(0xFFEFF6FF) : Colors.transparent,
                   borderRadius: BorderRadius.circular(3),
                   border: Border.all(
-                    color: isPull ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
+                    color: isPull
+                        ? const Color(0xFF3B82F6)
+                        : const Color(0xFFCBD5E1),
                     width: 1,
                   ),
                 ),
@@ -2147,7 +2547,9 @@ class _BeatBellowsArrows extends StatelessWidget {
                   child: FaIcon(
                     FontAwesomeIcons.arrowLeft,
                     size: 7.0,
-                    color: isPull ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
+                    color: isPull
+                        ? const Color(0xFF2563EB)
+                        : const Color(0xFF94A3B8),
                   ),
                 ),
               ),
@@ -2161,7 +2563,9 @@ class _BeatBellowsArrows extends StatelessWidget {
                 : 'Asigna un acorde al tiempo para definir el fuelle',
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: isEnabled ? () => onBellowsChanged?.call(BellowsMode.push) : null,
+              onTap: isEnabled
+                  ? () => onBellowsChanged?.call(BellowsMode.push)
+                  : null,
               child: Container(
                 width: 13.5,
                 height: 13.5,
@@ -2169,7 +2573,9 @@ class _BeatBellowsArrows extends StatelessWidget {
                   color: isPush ? const Color(0xFFFEF2F2) : Colors.transparent,
                   borderRadius: BorderRadius.circular(3),
                   border: Border.all(
-                    color: isPush ? const Color(0xFFEF4444) : const Color(0xFFCBD5E1),
+                    color: isPush
+                        ? const Color(0xFFEF4444)
+                        : const Color(0xFFCBD5E1),
                     width: 1,
                   ),
                 ),
@@ -2177,7 +2583,9 @@ class _BeatBellowsArrows extends StatelessWidget {
                   child: FaIcon(
                     FontAwesomeIcons.arrowRight,
                     size: 7.0,
-                    color: isPush ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                    color: isPush
+                        ? const Color(0xFFDC2626)
+                        : const Color(0xFF94A3B8),
                   ),
                 ),
               ),
@@ -2189,18 +2597,13 @@ class _BeatBellowsArrows extends StatelessWidget {
   }
 }
 
-
 /// Checkbox compacto para marcar un tiempo del Compás.
 /// Optimizado con área táctil cómoda y respuesta instantánea sin retrasos.
 class _BeatMarkCheckbox extends StatelessWidget {
   final bool isChecked;
   final VoidCallback? onTap;
 
-  const _BeatMarkCheckbox({
-    super.key,
-    required this.isChecked,
-    this.onTap,
-  });
+  const _BeatMarkCheckbox({super.key, required this.isChecked, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -2300,7 +2703,10 @@ class _DeleteAllChordsButton extends StatelessWidget {
   final VoidCallback onTap;
   final String tooltip;
 
-  const _DeleteAllChordsButton({required this.onTap, this.tooltip = 'Borrar acordes'});
+  const _DeleteAllChordsButton({
+    required this.onTap,
+    this.tooltip = 'Borrar acordes',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2316,17 +2722,10 @@ class _DeleteAllChordsButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFDC2626),
             borderRadius: BorderRadius.circular(3),
-            border: Border.all(
-              color: const Color(0xFFB91C1C),
-              width: 1.2,
-            ),
+            border: Border.all(color: const Color(0xFFB91C1C), width: 1.2),
           ),
           child: const Center(
-            child: FaIcon(
-              FontAwesomeIcons.trash,
-              size: 8,
-              color: Colors.white,
-            ),
+            child: FaIcon(FontAwesomeIcons.trash, size: 8, color: Colors.white),
           ),
         ),
       ),
@@ -2354,10 +2753,7 @@ class _ClearMarksButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFF59E0B),
             borderRadius: BorderRadius.circular(3),
-            border: Border.all(
-              color: const Color(0xFFD97706),
-              width: 1.2,
-            ),
+            border: Border.all(color: const Color(0xFFD97706), width: 1.2),
           ),
           child: const Center(
             child: FaIcon(
@@ -2406,7 +2802,9 @@ class _CompleteChordsButton extends ConsumerWidget {
         final count = notifier.selectCompleteChordsBeats(accordionNumber);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$count tiempos con acordes completos seleccionados en el compás.'),
+            content: Text(
+              '$count tiempos con acordes completos seleccionados en el compás.',
+            ),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -2415,7 +2813,9 @@ class _CompleteChordsButton extends ConsumerWidget {
         final count = notifier.markYellowDecisionBeats(accordionNumber);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$count acordes completos abriendo o cerrando marcados en amarillo.'),
+            content: Text(
+              '$count acordes completos abriendo o cerrando marcados en amarillo.',
+            ),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -2465,7 +2865,9 @@ class _CompleteChordsButton extends ConsumerWidget {
           color: hasYellowDecisions ? const Color(0xFFFEF9C3) : Colors.white,
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
-            color: hasYellowDecisions ? const Color(0xFFEAB308) : const Color(0xFFCBD5E1),
+            color: hasYellowDecisions
+                ? const Color(0xFFEAB308)
+                : const Color(0xFFCBD5E1),
             width: hasYellowDecisions ? 1.2 : 0.8,
           ),
         ),
@@ -2475,12 +2877,17 @@ class _CompleteChordsButton extends ConsumerWidget {
             FaIcon(
               FontAwesomeIcons.checkDouble,
               size: 8.5,
-              color: hasYellowDecisions ? const Color(0xFFB45309) : const Color(0xFF0284C7),
+              color: hasYellowDecisions
+                  ? const Color(0xFFB45309)
+                  : const Color(0xFF0284C7),
             ),
             if (hasYellowDecisions) ...[
               const SizedBox(width: 2),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 2.5, vertical: 0.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 2.5,
+                  vertical: 0.5,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF59E0B),
                   borderRadius: BorderRadius.circular(6),
@@ -2504,7 +2911,11 @@ class _CompleteChordsButton extends ConsumerWidget {
           value: 'assign',
           child: Row(
             children: [
-              FaIcon(FontAwesomeIcons.wandMagicSparkles, size: 12, color: Color(0xFF0284C7)),
+              FaIcon(
+                FontAwesomeIcons.wandMagicSparkles,
+                size: 12,
+                color: Color(0xFF0284C7),
+              ),
               SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -2512,7 +2923,10 @@ class _CompleteChordsButton extends ConsumerWidget {
                   children: [
                     Text(
                       'Asignar acordes completos',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       'Auto-asigna unívocos y marca amarillos para decidir',
@@ -2529,7 +2943,11 @@ class _CompleteChordsButton extends ConsumerWidget {
           value: 'select',
           child: Row(
             children: [
-              FaIcon(FontAwesomeIcons.squareCheck, size: 12, color: Color(0xFF059669)),
+              FaIcon(
+                FontAwesomeIcons.squareCheck,
+                size: 12,
+                color: Color(0xFF059669),
+              ),
               SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -2537,7 +2955,10 @@ class _CompleteChordsButton extends ConsumerWidget {
                   children: [
                     Text(
                       'Seleccionar en compás',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       'Marca checkboxes de tiempos con notas completas',
@@ -2554,7 +2975,11 @@ class _CompleteChordsButton extends ConsumerWidget {
           value: 'mark_yellow',
           child: Row(
             children: [
-              FaIcon(FontAwesomeIcons.circleExclamation, size: 12, color: Color(0xFFD97706)),
+              FaIcon(
+                FontAwesomeIcons.circleExclamation,
+                size: 12,
+                color: Color(0xFFD97706),
+              ),
               SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -2562,7 +2987,10 @@ class _CompleteChordsButton extends ConsumerWidget {
                   children: [
                     Text(
                       'Marcar amarillos para decidir',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       'Resalta acordes que abren o cierran para elegir',
@@ -2581,11 +3009,19 @@ class _CompleteChordsButton extends ConsumerWidget {
             value: 'apply_pull',
             child: Row(
               children: [
-                FaIcon(FontAwesomeIcons.arrowLeft, size: 12, color: Color(0xFF2563EB)),
+                FaIcon(
+                  FontAwesomeIcons.arrowLeft,
+                  size: 12,
+                  color: Color(0xFF2563EB),
+                ),
                 SizedBox(width: 8),
                 Text(
                   'Aplicar todos los amarillos a Abre (←)',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1D4ED8),
+                  ),
                 ),
               ],
             ),
@@ -2595,11 +3031,19 @@ class _CompleteChordsButton extends ConsumerWidget {
             value: 'apply_push',
             child: Row(
               children: [
-                FaIcon(FontAwesomeIcons.arrowRight, size: 12, color: Color(0xFFDC2626)),
+                FaIcon(
+                  FontAwesomeIcons.arrowRight,
+                  size: 12,
+                  color: Color(0xFFDC2626),
+                ),
                 SizedBox(width: 8),
                 Text(
                   'Aplicar todos los amarillos a Cierra (→)',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFB91C1C)),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFB91C1C),
+                  ),
                 ),
               ],
             ),
@@ -2609,7 +3053,11 @@ class _CompleteChordsButton extends ConsumerWidget {
             value: 'clear_yellow',
             child: Row(
               children: [
-                FaIcon(FontAwesomeIcons.xmark, size: 12, color: Color(0xFF94A3B8)),
+                FaIcon(
+                  FontAwesomeIcons.xmark,
+                  size: 12,
+                  color: Color(0xFF94A3B8),
+                ),
                 SizedBox(width: 8),
                 Text(
                   'Limpiar marcas amarillas',
@@ -2652,7 +3100,9 @@ class _MetronomeButton extends StatelessWidget {
             color: isActive ? const Color(0xFF10B981) : const Color(0xFFE2E8F0),
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
-              color: isActive ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
+              color: isActive
+                  ? const Color(0xFF059669)
+                  : const Color(0xFFCBD5E1),
               width: 0.9,
             ),
           ),
@@ -2683,8 +3133,12 @@ class _LiveMarkerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeBg = isPlaying ? const Color(0xFFF59E0B) : const Color(0xFF8B5CF6);
-    final activeBorder = isPlaying ? const Color(0xFFD97706) : const Color(0xFF7C3AED);
+    final activeBg = isPlaying
+        ? const Color(0xFFF59E0B)
+        : const Color(0xFF8B5CF6);
+    final activeBorder = isPlaying
+        ? const Color(0xFFD97706)
+        : const Color(0xFF7C3AED);
 
     return Tooltip(
       message: isActive
@@ -2813,7 +3267,8 @@ class _BeatAdjustButton extends StatelessWidget {
 
     return PopupMenuButton<String>(
       key: ValueKey('beat_adjust_menu_btn_$accordionNumber'),
-      tooltip: 'Ajustes del Beat (Fase/Sincronización): ${ms >= 0 ? "+" : ""}$ms ms',
+      tooltip:
+          'Ajustes del Beat (Fase/Sincronización): ${ms >= 0 ? "+" : ""}$ms ms',
       padding: EdgeInsets.zero,
       offset: const Offset(0, 24),
       onSelected: (val) {
@@ -2844,7 +3299,11 @@ class _BeatAdjustButton extends StatelessWidget {
           height: 28,
           child: Text(
             'Ajustes del Beat (Desfase: ${ms >= 0 ? "+" : ""}$ms ms)',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF0F172A)),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+              color: Color(0xFF0F172A),
+            ),
           ),
         ),
         const PopupMenuDivider(height: 4),
@@ -2853,9 +3312,16 @@ class _BeatAdjustButton extends StatelessWidget {
           height: 32,
           child: Row(
             children: [
-              FaIcon(FontAwesomeIcons.arrowsRotate, size: 12, color: Color(0xFF2563EB)),
+              FaIcon(
+                FontAwesomeIcons.arrowsRotate,
+                size: 12,
+                color: Color(0xFF2563EB),
+              ),
               SizedBox(width: 8),
-              Text('Sincronizar Beat al audio actual', style: TextStyle(fontSize: 11)),
+              Text(
+                'Sincronizar Beat al audio actual',
+                style: TextStyle(fontSize: 11),
+              ),
             ],
           ),
         ),
@@ -2864,7 +3330,11 @@ class _BeatAdjustButton extends StatelessWidget {
           height: 30,
           child: Row(
             children: [
-              FaIcon(FontAwesomeIcons.backward, size: 11, color: Color(0xFFD97706)),
+              FaIcon(
+                FontAwesomeIcons.backward,
+                size: 11,
+                color: Color(0xFFD97706),
+              ),
               SizedBox(width: 8),
               Text('Atrasar Beat -50 ms', style: TextStyle(fontSize: 11)),
             ],
@@ -2875,7 +3345,11 @@ class _BeatAdjustButton extends StatelessWidget {
           height: 30,
           child: Row(
             children: [
-              FaIcon(FontAwesomeIcons.backwardStep, size: 11, color: Color(0xFFD97706)),
+              FaIcon(
+                FontAwesomeIcons.backwardStep,
+                size: 11,
+                color: Color(0xFFD97706),
+              ),
               SizedBox(width: 8),
               Text('Atrasar Beat -25 ms', style: TextStyle(fontSize: 11)),
             ],
@@ -2886,7 +3360,11 @@ class _BeatAdjustButton extends StatelessWidget {
           height: 30,
           child: Row(
             children: [
-              FaIcon(FontAwesomeIcons.forwardStep, size: 11, color: Color(0xFF16A34A)),
+              FaIcon(
+                FontAwesomeIcons.forwardStep,
+                size: 11,
+                color: Color(0xFF16A34A),
+              ),
               SizedBox(width: 8),
               Text('Adelantar Beat +25 ms', style: TextStyle(fontSize: 11)),
             ],
@@ -2897,7 +3375,11 @@ class _BeatAdjustButton extends StatelessWidget {
           height: 30,
           child: Row(
             children: [
-              FaIcon(FontAwesomeIcons.forward, size: 11, color: Color(0xFF16A34A)),
+              FaIcon(
+                FontAwesomeIcons.forward,
+                size: 11,
+                color: Color(0xFF16A34A),
+              ),
               SizedBox(width: 8),
               Text('Adelantar Beat +50 ms', style: TextStyle(fontSize: 11)),
             ],
@@ -2909,9 +3391,16 @@ class _BeatAdjustButton extends StatelessWidget {
           height: 30,
           child: Row(
             children: [
-              FaIcon(FontAwesomeIcons.rotateLeft, size: 11, color: Color(0xFFDC2626)),
+              FaIcon(
+                FontAwesomeIcons.rotateLeft,
+                size: 11,
+                color: Color(0xFFDC2626),
+              ),
               SizedBox(width: 8),
-              Text('Restablecer desfase (0 ms)', style: TextStyle(fontSize: 11)),
+              Text(
+                'Restablecer desfase (0 ms)',
+                style: TextStyle(fontSize: 11),
+              ),
             ],
           ),
         ),
@@ -2932,7 +3421,9 @@ class _BeatAdjustButton extends StatelessWidget {
             FaIcon(
               FontAwesomeIcons.sliders,
               size: 9.0,
-              color: isNudged ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+              color: isNudged
+                  ? const Color(0xFF2563EB)
+                  : const Color(0xFF64748B),
             ),
             const SizedBox(width: 3),
             Text(
@@ -2940,7 +3431,9 @@ class _BeatAdjustButton extends StatelessWidget {
               style: TextStyle(
                 fontSize: 8.5,
                 fontWeight: FontWeight.w800,
-                color: isNudged ? const Color(0xFF1D4ED8) : const Color(0xFF475569),
+                color: isNudged
+                    ? const Color(0xFF1D4ED8)
+                    : const Color(0xFF475569),
               ),
             ),
           ],

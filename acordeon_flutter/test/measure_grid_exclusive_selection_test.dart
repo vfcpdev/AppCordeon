@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:acordeon_flutter/core/constants/enums.dart';
+import 'package:acordeon_flutter/core/constants/layout_constants.dart';
 import 'package:acordeon_flutter/domain/commands/accordion_commands.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
@@ -123,6 +124,51 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(container.read(accordionSimulatorProvider).measures[0].beats[1].chord, 'Do7');
+    });
+
+    testWidgets('desplaza lentamente el siguiente compás arriba al alcanzar el 80 %',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+      notifier.generateMeasuresForAudio(durationSeconds: 100, bpm: 120);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(body: MeasureGridWidget(width: 600)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollable = find.descendant(
+        of: find.byType(RawScrollbar),
+        matching: find.byType(Scrollable),
+      ).first;
+      final scrollableState = tester.state<ScrollableState>(scrollable);
+      notifier.togglePlayAudio();
+      await tester.pump();
+      notifier.selectBeat(11, 0);
+      await tester.pump();
+
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(scrollableState.position.pixels, greaterThan(0));
+      expect(
+        scrollableState.position.pixels,
+        lessThan(12 * CompasCardMetrics.measureRowHeight),
+      );
+      await tester.pump(const Duration(seconds: 2));
+      expect(
+        scrollableState.position.pixels,
+        closeTo(12 * CompasCardMetrics.measureRowHeight, 2.0),
+      );
+      notifier.stopAudio();
     });
   });
 }

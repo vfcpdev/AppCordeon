@@ -199,46 +199,6 @@ class AppHeaderWidget extends ConsumerWidget {
                   Text('Alemana', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                 ],
               ),
-              const SizedBox(width: 12),
-
-              // Selector de Color de Fondo
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const FaIcon(FontAwesomeIcons.palette, size: 12, color: Color(0xFF64748B)),
-                  const SizedBox(width: 5),
-                  const Text('Fondo:', style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 5),
-                  PopupMenuButton<Color>(
-                    tooltip: 'Cambiar color de fondo',
-                    onSelected: (color) => notifier.setBackgroundColor(color),
-                    itemBuilder: (context) => [
-                      _buildColorMenuItem(const Color(0xFFF1F5F9), 'Gris Pizarra Claro'),
-                      _buildColorMenuItem(const Color(0xFFFFFFFF), 'Blanco Puro'),
-                      _buildColorMenuItem(const Color(0xFFF0F9FF), 'Azul Glaciar Suave'),
-                      _buildColorMenuItem(const Color(0xFFFEFCE8), 'Crema Ámbar'),
-                      _buildColorMenuItem(const Color(0xFFE2E8F0), 'Gris Plomo Zinc'),
-                      _buildColorMenuItem(const Color(0xFF0F172A), 'Modo Oscuro Profundo'),
-                    ],
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: state.backgroundColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF94A3B8), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 3,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(width: 14),
 
               // Botón Modal de Teoría Musical
@@ -331,24 +291,4 @@ class AppHeaderWidget extends ConsumerWidget {
     );
   }
 
-  PopupMenuItem<Color> _buildColorMenuItem(Color color, String label) {
-    return PopupMenuItem<Color>(
-      value: color,
-      child: Row(
-        children: [
-          Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF94A3B8)),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
 }

@@ -9,6 +9,7 @@ import 'package:acordeon_flutter/domain/models/audio_analysis_models.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/core/audio/audio_analyzer_service.dart';
 import 'package:acordeon_flutter/presentation/widgets/app_header_widget.dart';
+import 'package:acordeon_flutter/presentation/widgets/track_info_card_widget.dart';
 
 void main() {
   group('Audio Loading & Analysis Controller Pipeline Tests', () {
@@ -128,6 +129,55 @@ void main() {
       expect(widgetContainer.read(accordionSimulatorProvider).audioReport, isNotNull);
     });
 
+    testWidgets('permite reproducir una pista sin analizar y desacoplarla del Compás',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final analyzer = _CountingAudioAnalyzer();
+      final player = _TestAudioFilePlayer();
+      final widgetContainer = ProviderContainer(
+        overrides: [
+          audioAnalyzerProvider.overrideWithValue(analyzer),
+          audioFilePlayerProvider.overrideWithValue(player),
+        ],
+      );
+      addTearDown(widgetContainer.dispose);
+
+      final notifier = widgetContainer.read(accordionSimulatorProvider.notifier);
+      expect(
+        notifier.loadAudioBytes(Uint8List.fromList([1, 2, 3]), 'test.wav'),
+        isA<AudioLoadSuccess>(),
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: widgetContainer,
+          child: const MaterialApp(
+            home: Scaffold(body: TrackInfoCardWidget()),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(TrackInfoCardWidget), findsOneWidget);
+      expect(find.byKey(const ValueKey('audio_not_analyzed_status')), findsOneWidget);
+      expect(analyzer.calls, 0);
+
+      await tester.tap(find.byKey(const ValueKey('audio_compas_sync_toggle')));
+      await tester.pump();
+      expect(widgetContainer.read(accordionSimulatorProvider).isAudioCoupled, isFalse);
+
+      await tester.tap(find.byTooltip('Reproducir'));
+      await tester.pump();
+      expect(player.playCalls, 1);
+      expect(widgetContainer.read(accordionSimulatorProvider).isPlayingAudio, isTrue);
+      expect(analyzer.calls, 0);
+
+      notifier.stopAudio();
+    });
+
     test('AudioAnalyzerService correctly identifies key signature and recommended accordion tuning', () async {
       final service = AudioAnalyzerService();
       final testAudio = Uint8List(44100 * 2 * 4); // 4 segundos
@@ -172,6 +222,7 @@ class _CountingAudioAnalyzer implements AudioAnalyzer {
 
 class _TestAudioFilePlayer implements AudioFilePlayer {
   bool _isLoaded = false;
+  int playCalls = 0;
 
   @override
   double get durationSeconds => 6;
@@ -191,7 +242,9 @@ class _TestAudioFilePlayer implements AudioFilePlayer {
   void pause() {}
 
   @override
-  void play() {}
+  void play() {
+    playCalls++;
+  }
 
   @override
   void seek(double seconds) {}

@@ -24,4 +24,7 @@ class CompasCardMetrics {
   /// - {C} `height == beatCellBaseHeight * 1.05`.
   /// - {Q} La celda mantiene legibilidad de acordes y fuente ajustada con +5% de espacio vertical.
   static const double beatCellHeight = beatCellBaseHeight * 1.05; // 22.68
+
+  /// Alto de una fila de compás, incluyendo el margen vertical entre filas.
+  static const double measureRowHeight = beatCellHeight + 5.0;
 }

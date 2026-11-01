@@ -104,6 +104,8 @@ void main() {
       // Buscamos el botón de Teoría Musical en el encabezado
       final theoryBtn = find.byKey(const ValueKey('music_theory_modal_btn'));
       expect(theoryBtn, findsOneWidget);
+      expect(find.text('Fondo:'), findsNothing);
+      expect(find.byTooltip('Cambiar color de fondo'), findsNothing);
 
       // Hacemos clic para abrir el modal
       await tester.tap(theoryBtn);

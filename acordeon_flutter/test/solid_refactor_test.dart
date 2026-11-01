@@ -346,24 +346,24 @@ void main() {
       await n.pickAndLoadAudio();
       expect(c.read(accordionSimulatorProvider).isAudioCoupled, isTrue);
 
-      // Desacoplado: la pista se pausa y el Compás sigue por su reloj.
+      // Desacoplado: la pista sigue reproduciéndose independientemente del Compás.
       n.toggleAudioCoupling();
       expect(c.read(accordionSimulatorProvider).isAudioCoupled, isFalse);
-      expect(player.calls, contains('pause'));
+      expect(player.calls, isNot(contains('pause')));
 
-      // Reacoplado: la pista retoma en la posición del Compás.
+      // Reacoplado: la pista salta a la posición actual del Compás.
       n.seekAudio(3.0);
       player.calls.clear();
       n.toggleAudioCoupling();
       expect(c.read(accordionSimulatorProvider).isAudioCoupled, isTrue);
-      expect(player.calls, contains('seek:3.0'));
+      expect(player.calls, contains('seek:0.0'));
 
-      // Reproduciendo, desacoplar pausa; reacoplar reanuda la pista.
+      // Desacoplar durante la reproducción no pausa el archivo.
       n.togglePlayAudio();
       expect(player.calls, contains('play'));
       player.calls.clear();
       n.toggleAudioCoupling();
-      expect(player.calls, contains('pause'));
+      expect(player.calls, isNot(contains('pause')));
       player.calls.clear();
       n.toggleAudioCoupling();
       expect(player.calls.any((call) => call.startsWith('seek:')), isTrue);

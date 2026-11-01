@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'dart:ui' show Color, Offset;
+import 'dart:ui' show Offset;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/audio/analysis/tuning_recommender.dart';
 import '../../core/audio/audio_analyzer.dart';
@@ -49,7 +49,10 @@ class AudioLoadFailure extends AudioLoadResult {
   const AudioLoadFailure(this.message);
 }
 
-String _findChordForTime(List<DetectedChordSegment> chords, double timeSeconds) {
+String _findChordForTime(
+  List<DetectedChordSegment> chords,
+  double timeSeconds,
+) {
   if (chords.isEmpty) return '';
   var low = 0;
   var high = chords.length - 1;
@@ -77,7 +80,6 @@ String _findChordForTime(List<DetectedChordSegment> chords, double timeSeconds) 
 /// Estado global del simulador de Acordeón
 class AccordionSimulatorState {
   // Configuración General
-  final Color backgroundColor;
   final NotationMode notation;
   final bool showDiapason1;
   final bool showDiapason2;
@@ -105,6 +107,8 @@ class AccordionSimulatorState {
   // Reproductor & Cuadrícula de Compases
   final bool isPlayingAudio;
   final double currentAudioTime;
+  final double? currentCompasTime;
+  double get compasTime => currentCompasTime ?? currentAudioTime;
   final double totalAudioDuration;
   final bool syncDiapason;
 
@@ -184,7 +188,8 @@ class AccordionSimulatorState {
   bool get isChordDetectorUndocked => _isChordDetectorUndocked ?? false;
 
   final Offset? _chordDetectorPosition;
-  Offset get chordDetectorPosition => _chordDetectorPosition ?? const Offset(390, 150);
+  Offset get chordDetectorPosition =>
+      _chordDetectorPosition ?? const Offset(390, 150);
 
   // Bajo alterado / Slash chord en constructor libre
   final String? _freeChordBass;
@@ -215,7 +220,8 @@ class AccordionSimulatorState {
 
   /// Detección automática del acorde en reproducción sólo cuando hay cambios de acorde.
   final bool? _isPlaybackAutoChordDetectEnabled;
-  bool get isPlaybackAutoChordDetectEnabled => _isPlaybackAutoChordDetectEnabled ?? false;
+  bool get isPlaybackAutoChordDetectEnabled =>
+      _isPlaybackAutoChordDetectEnabled ?? false;
 
   /// Micro-ajuste o ajuste fino del desfase del pulso (s) respecto a la cuadrícula.
   final double? _beatNudgeOffset;
@@ -235,11 +241,11 @@ class AccordionSimulatorState {
         if (chord.isNotEmpty) return chord;
       }
     }
+    if (!isAudioCoupled) return '';
     return _findChordForTime(audioReport?.chords ?? const [], currentAudioTime);
   }
 
   const AccordionSimulatorState({
-    required this.backgroundColor,
     required this.notation,
     required this.showDiapason1,
     required this.showDiapason2,
@@ -259,6 +265,7 @@ class AccordionSimulatorState {
     required this.activeButtons,
     required this.isPlayingAudio,
     required this.currentAudioTime,
+    this.currentCompasTime,
     required this.totalAudioDuration,
     required this.syncDiapason,
     required this.isAudioCoupled,
@@ -308,7 +315,8 @@ class AccordionSimulatorState {
     double? beatNudgeOffset,
   })  : _audioStartOffset = audioStartOffset ?? 0.0,
         _bpmCalibrationStart = bpmCalibrationStart ?? -1.0,
-        _isPlaybackAutoChordDetectEnabled = isPlaybackAutoChordDetectEnabled ?? false,
+       _isPlaybackAutoChordDetectEnabled =
+           isPlaybackAutoChordDetectEnabled ?? false,
         _beatNudgeOffset = beatNudgeOffset ?? 0.0,
         _markedBeats = markedBeats ?? const {},
         _yellowDecisionBeats = yellowDecisionBeats ?? const {},
@@ -327,7 +335,6 @@ class AccordionSimulatorState {
         _isLiveChordMarkerActive = isLiveChordMarkerActive ?? false;
 
   AccordionSimulatorState copyWith({
-    Color? backgroundColor,
     NotationMode? notation,
     bool? showDiapason1,
     bool? showDiapason2,
@@ -347,6 +354,7 @@ class AccordionSimulatorState {
     Set<String>? activeButtons,
     bool? isPlayingAudio,
     double? currentAudioTime,
+    double? currentCompasTime,
     double? totalAudioDuration,
     bool? syncDiapason,
     bool? isAudioCoupled,
@@ -402,9 +410,9 @@ class AccordionSimulatorState {
       audioStartOffset: audioStartOffset ?? this.audioStartOffset,
       bpmCalibrationStart: bpmCalibrationStart ?? this.bpmCalibrationStart,
       isPlaybackAutoChordDetectEnabled:
-          isPlaybackAutoChordDetectEnabled ?? this.isPlaybackAutoChordDetectEnabled,
+          isPlaybackAutoChordDetectEnabled ??
+          this.isPlaybackAutoChordDetectEnabled,
       beatNudgeOffset: beatNudgeOffset ?? this.beatNudgeOffset,
-      backgroundColor: backgroundColor ?? this.backgroundColor,
       notation: notation ?? this.notation,
       showDiapason1: showDiapason1 ?? this.showDiapason1,
       showDiapason2: showDiapason2 ?? this.showDiapason2,
@@ -424,6 +432,7 @@ class AccordionSimulatorState {
       activeButtons: activeButtons ?? this.activeButtons,
       isPlayingAudio: isPlayingAudio ?? this.isPlayingAudio,
       currentAudioTime: currentAudioTime ?? this.currentAudioTime,
+      currentCompasTime: currentCompasTime ?? compasTime,
       totalAudioDuration: totalAudioDuration ?? this.totalAudioDuration,
       syncDiapason: syncDiapason ?? this.syncDiapason,
       isAudioCoupled: isAudioCoupled ?? this.isAudioCoupled,
@@ -451,12 +460,18 @@ class AccordionSimulatorState {
       detectorSelectedButtons:
           detectorSelectedButtons ?? this.detectorSelectedButtons,
       detectedChord: detectedChord ?? this.detectedChord,
-      audioReport: clearAudio || clearAudioReport ? null : (audioReport ?? this.audioReport),
+      audioReport: clearAudio || clearAudioReport
+          ? null
+          : (audioReport ?? this.audioReport),
       isAnalyzingAudio: isAnalyzingAudio ?? this.isAnalyzingAudio,
-      loadedAudioFileName: clearAudio ? null : (loadedAudioFileName ?? this.loadedAudioFileName),
+      loadedAudioFileName: clearAudio
+          ? null
+          : (loadedAudioFileName ?? this.loadedAudioFileName),
       showMultiBeatModal: showMultiBeatModal ?? this.showMultiBeatModal,
       multiBeatPattern: multiBeatPattern ?? this.multiBeatPattern,
-      multiBeatChord: clearMultiBeatChord ? null : (multiBeatChord ?? this.multiBeatChord),
+      multiBeatChord: clearMultiBeatChord
+          ? null
+          : (multiBeatChord ?? this.multiBeatChord),
       isCompas1Undocked: isCompas1Undocked ?? this.isCompas1Undocked,
       compas1Position: compas1Position ?? this.compas1Position,
       isCompas2Undocked: isCompas2Undocked ?? this.isCompas2Undocked,
@@ -562,7 +577,6 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     });
 
     return AccordionSimulatorState(
-      backgroundColor: const Color(0xFFF1F5F9),
       notation: NotationMode.latina,
       showDiapason1: true,
       showDiapason2: true,
@@ -582,6 +596,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       activeButtons: const {},
       isPlayingAudio: false,
       currentAudioTime: 0.0,
+      currentCompasTime: 0.0,
       totalAudioDuration: 180.0,
       syncDiapason: true,
       isAudioCoupled: true,
@@ -641,7 +656,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void toggleUndockChordDetector() {
-    state = state.copyWith(isChordDetectorUndocked: !state.isChordDetectorUndocked);
+    state = state.copyWith(
+      isChordDetectorUndocked: !state.isChordDetectorUndocked,
+    );
   }
 
   void setChordDetectorPosition(Offset position) {
@@ -658,13 +675,17 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final convertedMeasures = state.measures.map((row) {
       final updatedBeats = row.beats.map((beat) {
         if (beat.chord.trim().isEmpty) return beat;
-        final converted = ChordCatalog.formatChordForNotation(beat.chord, notation);
+        final converted = ChordCatalog.formatChordForNotation(
+          beat.chord,
+          notation,
+        );
         return beat.copyWith(chord: converted);
       }).toList();
       return MeasureRow(barNumber: row.barNumber, beats: updatedBeats);
     }).toList();
 
-    final convertedDetected = state.detectedChord != null && state.detectedChord!.notes.isNotEmpty
+    final convertedDetected =
+        state.detectedChord != null && state.detectedChord!.notes.isNotEmpty
         ? ChordDetectorEngine.detect(
             midiNotes: state.detectedChord!.notes,
             notation: notation,
@@ -675,14 +696,11 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       notation: notation,
       measures: convertedMeasures,
       detectedChord: convertedDetected ?? state.detectedChord,
-      multiBeatChord: state.multiBeatChord != null && state.multiBeatChord!.isNotEmpty
+      multiBeatChord:
+          state.multiBeatChord != null && state.multiBeatChord!.isNotEmpty
           ? ChordCatalog.formatChordForNotation(state.multiBeatChord!, notation)
           : state.multiBeatChord,
     );
-  }
-
-  void setBackgroundColor(Color color) {
-    state = state.copyWith(backgroundColor: color);
   }
 
   Timer? _playbackTimer;
@@ -721,10 +739,14 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   /// {Q}: la pista queda disponible para reproducción y no se invoca el analizador.
   AudioLoadResult loadAudioBytes(Uint8List bytes, String fileName) {
     if (bytes.isEmpty || fileName.trim().isEmpty) {
-      return const AudioLoadFailure('El archivo de audio está vacío o no tiene nombre.');
+      return const AudioLoadFailure(
+        'El archivo de audio está vacío o no tiene nombre.',
+      );
     }
     if (state.isAnalyzingAudio) {
-      return const AudioLoadFailure('Espera a que termine el análisis actual antes de cargar otra pista.');
+      return const AudioLoadFailure(
+        'Espera a que termine el análisis actual antes de cargar otra pista.',
+      );
     }
 
     // Detener cualquier reproducción anterior antes de cargar la nueva pista.
@@ -743,6 +765,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       loadedAudioFileName: fileName,
       totalAudioDuration: _audioPlayer.durationSeconds,
       currentAudioTime: 0.0,
+      currentCompasTime: 0.0,
       isPlayingAudio: false,
     );
     return AudioLoadSuccess(fileName);
@@ -771,6 +794,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         audioReport: report,
         totalAudioDuration: report.duration,
         currentAudioTime: 0.0,
+        currentCompasTime: 0.0,
       );
 
       applyDetectedTuning(report.keyResult);
@@ -809,10 +833,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final now = state.currentAudioTime;
     if (!state.isCalibratingBpm) {
       // 1er toque: fija el inicio del Compás 1 en 'now'
-      state = state.copyWith(
-        bpmCalibrationStart: now,
-        audioStartOffset: now,
-      );
+      state = state.copyWith(bpmCalibrationStart: now, audioStartOffset: now);
       final dur = state.totalAudioDuration > 0
           ? state.totalAudioDuration
           : (report.duration > 0 ? report.duration : 60.0);
@@ -832,10 +853,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
     if (!command.canExecute()) {
       // Toque inválido (orden o rango): se toma como nuevo inicio de compás 1.
-      state = state.copyWith(
-        bpmCalibrationStart: now,
-        audioStartOffset: now,
-      );
+      state = state.copyWith(bpmCalibrationStart: now, audioStartOffset: now);
       return null;
     }
 
@@ -855,7 +873,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   /// Cancela una calibración de BPM en curso.
-  void cancelBpmCalibration() => state = state.copyWith(bpmCalibrationStart: -1.0);
+  void cancelBpmCalibration() =>
+      state = state.copyWith(bpmCalibrationStart: -1.0);
 
   /// Tipo MIME según la extensión del archivo cargado.
   static String _mimeTypeFor(String fileName) {
@@ -870,24 +889,16 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     return 'audio/mpeg';
   }
 
-
   void clearAudioReport() {
     stopAudio();
     _loadedAudioBytes = null;
-    state = state.copyWith(
-      clearAudio: true,
-      isPlayingAudio: false,
-    );
+    state = state.copyWith(clearAudio: true, isPlayingAudio: false);
   }
 
   void updateAudioKey(int rootMod, String mode) {
     final report = state.audioReport;
     if (report == null) return;
-    updateAudioKeyAndBpm(
-      rootMod: rootMod,
-      mode: mode,
-      bpm: report.bpm,
-    );
+    updateAudioKeyAndBpm(rootMod: rootMod, mode: mode, bpm: report.bpm);
   }
 
   void updateAudioBpm(int newBpm) {
@@ -937,17 +948,43 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final semitoneOffset = ((rootMod % 12) - (oldRootMod % 12) + 12) % 12;
 
     const noteNamesLat = [
-      'Do', 'Do♯', 'Re', 'Mi♭', 'Mi', 'Fa', 'Fa♯', 'Sol', 'Sol♯', 'La', 'Si♭', 'Si'
+      'Do',
+      'Do♯',
+      'Re',
+      'Mi♭',
+      'Mi',
+      'Fa',
+      'Fa♯',
+      'Sol',
+      'Sol♯',
+      'La',
+      'Si♭',
+      'Si',
     ];
     const noteNamesAle = [
-      'C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'
+      'C',
+      'C#',
+      'D',
+      'Eb',
+      'E',
+      'F',
+      'F#',
+      'G',
+      'G#',
+      'A',
+      'Bb',
+      'B',
     ];
 
     final isMajor = mode.toLowerCase() == 'major';
-    final keyNameLat = '${noteNamesLat[rootMod % 12]} ${isMajor ? 'Mayor' : 'Menor'}';
-    final keyNameAle = '${noteNamesAle[rootMod % 12]} ${isMajor ? 'Major' : 'Minor'}';
+    final keyNameLat =
+        '${noteNamesLat[rootMod % 12]} ${isMajor ? 'Mayor' : 'Menor'}';
+    final keyNameAle =
+        '${noteNamesAle[rootMod % 12]} ${isMajor ? 'Major' : 'Minor'}';
 
-    final (recName, recOffset, recRow) = const TuningRecommender().recommend(rootMod % 12);
+    final (recName, recOffset, recRow) = const TuningRecommender().recommend(
+      rootMod % 12,
+    );
     final preferFlats = TuningRegistry.usesFlats(recOffset);
 
     final updatedKey = report.mainKey.copyWith(
@@ -1052,10 +1089,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       newMeasures = state.measures;
     }
 
-    state = state.copyWith(
-      audioReport: updatedReport,
-      measures: newMeasures,
-    );
+    state = state.copyWith(audioReport: updatedReport, measures: newMeasures);
 
     applyDetectedTuning(updatedKey);
   }
@@ -1113,7 +1147,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   /// marcando automáticamente cada beat donde ocurre un cambio armónico con precisión algorítmica.
   ApplyMeasureChordsResult? applyDetectedChordChangesToGrid() {
     final report = state.audioReport;
-    if (report == null || report.chords.isEmpty || state.measures.isEmpty) return null;
+    if (report == null || report.chords.isEmpty || state.measures.isEmpty)
+      return null;
 
     final command = ApplyMeasureChordsFromAudioCommand(
       measures: state.measures,
@@ -1184,6 +1219,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       _recalculateDetectedChord();
     }
   }
+
   void toggleBass1() =>
       state = state.copyWith(isBass1Collapsed: !state.isBass1Collapsed);
   void toggleMirror1() => state = state.copyWith(mirror1: !state.mirror1);
@@ -1248,9 +1284,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final pitchClasses = ChordCatalog.pitchClassesForChordSymbol(trimmed);
     if (root == null || pitchClasses.isEmpty) return [];
 
-    final intervals = pitchClasses
-        .map((pitchClass) => (pitchClass - root + 12) % 12)
-        .toList()
+    final intervals =
+        pitchClasses.map((pitchClass) => (pitchClass - root + 12) % 12).toList()
       ..sort();
     return intervals.map((interval) => 60 + root + interval).toList();
   }
@@ -1284,10 +1319,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final beat = row.beats[beatIndex];
     final chord = beat.chord.trim().isNotEmpty
         ? beat.chord.trim()
-        : _findChordForTime(
+        : state.isAudioCoupled
+        ? _findChordForTime(
             state.audioReport?.chords ?? const [],
             state.currentAudioTime,
-          );
+          )
+        : '';
     if (chord.isEmpty) {
       state = state.copyWith(playingChordNotes: const {});
       return;
@@ -1301,10 +1338,17 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     _currentBeatNotes = notes;
     state = state.copyWith(
       playingChordNotes: notes.toSet(),
-      bellows1: beat.bellows != BellowsMode.both ? beat.bellows : state.bellows1,
+      bellows1: beat.bellows != BellowsMode.both
+          ? beat.bellows
+          : state.bellows1,
     );
   }
 
+  /// Inicia o pausa el archivo aunque no exista análisis armónico.
+  ///
+  /// {P}: existe un archivo cargado o el Compás puede funcionar con su metrónomo.
+  /// {Q}: el transporte se reproduce; `isAudioCoupled` solo decide si el reloj
+  /// del Compás sigue la posición del archivo o avanza de manera independiente.
   void togglePlayAudio() {
     final nextPlaying = !state.isPlayingAudio;
     _playbackTimer?.cancel();
@@ -1330,32 +1374,40 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     _lastPlayedBar = null;
     _lastPlayedBeat = null;
 
-    // Acoplado: la pista manda. Desacoplado: solo avanza el Compás.
-    final useFileTransport = _audioPlayer.isLoaded && state.isAudioCoupled;
-    if (useFileTransport) {
+    // El archivo siempre se reproduce si está cargado; el acoplamiento solo
+    // decide si su posición gobierna también el compás.
+    if (_audioPlayer.isLoaded) {
       _audioPlayer.seek(state.currentAudioTime);
       _audioPlayer.play();
     } else {
       _audioPlayer.pause();
     }
+    if (state.isAudioCoupled) {
+      state = state.copyWith(currentCompasTime: state.currentAudioTime);
+    }
 
     final bpm = state.audioReport?.bpm ?? 120.0;
     final intervalMs = ((60.0 / bpm / 2.0) * 1000).toInt().clamp(50, 1000);
 
-    _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
+    _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), (
+      timer,
+    ) {
       if (!state.isPlayingAudio) {
         timer.cancel();
         return;
       }
 
-      final fileDrives = _audioPlayer.isLoaded && state.isAudioCoupled;
+      final fileLoaded = _audioPlayer.isLoaded;
+      final fileDrivesCompas = fileLoaded && state.isAudioCoupled;
       final audioDur = _audioPlayer.durationSeconds;
-      final totalDur = fileDrives && audioDur > 0
+      final totalDur = fileLoaded && audioDur > 0
           ? audioDur
           : (state.totalAudioDuration > 0 ? state.totalAudioDuration : 16.0);
 
       // Si la pista terminó (y ya avanzó más allá del inicio > 0.5s), detener y volver al inicio.
-      if (fileDrives && _audioPlayer.positionSeconds > 0.5 && _audioPlayer.positionSeconds >= totalDur - 0.1) {
+      if (fileLoaded &&
+          _audioPlayer.positionSeconds > 0.5 &&
+          _audioPlayer.positionSeconds >= totalDur - 0.1) {
         timer.cancel();
         _audioPlayer.stop();
         _audioBridge.allNotesOff();
@@ -1363,6 +1415,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         state = state.copyWith(
           isPlayingAudio: false,
           currentAudioTime: 0.0,
+          currentCompasTime: 0.0,
           selectedBarIndex: 0,
           selectedBeatIndex: 0,
           playingChordNotes: const {},
@@ -1370,30 +1423,44 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         return;
       }
 
-      // Acoplado, la posición real manda; desacoplado, avanza el reloj.
-      final nextTime = fileDrives
+      final nextAudioTime = fileLoaded
           ? _audioPlayer.positionSeconds
           : state.currentAudioTime + (intervalMs / 1000.0);
-      final wrappedTime = !fileDrives && nextTime >= totalDur ? 0.0 : nextTime;
+      final wrappedAudioTime = !fileLoaded && nextAudioTime >= totalDur
+          ? 0.0
+          : nextAudioTime;
+      final nextCompasTime = fileDrivesCompas
+          ? wrappedAudioTime
+          : state.compasTime + (intervalMs / 1000.0);
+      final compasDuration = state.measures.length * 4 * (60.0 / bpm);
+      final wrappedCompasTime =
+          !fileDrivesCompas && nextCompasTime >= compasDuration
+          ? 0.0
+          : nextCompasTime;
 
       final beatDuration = 60.0 / bpm;
       final effectiveOffset = state.effectiveAudioStartOffset;
-      final effectiveTime = math.max(0.0, wrappedTime - effectiveOffset);
+      final effectiveTime = math.max(0.0, wrappedCompasTime - effectiveOffset);
       final totalBeats = (effectiveTime / beatDuration).floor();
-      final currentBar = wrappedTime >= effectiveOffset
-          ? (totalBeats ~/ 4) % (state.measures.isNotEmpty ? state.measures.length : 8)
+      final currentBar = wrappedCompasTime >= effectiveOffset
+          ? (totalBeats ~/ 4) %
+                (state.measures.isNotEmpty ? state.measures.length : 8)
           : 0;
-      final currentBeat = wrappedTime >= effectiveOffset ? totalBeats % 4 : 0;
+      final currentBeat = wrappedCompasTime >= effectiveOffset
+          ? totalBeats % 4
+          : 0;
 
       state = state.copyWith(
-        currentAudioTime: wrappedTime,
+        currentAudioTime: wrappedAudioTime,
+        currentCompasTime: wrappedCompasTime,
+        totalAudioDuration: audioDur > 0 ? audioDur : null,
         selectedBarIndex: currentBar,
         selectedBeatIndex: currentBeat,
       );
 
       // Detección automática en reproducción: ÚNICAMENTE cuando ocurre una transición armónica
-      if (state.isPlaybackAutoChordDetectEnabled) {
-        _checkPlaybackAutoChordChange(wrappedTime);
+      if (state.isAudioCoupled && state.isPlaybackAutoChordDetectEnabled) {
+        _checkPlaybackAutoChordChange(wrappedAudioTime);
       }
 
       // Reproducir acorde al entrar en un nuevo beat
@@ -1418,6 +1485,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     state = state.copyWith(
       isPlayingAudio: false,
       currentAudioTime: 0.0,
+      currentCompasTime: 0.0,
       selectedBarIndex: 0,
       selectedBeatIndex: 0,
       playingChordNotes: const {},
@@ -1448,16 +1516,22 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
   /// Alterna el modo de marcación de acordes en vivo con barra espaciadora.
   void toggleLiveChordMarker() {
-    state = state.copyWith(isLiveChordMarkerActive: !state.isLiveChordMarkerActive);
+    state = state.copyWith(
+      isLiveChordMarkerActive: !state.isLiveChordMarkerActive,
+    );
   }
 
   /// Ejecuta un chasquido de metrónomo (acento en beat 0, secundario en beats 1..3).
   void playMetronomeTick(int beatIndex) {
     PlayMetronomeTickCommand(
       onPercussiveClick: ({bool isDownbeat = true, double volume = 0.8}) {
-        _audioBridge.playPercussiveClick(isDownbeat: isDownbeat, volume: volume);
+        _audioBridge.playPercussiveClick(
+          isDownbeat: isDownbeat,
+          volume: volume,
+        );
       },
-      onNoteOn: (note, {velocity = 0.8}) => _audioBridge.noteOn(note, velocity: velocity),
+      onNoteOn: (note, {velocity = 0.8}) =>
+          _audioBridge.noteOn(note, velocity: velocity),
       onNoteOff: (note) => _audioBridge.noteOff(note),
       beatIndex: beatIndex,
       volume: state.metronomeVolume,
@@ -1471,14 +1545,17 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     _standaloneBeat = 0;
     playMetronomeTick(_standaloneBeat);
 
-    _standaloneMetronomeTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
+    _standaloneMetronomeTimer = Timer.periodic(
+      Duration(milliseconds: intervalMs),
+      (timer) {
       if (!state.isMetronomeActive || state.isPlayingAudio) {
         timer.cancel();
         return;
       }
       _standaloneBeat = (_standaloneBeat + 1) % 4;
       playMetronomeTick(_standaloneBeat);
-    });
+      },
+    );
   }
 
   void _stopStandaloneMetronome() {
@@ -1509,7 +1586,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       );
       audioDetectedChord = state.notation == NotationMode.alemana
           ? matchingSegment.chordSymbol
-          : (matchingSegment.chordName.isNotEmpty ? matchingSegment.chordName : matchingSegment.chordSymbol);
+          : (matchingSegment.chordName.isNotEmpty
+                ? matchingSegment.chordName
+                : matchingSegment.chordSymbol);
     }
 
     // 2. Acorde del constructor libre
@@ -1522,7 +1601,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     );
 
     // Jerarquía armónica: 1. Audio detectado, 2. Constructor libre, 3. Detector diapasón
-    final activeChord = (audioDetectedChord != null && audioDetectedChord.trim().isNotEmpty)
+    final activeChord =
+        (audioDetectedChord != null && audioDetectedChord.trim().isNotEmpty)
         ? audioDetectedChord.trim()
         : (constructorChord.isNotEmpty
             ? constructorChord
@@ -1562,11 +1642,17 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final bpm = state.audioReport?.bpm ?? 120.0;
     final secondsPerBar = (60.0 / bpm) * 4.0;
     final currentBar = state.selectedBarIndex ?? 0;
-    final targetBar = (currentBar - 1).clamp(0, state.measures.isNotEmpty ? state.measures.length - 1 : 0);
-    seekAudio(
-      state.effectiveAudioStartOffset + targetBar * secondsPerBar,
-      audition: true,
+    final targetBar = (currentBar - 1).clamp(
+      0,
+      state.measures.isNotEmpty ? state.measures.length - 1 : 0,
     );
+    final targetTime =
+        state.effectiveAudioStartOffset + targetBar * secondsPerBar;
+    if (state.isAudioCoupled) {
+      seekAudio(targetTime, audition: true);
+    } else {
+      _seekCompas(targetTime, audition: true);
+    }
   }
 
   /// Avanza al siguiente compás y sincroniza la posición del audio y de la cuadrícula.
@@ -1576,10 +1662,13 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final currentBar = state.selectedBarIndex ?? 0;
     final maxBar = state.measures.isNotEmpty ? state.measures.length - 1 : 0;
     final targetBar = (currentBar + 1).clamp(0, maxBar);
-    seekAudio(
-      state.effectiveAudioStartOffset + targetBar * secondsPerBar,
-      audition: true,
-    );
+    final targetTime =
+        state.effectiveAudioStartOffset + targetBar * secondsPerBar;
+    if (state.isAudioCoupled) {
+      seekAudio(targetTime, audition: true);
+    } else {
+      _seekCompas(targetTime, audition: true);
+    }
   }
 
   /// Posiciona la reproducción de audio en el segundo indicado y sincroniza la cuadrícula de compases.
@@ -1591,9 +1680,17 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   void seekAudio(double time, {bool audition = false}) {
     final clamped = time.clamp(
       0.0,
-      state.totalAudioDuration > 0 ? state.totalAudioDuration : time,
+      state.totalAudioDuration > 0
+          ? state.totalAudioDuration
+          : (_audioPlayer.durationSeconds > 0
+                ? _audioPlayer.durationSeconds
+                : time),
     );
     _audioPlayer.seek(clamped);
+    if (!state.isAudioCoupled) {
+      state = state.copyWith(currentAudioTime: clamped);
+      return;
+    }
 
     final bpm = state.audioReport?.bpm ?? 120.0;
     final beatDuration = 60.0 / bpm;
@@ -1601,7 +1698,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final effectiveTime = math.max(0.0, clamped - effectiveOffset);
     final totalBeats = (effectiveTime / beatDuration).floor();
     final currentBar = clamped >= effectiveOffset
-        ? (totalBeats ~/ 4) % (state.measures.isNotEmpty ? state.measures.length : 8)
+        ? (totalBeats ~/ 4) %
+              (state.measures.isNotEmpty ? state.measures.length : 8)
         : 0;
     final currentBeat = clamped >= effectiveOffset ? totalBeats % 4 : 0;
     _lastPlayedBar = currentBar;
@@ -1610,6 +1708,29 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
     state = state.copyWith(
       currentAudioTime: clamped,
+      currentCompasTime: clamped,
+      selectedBarIndex: currentBar,
+      selectedBeatIndex: currentBeat,
+    );
+    if (audition || state.isPlayingAudio) {
+      _playBeatChord(currentBar, currentBeat);
+    }
+  }
+
+  void _seekCompas(double time, {bool audition = false}) {
+    final bpm = state.audioReport?.bpm ?? 120.0;
+    final effectiveOffset = state.effectiveAudioStartOffset;
+    final effectiveTime = math.max(0.0, time - effectiveOffset);
+    final totalBeats = (effectiveTime / (60.0 / bpm)).floor();
+    final currentBar = time >= effectiveOffset
+        ? (totalBeats ~/ 4) %
+              (state.measures.isNotEmpty ? state.measures.length : 8)
+        : 0;
+    final currentBeat = time >= effectiveOffset ? totalBeats % 4 : 0;
+    _lastPlayedBar = currentBar;
+    _lastPlayedBeat = currentBeat;
+    state = state.copyWith(
+      currentCompasTime: time,
       selectedBarIndex: currentBar,
       selectedBeatIndex: currentBeat,
     );
@@ -1673,7 +1794,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   void _checkPlaybackAutoChordChange(double audioTime) {
     if (!state.isPlaybackAutoChordDetectEnabled) return;
     final report = state.audioReport;
-    if (report == null || report.chords.isEmpty || state.measures.isEmpty) return;
+    if (report == null || report.chords.isEmpty || state.measures.isEmpty)
+      return;
 
     final bpm = report.bpm.toDouble();
     final effectiveOffset = state.effectiveAudioStartOffset;
@@ -1720,7 +1842,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
     final updated = state.measures.map((row) {
       final updatedBeats = row.beats.map((b) {
-        final timeSec = totalOffset + (b.barIndex * 4 + b.beatIndex) * secondsPerBeat;
+        final timeSec =
+            totalOffset + (b.barIndex * 4 + b.beatIndex) * secondsPerBeat;
         final mins = (timeSec ~/ 60).toString().padLeft(2, '0');
         final secs = ((timeSec % 60).toInt()).toString().padLeft(2, '0');
         return b.copyWith(timeText: '$mins:$secs');
@@ -1733,24 +1856,24 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
   /// Acopla o desacopla la pista de audio al transporte del Compás.
   ///
-  /// - Acoplado: el archivo suena y su posición real manda sobre la cuadrícula.
-  /// - Desacoplado: la pista se pausa y el Compás sigue con su propio reloj/BPM.
-  /// Al reacoplar, la pista retoma exactamente en el tiempo actual del Compás.
+  /// {P}: el estado de sincronización puede cambiarse durante la reproducción.
+  /// {Q}: al desacoplar, la pista sigue sonando y el Compás conserva su reloj;
+  /// al acoplar, ambos continúan desde el tiempo actual del Compás.
   void toggleAudioCoupling() {
     final coupled = !state.isAudioCoupled;
-    state = state.copyWith(isAudioCoupled: coupled);
+    final syncedTime = coupled ? state.compasTime : state.currentAudioTime;
+    state = state.copyWith(
+      isAudioCoupled: coupled,
+      currentAudioTime: syncedTime,
+      currentCompasTime: coupled ? syncedTime : state.compasTime,
+    );
 
-    if (!_audioPlayer.isLoaded) return;
-
-    if (!coupled) {
-      _audioPlayer.pause();
-      return;
-    }
-
-    _audioPlayer.seek(state.currentAudioTime);
-    if (state.isPlayingAudio) {
+    if (coupled) {
+      _audioPlayer.seek(syncedTime);
+      if (state.isPlayingAudio && _audioPlayer.isLoaded) {
       _audioPlayer.play();
     }
+  }
   }
 
   void toggleSyncDiapason() {
@@ -1824,8 +1947,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   /// Claves planas de los 4 tiempos del compás [barIndex].
-  Set<int> measureKeysOf(int barIndex) =>
-      {for (var i = 0; i < 4; i++) beatKey(barIndex, i)};
+  Set<int> measureKeysOf(int barIndex) => {
+    for (var i = 0; i < 4; i++) beatKey(barIndex, i),
+  };
+
   /// Marca o desmarca un tiempo individual. Los tiempos marcados reciben el
   /// acorde del Constructor de forma simultánea y son los únicos que se
   /// ejecutan durante la reproducción.
@@ -1846,9 +1971,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     if (allMarked) {
       state = state.copyWith(markedBeats: const {});
     } else {
-      state = state.copyWith(
-        markedBeats: {for (var i = 0; i < total; i++) i},
-      );
+      state = state.copyWith(markedBeats: {for (var i = 0; i < total; i++) i});
     }
   }
 
@@ -1949,10 +2072,15 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     updatedBeats[beatIndex] = updatedBeats[beatIndex].copyWith(chord: chord);
 
     final updatedMeasures = List<MeasureRow>.from(state.measures);
-    updatedMeasures[barIndex] = MeasureRow(barNumber: row.barNumber, beats: updatedBeats);
+    updatedMeasures[barIndex] = MeasureRow(
+      barNumber: row.barNumber,
+      beats: updatedBeats,
+    );
 
     final beatBellows = updatedBeats[beatIndex].bellows;
-    final nextBellows = beatBellows != BellowsMode.both ? beatBellows : state.bellows1;
+    final nextBellows = beatBellows != BellowsMode.both
+        ? beatBellows
+        : state.bellows1;
 
     state = state.copyWith(
       measures: updatedMeasures,
@@ -1974,7 +2102,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     // Solo es válido para cuadros que ya tengan un acorde registrado
     if (targetBeat.chord.trim().isEmpty) return;
 
-    final newBellows = targetBeat.bellows == bellows ? BellowsMode.both : bellows;
+    final newBellows = targetBeat.bellows == bellows
+        ? BellowsMode.both
+        : bellows;
     final updatedMeasures = List<MeasureRow>.from(state.measures);
     final key = beatKey(barIndex, beatIndex);
 
@@ -1989,7 +2119,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
             // Solo para cuadros con acorde registrado, sin modificar el acorde
             if (bts[tIdx].chord.trim().isNotEmpty) {
               bts[tIdx] = bts[tIdx].copyWith(bellows: newBellows);
-              updatedMeasures[bIdx] = MeasureRow(barNumber: r.barNumber, beats: bts);
+              updatedMeasures[bIdx] = MeasureRow(
+                barNumber: r.barNumber,
+                beats: bts,
+              );
             }
           }
         }
@@ -1997,7 +2130,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     } else {
       final beats = List<MeasureBeat>.from(row.beats);
       beats[beatIndex] = targetBeat.copyWith(bellows: newBellows);
-      updatedMeasures[barIndex] = MeasureRow(barNumber: row.barNumber, beats: beats);
+      updatedMeasures[barIndex] = MeasureRow(
+        barNumber: row.barNumber,
+        beats: beats,
+      );
     }
 
     final remainingYellow = Set<int>.from(state.yellowDecisionBeats);
@@ -2175,38 +2311,31 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   /// Limpia las marcas amarillas de decisión de fuelle.
-  void clearYellowDecisionBeats() => state = state.copyWith(yellowDecisionBeats: const {});
+  void clearYellowDecisionBeats() =>
+      state = state.copyWith(yellowDecisionBeats: const {});
 
-  /// Inserta el acorde generado en el constructor. Si hay tiempos marcados con
-  /// el checkbox, se asigna a todos ellos a la vez; si no, a la celda
-  /// actualmente seleccionada. Devuelve el símbolo insertado, o `null` si no
-  /// hay tónica o destino válido.
-  String? insertFreeChordIntoSelectedBeat() {
-    final symbol = ChordCatalog.symbolFor(
-      root: state.freeChordRoot,
-      type: state.freeChordType,
-      extension: state.freeChordFourth,
-      bass: state.freeChordBass,
-      latin: state.notation != NotationMode.alemana,
-    );
-    if (symbol.isEmpty) return null;
+  /// Asigna el acorde del constructor a todas las casillas marcadas.
+  /// Devuelve el símbolo asignado, o `null` si no hay acorde o destinos válidos.
+  String? assignFreeChordToMarkedBeats() {
+    final symbol = _freeChordSymbol();
+    if (symbol == null || state.markedBeats.isEmpty) return null;
 
-    // Inserción simultánea en todos los tiempos marcados.
-    if (state.markedBeats.isNotEmpty) {
       final updatedMeasures = List<MeasureRow>.from(state.measures);
       var applied = false;
-
       for (final key in state.markedBeats) {
         final barIndex = key ~/ 4;
         final beatIndex = key % 4;
         if (barIndex < 0 || barIndex >= updatedMeasures.length) continue;
+
         final row = updatedMeasures[barIndex];
         if (beatIndex < 0 || beatIndex >= row.beats.length) continue;
 
         final beats = List<MeasureBeat>.from(row.beats);
         beats[beatIndex] = beats[beatIndex].copyWith(chord: symbol);
-        updatedMeasures[barIndex] =
-            MeasureRow(barNumber: row.barNumber, beats: beats);
+      updatedMeasures[barIndex] = MeasureRow(
+        barNumber: row.barNumber,
+        beats: beats,
+      );
         applied = true;
       }
 
@@ -2214,6 +2343,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       state = state.copyWith(measures: updatedMeasures);
       return symbol;
     }
+
+  /// Inserta el acorde generado en el constructor en la casilla enfocada.
+  /// Devuelve el símbolo insertado, o `null` si no hay acorde o destino válido.
+  String? insertFreeChordIntoSelectedCell() {
+    final symbol = _freeChordSymbol();
+    if (symbol == null) return null;
 
     final barIndex = state.selectedBarIndex;
     final beatIndex = state.selectedBeatIndex;
@@ -2224,8 +2359,31 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
     final key = beatKey(barIndex, beatIndex);
     updateMeasureBeat(barIndex, beatIndex, symbol);
-    state = state.copyWith(markedBeats: Set<int>.from(state.markedBeats)..add(key));
+    state = state.copyWith(
+      markedBeats: Set<int>.from(state.markedBeats)..add(key),
+    );
     return symbol;
+  }
+
+  /// Inserta el acorde del constructor en los tiempos marcados o, si no hay
+  /// marcas, en la casilla enfocada. Conserva el comportamiento anterior para
+  /// consumidores existentes; la interfaz ofrece acciones separadas.
+  String? insertFreeChordIntoSelectedBeat() {
+    if (state.markedBeats.isNotEmpty) {
+      return assignFreeChordToMarkedBeats();
+    }
+    return insertFreeChordIntoSelectedCell();
+  }
+
+  String? _freeChordSymbol() {
+    final symbol = ChordCatalog.symbolFor(
+      root: state.freeChordRoot,
+      type: state.freeChordType,
+      extension: state.freeChordFourth,
+      bass: state.freeChordBass,
+      latin: state.notation != NotationMode.alemana,
+    );
+    return symbol.isEmpty ? null : symbol;
   }
 
   /// Activa o desactiva la visibilidad del modal movible de asignación múltiple de acorde.
@@ -2258,7 +2416,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         showMultiBeatModal: true,
         multiBeatChord: symbol,
         multiBeatPattern: pattern,
-        markedBeats: chordMarkedBeats.isNotEmpty ? chordMarkedBeats : state.markedBeats,
+        markedBeats: chordMarkedBeats.isNotEmpty
+            ? chordMarkedBeats
+            : state.markedBeats,
       );
     } else {
       state = state.copyWith(showMultiBeatModal: false);
@@ -2295,9 +2455,15 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       showMultiBeatModal: true,
       multiBeatChord: effectiveChord,
       multiBeatPattern: effectivePattern,
-      markedBeats: chordMarkedBeats.isNotEmpty ? chordMarkedBeats : state.markedBeats,
-      selectedBarIndex: positions.isNotEmpty ? int.parse(positions.first.split('.').first) - 1 : state.selectedBarIndex,
-      selectedBeatIndex: positions.isNotEmpty ? int.parse(positions.first.split('.').last) - 1 : state.selectedBeatIndex,
+      markedBeats: chordMarkedBeats.isNotEmpty
+          ? chordMarkedBeats
+          : state.markedBeats,
+      selectedBarIndex: positions.isNotEmpty
+          ? int.parse(positions.first.split('.').first) - 1
+          : state.selectedBarIndex,
+      selectedBeatIndex: positions.isNotEmpty
+          ? int.parse(positions.first.split('.').last) - 1
+          : state.selectedBeatIndex,
     );
   }
 
@@ -2342,7 +2508,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   /// Parsea tokens en formato "Compás.Cuadro" (1-indexed, ej: "1.1, 2.3, 5.2").
-  static List<({int barNumber, int beatNumber})> parseMultiBeatPositions(String pattern) {
+  static List<({int barNumber, int beatNumber})> parseMultiBeatPositions(
+    String pattern,
+  ) {
     final result = <({int barNumber, int beatNumber})>[];
     if (pattern.trim().isEmpty) return result;
 
@@ -2424,7 +2592,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         updatedFourth = '';
       }
     } else if (mode == 'seventh') {
-      if (updatedFourth.isEmpty || updatedFourth == 'none' || updatedFourth == 'octave') {
+      if (updatedFourth.isEmpty ||
+          updatedFourth == 'none' ||
+          updatedFourth == 'octave') {
         updatedFourth = switch (state.freeChordType) {
           'min' => 'min7',
           'dim' => 'dim7',
@@ -2471,7 +2641,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final notes = _calculateFreeChordNotes();
     for (final midi in notes) {
       _audioBridge.noteOn(midi);
-      _highlightDiapasonButtonsForNotes([midi], const Duration(milliseconds: 210));
+      _highlightDiapasonButtonsForNotes([
+        midi,
+      ], const Duration(milliseconds: 210));
       await Future.delayed(const Duration(milliseconds: 220));
       _audioBridge.noteOff(midi);
     }
@@ -2521,7 +2693,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
     // Resalta también los bajos de acompañamiento según el fuelle.
     // Si existen coincidencias exactas para fundamental y acorde, se priorizan las exactas.
-    final chordRoot = state.detectedChord?.rootPitchClass ??
+    final chordRoot =
+        state.detectedChord?.rootPitchClass ??
         (notes.isNotEmpty ? notes.first % 12 : state.freeChordRoot);
     final bellows1 = state.bellows1;
 
@@ -2553,9 +2726,11 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
           match = pullMatch;
           break;
         case BellowsMode.both:
-          if (pushMatch == BassMatchType.exact || pullMatch == BassMatchType.exact) {
+          if (pushMatch == BassMatchType.exact ||
+              pullMatch == BassMatchType.exact) {
             match = BassMatchType.exact;
-          } else if (pushMatch == BassMatchType.close || pullMatch == BassMatchType.close) {
+          } else if (pushMatch == BassMatchType.close ||
+              pullMatch == BassMatchType.close) {
             match = BassMatchType.close;
           } else {
             match = BassMatchType.none;
@@ -2577,12 +2752,14 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
 
     if (matchingButtonIds.isEmpty) return;
-    final next = Set<String>.from(state.activeButtons)..addAll(matchingButtonIds);
+    final next = Set<String>.from(state.activeButtons)
+      ..addAll(matchingButtonIds);
     state = state.copyWith(activeButtons: next);
 
     Future.delayed(duration, () {
       if (!ref.mounted) return;
-      final remaining = Set<String>.from(state.activeButtons)..removeAll(matchingButtonIds);
+      final remaining = Set<String>.from(state.activeButtons)
+        ..removeAll(matchingButtonIds);
       state = state.copyWith(activeButtons: remaining);
     });
   }
@@ -2662,7 +2839,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void playDetectorChord() {
-    if (state.detectorSelectedButtons.isEmpty && state.detectedChord == null) return;
+    if (state.detectorSelectedButtons.isEmpty && state.detectedChord == null)
+      return;
     final notes = <int>[];
     if (state.detectedChord != null && state.detectedChord!.notes.isNotEmpty) {
       notes.addAll(state.detectedChord!.notes);
@@ -2671,7 +2849,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         for (final row in state.trebleData1.values) {
           for (final btn in row) {
             if (btn.id == btnId) {
-              final midi = state.bellows1 == BellowsMode.pull ? btn.pull : btn.push;
+              final midi = state.bellows1 == BellowsMode.pull
+                  ? btn.pull
+                  : btn.push;
               notes.add(midi);
             }
           }
@@ -2689,7 +2869,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void arpeggioDetectorChord() async {
-    if (state.detectorSelectedButtons.isEmpty && state.detectedChord == null) return;
+    if (state.detectorSelectedButtons.isEmpty && state.detectedChord == null)
+      return;
     final notes = <int>[];
     if (state.detectedChord != null && state.detectedChord!.notes.isNotEmpty) {
       notes.addAll(state.detectedChord!.notes);
@@ -2698,7 +2879,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         for (final row in state.trebleData1.values) {
           for (final btn in row) {
             if (btn.id == btnId) {
-              final midi = state.bellows1 == BellowsMode.pull ? btn.pull : btn.push;
+              final midi = state.bellows1 == BellowsMode.pull
+                  ? btn.pull
+                  : btn.push;
               notes.add(midi);
             }
           }
@@ -2775,10 +2958,16 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     } else {
       // BellowsMode.both: analizar ambos sentidos y enriquecer información
       final pushDet = pushNotes.length >= 2
-          ? ChordDetectorEngine.detect(midiNotes: pushNotes, notation: state.notation)
+          ? ChordDetectorEngine.detect(
+              midiNotes: pushNotes,
+              notation: state.notation,
+            )
           : null;
       final pullDet = pullNotes.length >= 2
-          ? ChordDetectorEngine.detect(midiNotes: pullNotes, notation: state.notation)
+          ? ChordDetectorEngine.detect(
+              midiNotes: pullNotes,
+              notation: state.notation,
+            )
           : null;
 
       if (pushDet != null && pullDet == null) {
@@ -2790,7 +2979,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       } else if (pushDet != null && pullDet != null) {
         final combinedAlts = List<String>.from(pushDet.alternatives);
         final pullSym = pullDet.formattedSymbol(state.notation);
-        if (!combinedAlts.contains(pullSym) && pullSym != pushDet.formattedSymbol(state.notation)) {
+        if (!combinedAlts.contains(pullSym) &&
+            pullSym != pushDet.formattedSymbol(state.notation)) {
           combinedAlts.insert(0, 'Abre: $pullSym');
         }
         state = state.copyWith(
@@ -2830,27 +3020,51 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 final accordionSimulatorProvider =
     NotifierProvider<AccordionSimulatorNotifier, AccordionSimulatorState>(() {
   return AccordionSimulatorNotifier();
-});
+    });
 
 /// Selector memoizado para las clases de altura activas de un diapasón (1 o 2).
 /// Evita recalculaciones en cada frame de reproducción.
-final activeChordPitchClassesProvider =
-    Provider.family<Set<int>, int>((ref, accordionNumber) {
+final activeChordPitchClassesProvider = Provider.family<Set<int>, int>((
+  ref,
+  accordionNumber,
+) {
   final isPrimary = accordionNumber == 1;
-  final trebleData = ref.watch(accordionSimulatorProvider.select(
+  final trebleData = ref.watch(
+    accordionSimulatorProvider.select(
     (s) => isPrimary ? s.trebleData1 : s.trebleData2,
-  ));
-  final freeChordRoot = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordRoot));
-  final freeChordType = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordType));
-  final freeChordFourth = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordFourth));
-  final detectorMode = ref.watch(accordionSimulatorProvider.select((s) => s.detectorMode));
-  final detectorSelected = ref.watch(accordionSimulatorProvider.select((s) => s.detectorSelectedButtons));
-  final detectedChord = ref.watch(accordionSimulatorProvider.select((s) => s.detectedChord));
-  final syncDiapason = ref.watch(accordionSimulatorProvider.select((s) => s.syncDiapason));
-  final isPlaying = ref.watch(accordionSimulatorProvider.select((s) => s.isPlayingAudio));
-  final playingChordNotes = ref.watch(accordionSimulatorProvider.select((s) => s.playingChordNotes));
+    ),
+  );
+  final freeChordRoot = ref.watch(
+    accordionSimulatorProvider.select((s) => s.freeChordRoot),
+  );
+  final freeChordType = ref.watch(
+    accordionSimulatorProvider.select((s) => s.freeChordType),
+  );
+  final freeChordFourth = ref.watch(
+    accordionSimulatorProvider.select((s) => s.freeChordFourth),
+  );
+  final detectorMode = ref.watch(
+    accordionSimulatorProvider.select((s) => s.detectorMode),
+  );
+  final detectorSelected = ref.watch(
+    accordionSimulatorProvider.select((s) => s.detectorSelectedButtons),
+  );
+  final detectedChord = ref.watch(
+    accordionSimulatorProvider.select((s) => s.detectedChord),
+  );
+  final syncDiapason = ref.watch(
+    accordionSimulatorProvider.select((s) => s.syncDiapason),
+  );
+  final isPlaying = ref.watch(
+    accordionSimulatorProvider.select((s) => s.isPlayingAudio),
+  );
+  final playingChordNotes = ref.watch(
+    accordionSimulatorProvider.select((s) => s.playingChordNotes),
+  );
 
-  final isFreeChordFixed = ref.watch(accordionSimulatorProvider.select((s) => s.isFreeChordFixed));
+  final isFreeChordFixed = ref.watch(
+    accordionSimulatorProvider.select((s) => s.isFreeChordFixed),
+  );
 
   final generated = freeChordRoot >= 0
       ? ChordCatalog.notesFor(
@@ -2861,7 +3075,9 @@ final activeChordPitchClassesProvider =
       : const <int>[];
 
   // Acorde activo en el Compás (seleccionado o reproduciéndose)
-  final compasChord = ref.watch(accordionSimulatorProvider.select((s) => s.activeCompasChord));
+  final compasChord = ref.watch(
+    accordionSimulatorProvider.select((s) => s.activeCompasChord),
+  );
 
   // Clases de altura del acorde del Compás
   final compasPcs = compasChord.isNotEmpty
@@ -2891,7 +3107,9 @@ final activeChordPitchClassesProvider =
   } else if (!isFreeChordFixed && compasPcs.isNotEmpty) {
     baseChordPcs = compasPcs;
   } else {
-    baseChordPcs = (freeChordRoot >= 0 && (isFreeChordFixed || !isPlaying || !syncDiapason))
+    baseChordPcs =
+        (freeChordRoot >= 0 &&
+            (isFreeChordFixed || !isPlaying || !syncDiapason))
         ? generated.map((n) => n % 12).toSet()
         : const <int>{};
   }
@@ -2910,12 +3128,24 @@ final activeChordPitchClassesProvider =
 
 /// Selector atómico memoizado que indica si el diapasón está en reposo limpio (sin notas activas).
 final isDiapasonCleanProvider = Provider<bool>((ref) {
-  final activeButtons = ref.watch(accordionSimulatorProvider.select((s) => s.activeButtons));
-  final detectorMode = ref.watch(accordionSimulatorProvider.select((s) => s.detectorMode));
-  final detectorButtons = ref.watch(accordionSimulatorProvider.select((s) => s.detectorSelectedButtons));
-  final freeRoot = ref.watch(accordionSimulatorProvider.select((s) => s.freeChordRoot));
-  final compasChord = ref.watch(accordionSimulatorProvider.select((s) => s.activeCompasChord));
-  final isPlaying = ref.watch(accordionSimulatorProvider.select((s) => s.isPlayingAudio));
+  final activeButtons = ref.watch(
+    accordionSimulatorProvider.select((s) => s.activeButtons),
+  );
+  final detectorMode = ref.watch(
+    accordionSimulatorProvider.select((s) => s.detectorMode),
+  );
+  final detectorButtons = ref.watch(
+    accordionSimulatorProvider.select((s) => s.detectorSelectedButtons),
+  );
+  final freeRoot = ref.watch(
+    accordionSimulatorProvider.select((s) => s.freeChordRoot),
+  );
+  final compasChord = ref.watch(
+    accordionSimulatorProvider.select((s) => s.activeCompasChord),
+  );
+  final isPlaying = ref.watch(
+    accordionSimulatorProvider.select((s) => s.isPlayingAudio),
+  );
 
   if (activeButtons.isNotEmpty || isPlaying) return false;
   if (detectorMode) return detectorButtons.isEmpty;
@@ -2924,15 +3154,26 @@ final isDiapasonCleanProvider = Provider<bool>((ref) {
 
 /// Selector atómico memoizado de la dirección del fuelle de un acordeón específico (ISP).
 final bellowsModeProvider = Provider.family<BellowsMode, int>((ref, accNumber) {
-  return ref.watch(accordionSimulatorProvider.select(
+  return ref.watch(
+    accordionSimulatorProvider.select(
     (s) => accNumber == 1 ? s.bellows1 : s.bellows2,
-  ));
+    ),
+  );
 });
 
 /// Selector atómico del estado del detector de acordes para widgets especializados (ISP).
-final detectorStatusSliceProvider = Provider<({bool active, int count, bool hasChord})>((ref) {
-  final mode = ref.watch(accordionSimulatorProvider.select((s) => s.detectorMode));
-  final count = ref.watch(accordionSimulatorProvider.select((s) => s.detectorSelectedButtons.length));
-  final hasChord = ref.watch(accordionSimulatorProvider.select((s) => s.detectedChord != null));
+final detectorStatusSliceProvider =
+    Provider<({bool active, int count, bool hasChord})>((ref) {
+      final mode = ref.watch(
+        accordionSimulatorProvider.select((s) => s.detectorMode),
+      );
+      final count = ref.watch(
+        accordionSimulatorProvider.select(
+          (s) => s.detectorSelectedButtons.length,
+        ),
+      );
+      final hasChord = ref.watch(
+        accordionSimulatorProvider.select((s) => s.detectedChord != null),
+      );
   return (active: mode, count: count, hasChord: hasChord);
-});
+    });

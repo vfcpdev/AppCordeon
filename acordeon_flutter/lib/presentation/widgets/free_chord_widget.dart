@@ -37,6 +37,7 @@ class FreeChordWidget extends ConsumerWidget {
             children: [
               const Text(
                 'Acorde',
+                key: ValueKey('free_chord_title'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
@@ -56,9 +57,14 @@ class FreeChordWidget extends ConsumerWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0284C7),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         minimumSize: const Size(32, 28),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
                       onPressed: notifier.playFreeChord,
                       child: const FaIcon(FontAwesomeIcons.play, size: 13),
@@ -70,9 +76,14 @@ class FreeChordWidget extends ConsumerWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF059669),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         minimumSize: const Size(32, 28),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
                       onPressed: notifier.arpeggioFreeChord,
                       child: const FaIcon(FontAwesomeIcons.music, size: 13),
@@ -95,9 +106,12 @@ class FreeChordWidget extends ConsumerWidget {
                               value: state.isFreeChordFixed,
                               onChanged: (_) => notifier.toggleFreeChordFixed(),
                               visualDensity: VisualDensity.compact,
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
                               activeColor: const Color(0xFF059669),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(3),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 3),
@@ -123,60 +137,6 @@ class FreeChordWidget extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Cualidad
-              _buildMatrixSection(
-                title: 'Cualidad',
-                color: const Color(0xFF059669),
-                child: _buildMatrixGrid(
-                  columns: 3,
-                  cells: [
-                    _buildOptionButton(
-                      sigla: 'M',
-                      tooltip: 'Mayor',
-                      isActive: state.freeChordType == 'maj',
-                      activeColor: const Color(0xFF059669),
-                      onTap: () => notifier.setFreeChordType('maj'),
-                    ),
-                    _buildOptionButton(
-                      sigla: 'm',
-                      tooltip: 'Menor',
-                      isActive: state.freeChordType == 'min',
-                      activeColor: const Color(0xFF059669),
-                      onTap: () => notifier.setFreeChordType('min'),
-                    ),
-                    _buildOptionButton(
-                      sigla: '°',
-                      tooltip: 'Disminuido',
-                      isActive: state.freeChordType == 'dim',
-                      activeColor: const Color(0xFF059669),
-                      onTap: () => notifier.setFreeChordType('dim'),
-                    ),
-                    _buildOptionButton(
-                      sigla: '+',
-                      tooltip: 'Aumentado',
-                      isActive: state.freeChordType == 'aug',
-                      activeColor: const Color(0xFF059669),
-                      onTap: () => notifier.setFreeChordType('aug'),
-                    ),
-                    _buildOptionButton(
-                      sigla: 'sus4',
-                      tooltip: 'Suspendido 4',
-                      isActive: state.freeChordType == 'sus4',
-                      activeColor: const Color(0xFF059669),
-                      onTap: () => notifier.setFreeChordType('sus4'),
-                    ),
-                    _buildOptionButton(
-                      sigla: 'sus2',
-                      tooltip: 'Suspendido 2',
-                      isActive: state.freeChordType == 'sus2',
-                      activeColor: const Color(0xFF059669),
-                      onTap: () => notifier.setFreeChordType('sus2'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-
               // Estructura
               _buildMatrixSection(
                 title: 'Estructura',
@@ -189,14 +149,16 @@ class FreeChordWidget extends ConsumerWidget {
                       tooltip: 'Tríada',
                       isActive: state.freeChordScaleHarmonicMode == 'triad',
                       activeColor: const Color(0xFFEA580C),
-                      onTap: () => notifier.setFreeChordScaleHarmonicMode('triad'),
+                      onTap: () =>
+                          notifier.setFreeChordScaleHarmonicMode('triad'),
                     ),
                     _buildOptionButton(
                       sigla: '4',
                       tooltip: 'Cuatríada (7mas)',
                       isActive: state.freeChordScaleHarmonicMode == 'seventh',
                       activeColor: const Color(0xFFEA580C),
-                      onTap: () => notifier.setFreeChordScaleHarmonicMode('seventh'),
+                      onTap: () =>
+                          notifier.setFreeChordScaleHarmonicMode('seventh'),
                     ),
                   ],
                 ),
@@ -322,28 +284,36 @@ class FreeChordWidget extends ConsumerWidget {
                     _buildOptionButton(
                       sigla: '—',
                       tooltip: 'Fundamental (sin bajo alterado)',
-                      isActive: state.freeChordBass.isEmpty || state.freeChordBass == 'none',
+                      isActive:
+                          state.freeChordBass.isEmpty ||
+                          state.freeChordBass == 'none',
                       activeColor: const Color(0xFF0D9488),
                       onTap: () => notifier.setFreeChordBass(''),
                     ),
                     _buildOptionButton(
                       sigla: '/3',
                       tooltip: '1ª Inversión (Bajo en 3ra)',
-                      isActive: state.freeChordBass == '3' || state.freeChordBass == '/3',
+                      isActive:
+                          state.freeChordBass == '3' ||
+                          state.freeChordBass == '/3',
                       activeColor: const Color(0xFF0D9488),
                       onTap: () => notifier.setFreeChordBass('3'),
                     ),
                     _buildOptionButton(
                       sigla: '/5',
                       tooltip: '2ª Inversión (Bajo en 5ta)',
-                      isActive: state.freeChordBass == '5' || state.freeChordBass == '/5',
+                      isActive:
+                          state.freeChordBass == '5' ||
+                          state.freeChordBass == '/5',
                       activeColor: const Color(0xFF0D9488),
                       onTap: () => notifier.setFreeChordBass('5'),
                     ),
                     _buildOptionButton(
                       sigla: '/7',
                       tooltip: '3ª Inversión (Bajo en 7ma)',
-                      isActive: state.freeChordBass == '7' || state.freeChordBass == '/7',
+                      isActive:
+                          state.freeChordBass == '7' ||
+                          state.freeChordBass == '/7',
                       activeColor: const Color(0xFF0D9488),
                       onTap: () => notifier.setFreeChordBass('7'),
                     ),

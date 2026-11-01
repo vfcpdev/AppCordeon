@@ -36,55 +36,91 @@ void main() {
       find.byKey(const ValueKey('tonic_bar_full_chord_name')),
       findsNothing,
     );
-    for (final section in [
-      'Cualidad',
-      'Estructura',
-      'Octava',
-      'Extensión',
-      'Bajo (/)',
-    ]) {
+    for (final section in ['Estructura', 'Octava', 'Extensión', 'Bajo (/)']) {
       expect(find.text(section), findsOneWidget);
     }
-    expect(find.byTooltip('Suspendido 2'), findsOneWidget);
+    expect(find.text('Cualidad'), findsNothing);
+    expect(find.byTooltip('Suspendido 2'), findsNothing);
   });
 
-  testWidgets('Sus2 selecciona la cualidad y genera sus notas correctas', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: Scaffold(body: SingleChildScrollView(child: FreeChordWidget())),
+  testWidgets(
+    'la columna vertical de cualidades cambia la cualidad del acorde',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(width: 280, child: FreeChordWidget()),
+                  MeasureGridWidget(width: 185),
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(FreeChordWidget)),
-    );
-    await tester.tap(find.byTooltip('Suspendido 2'));
-    await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MeasureGridWidget)),
+      );
+      final qualityKeys = [
+        'chord_quality_maj',
+        'chord_quality_min',
+        'chord_quality_dim',
+        'chord_quality_aug',
+        'chord_quality_sus2',
+        'chord_quality_sus4',
+      ];
+      for (final key in qualityKeys) {
+        expect(find.byKey(ValueKey(key)), findsOneWidget);
+      }
 
-    final state = container.read(accordionSimulatorProvider);
-    expect(state.freeChordType, 'sus2');
-    expect(
-      ChordCatalog.notesFor(
-        root: 0,
-        type: state.freeChordType,
-        extension: 'none',
-      ),
-      [60, 62, 67],
-    );
-    expect(
-      ChordCatalog.symbolFor(
-        root: 0,
-        type: state.freeChordType,
-        extension: 'none',
-      ),
-      'Dosus2',
-    );
-  });
+      final firstQuality = tester.getTopLeft(
+        find.byKey(const ValueKey('chord_quality_maj')),
+      );
+      final firstTonic = tester.getTopLeft(
+        find.byKey(const ValueKey('tonic_matrix_btn_0')),
+      );
+      expect(firstQuality.dy, closeTo(firstTonic.dy, 1));
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('chord_quality_sus4'))).dy,
+        greaterThan(
+          tester
+              .getTopLeft(find.byKey(const ValueKey('chord_quality_sus2')))
+              .dy,
+        ),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('chord_quality_sus2')));
+      await tester.pumpAndSettle();
+
+      final state = container.read(accordionSimulatorProvider);
+      expect(state.freeChordType, 'sus2');
+      expect(
+        ChordCatalog.notesFor(
+          root: 0,
+          type: state.freeChordType,
+          extension: 'none',
+        ),
+        [60, 62, 67],
+      );
+      expect(
+        ChordCatalog.symbolFor(
+          root: 0,
+          type: state.freeChordType,
+          extension: 'none',
+        ),
+        'Dosus2',
+      );
+    },
+  );
 
   testWidgets('el botón Compás inserta el acorde en la celda seleccionada', (
     WidgetTester tester,
@@ -131,6 +167,111 @@ void main() {
     final state = container.read(accordionSimulatorProvider);
     expect(state.measures[1].beats[3].chord, 'Solm7');
   });
+
+  testWidgets('asigna el acorde a casillas marcadas de compases distintos', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 280,
+                  child: SingleChildScrollView(child: FreeChordWidget()),
+                ),
+                MeasureGridWidget(width: 600),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(FreeChordWidget)),
+    );
+    final notifier = container.read(accordionSimulatorProvider.notifier);
+    notifier.setFreeChordRoot(7);
+    notifier.setFreeChordType('min');
+    notifier.setFreeChordFourth('dom7');
+    notifier.updateMeasureBeat(0, 1, 'Do');
+    notifier.updateMeasureBeat(2, 0, 'La');
+    notifier.toggleBeatMark(0, 0);
+    notifier.toggleBeatMark(2, 3);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('select_all_beats_btn')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('assign_chord_to_marked_beats_btn')),
+      findsOneWidget,
+    );
+    expect(container.read(accordionSimulatorProvider).markedBeats, {0, 11});
+    await tester.tap(
+      find.byKey(const ValueKey('assign_chord_to_marked_beats_btn')),
+    );
+    await tester.pumpAndSettle();
+
+    final state = container.read(accordionSimulatorProvider);
+    expect(state.measures[0].beats[0].chord, 'Solm7');
+    expect(state.measures[2].beats[3].chord, 'Solm7');
+    expect(state.measures[0].beats[1].chord, 'Do');
+    expect(state.measures[2].beats[0].chord, 'La');
+  });
+
+  testWidgets(
+    'el título de Compás iguala el tamaño de Acorde y no lleva icono',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(width: 280, child: FreeChordWidget()),
+                  MeasureGridWidget(width: 400),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final chordTitle = tester.widget<Text>(
+        find.byKey(const ValueKey('free_chord_title')),
+      );
+      final measureTitle = tester.widget<Text>(
+        find.byKey(const ValueKey('compas_title_1')),
+      );
+      expect(measureTitle.style?.fontSize, chordTitle.style?.fontSize);
+      final titleRow = tester.widget<Row>(
+        find
+            .ancestor(
+              of: find.byKey(const ValueKey('compas_title_1')),
+              matching: find.byType(Row),
+            )
+            .first,
+      );
+      expect(titleRow.children.first, isA<Text>());
+      expect(
+        (titleRow.children.first as Text).key,
+        const ValueKey('compas_title_1'),
+      );
+    },
+  );
 
   test('los tiempos marcados reciben el acorde de forma simultánea', () {
     final container = ProviderContainer();

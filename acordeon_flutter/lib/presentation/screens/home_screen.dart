@@ -21,7 +21,7 @@ class HomeScreen extends ConsumerWidget {
     final notifier = ref.read(accordionSimulatorProvider.notifier);
 
     return Scaffold(
-      backgroundColor: state.backgroundColor,
+      backgroundColor: const Color(0xFFF1F5F9),
       body: AccordionKeyboardListener(
         child: SafeArea(
           left: false,
@@ -42,8 +42,8 @@ class HomeScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Tarjeta de pista de audio y análisis armónico (si hay audio cargado)
-                            if (state.audioReport != null)
+                            // El transporte está disponible desde la carga; analizar es opcional.
+                            if (state.loadedAudioFileName != null)
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
                                 child: state.isSongBarUndocked
@@ -133,7 +133,7 @@ class HomeScreen extends ConsumerWidget {
                   onPositionChanged: (pos) => notifier.setCompasPosition(2, pos),
                   onDock: () => notifier.toggleUndockCompas(2),
                 ),
-              if (state.isSongBarUndocked && state.audioReport != null)
+              if (state.isSongBarUndocked && state.loadedAudioFileName != null)
                 _buildFloatingSongBar(
                   context: context,
                   position: state.songBarPosition,

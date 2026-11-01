@@ -6,7 +6,7 @@ import '../../domain/models/audio_analysis_models.dart';
 import '../controllers/accordion_controller.dart';
 import 'edit_audio_key_bpm_dialog.dart';
 
-/// Barra de la canción analizada.
+/// Barra de transporte disponible desde que se carga una pista.
 ///
 /// Contiene:
 /// 1. Título de la pista con animación de Marquesina continua.
@@ -35,12 +35,12 @@ class TrackInfoCardWidget extends ConsumerWidget {
     final notifier = ref.read(accordionSimulatorProvider.notifier);
     final AudioAnalysisReport? report = state.audioReport;
 
-    if (report == null) return const SizedBox.shrink();
+    if (state.loadedAudioFileName == null) return const SizedBox.shrink();
 
     final isPlaying = state.isPlayingAudio;
     final totalDur = state.totalAudioDuration > 0
         ? state.totalAudioDuration
-        : report.duration;
+        : (report?.duration ?? 0.0);
 
     return Container(
       margin: isFloating ? EdgeInsets.zero : const EdgeInsets.only(bottom: 8),
@@ -188,52 +188,85 @@ class TrackInfoCardWidget extends ConsumerWidget {
           ),
           const SizedBox(width: 10),
 
-          // ─── Opciones juntas: Tono y Cargar Acordes (sin colores) ─────────
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2.5),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFCBD5E1)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 1. Tono detectado (sin colores / neutro)
-                _GroupedOptionBadge(
-                  icon: FontAwesomeIcons.key,
-                  label: 'Tono: ${report.keyResult.keyNameLat}',
-                  tooltip: 'Tono detectado (clic para editar o corregir)',
-                  background: const Color(0xFFF8FAFC),
-                  border: const Color(0xFFCBD5E1),
-                  foreground: const Color(0xFF334155),
-                  onTap: () => showDialog(
-                    context: context,
-                    builder: (_) => EditAudioKeyBpmDialog(report: report),
+          if (report == null)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                'Sin analizar',
+                key: ValueKey('audio_not_analyzed_status'),
+                style: TextStyle(
+                  color: Color(0xFF64748B),
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            )
+          else ...[
+            // Opciones armónicas que solo existen después del análisis.
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2.5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _GroupedOptionBadge(
+                    icon: FontAwesomeIcons.key,
+                    label: 'Tono: ${report.keyResult.keyNameLat}',
+                    tooltip: 'Tono detectado (clic para editar o corregir)',
+                    background: const Color(0xFFF8FAFC),
+                    border: const Color(0xFFCBD5E1),
+                    foreground: const Color(0xFF334155),
+                    onTap: () => showDialog(
+                      context: context,
+                      builder: (_) => EditAudioKeyBpmDialog(report: report),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 4),
-
-                // 2. Cargar Acordes a la cuadrícula de compases (sin colores / neutro)
-                _GroupedOptionBadge(
-                  icon: FontAwesomeIcons.tableCells,
-                  label: 'Cargar Acordes',
-                  tooltip: 'Cargar acordes analizados a los compases',
-                  background: const Color(0xFFF8FAFC),
-                  border: const Color(0xFFCBD5E1),
-                  foreground: const Color(0xFF334155),
-                  onTap: () {
-                    notifier.applyChordsToMeasures(report.chords);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Acordes detectados cargados en la cuadrícula de compases.'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  _GroupedOptionBadge(
+                    icon: FontAwesomeIcons.tableCells,
+                    label: 'Cargar Acordes',
+                    tooltip: 'Cargar acordes analizados a los compases',
+                    background: const Color(0xFFF8FAFC),
+                    border: const Color(0xFFCBD5E1),
+                    foreground: const Color(0xFF334155),
+                    onTap: () {
+                      notifier.applyChordsToMeasures(report.chords);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Acordes detectados cargados en la cuadrícula de compases.'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
+          ],
+          const SizedBox(width: 6),
+          _GroupedOptionBadge(
+            icon: state.isAudioCoupled
+                ? FontAwesomeIcons.link
+                : FontAwesomeIcons.linkSlash,
+            label: state.isAudioCoupled ? 'Sincronizado' : 'Independiente',
+            tooltip: state.isAudioCoupled
+                ? 'Audio sincronizado con el Compás. Clic para reproducirlos independientemente.'
+                : 'Audio y Compás independientes. Clic para sincronizarlos.',
+            background: state.isAudioCoupled
+                ? const Color(0xFFE0F2FE)
+                : const Color(0xFFF8FAFC),
+            border: state.isAudioCoupled
+                ? const Color(0xFF7DD3FC)
+                : const Color(0xFFCBD5E1),
+            foreground: state.isAudioCoupled
+                ? const Color(0xFF0369A1)
+                : const Color(0xFF475569),
+            onTap: notifier.toggleAudioCoupling,
+            key: const ValueKey('audio_compas_sync_toggle'),
           ),
           const SizedBox(width: 8),
 
@@ -463,6 +496,7 @@ class _GroupedOptionBadge extends StatelessWidget {
   final VoidCallback onTap;
 
   const _GroupedOptionBadge({
+    super.key,
     required this.icon,
     required this.label,
     required this.tooltip,
