@@ -97,17 +97,17 @@ void main() {
     // 2. Press 1 -> Should NOT set to 'Do' (numeric keys have no scale degree effect)
     await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
     await tester.pumpAndSettle();
-    expect(find.text('Do'), findsNothing);
+    expect(tester.widget<TextField>(firstBeatFinder).controller?.text, isNot(equals('Do')));
 
     // 3. Press 5 -> Should NOT set to 'Sol'
     await tester.sendKeyEvent(LogicalKeyboardKey.digit5);
     await tester.pumpAndSettle();
-    expect(find.text('Sol'), findsNothing);
+    expect(tester.widget<TextField>(firstBeatFinder).controller?.text, isNot(equals('Sol')));
 
     // 4. Press 7 (numpad) -> Should NOT set to 'Si'
     await tester.sendKeyEvent(LogicalKeyboardKey.numpad7);
     await tester.pumpAndSettle();
-    expect(find.text('Si'), findsNothing);
+    expect(tester.widget<TextField>(firstBeatFinder).controller?.text, isNot(equals('Si')));
   });
 
   testWidgets('Typing inside TextField writes chord directly without number translation (1 is not Do)',
@@ -141,7 +141,7 @@ void main() {
     // 3. Enter 'Do' directly
     await tester.enterText(firstBeatFinder, 'Do');
     await tester.pumpAndSettle();
-    expect(find.text('Do'), findsOneWidget);
+    expect(tester.widget<TextField>(firstBeatFinder).controller?.text, equals('Do'));
   });
 
   testWidgets('MeasureGrid chord modifiers (.=Menor, /=7ma, +=Aumentada, -=Disminuida) in selection mode',
@@ -172,7 +172,7 @@ void main() {
     // Arrow Right to exit edit mode leaving it selected
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
-    expect(find.text('Do'), findsOneWidget);
+    expect(tester.widget<TextField>(firstBeatFinder).controller?.text, equals('Do'));
 
     // 1. Press '.' -> Menor ('Dom')
     await tester.sendKeyEvent(LogicalKeyboardKey.period);
