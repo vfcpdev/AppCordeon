@@ -41,7 +41,7 @@ const _musicXml = '''
     <measure number="2">
       <attributes><time><beats>6</beats><beat-type>8</beat-type></time></attributes>
       <direction><direction-type><words>Merengue</words></direction-type></direction>
-      <note><pitch><step>G</step><octave>4</octave></pitch><duration>4</duration></note>
+      <note><pitch><step>G</step><octave>4</octave></pitch><duration>1</duration></note>
       <note><pitch><step>A</step><octave>4</octave></pitch><duration>1</duration></note>
     </measure>
   </part>
