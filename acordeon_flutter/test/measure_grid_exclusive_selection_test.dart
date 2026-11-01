@@ -147,28 +147,33 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final scrollable = find.descendant(
-        of: find.byType(RawScrollbar),
-        matching: find.byType(Scrollable),
-      ).first;
-      final scrollableState = tester.state<ScrollableState>(scrollable);
-      notifier.togglePlayAudio();
+      final scrollController = tester
+          .widget<ListView>(
+            find.descendant(
+              of: find.byType(RawScrollbar),
+              matching: find.byType(ListView),
+            ),
+          )
+          .controller!;
+      notifier.state = notifier.state.copyWith(isPlayingAudio: true);
       await tester.pump();
       notifier.selectBeat(11, 0);
       await tester.pump();
 
+      await tester.pump(const Duration(milliseconds: 150));
       await tester.pump(const Duration(milliseconds: 500));
-      expect(scrollableState.position.pixels, greaterThan(0));
+      expect(scrollController.position.pixels, greaterThan(0));
       expect(
-        scrollableState.position.pixels,
+        scrollController.position.pixels,
         lessThan(12 * CompasCardMetrics.measureRowHeight),
       );
       await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 1));
       expect(
-        scrollableState.position.pixels,
+        scrollController.position.pixels,
         closeTo(12 * CompasCardMetrics.measureRowHeight, 2.0),
       );
-      notifier.stopAudio();
+      notifier.state = notifier.state.copyWith(isPlayingAudio: false);
     });
   });
 }

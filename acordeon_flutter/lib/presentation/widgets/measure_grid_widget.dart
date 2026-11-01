@@ -5,6 +5,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../../core/constants/layout_constants.dart';
 import '../../core/di/providers.dart';
+import '../../core/text/chord_text_fitter.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
 import 'chord_detector_widget.dart';
@@ -147,7 +148,15 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
       accordionSimulatorProvider.select((s) => s.selectedBarIndex),
       (prevBar, currentBar) {
         if (currentBar != null && currentBar != prevBar) {
-          _handlePlaybackAutoScroll(currentBar);
+          // Deja que termine el desplazamiento de edición antes del de reproducción.
+          Future<void>.delayed(const Duration(milliseconds: 120), () {
+            if (!mounted ||
+                ref.read(accordionSimulatorProvider).selectedBarIndex !=
+                    currentBar) {
+              return;
+            }
+            _handlePlaybackAutoScroll(currentBar);
+          });
         }
       },
     );
@@ -156,7 +165,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final totalBeats = state.measures.length * 4;
     final allMarked = totalBeats > 0 && state.markedBeats.length == totalBeats;
     final hasMarks = state.markedBeats.isNotEmpty;
-    final effectiveWidth = widget.width ?? 185.0;
+    final effectiveWidth = widget.width ?? CompasCardMetrics.gridWidth;
     final isUndocked =
         widget.isUndocked ||
         (widget.accordionNumber == 1
@@ -192,13 +201,17 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         selectedBar < state.measures.length &&
         selectedBeat >= 0 &&
         selectedBeat < state.measures[selectedBar].beats.length;
-    final markedCount = state.markedBeats.length;
+    final assignmentTargetCount = state.multiBeatAssignmentTargets.length;
     final insertTargetLabel = hasSelectedCell
         ? 'Compás ${selectedBar + 1} · Tiempo ${selectedBeat + 1}'
         : 'sin casilla seleccionada';
-    final canInsertChord = constructorChord.isNotEmpty && hasSelectedCell;
-    final canAssignToMarkedBeats =
-        constructorChord.isNotEmpty && markedCount > 0;
+    final canInsertChord =
+        constructorChord.isNotEmpty &&
+        (state.isMultiBeatAssignmentMode
+            ? assignmentTargetCount > 0
+            : hasSelectedCell);
+    final canToggleMultiBeatAssignment =
+        constructorChord.isNotEmpty || state.isMultiBeatAssignmentMode;
 
     final chordToEdit =
         selectedChord ??
@@ -298,9 +311,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w900,
-                                        color: isPrimary
-                                            ? const Color(0xFF0F172A)
-                                            : const Color(0xFF059669),
+                                        color: const Color(0xFF059669),
                                       ),
                                     ),
                                     const SizedBox(width: 5),
@@ -619,7 +630,11 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                 ),
                                 const SizedBox(width: 3),
                                 Tooltip(
-                                  message: canInsertChord
+                                  message: state.isMultiBeatAssignmentMode
+                                      ? canInsertChord
+                                            ? 'Asignar $constructorChord a $assignmentTargetCount caja${assignmentTargetCount == 1 ? '' : 's'}'
+                                            : 'Selecciona las cajas de destino para asignar $constructorChord'
+                                      : canInsertChord
                                       ? 'Agregar $constructorChord a $insertTargetLabel'
                                       : 'Selecciona un acorde y una casilla del Compás',
                                   child: InkWell(
@@ -628,15 +643,21 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                     ),
                                     onTap: canInsertChord
                                         ? () {
-                                            final symbol = notifier
-                                                .insertFreeChordIntoSelectedCell();
+                                            final symbol =
+                                                state.isMultiBeatAssignmentMode
+                                                ? notifier
+                                                      .assignFreeChordToMultiBeatTargets()
+                                                : notifier
+                                                      .insertFreeChordIntoSelectedCell();
                                             if (symbol == null) return;
                                             ScaffoldMessenger.of(context)
                                               ..hideCurrentSnackBar()
                                               ..showSnackBar(
                                                 SnackBar(
                                                   content: Text(
-                                                    '$symbol → $insertTargetLabel',
+                                                    state.isMultiBeatAssignmentMode
+                                                        ? '$symbol asignado a $assignmentTargetCount caja${assignmentTargetCount == 1 ? '' : 's'}'
+                                                        : '$symbol → $insertTargetLabel',
                                                   ),
                                                   duration: const Duration(
                                                     milliseconds: 1400,
@@ -650,12 +671,16 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       padding: const EdgeInsets.all(4),
                                       decoration: BoxDecoration(
                                         color: canInsertChord
-                                            ? const Color(0xFF16A34A)
+                                            ? state.isMultiBeatAssignmentMode
+                                                  ? const Color(0xFF7C3AED)
+                                                  : const Color(0xFF16A34A)
                                             : const Color(0xFFF1F5F9),
                                         borderRadius: BorderRadius.circular(5),
                                         border: Border.all(
                                           color: canInsertChord
-                                              ? const Color(0xFF16A34A)
+                                              ? state.isMultiBeatAssignmentMode
+                                                    ? const Color(0xFF6D28D9)
+                                                    : const Color(0xFF16A34A)
                                               : const Color(0xFFCBD5E1),
                                         ),
                                       ),
@@ -671,42 +696,26 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                 ),
                                 const SizedBox(width: 3),
                                 Tooltip(
-                                  message: canAssignToMarkedBeats
-                                      ? 'Asignar $constructorChord a $markedCount casilla${markedCount == 1 ? '' : 's'} seleccionada${markedCount == 1 ? '' : 's'}'
-                                      : 'Marca una o más casillas para asignarles $constructorChord',
+                                  message: state.isMultiBeatAssignmentMode
+                                      ? 'Cancelar selección de cajas ($assignmentTargetCount seleccionada${assignmentTargetCount == 1 ? '' : 's'})'
+                                      : 'Activar asignación múltiple de $constructorChord tocando sus cajas',
                                   child: InkWell(
                                     key: const ValueKey(
-                                      'assign_chord_to_marked_beats_btn',
+                                      'multi_beat_assignment_mode_btn',
                                     ),
-                                    onTap: canAssignToMarkedBeats
-                                        ? () {
-                                            final symbol = notifier
-                                                .assignFreeChordToMarkedBeats();
-                                            if (symbol == null) return;
-                                            ScaffoldMessenger.of(context)
-                                              ..hideCurrentSnackBar()
-                                              ..showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    '$symbol asignado a $markedCount casilla${markedCount == 1 ? '' : 's'}',
-                                                  ),
-                                                  duration: const Duration(
-                                                    milliseconds: 1400,
-                                                  ),
-                                                ),
-                                              );
-                                          }
+                                    onTap: canToggleMultiBeatAssignment
+                                        ? notifier.toggleMultiBeatAssignmentMode
                                         : null,
                                     borderRadius: BorderRadius.circular(5),
                                     child: Container(
                                       padding: const EdgeInsets.all(4),
                                       decoration: BoxDecoration(
-                                        color: canAssignToMarkedBeats
+                                        color: state.isMultiBeatAssignmentMode
                                             ? const Color(0xFF7C3AED)
                                             : const Color(0xFFF1F5F9),
                                         borderRadius: BorderRadius.circular(5),
                                         border: Border.all(
-                                          color: canAssignToMarkedBeats
+                                          color: state.isMultiBeatAssignmentMode
                                               ? const Color(0xFF6D28D9)
                                               : const Color(0xFFCBD5E1),
                                         ),
@@ -714,7 +723,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       child: FaIcon(
                                         FontAwesomeIcons.squareCheck,
                                         size: 13.5,
-                                        color: canAssignToMarkedBeats
+                                        color: canToggleMultiBeatAssignment
                                             ? Colors.white
                                             : const Color(0xFF94A3B8),
                                       ),
@@ -918,7 +927,9 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                       vertical: 4.0,
                     ),
                     child: Container(
-                      constraints: const BoxConstraints(maxHeight: 330),
+                      constraints: const BoxConstraints(
+                        maxHeight: CompasCardMetrics.gridMaxHeight,
+                      ),
                       child: RawScrollbar(
                         controller: _compasScrollController,
                         thumbVisibility: true,
@@ -1031,6 +1042,22 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                                 mIdx,
                                                 entry.key,
                                               ),
+                                              isMultiBeatAssignmentMode: state
+                                                  .isMultiBeatAssignmentMode,
+                                              isMultiBeatAssignmentTarget: state
+                                                  .multiBeatAssignmentTargets
+                                                  .contains(
+                                                    AccordionSimulatorNotifier.beatKey(
+                                                      mIdx,
+                                                      entry.key,
+                                                    ),
+                                                  ),
+                                              onToggleMultiBeatAssignmentTarget:
+                                                  () => notifier
+                                                      .toggleMultiBeatAssignmentTarget(
+                                                        mIdx,
+                                                        entry.key,
+                                                      ),
                                               isYellowDecision: state
                                                   .yellowDecisionBeats
                                                   .contains(
@@ -1879,12 +1906,15 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final String chord;
   final String timeText;
   final BellowsMode bellows;
+  final bool isMultiBeatAssignmentMode;
+  final bool isMultiBeatAssignmentTarget;
   final bool isCurrentPlayhead;
   final bool isMarked;
   final bool isYellowDecision;
   final bool isSelected;
   final NotationMode notation;
   final ValueChanged<String> onChanged;
+  final VoidCallback? onToggleMultiBeatAssignmentTarget;
   final String? Function()? onCopy;
   final String? Function()? onPaste;
   final VoidCallback? onSelected;
@@ -1900,12 +1930,15 @@ class _InlineBeatChordEditor extends StatefulWidget {
     required this.chord,
     required this.timeText,
     this.bellows = BellowsMode.both,
+    this.isMultiBeatAssignmentMode = false,
+    this.isMultiBeatAssignmentTarget = false,
     required this.isCurrentPlayhead,
     required this.isMarked,
     this.isYellowDecision = false,
     this.isSelected = false,
     this.notation = NotationMode.latina,
     required this.onChanged,
+    this.onToggleMultiBeatAssignmentTarget,
     this.onCopy,
     this.onPaste,
     this.onSelected,
@@ -2005,7 +2038,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
 
     if (_selectedKey == _nodeKey || widget.isSelected) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _setSelected();
+        if (mounted) _activateEdit();
       });
     }
   }
@@ -2022,6 +2055,12 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
       _registry.remove('${oldWidget.measureIndex}_${oldWidget.beatIndex}');
       _registry[_nodeKey] = this;
     }
+    if (!oldWidget.isMultiBeatAssignmentMode &&
+        widget.isMultiBeatAssignmentMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.isMultiBeatAssignmentMode) _setIdle();
+      });
+    }
     final formattedChord = ChordCatalog.formatChordForNotation(
       widget.chord,
       widget.notation,
@@ -2036,7 +2075,9 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     }
     if (widget.isSelected && !oldWidget.isSelected && !_isEditing) {
       _selectedKey = _nodeKey;
-      _cellFocusNode.requestFocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.isSelected && !_isEditing) _activateEdit();
+      });
     } else if (!widget.isSelected && oldWidget.isSelected) {
       if (_selectedKey == _nodeKey) {
         _selectedKey = null;
@@ -2083,11 +2124,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
       _deselectOtherCells();
 
       widget.onNavigate?.call(nextM, nextB);
-      widget.onSelected?.call();
 
       final targetState = _registry[targetKey];
       if (targetState != null) {
-        targetState._setSelected();
+        targetState._activateEdit();
       }
     }
   }
@@ -2126,6 +2166,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
   }
 
   void _activateEdit() {
+    if (widget.isMultiBeatAssignmentMode) return;
     _selectedKey = _nodeKey;
     _deselectOtherCells();
     widget.onSelected?.call();
@@ -2278,15 +2319,21 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     final isPlaying = widget.isCurrentPlayhead;
     final isCellSelected = _isCellHighlighted;
     final isFocusedOrSelected = _isEditing || isCellSelected;
+    final isAssignmentTarget = widget.isMultiBeatAssignmentTarget;
     final isMarked = widget.isMarked;
 
     return Focus(
       focusNode: _cellFocusNode,
       child: GestureDetector(
         onTap: () {
-          _activateEdit();
+          if (widget.isMultiBeatAssignmentMode) {
+            widget.onToggleMultiBeatAssignmentTarget?.call();
+          } else {
+            _activateEdit();
+          }
         },
         child: AnimatedContainer(
+          key: ValueKey('beat_cell_${widget.measureIndex}_${widget.beatIndex}'),
           duration: const Duration(milliseconds: 120),
           // Altura mínima un 5% mayor; se permite crecer si el contenido interno
           // (ej. flechas de fuelle en modo compacto) supera el mínimo. {P} C {Q}
@@ -2299,82 +2346,98 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
             // divisor entre cuadros es un hueco (no un borde), así que el
             // radio siempre se admite sobre bordes uniformes.
             borderRadius: BorderRadius.circular(4),
-            color: isCellSelected
-                ? const Color(
-                    0xFFDBEAFE,
-                  ) // Resaltado azul suave y vivo para cuadro seleccionado
-                : (_isEditing
-                      ? Colors
-                            .white // Fondo blanco limpio al editar
-                      : (isPlaying
-                            ? const Color(0xFFFEF3C7)
-                            : (widget.isYellowDecision
-                                  ? const Color(
-                                      0xFFFEF08A,
-                                    ) // Resaltado amarillo para decidir fuelle
-                                  : (isMarked
+            color: isAssignmentTarget
+                ? const Color(0xFFF3E8FF)
+                : (isCellSelected
+                      ? const Color(
+                          0xFFDBEAFE,
+                        ) // Resaltado azul suave y vivo para cuadro seleccionado
+                      : (_isEditing
+                            ? Colors
+                                  .white // Fondo blanco limpio al editar
+                            : (isPlaying
+                                  ? const Color(0xFFFEF3C7)
+                                  : (widget.isYellowDecision
                                         ? const Color(
-                                            0xFFF0FDF4,
-                                          ) // Tiempo marcado con el checkbox
-                                        : Colors.white)))),
-            border: isCellSelected
-                ? Border.all(
-                    color: const Color(0xFF2563EB),
-                    width: 1.8,
-                  ) // Cuadro resaltado nítido con borde completo
-                : (_isEditing
+                                            0xFFFEF08A,
+                                          ) // Resaltado amarillo para decidir fuelle
+                                        : (isMarked
+                                              ? const Color(
+                                                  0xFFF0FDF4,
+                                                ) // Tiempo marcado con el checkbox
+                                              : Colors.white))))),
+            border: isAssignmentTarget
+                ? Border.all(color: const Color(0xFF7C3AED), width: 1.8)
+                : (isCellSelected
                       ? Border.all(
-                          color: const Color(0xFF3B82F6),
+                          color: const Color(0xFF2563EB),
                           width: 1.8,
-                        ) // Borde activo de edición
-                      : (isPlaying
+                        ) // Cuadro resaltado nítido con borde completo
+                      : (_isEditing
                             ? Border.all(
-                                color: const Color(0xFFF59E0B),
+                                color: const Color(0xFF3B82F6),
                                 width: 1.8,
-                              )
-                            : (widget.isYellowDecision
+                              ) // Borde activo de edición
+                            : (isPlaying
                                   ? Border.all(
-                                      color: const Color(0xFFEAB308),
+                                      color: const Color(0xFFF59E0B),
                                       width: 1.8,
-                                    ) // Borde amarillo dorado
-                                  : (isMarked
+                                    )
+                                  : (widget.isYellowDecision
                                         ? Border.all(
-                                            color: const Color(0xFF059669),
-                                            width: 1.2,
-                                          )
-                                        : Border.all(
-                                            color: Colors.transparent,
-                                            width: 0.8,
-                                          ))))),
-            boxShadow: isCellSelected
+                                            color: const Color(0xFFEAB308),
+                                            width: 1.8,
+                                          ) // Borde amarillo dorado
+                                        : (isMarked
+                                              ? Border.all(
+                                                  color: const Color(
+                                                    0xFF059669,
+                                                  ),
+                                                  width: 1.2,
+                                                )
+                                              : Border.all(
+                                                  color: Colors.transparent,
+                                                  width: 0.8,
+                                                )))))),
+            boxShadow: isAssignmentTarget
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF2563EB).withValues(alpha: 0.28),
+                      color: const Color(0xFF7C3AED).withValues(alpha: 0.24),
                       blurRadius: 4,
                       spreadRadius: 0.8,
                     ),
                   ]
-                : (widget.isYellowDecision
+                : (isCellSelected
                       ? [
                           BoxShadow(
                             color: const Color(
-                              0xFFEAB308,
-                            ).withValues(alpha: 0.35),
+                              0xFF2563EB,
+                            ).withValues(alpha: 0.28),
                             blurRadius: 4,
                             spreadRadius: 0.8,
                           ),
                         ]
-                      : (_isEditing
+                      : (widget.isYellowDecision
                             ? [
                                 BoxShadow(
                                   color: const Color(
-                                    0xFF3B82F6,
-                                  ).withValues(alpha: 0.20),
-                                  blurRadius: 3,
-                                  spreadRadius: 0.5,
+                                    0xFFEAB308,
+                                  ).withValues(alpha: 0.35),
+                                  blurRadius: 4,
+                                  spreadRadius: 0.8,
                                 ),
                               ]
-                            : null)),
+                            : (_isEditing
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFF3B82F6,
+                                        ).withValues(alpha: 0.20),
+                                        blurRadius: 3,
+                                        spreadRadius: 0.5,
+                                      ),
+                                    ]
+                                  : null))),
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -2384,9 +2447,20 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
               //   compacta vertical con el acorde centrado; el tiempo y el
               //   fuelle se ocultan si no caben. La marcación por checkbox vive
               //   a la izquierda del número del compás, no en la celda.
-              final showArrows = constraints.maxWidth >= 65;
+              final showArrows = constraints.maxWidth >= 110;
               final showCompactArrows = constraints.maxWidth >= 52;
               final showTime = constraints.maxWidth >= 155;
+              final chordTextWidth =
+                  (constraints.maxWidth - (showArrows ? 30 : 0)).clamp(
+                    1.0,
+                    double.infinity,
+                  );
+              final chordFontSize = ChordTextFitter.fitFontSize(
+                text: _controller.text,
+                availableWidth: chordTextWidth,
+                baseFontSize: 10,
+                minFontSize: 6,
+              );
 
               final chordField = Tooltip(
                 message: hasChord
@@ -2396,27 +2470,31 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                 child: TextField(
                   controller: _controller,
                   focusNode: _focusNode,
-                  readOnly: !_isEditing,
+                  readOnly: widget.isMultiBeatAssignmentMode || !_isEditing,
                   textAlignVertical: TextAlignVertical.center,
                   textAlign: showArrows ? TextAlign.start : TextAlign.center,
                   onTap: () {
-                    if (!_isEditing) {
+                    if (widget.isMultiBeatAssignmentMode) {
+                      widget.onToggleMultiBeatAssignmentTarget?.call();
+                    } else if (!_isEditing) {
                       _activateEdit();
                     }
                   },
                   style: TextStyle(
-                    fontSize: 10.0,
+                    fontSize: chordFontSize,
                     letterSpacing: -0.2,
                     fontWeight: (isFocusedOrSelected || hasChord)
                         ? FontWeight.w900
                         : FontWeight.w600,
-                    color: isPlaying
-                        ? const Color(0xFFB45309)
-                        : (isFocusedOrSelected
-                              ? const Color(0xFF1D4ED8)
-                              : (hasChord
-                                    ? const Color(0xFF0F172A)
-                                    : const Color(0xFF94A3B8))),
+                    color: isAssignmentTarget
+                        ? const Color(0xFF6D28D9)
+                        : (isPlaying
+                              ? const Color(0xFFB45309)
+                              : (isFocusedOrSelected
+                                    ? const Color(0xFF1D4ED8)
+                                    : (hasChord
+                                          ? const Color(0xFF0F172A)
+                                          : const Color(0xFF94A3B8)))),
                   ),
                   decoration: const InputDecoration(
                     isDense: true,
@@ -2451,7 +2529,12 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                   children: [
                     // Acorde del cuadro, alineado a la izquierda (sin checkbox:
                     // el marcado vive a la izquierda del número del compás)
-                    Expanded(child: chordField),
+                    Expanded(
+                      child: IgnorePointer(
+                        ignoring: widget.isMultiBeatAssignmentMode,
+                        child: chordField,
+                      ),
+                    ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -2488,7 +2571,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  chordField,
+                  IgnorePointer(
+                    ignoring: widget.isMultiBeatAssignmentMode,
+                    child: chordField,
+                  ),
                   if (showCompactArrows)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 1),

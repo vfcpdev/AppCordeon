@@ -132,6 +132,11 @@ class AccordionSimulatorState {
   final Set<int>? _markedBeats;
   Set<int> get markedBeats => _markedBeats ?? const {};
 
+  final bool isMultiBeatAssignmentMode;
+  final Set<int>? _multiBeatAssignmentTargets;
+  Set<int> get multiBeatAssignmentTargets =>
+      _multiBeatAssignmentTargets ?? const {};
+
   /// Tiempos resaltados en amarillo para decidir el fuelle (acordes completos abriendo o cerrando).
   final Set<int>? _yellowDecisionBeats;
   Set<int> get yellowDecisionBeats => _yellowDecisionBeats ?? const {};
@@ -277,6 +282,8 @@ class AccordionSimulatorState {
     this.selectedBarIndex,
     this.selectedBeatIndex,
     Set<int>? markedBeats,
+    this.isMultiBeatAssignmentMode = false,
+    Set<int>? multiBeatAssignmentTargets,
     Set<int>? yellowDecisionBeats,
     required this.freeChordRoot,
     required this.freeChordType,
@@ -313,26 +320,27 @@ class AccordionSimulatorState {
     double? audioStartOffset,
     bool? isPlaybackAutoChordDetectEnabled,
     double? beatNudgeOffset,
-  })  : _audioStartOffset = audioStartOffset ?? 0.0,
-        _bpmCalibrationStart = bpmCalibrationStart ?? -1.0,
+  }) : _audioStartOffset = audioStartOffset ?? 0.0,
+       _bpmCalibrationStart = bpmCalibrationStart ?? -1.0,
        _isPlaybackAutoChordDetectEnabled =
            isPlaybackAutoChordDetectEnabled ?? false,
-        _beatNudgeOffset = beatNudgeOffset ?? 0.0,
-        _markedBeats = markedBeats ?? const {},
-        _yellowDecisionBeats = yellowDecisionBeats ?? const {},
-        _multiBeatPattern = multiBeatPattern ?? '',
-        _freeChordBass = freeChordBass ?? '',
-        _isCompas1Undocked = isCompas1Undocked ?? false,
-        _compas1Position = compas1Position ?? const Offset(220, 70),
-        _isCompas2Undocked = isCompas2Undocked ?? false,
-        _compas2Position = compas2Position ?? const Offset(440, 70),
-        _isSongBarUndocked = isSongBarUndocked ?? false,
-        _songBarPosition = songBarPosition ?? const Offset(20, 50),
-        _isChordDetectorUndocked = isChordDetectorUndocked ?? false,
-        _chordDetectorPosition = chordDetectorPosition ?? const Offset(390, 150),
-        _isMetronomeActive = isMetronomeActive ?? false,
-        _metronomeVolume = metronomeVolume ?? 0.8,
-        _isLiveChordMarkerActive = isLiveChordMarkerActive ?? false;
+       _beatNudgeOffset = beatNudgeOffset ?? 0.0,
+       _markedBeats = markedBeats ?? const {},
+       _multiBeatAssignmentTargets = multiBeatAssignmentTargets ?? const {},
+       _yellowDecisionBeats = yellowDecisionBeats ?? const {},
+       _multiBeatPattern = multiBeatPattern ?? '',
+       _freeChordBass = freeChordBass ?? '',
+       _isCompas1Undocked = isCompas1Undocked ?? false,
+       _compas1Position = compas1Position ?? const Offset(220, 70),
+       _isCompas2Undocked = isCompas2Undocked ?? false,
+       _compas2Position = compas2Position ?? const Offset(440, 70),
+       _isSongBarUndocked = isSongBarUndocked ?? false,
+       _songBarPosition = songBarPosition ?? const Offset(20, 50),
+       _isChordDetectorUndocked = isChordDetectorUndocked ?? false,
+       _chordDetectorPosition = chordDetectorPosition ?? const Offset(390, 150),
+       _isMetronomeActive = isMetronomeActive ?? false,
+       _metronomeVolume = metronomeVolume ?? 0.8,
+       _isLiveChordMarkerActive = isLiveChordMarkerActive ?? false;
 
   AccordionSimulatorState copyWith({
     NotationMode? notation,
@@ -366,6 +374,8 @@ class AccordionSimulatorState {
     int? selectedBarIndex,
     int? selectedBeatIndex,
     Set<int>? markedBeats,
+    bool? isMultiBeatAssignmentMode,
+    Set<int>? multiBeatAssignmentTargets,
     Set<int>? yellowDecisionBeats,
     int? freeChordRoot,
     String? freeChordType,
@@ -444,6 +454,10 @@ class AccordionSimulatorState {
       selectedBarIndex: selectedBarIndex ?? this.selectedBarIndex,
       selectedBeatIndex: selectedBeatIndex ?? this.selectedBeatIndex,
       markedBeats: markedBeats ?? this.markedBeats,
+      isMultiBeatAssignmentMode:
+          isMultiBeatAssignmentMode ?? this.isMultiBeatAssignmentMode,
+      multiBeatAssignmentTargets:
+          multiBeatAssignmentTargets ?? this.multiBeatAssignmentTargets,
       yellowDecisionBeats: yellowDecisionBeats ?? this.yellowDecisionBeats,
       freeChordRoot: freeChordRoot ?? this.freeChordRoot,
       freeChordType: freeChordType ?? this.freeChordType,
@@ -1286,7 +1300,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
     final intervals =
         pitchClasses.map((pitchClass) => (pitchClass - root + 12) % 12).toList()
-      ..sort();
+          ..sort();
     return intervals.map((interval) => 60 + root + interval).toList();
   }
 
@@ -1548,12 +1562,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     _standaloneMetronomeTimer = Timer.periodic(
       Duration(milliseconds: intervalMs),
       (timer) {
-      if (!state.isMetronomeActive || state.isPlayingAudio) {
-        timer.cancel();
-        return;
-      }
-      _standaloneBeat = (_standaloneBeat + 1) % 4;
-      playMetronomeTick(_standaloneBeat);
+        if (!state.isMetronomeActive || state.isPlayingAudio) {
+          timer.cancel();
+          return;
+        }
+        _standaloneBeat = (_standaloneBeat + 1) % 4;
+        playMetronomeTick(_standaloneBeat);
       },
     );
   }
@@ -1605,8 +1619,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         (audioDetectedChord != null && audioDetectedChord.trim().isNotEmpty)
         ? audioDetectedChord.trim()
         : (constructorChord.isNotEmpty
-            ? constructorChord
-            : state.detectedChord?.formattedSymbol(state.notation));
+              ? constructorChord
+              : state.detectedChord?.formattedSymbol(state.notation));
 
     final command = MarkLiveChordChangeCommand(
       currentAudioTime: state.currentAudioTime,
@@ -1871,9 +1885,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     if (coupled) {
       _audioPlayer.seek(syncedTime);
       if (state.isPlayingAudio && _audioPlayer.isLoaded) {
-      _audioPlayer.play();
+        _audioPlayer.play();
+      }
     }
-  }
   }
 
   void toggleSyncDiapason() {
@@ -1962,6 +1976,32 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void clearBeatMarks() => state = state.copyWith(markedBeats: const {});
+
+  /// Activa el modo de selección de destinos desde las cajas de texto.
+  /// Al salir del modo, limpia los destinos sin modificar los checkbox.
+  void toggleMultiBeatAssignmentMode() {
+    final enabling = !state.isMultiBeatAssignmentMode;
+    state = state.copyWith(
+      isMultiBeatAssignmentMode: enabling,
+      multiBeatAssignmentTargets: const {},
+    );
+  }
+
+  /// Alterna una caja como destino de asignación masiva.
+  void toggleMultiBeatAssignmentTarget(int barIndex, int beatIndex) {
+    if (!state.isMultiBeatAssignmentMode ||
+        barIndex < 0 ||
+        barIndex >= state.measures.length ||
+        beatIndex < 0 ||
+        beatIndex >= state.measures[barIndex].beats.length) {
+      return;
+    }
+
+    final targets = Set<int>.from(state.multiBeatAssignmentTargets);
+    final key = beatKey(barIndex, beatIndex);
+    if (!targets.add(key)) targets.remove(key);
+    state = state.copyWith(multiBeatAssignmentTargets: targets);
+  }
 
   /// Marca o desmarca todos los tiempos de la cuadrícula. Si todos los
   /// checkboxes están marcados, los desmarca; si no, los marca a todos.
@@ -2317,32 +2357,50 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   /// Asigna el acorde del constructor a todas las casillas marcadas.
   /// Devuelve el símbolo asignado, o `null` si no hay acorde o destinos válidos.
   String? assignFreeChordToMarkedBeats() {
+    return _assignFreeChordToBeatKeys(state.markedBeats);
+  }
+
+  /// Asigna el acorde del constructor a las cajas seleccionadas en modo múltiple.
+  /// {P}: el modo está activo y existen destinos válidos.
+  /// {Q}: los destinos reciben el acorde y la selección queda limpia.
+  String? assignFreeChordToMultiBeatTargets() {
+    if (!state.isMultiBeatAssignmentMode) return null;
+    final symbol = _assignFreeChordToBeatKeys(state.multiBeatAssignmentTargets);
+    if (symbol == null) return null;
+    state = state.copyWith(
+      isMultiBeatAssignmentMode: false,
+      multiBeatAssignmentTargets: const {},
+    );
+    return symbol;
+  }
+
+  String? _assignFreeChordToBeatKeys(Set<int> targetKeys) {
     final symbol = _freeChordSymbol();
-    if (symbol == null || state.markedBeats.isEmpty) return null;
+    if (symbol == null || targetKeys.isEmpty) return null;
 
-      final updatedMeasures = List<MeasureRow>.from(state.measures);
-      var applied = false;
-      for (final key in state.markedBeats) {
-        final barIndex = key ~/ 4;
-        final beatIndex = key % 4;
-        if (barIndex < 0 || barIndex >= updatedMeasures.length) continue;
+    final updatedMeasures = List<MeasureRow>.from(state.measures);
+    var applied = false;
+    for (final key in targetKeys) {
+      final barIndex = key ~/ 4;
+      final beatIndex = key % 4;
+      if (barIndex < 0 || barIndex >= updatedMeasures.length) continue;
 
-        final row = updatedMeasures[barIndex];
-        if (beatIndex < 0 || beatIndex >= row.beats.length) continue;
+      final row = updatedMeasures[barIndex];
+      if (beatIndex < 0 || beatIndex >= row.beats.length) continue;
 
-        final beats = List<MeasureBeat>.from(row.beats);
-        beats[beatIndex] = beats[beatIndex].copyWith(chord: symbol);
+      final beats = List<MeasureBeat>.from(row.beats);
+      beats[beatIndex] = beats[beatIndex].copyWith(chord: symbol);
       updatedMeasures[barIndex] = MeasureRow(
         barNumber: row.barNumber,
         beats: beats,
       );
-        applied = true;
-      }
-
-      if (!applied) return null;
-      state = state.copyWith(measures: updatedMeasures);
-      return symbol;
+      applied = true;
     }
+
+    if (!applied) return null;
+    state = state.copyWith(measures: updatedMeasures);
+    return symbol;
+  }
 
   /// Inserta el acorde generado en el constructor en la casilla enfocada.
   /// Devuelve el símbolo insertado, o `null` si no hay acorde o destino válido.
@@ -2562,17 +2620,17 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   // Cada opción funciona como interruptor: al pulsar la opción activa se
   // desactiva (valor neutro) y al pulsarla de nuevo se vuelve a activar.
   void setFreeChordRoot(int root) => state = state.copyWith(
-        freeChordRoot: state.freeChordRoot == root ? -1 : root,
-      );
+    freeChordRoot: state.freeChordRoot == root ? -1 : root,
+  );
   void setFreeChordType(String type) => state = state.copyWith(
-        freeChordType: state.freeChordType == type ? '' : type,
-      );
+    freeChordType: state.freeChordType == type ? '' : type,
+  );
   void setFreeChordFourth(String fourth) => state = state.copyWith(
-        freeChordFourth: state.freeChordFourth == fourth ? '' : fourth,
-      );
+    freeChordFourth: state.freeChordFourth == fourth ? '' : fourth,
+  );
   void setFreeChordOctave(String oct) => state = state.copyWith(
-        freeChordOctave: state.freeChordOctave == oct ? '' : oct,
-      );
+    freeChordOctave: state.freeChordOctave == oct ? '' : oct,
+  );
   void setFreeChordMode(String mode) =>
       state = state.copyWith(freeChordMode: mode);
   void toggleFreeChordFixed() =>
@@ -3019,7 +3077,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
 final accordionSimulatorProvider =
     NotifierProvider<AccordionSimulatorNotifier, AccordionSimulatorState>(() {
-  return AccordionSimulatorNotifier();
+      return AccordionSimulatorNotifier();
     });
 
 /// Selector memoizado para las clases de altura activas de un diapasón (1 o 2).
@@ -3031,7 +3089,7 @@ final activeChordPitchClassesProvider = Provider.family<Set<int>, int>((
   final isPrimary = accordionNumber == 1;
   final trebleData = ref.watch(
     accordionSimulatorProvider.select(
-    (s) => isPrimary ? s.trebleData1 : s.trebleData2,
+      (s) => isPrimary ? s.trebleData1 : s.trebleData2,
     ),
   );
   final freeChordRoot = ref.watch(
@@ -3156,7 +3214,7 @@ final isDiapasonCleanProvider = Provider<bool>((ref) {
 final bellowsModeProvider = Provider.family<BellowsMode, int>((ref, accNumber) {
   return ref.watch(
     accordionSimulatorProvider.select(
-    (s) => accNumber == 1 ? s.bellows1 : s.bellows2,
+      (s) => accNumber == 1 ? s.bellows1 : s.bellows2,
     ),
   );
 });
@@ -3175,5 +3233,5 @@ final detectorStatusSliceProvider =
       final hasChord = ref.watch(
         accordionSimulatorProvider.select((s) => s.detectedChord != null),
       );
-  return (active: mode, count: count, hasChord: hasChord);
+      return (active: mode, count: count, hasChord: hasChord);
     });

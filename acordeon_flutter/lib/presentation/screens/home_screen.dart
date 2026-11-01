@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../core/constants/layout_constants.dart';
 import '../controllers/accordion_controller.dart';
 import '../widgets/accordion_keyboard_listener.dart';
 import '../widgets/app_header_widget.dart';
@@ -81,7 +82,8 @@ class HomeScreen extends ConsumerWidget {
                                           if (!state.isCompas1Undocked)
                                             const MeasureGridWithChordQualityWidget(
                                               accordionNumber: 1,
-                                              width: 185,
+                                              width:
+                                                  CompasCardMetrics.gridWidth,
                                             )
                                           else
                                             _buildDockPlaceholder(1, notifier),
@@ -110,7 +112,7 @@ class HomeScreen extends ConsumerWidget {
                                       if (!state.isCompas2Undocked)
                                         const MeasureGridWithChordQualityWidget(
                                           accordionNumber: 2,
-                                          width: 185,
+                                          width: CompasCardMetrics.gridWidth,
                                         )
                                       else
                                         _buildDockPlaceholder(2, notifier),
@@ -220,7 +222,7 @@ class HomeScreen extends ConsumerWidget {
   ) {
     final isPrimary = accordionNumber == 1;
     return Container(
-      width: 185,
+      width: CompasCardMetrics.gridWidth,
       height: 140,
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
@@ -287,9 +289,15 @@ class HomeScreen extends ConsumerWidget {
   }) {
     final screen = MediaQuery.sizeOf(context);
     final isPrimary = accordionNumber == 1;
+    final contentWidth = MeasureGridWithChordQualityWidget.contentWidth(
+      CompasCardMetrics.gridWidth,
+    );
     final clampedX = position.dx.clamp(
       5.0,
-      (screen.width - 235).clamp(5.0, double.infinity),
+      (screen.width - contentWidth - 40).clamp(
+        5.0,
+        double.infinity,
+      ),
     );
     final clampedY = position.dy.clamp(
       5.0,
@@ -302,7 +310,7 @@ class HomeScreen extends ConsumerWidget {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          width: 220,
+          width: contentWidth + 40,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -385,7 +393,7 @@ class HomeScreen extends ConsumerWidget {
               ),
               MeasureGridWithChordQualityWidget(
                 accordionNumber: accordionNumber,
-                width: 185,
+                width: CompasCardMetrics.gridWidth,
                 isUndocked: true,
               ),
             ],

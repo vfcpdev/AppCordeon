@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:acordeon_flutter/core/constants/layout_constants.dart';
+import 'package:acordeon_flutter/core/text/chord_text_fitter.dart';
 import 'package:acordeon_flutter/domain/theory/chord_catalog.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/free_chord_widget.dart';
@@ -8,6 +10,65 @@ import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_with_chord_quality_widget.dart';
 
 void main() {
+  testWidgets('la cuadrícula amplía sus celdas y muestra seis compases', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: Scaffold(body: MeasureGridWidget())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final gridSize = tester.getSize(
+      find.byKey(const ValueKey('measure_grid_section_card')),
+    );
+    final listFinder = find.descendant(
+      of: find.byKey(const ValueKey('measure_grid_section_card')),
+      matching: find.byType(ListView),
+    );
+    final listRect = tester.getRect(listFinder);
+    final notifier = ProviderScope.containerOf(
+      tester.element(find.byType(MeasureGridWidget)),
+    ).read(accordionSimulatorProvider.notifier);
+    notifier.updateMeasureBeat(5, 0, ChordCatalog.maxChordName);
+    await tester.pumpAndSettle();
+
+    final sixthCellFinder = find.byKey(const ValueKey('beat_cell_5_0'));
+    final sixthMeasureCell = tester.getRect(sixthCellFinder);
+    final chordField = tester.widget<TextField>(
+      find.descendant(of: sixthCellFinder, matching: find.byType(TextField)),
+    );
+
+    expect(gridSize.width, CompasCardMetrics.gridWidth);
+    expect(sixthMeasureCell.width, greaterThan(sixthMeasureCell.height));
+    expect(CompasCardMetrics.measureRowHeight * 6, 282);
+    expect(CompasCardMetrics.gridMaxHeight, 290);
+    expect(sixthMeasureCell.bottom, lessThanOrEqualTo(listRect.bottom + 1));
+    expect(chordField.controller?.text, ChordCatalog.maxChordName);
+    final fittedFontSize = chordField.style!.fontSize!;
+    expect(fittedFontSize, greaterThanOrEqualTo(6));
+    expect(fittedFontSize, lessThanOrEqualTo(10));
+    expect(
+      ChordCatalog.maxChordName.length *
+              ChordTextFitter.defaultCharWidthFactor *
+              fittedFontSize <=
+          tester
+              .getSize(
+                find.descendant(
+                  of: sixthCellFinder,
+                  matching: find.byType(TextField),
+                ),
+              )
+              .width,
+      isTrue,
+    );
+  });
+
   testWidgets('la sección de acordes no muestra botones de tónica', (
     WidgetTester tester,
   ) async {
@@ -37,11 +98,13 @@ void main() {
       find.byKey(const ValueKey('tonic_bar_full_chord_name')),
       findsNothing,
     );
-    for (final section in ['Estructura', 'Octava', 'Extensión', 'Bajo (/)']) {
+    for (final section in ['Octava', 'Extensión', 'Bajo (/)']) {
       expect(find.text(section), findsOneWidget);
     }
+    expect(find.text('Estructura'), findsNothing);
     expect(find.text('Cualidad'), findsNothing);
     expect(find.byTooltip('Suspendido 2'), findsNothing);
+    expect(find.byTooltip('Séptima menor'), findsNothing);
   });
 
   testWidgets(
@@ -83,13 +146,36 @@ void main() {
         expect(find.byKey(ValueKey(key)), findsOneWidget);
       }
 
-      final firstQuality = tester.getTopLeft(
-        find.byKey(const ValueKey('chord_quality_maj')),
+      expect(
+        find.byKey(const ValueKey('chord_qualities_container')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('chord_structure_container')),
+        findsOneWidget,
+      );
+      final qualityContainer = tester.getRect(
+        find.byKey(const ValueKey('chord_qualities_container')),
+      );
+      final structureContainer = tester.getRect(
+        find.byKey(const ValueKey('chord_structure_container')),
+      );
+      final sus4Rect = tester.getRect(
+        find.byKey(const ValueKey('chord_quality_sus4')),
+      );
+      final triadRect = tester.getRect(
+        find.byKey(const ValueKey('chord_structure_triad')),
+      );
+      final seventhRect = tester.getRect(
+        find.byKey(const ValueKey('chord_structure_seventh')),
       );
       final firstTonic = tester.getTopLeft(
         find.byKey(const ValueKey('tonic_matrix_btn_0')),
       );
-      expect(firstQuality.dy, closeTo(firstTonic.dy, 1));
+      expect(qualityContainer.top, closeTo(firstTonic.dy, 1));
+      expect(structureContainer.top, greaterThan(qualityContainer.bottom));
+      expect(triadRect.top, greaterThan(sus4Rect.bottom));
+      expect(seventhRect.top, greaterThan(triadRect.bottom));
       final compasCardRect = tester.getRect(
         find.byKey(const ValueKey('measure_grid_section_card')),
       );
@@ -99,14 +185,14 @@ void main() {
       final layoutRect = tester.getRect(
         find.byKey(const ValueKey('measure_grid_with_chord_quality_1')),
       );
+      expect(qualityContainer.left, greaterThan(compasCardRect.right));
       expect(
-        qualityRect.left,
-        allOf(
-          greaterThan(compasCardRect.right),
-          lessThanOrEqualTo(compasCardRect.right + 6),
-        ),
+        qualityContainer.left,
+        lessThanOrEqualTo(compasCardRect.right + 10),
       );
       expect(qualityRect.right, lessThanOrEqualTo(layoutRect.right));
+      expect(qualityRect.left, greaterThanOrEqualTo(qualityContainer.left));
+      expect(qualityRect.right, lessThanOrEqualTo(qualityContainer.right));
       expect(
         find.ancestor(
           of: find.byKey(const ValueKey('chord_quality_maj')),
@@ -121,6 +207,13 @@ void main() {
               .getTopLeft(find.byKey(const ValueKey('chord_quality_sus2')))
               .dy,
         ),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('chord_structure_seventh')));
+      await tester.pumpAndSettle();
+      expect(
+        container.read(accordionSimulatorProvider).freeChordScaleHarmonicMode,
+        'seventh',
       );
 
       await tester.tap(find.byKey(const ValueKey('chord_quality_sus2')));
@@ -143,6 +236,69 @@ void main() {
           extension: 'none',
         ),
         'Dosus2',
+      );
+    },
+  );
+
+  testWidgets(
+    'seleccionar una casilla inicia edición y selección múltiple requiere activar su modo',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(body: MeasureGridWidget(width: 600)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final firstCell = find.byKey(const ValueKey('beat_cell_0_0'));
+      final secondCell = find.byKey(const ValueKey('beat_cell_0_1'));
+      Finder textFieldFor(Finder cell) =>
+          find.descendant(of: cell, matching: find.byType(TextField));
+
+      await tester.tap(firstCell);
+      await tester.pumpAndSettle();
+      var firstTextField = tester.widget<TextField>(textFieldFor(firstCell));
+      expect(firstTextField.readOnly, isFalse);
+      expect(firstTextField.focusNode!.hasFocus, isTrue);
+
+      await tester.tap(secondCell);
+      await tester.pumpAndSettle();
+      firstTextField = tester.widget<TextField>(textFieldFor(firstCell));
+      final secondTextField = tester.widget<TextField>(
+        textFieldFor(secondCell),
+      );
+      expect(firstTextField.focusNode!.hasFocus, isFalse);
+      expect(secondTextField.readOnly, isFalse);
+      expect(secondTextField.focusNode!.hasFocus, isTrue);
+
+      await tester.tap(
+        find.byKey(const ValueKey('multi_beat_assignment_mode_btn')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(firstCell);
+      await tester.tap(secondCell);
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(textFieldFor(firstCell)).readOnly,
+        isTrue,
+      );
+      expect(
+        tester.widget<TextField>(textFieldFor(secondCell)).readOnly,
+        isTrue,
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MeasureGridWidget)),
+      );
+      expect(
+        container.read(accordionSimulatorProvider).multiBeatAssignmentTargets,
+        {0, 1},
       );
     },
   );
@@ -234,17 +390,40 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('select_all_beats_btn')), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('assign_chord_to_marked_beats_btn')),
-      findsOneWidget,
-    );
     expect(container.read(accordionSimulatorProvider).markedBeats, {0, 11});
     await tester.tap(
-      find.byKey(const ValueKey('assign_chord_to_marked_beats_btn')),
+      find.byKey(const ValueKey('multi_beat_assignment_mode_btn')),
     );
+    await tester.pumpAndSettle();
+    expect(
+      container.read(accordionSimulatorProvider).isMultiBeatAssignmentMode,
+      isTrue,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('beat_cell_0_0')));
+    await tester.tap(find.byKey(const ValueKey('beat_cell_2_3')));
+    await tester.pumpAndSettle();
+    expect(
+      container.read(accordionSimulatorProvider).multiBeatAssignmentTargets,
+      {0, 11},
+    );
+    expect(container.read(accordionSimulatorProvider).markedBeats, {0, 11});
+
+    await tester.tap(find.byKey(const ValueKey('beat_cell_0_0')));
+    await tester.pumpAndSettle();
+    expect(
+      container.read(accordionSimulatorProvider).multiBeatAssignmentTargets,
+      {11},
+    );
+    await tester.tap(find.byKey(const ValueKey('beat_cell_0_0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('insert_chord_to_compas_btn')));
     await tester.pumpAndSettle();
 
     final state = container.read(accordionSimulatorProvider);
+    expect(state.isMultiBeatAssignmentMode, isFalse);
+    expect(state.multiBeatAssignmentTargets, isEmpty);
+    expect(state.markedBeats, {0, 11});
     expect(state.measures[0].beats[0].chord, 'Solm7');
     expect(state.measures[2].beats[3].chord, 'Solm7');
     expect(state.measures[0].beats[1].chord, 'Do');
@@ -282,6 +461,8 @@ void main() {
         find.byKey(const ValueKey('compas_title_1')),
       );
       expect(measureTitle.style?.fontSize, chordTitle.style?.fontSize);
+      expect(measureTitle.style?.fontWeight, chordTitle.style?.fontWeight);
+      expect(measureTitle.style?.color, chordTitle.style?.color);
       final titleRow = tester.widget<Row>(
         find
             .ancestor(

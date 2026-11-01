@@ -137,34 +137,6 @@ class FreeChordWidget extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Estructura
-              _buildMatrixSection(
-                title: 'Estructura',
-                color: const Color(0xFFEA580C),
-                child: _buildMatrixGrid(
-                  columns: 2,
-                  cells: [
-                    _buildOptionButton(
-                      sigla: '3',
-                      tooltip: 'Tríada',
-                      isActive: state.freeChordScaleHarmonicMode == 'triad',
-                      activeColor: const Color(0xFFEA580C),
-                      onTap: () =>
-                          notifier.setFreeChordScaleHarmonicMode('triad'),
-                    ),
-                    _buildOptionButton(
-                      sigla: '4',
-                      tooltip: 'Cuatríada (7mas)',
-                      isActive: state.freeChordScaleHarmonicMode == 'seventh',
-                      activeColor: const Color(0xFFEA580C),
-                      onTap: () =>
-                          notifier.setFreeChordScaleHarmonicMode('seventh'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-
               // Octava
               _buildMatrixSection(
                 title: 'Octava',
@@ -206,7 +178,7 @@ class FreeChordWidget extends ConsumerWidget {
               const SizedBox(height: 8),
 
               // Extensión: matriz 4 columnas × 2 filas
-              // Fila 1: séptimas · Fila 2: añadidas + casilla "sin extensión"
+              // Fila 1: séptimas y sexta · Fila 2: añadidas y sin extensión
               _buildMatrixSection(
                 title: 'Extensión',
                 color: const Color(0xFF7C3AED),
@@ -226,20 +198,6 @@ class FreeChordWidget extends ConsumerWidget {
                       isActive: state.freeChordFourth == 'maj7',
                       activeColor: const Color(0xFF7C3AED),
                       onTap: () => notifier.setFreeChordFourth('maj7'),
-                    ),
-                    _buildOptionButton(
-                      sigla: 'm7',
-                      tooltip: 'Séptima menor',
-                      isActive: state.freeChordFourth == 'min7',
-                      activeColor: const Color(0xFF7C3AED),
-                      onTap: () => notifier.setFreeChordFourth('min7'),
-                    ),
-                    _buildOptionButton(
-                      sigla: '°7',
-                      tooltip: 'Séptima disminuida',
-                      isActive: state.freeChordFourth == 'dim7',
-                      activeColor: const Color(0xFF7C3AED),
-                      onTap: () => notifier.setFreeChordFourth('dim7'),
                     ),
                     _buildOptionButton(
                       sigla: '6',

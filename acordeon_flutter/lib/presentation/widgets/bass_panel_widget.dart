@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/theory/chord_catalog.dart';
@@ -13,58 +12,82 @@ class BassPanelWidget extends ConsumerWidget {
 
   static const double _buttonSize = 50.0;
 
-  const BassPanelWidget({
-    super.key,
-    this.accordionNumber = 1,
-  });
+  const BassPanelWidget({super.key, this.accordionNumber = 1});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(accordionSimulatorProvider);
     final notifier = ref.read(accordionSimulatorProvider.notifier);
     final isPrimary = accordionNumber == 1;
-    final isCollapsed = isPrimary ? state.isBass1Collapsed : state.isBass2Collapsed;
+    final isCollapsed = isPrimary
+        ? state.isBass1Collapsed
+        : state.isBass2Collapsed;
 
     if (isCollapsed) {
-      return Container(
-        margin: const EdgeInsets.only(right: 12),
-        child: ElevatedButton.icon(
-          onPressed: () {
-            if (isPrimary) {
-              notifier.toggleBass1();
-            } else {
-              notifier.toggleBass2();
-            }
-          },
-          icon: const FaIcon(FontAwesomeIcons.drum, size: 14),
-          label: Text('Bajos A$accordionNumber'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFE2E8F0),
-            foregroundColor: const Color(0xFF0F172A),
+      return Padding(
+        padding: const EdgeInsets.only(right: 12),
+        child: Tooltip(
+          message: 'Mostrar bajos',
+          child: InkWell(
+            key: ValueKey('bass_panel_restore_btn_$accordionNumber'),
+            onTap: () => _toggleCollapsed(notifier, isPrimary),
+            borderRadius: BorderRadius.circular(8),
+            child: RotatedBox(
+              quarterTurns: 3,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                ),
+                child: Text(
+                  'Bajos',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF059669),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       );
     }
 
     final basses = isPrimary ? state.bassData1 : state.bassData2;
-    final funds = basses.where((b) => b.type == ButtonType.fundamental).toList();
+    final funds = basses
+        .where((b) => b.type == ButtonType.fundamental)
+        .toList();
     final chords = basses.where((b) => b.type == ButtonType.chord).toList();
 
     // Columna Exterior: pares 1, 3, 5 (Acorde, Bajo, Acorde, Bajo, Acorde, Bajo)
     final List<BassButtonModel> exteriorButtons = [
-      chords[0], funds[0],
-      chords[2], funds[2],
-      chords[4], funds[4],
+      chords[0],
+      funds[0],
+      chords[2],
+      funds[2],
+      chords[4],
+      funds[4],
     ];
 
     // Columna Interior: pares 2, 4, 6
     final List<BassButtonModel> interiorButtons = [
-      chords[1], funds[1],
-      chords[3], funds[3],
-      chords[5], funds[5],
+      chords[1],
+      funds[1],
+      chords[3],
+      funds[3],
+      chords[5],
+      funds[5],
     ];
 
-    final activeChordPitchClasses = ref.watch(activeChordPitchClassesProvider(accordionNumber));
+    final activeChordPitchClasses = ref.watch(
+      activeChordPitchClassesProvider(accordionNumber),
+    );
 
     return Container(
       margin: const EdgeInsets.only(right: 8),
@@ -86,6 +109,7 @@ class BassPanelWidget extends ConsumerWidget {
         children: [
           // Cabecera del panel de bajos
           Container(
+            key: ValueKey('bass_panel_header_$accordionNumber'),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             decoration: const BoxDecoration(
               color: Color(0xFFE2E8F0),
@@ -97,26 +121,26 @@ class BassPanelWidget extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const FaIcon(FontAwesomeIcons.drum, size: 12, color: Color(0xFF0284C7)),
-                const SizedBox(width: 4),
                 Text(
-                  'Bajos A$accordionNumber (12)',
+                  'Bajos',
+                  key: ValueKey('bass_panel_title_$accordionNumber'),
                   style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF059669),
                   ),
                 ),
                 const SizedBox(width: 8),
                 InkWell(
+                  key: ValueKey('bass_panel_collapse_btn_$accordionNumber'),
                   onTap: () {
-                    if (isPrimary) {
-                      notifier.toggleBass1();
-                    } else {
-                      notifier.toggleBass2();
-                    }
+                    _toggleCollapsed(notifier, isPrimary);
                   },
-                  child: const Icon(Icons.close, size: 14, color: Color(0xFF64748B)),
+                  child: const Icon(
+                    Icons.close,
+                    size: 14,
+                    color: Color(0xFF64748B),
+                  ),
                 ),
               ],
             ),
@@ -218,6 +242,14 @@ class BassPanelWidget extends ConsumerWidget {
     );
   }
 
+  void _toggleCollapsed(AccordionSimulatorNotifier notifier, bool isPrimary) {
+    if (isPrimary) {
+      notifier.toggleBass1();
+    } else {
+      notifier.toggleBass2();
+    }
+  }
+
   Widget _buildBassColumn({
     required String title,
     required List<BassButtonModel> buttons,
@@ -232,7 +264,9 @@ class BassPanelWidget extends ConsumerWidget {
     if (state.detectedChord != null) {
       activeChordRoot = state.detectedChord!.rootPitchClass;
     } else if (!state.isFreeChordFixed && state.activeCompasChord.isNotEmpty) {
-      activeChordRoot = ChordCatalog.rootPitchClassForChordSymbol(state.activeCompasChord) ?? state.freeChordRoot;
+      activeChordRoot =
+          ChordCatalog.rootPitchClassForChordSymbol(state.activeCompasChord) ??
+          state.freeChordRoot;
     } else {
       activeChordRoot = state.freeChordRoot;
     }
@@ -283,8 +317,12 @@ class BassPanelWidget extends ConsumerWidget {
             ignoreOctave: true,
             tuningOffset: currentTuning.offset,
           );
-          final pushName = btn.type == ButtonType.chord ? '$rawPush${isMinorPush ? "m" : ""}' : rawPush;
-          final pullName = btn.type == ButtonType.chord ? '$rawPull${isMinorPull ? "m" : ""}' : rawPull;
+          final pushName = btn.type == ButtonType.chord
+              ? '$rawPush${isMinorPush ? "m" : ""}'
+              : rawPush;
+          final pullName = btn.type == ButtonType.chord
+              ? '$rawPull${isMinorPull ? "m" : ""}'
+              : rawPull;
 
           final currentBellows = isPrimary ? state.bellows1 : state.bellows2;
           // `bassData` ya está transpuesto según la afinación.
@@ -314,12 +352,16 @@ class BassPanelWidget extends ConsumerWidget {
           if (currentBellows == BellowsMode.push) {
             final desc = pushMatch == BassMatchType.exact
                 ? 'Coincidencia exacta'
-                : (pushMatch == BassMatchType.close ? 'Acompañamiento cercano' : '');
+                : (pushMatch == BassMatchType.close
+                      ? 'Acompañamiento cercano'
+                      : '');
             tooltipMsg = desc.isNotEmpty ? '${btn.label} ($desc)' : btn.label;
           } else if (currentBellows == BellowsMode.pull) {
             final desc = pullMatch == BassMatchType.exact
                 ? 'Coincidencia exacta'
-                : (pullMatch == BassMatchType.close ? 'Acompañamiento cercano' : '');
+                : (pullMatch == BassMatchType.close
+                      ? 'Acompañamiento cercano'
+                      : '');
             tooltipMsg = desc.isNotEmpty ? '${btn.label} ($desc)' : btn.label;
           } else {
             final parts = <String>[];
@@ -333,7 +375,9 @@ class BassPanelWidget extends ConsumerWidget {
             } else if (pushMatch == BassMatchType.close) {
               parts.add('Cierra: Cercano');
             }
-            tooltipMsg = parts.isNotEmpty ? '${btn.label} (${parts.join(' · ')})' : btn.label;
+            tooltipMsg = parts.isNotEmpty
+                ? '${btn.label} (${parts.join(' · ')})'
+                : btn.label;
           }
 
           return Padding(
@@ -356,7 +400,11 @@ class BassPanelWidget extends ConsumerWidget {
                         fontWeight: FontWeight.w900,
                         color: Colors.white.withValues(alpha: 0.95),
                         shadows: const [
-                          Shadow(color: Colors.black, offset: Offset(0, 1), blurRadius: 3),
+                          Shadow(
+                            color: Colors.black,
+                            offset: Offset(0, 1),
+                            blurRadius: 3,
+                          ),
                           Shadow(color: Colors.black87, blurRadius: 2),
                         ],
                       ),
@@ -371,56 +419,81 @@ class BassPanelWidget extends ConsumerWidget {
                     isChordPush: isChordPush,
                     bassMatchPush: pushMatch,
                     bassMatchPull: pullMatch,
-                    onPointerDown: () => notifier.pressButton(btn.id, midiToPlay),
-                    onPointerUp: () => notifier.releaseButton(btn.id, midiToPlay),
-                    child: _buildBassButtonLabel(pushName, pullName, currentBellows),
+                    onPointerDown: () =>
+                        notifier.pressButton(btn.id, midiToPlay),
+                    onPointerUp: () =>
+                        notifier.releaseButton(btn.id, midiToPlay),
+                    child: _buildBassButtonLabel(
+                      pushName,
+                      pullName,
+                      currentBellows,
+                    ),
                   ),
 
-                // Insignia flotante Abre / Cierra al presionar bajo
-                if (isPressed && (currentBellows == BellowsMode.push || currentBellows == BellowsMode.pull))
-                  Positioned(
-                    top: -13.0,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 140),
-                      padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 1.1),
-                      decoration: BoxDecoration(
-                        color: currentBellows == BellowsMode.push ? const Color(0xFFDC2626) : const Color(0xFF2563EB),
-                        borderRadius: BorderRadius.circular(9999),
-                        border: Border.all(
-                          color: currentBellows == BellowsMode.push ? const Color(0xFFFCA5A5) : const Color(0xFF93C5FD),
-                          width: 1.1,
+                  // Insignia flotante Abre / Cierra al presionar bajo
+                  if (isPressed &&
+                      (currentBellows == BellowsMode.push ||
+                          currentBellows == BellowsMode.pull))
+                    Positioned(
+                      top: -13.0,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 140),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6.5,
+                          vertical: 1.1,
                         ),
-                        boxShadow: [
-                          BoxShadow(
+                        decoration: BoxDecoration(
+                          color: currentBellows == BellowsMode.push
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFF2563EB),
+                          borderRadius: BorderRadius.circular(9999),
+                          border: Border.all(
                             color: currentBellows == BellowsMode.push
-                                ? const Color(0xFFDC2626).withValues(alpha: 0.80)
-                                : const Color(0xFF2563EB).withValues(alpha: 0.80),
-                            blurRadius: 14.5,
-                            spreadRadius: 1,
+                                ? const Color(0xFFFCA5A5)
+                                : const Color(0xFF93C5FD),
+                            width: 1.1,
                           ),
-                        ],
-                      ),
-                      child: Text(
-                        currentBellows == BellowsMode.push ? 'CIERRA' : 'ABRE',
-                        style: const TextStyle(
-                          fontSize: 8.7,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
+                          boxShadow: [
+                            BoxShadow(
+                              color: currentBellows == BellowsMode.push
+                                  ? const Color(
+                                      0xFFDC2626,
+                                    ).withValues(alpha: 0.80)
+                                  : const Color(
+                                      0xFF2563EB,
+                                    ).withValues(alpha: 0.80),
+                              blurRadius: 14.5,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          currentBellows == BellowsMode.push
+                              ? 'CIERRA'
+                              : 'ABRE',
+                          style: const TextStyle(
+                            fontSize: 8.7,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
+          );
         }),
       ],
     );
   }
 
-  Widget _buildBassButtonLabel(String pushName, String pullName, BellowsMode bellows) {
+  Widget _buildBassButtonLabel(
+    String pushName,
+    String pullName,
+    BellowsMode bellows,
+  ) {
     // Fuelle seleccionado: solo se muestra la nota que suena en esa
     // dirección. El cuerpo del botón ya está teñido de azul (Abre) o
     // rojo (Cierra), por eso el texto va en blanco.
@@ -502,5 +575,4 @@ class BassPanelWidget extends ConsumerWidget {
       ),
     );
   }
-
 }

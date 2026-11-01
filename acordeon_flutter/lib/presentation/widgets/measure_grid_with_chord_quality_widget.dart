@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/layout_constants.dart';
 import 'chord_quality_selector_widget.dart';
 import 'measure_grid_widget.dart';
 
 class MeasureGridWithChordQualityWidget extends StatelessWidget {
+  static double contentWidth(double gridWidth) =>
+      gridWidth + ChordQualitySelectorWidget.layoutWidth;
+
   final int accordionNumber;
   final double width;
   final bool isUndocked;
@@ -10,7 +14,7 @@ class MeasureGridWithChordQualityWidget extends StatelessWidget {
   const MeasureGridWithChordQualityWidget({
     super.key,
     this.accordionNumber = 1,
-    this.width = 185,
+    this.width = CompasCardMetrics.gridWidth,
     this.isUndocked = false,
   });
 
