@@ -65,7 +65,7 @@ class AudioLoaderDialog extends ConsumerWidget {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Análisis armónico, tonalidad, BPM y acordes con Rust DSP',
+                          'Carga audio y analiza tono, BPM y acordes cuando quieras',
                           style: TextStyle(
                             fontSize: 12,
                             color: Color(0xFF64748B),
@@ -128,7 +128,7 @@ class AudioLoaderDialog extends ConsumerWidget {
                   onTap: () {
                     // Síncrono dentro del gesto: el selector se abre antes de cerrar el diálogo.
                     final navContext = Navigator.of(context).context;
-                    notifier.pickAndAnalyzeAudio().then((r) {
+                    notifier.pickAndLoadAudio().then((r) {
                       if (navContext.mounted) presentAudioLoadResult(navContext, r);
                     });
                     Navigator.of(context).pop();
@@ -233,12 +233,12 @@ class AudioLoaderDialog extends ConsumerWidget {
                                     ),
                                   ),
                                   SizedBox(width: 8),
-                                  ContainerBadge(text: '1 Clic', color: Color(0xFF2563EB)),
+                                  ContainerBadge(text: 'Sin análisis automático', color: Color(0xFF2563EB)),
                                 ],
                               ),
                               SizedBox(height: 3),
                               Text(
-                                'Paseo Vallenato tradicional en Do Mayor (Cinco Letras: Do-Fa-Sol).',
+                                'Paseo Vallenato tradicional. El análisis es opcional.',
                                 style: TextStyle(fontSize: 12, color: Color(0xFF3B82F6)),
                               ),
                             ],

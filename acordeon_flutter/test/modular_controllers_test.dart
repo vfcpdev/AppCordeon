@@ -103,7 +103,7 @@ void main() {
       expect(container.read(audioAnalysisProvider).report, isNull);
 
       final result = await aa.loadDemo();
-      expect(result, isA<AudioLoadSuccess>());
+      expect(result, isA<AudioAnalysisSuccess>());
       expect(container.read(audioAnalysisProvider).report, isNotNull);
       expect(container.read(audioAnalysisProvider).loadedFileName, contains('Demo'));
 

@@ -24,7 +24,7 @@ void main() {
       expect(state.isPlayingAudio, isFalse);
     });
 
-    test('processAudioBytes executes analysis, updates report, applies tuning and populates measures', () async {
+    test('cargar audio no analiza hasta solicitarlo y luego aplica el reporte', () async {
       final notifier = container.read(accordionSimulatorProvider.notifier);
 
       // Generar bytes de prueba simulando audio
@@ -33,13 +33,21 @@ void main() {
         dummyAudio[i] = (i * 7) % 256;
       }
 
-      await notifier.processAudioBytes(dummyAudio, 'test_song.mp3');
+      final loadResult = notifier.loadAudioBytes(dummyAudio, 'test_song.mp3');
+      expect(loadResult, isA<AudioLoadSuccess>());
 
-      final state = container.read(accordionSimulatorProvider);
+      var state = container.read(accordionSimulatorProvider);
 
-      // 1. Verificar reporte de audio
+      // La carga prepara el reproductor, pero no genera análisis ni altera acordes.
       expect(state.isAnalyzingAudio, isFalse);
       expect(state.loadedAudioFileName, equals('test_song.mp3'));
+      expect(state.audioReport, isNull);
+      expect(state.measures.any((m) => m.beats.any((b) => b.chord.isNotEmpty)), isFalse);
+
+      final analysisResult = await notifier.analyzeLoadedAudio();
+      expect(analysisResult, isA<AudioAnalysisSuccess>());
+      state = container.read(accordionSimulatorProvider);
+      expect(state.isAnalyzingAudio, isFalse);
       expect(state.audioReport, isNotNull);
       expect(state.audioReport!.duration, greaterThan(0));
       expect(state.audioReport!.bpm, inInclusiveRange(60, 220));

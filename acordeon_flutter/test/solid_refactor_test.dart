@@ -186,37 +186,41 @@ void main() {
       expect(engine.calls, containsAll(['on:60', 'on:63', 'on:67']));
     });
 
-    test('pickAndAnalyzeAudio devuelve Cancelled si el loader no devuelve archivo', () async {
+    test('pickAndLoadAudio devuelve Cancelled si el loader no devuelve archivo', () async {
       final loader = FakeLoader(null);
       final c = makeContainer(loader: loader);
       addTearDown(c.dispose);
-      final r = await c.read(accordionSimulatorProvider.notifier).pickAndAnalyzeAudio();
+      final r = await c.read(accordionSimulatorProvider.notifier).pickAndLoadAudio();
       expect(r, isA<AudioLoadCancelled>());
       expect(loader.calls, 1);
       expect(c.read(accordionSimulatorProvider).audioReport, isNull);
     });
 
-    test('pickAndAnalyzeAudio analiza el archivo devuelto y retorna Success', () async {
+    test('pickAndLoadAudio carga el archivo sin iniciar el análisis', () async {
       final bytes = const DemoTrackGenerator().generate();
       final c = makeContainer(loader: FakeLoader(PickedAudioData(name: 'x.wav', bytes: bytes)));
       addTearDown(c.dispose);
-      final r = await c.read(accordionSimulatorProvider.notifier).pickAndAnalyzeAudio();
+      final r = await c.read(accordionSimulatorProvider.notifier).pickAndLoadAudio();
       expect(r, isA<AudioLoadSuccess>());
       expect(c.read(accordionSimulatorProvider).loadedAudioFileName, 'x.wav');
+      expect(c.read(accordionSimulatorProvider).audioReport, isNull);
     });
 
-    test('un fallo del analizador se traduce en Failure sin dejar isAnalyzing colgado', () async {
+    test('un fallo del análisis solicitado se traduce en Failure sin dejar isAnalyzing colgado', () async {
       final c = makeContainer(
         loader: FakeLoader(PickedAudioData(name: 'x.mp3', bytes: Uint8List(10))),
         analyzer: ThrowingAnalyzer(),
       );
       addTearDown(c.dispose);
-      final r = await c.read(accordionSimulatorProvider.notifier).pickAndAnalyzeAudio();
+      final notifier = c.read(accordionSimulatorProvider.notifier);
+      final loadResult = await notifier.pickAndLoadAudio();
+      expect(loadResult, isA<AudioLoadSuccess>());
+      final r = await notifier.analyzeLoadedAudio();
       expect(r, isA<AudioLoadFailure>());
       expect(c.read(accordionSimulatorProvider).isAnalyzingAudio, isFalse);
     });
 
-    test('el archivo se entrega al reproductor aunque el análisis falle', () async {
+    test('el archivo queda listo para reproducir antes del análisis', () async {
       final player = FakeAudioFilePlayer();
       final bytes = Uint8List.fromList([1, 2, 3, 4]);
       final c = makeContainer(
@@ -225,10 +229,12 @@ void main() {
         player: player,
       );
       addTearDown(c.dispose);
-      final r = await c.read(accordionSimulatorProvider.notifier).pickAndAnalyzeAudio();
-      expect(r, isA<AudioLoadFailure>());
+      final notifier = c.read(accordionSimulatorProvider.notifier);
+      final r = await notifier.pickAndLoadAudio();
+      expect(r, isA<AudioLoadSuccess>());
       expect(player.loaded, isTrue);
       expect(player.calls, contains('load:4:audio/mpeg'));
+      expect(c.read(accordionSimulatorProvider).audioReport, isNull);
     });
 
     test('play, pausa y stop delegan en el reproductor del archivo', () async {
@@ -243,7 +249,7 @@ void main() {
       addTearDown(c.dispose);
       final n = c.read(accordionSimulatorProvider.notifier);
 
-      final r = await n.pickAndAnalyzeAudio();
+      final r = await n.pickAndLoadAudio();
       expect(r, isA<AudioLoadSuccess>());
       expect(player.loaded, isTrue);
 
@@ -313,7 +319,7 @@ void main() {
       addTearDown(c.dispose);
       final n = c.read(accordionSimulatorProvider.notifier);
 
-      await n.pickAndAnalyzeAudio();
+      await n.pickAndLoadAudio();
       expect(player.calls, contains('vol:0.8'));
 
       n.setCompasVolume(0.35);
@@ -337,7 +343,7 @@ void main() {
       addTearDown(c.dispose);
       final n = c.read(accordionSimulatorProvider.notifier);
 
-      await n.pickAndAnalyzeAudio();
+      await n.pickAndLoadAudio();
       expect(c.read(accordionSimulatorProvider).isAudioCoupled, isTrue);
 
       // Desacoplado: la pista se pausa y el Compás sigue por su reloj.

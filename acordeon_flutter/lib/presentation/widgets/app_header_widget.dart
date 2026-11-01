@@ -88,7 +88,7 @@ class AppHeaderWidget extends ConsumerWidget {
             ],
           ),
 
-          // Acciones: Dropzone MP3 + Notación Latina/Alemana + Paleta de fondo
+          // Acciones: carga y análisis explícito de audio + notación + paleta
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -97,7 +97,7 @@ class AppHeaderWidget extends ConsumerWidget {
                 message: 'Seleccionar y cargar archivo MP3 o WAV local de tu equipo',
                 child: InkWell(
                   onTap: () async {
-                    final r = await notifier.pickAndAnalyzeAudio();
+                    final r = await notifier.pickAndLoadAudio();
                     if (context.mounted) presentAudioLoadResult(context, r);
                   },
                   borderRadius: BorderRadius.circular(8),
@@ -140,6 +140,43 @@ class AppHeaderWidget extends ConsumerWidget {
                   ),
                 ),
               ),
+              if (state.loadedAudioFileName != null) ...[
+                const SizedBox(width: 6),
+                Tooltip(
+                  message: state.isAnalyzingAudio
+                      ? 'Analizando ${state.loadedAudioFileName}'
+                      : 'Analizar ${state.loadedAudioFileName}',
+                  child: ElevatedButton.icon(
+                    key: const ValueKey('analyze_loaded_audio_btn'),
+                    onPressed: state.isAnalyzingAudio
+                        ? null
+                        : () async {
+                            final result = await notifier.analyzeLoadedAudio();
+                            if (context.mounted) {
+                              presentAudioLoadResult(context, result);
+                            }
+                          },
+                    icon: state.isAnalyzingAudio
+                        ? const SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const FaIcon(FontAwesomeIcons.magnifyingGlassChart, size: 12),
+                    label: Text(state.isAnalyzingAudio ? 'Analizando' : 'Analizar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF059669),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                      minimumSize: const Size(0, 30),
+                      textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(width: 12),
 
               // Toggle Notación

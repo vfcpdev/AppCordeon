@@ -30,9 +30,14 @@ sealed class AudioLoadResult {
 }
 
 class AudioLoadSuccess extends AudioLoadResult {
+  final String fileName;
+  const AudioLoadSuccess(this.fileName);
+}
+
+class AudioAnalysisSuccess extends AudioLoadResult {
   final AudioAnalysisReport report;
   final String fileName;
-  const AudioLoadSuccess(this.report, this.fileName);
+  const AudioAnalysisSuccess(this.report, this.fileName);
 }
 
 class AudioLoadCancelled extends AudioLoadResult {
@@ -339,6 +344,7 @@ class AccordionSimulatorState {
     bool? isAnalyzingAudio,
     String? loadedAudioFileName,
     bool clearAudio = false,
+    bool clearAudioReport = false,
     bool? showMultiBeatModal,
     String? multiBeatPattern,
     String? multiBeatChord,
@@ -413,7 +419,7 @@ class AccordionSimulatorState {
       detectorSelectedButtons:
           detectorSelectedButtons ?? this.detectorSelectedButtons,
       detectedChord: detectedChord ?? this.detectedChord,
-      audioReport: clearAudio ? null : (audioReport ?? this.audioReport),
+      audioReport: clearAudio || clearAudioReport ? null : (audioReport ?? this.audioReport),
       isAnalyzingAudio: isAnalyzingAudio ?? this.isAnalyzingAudio,
       loadedAudioFileName: clearAudio ? null : (loadedAudioFileName ?? this.loadedAudioFileName),
       showMultiBeatModal: showMultiBeatModal ?? this.showMultiBeatModal,
@@ -455,6 +461,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   late AudioFileLoader _fileLoader;
   late AudioFilePlayer _audioPlayer;
   late DemoTrackGenerator _demoGenerator;
+  Uint8List? _loadedAudioBytes;
   final GridHistoryManager _gridHistory = GridHistoryManager();
 
   bool get canUndoGrid => _gridHistory.canUndo;
@@ -650,21 +657,21 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   // Carga y Análisis de Audio con DSP Rust
   /// IMPORTANTE (Web): no debe haber ningún `await` antes de `pickAudioFile()`
   /// para que el navegador conserve el gesto del usuario y abra el selector.
-  Future<AudioLoadResult> pickAndAnalyzeAudio() async {
+  Future<AudioLoadResult> pickAndLoadAudio() async {
     try {
       final picked = await _fileLoader.pickAudioFile();
       if (picked == null) return const AudioLoadCancelled();
-      return await processAudioBytes(picked.bytes, picked.name);
+      return loadAudioBytes(picked.bytes, picked.name);
     } catch (e) {
       state = state.copyWith(isAnalyzingAudio: false);
       return AudioLoadFailure('Error al cargar audio: $e');
     }
   }
 
-  /// Carga y analiza una pista demo clásica de Vallenato ("La Gota Fría" en Do Mayor / Cinco Letras)
+  /// Carga una pista demo clásica de Vallenato sin analizarla.
   Future<AudioLoadResult> loadDemoAudioTrack() async {
     try {
-      return await processAudioBytes(
+      return loadAudioBytes(
         _demoGenerator.generate(),
         DemoTrackGenerator.demoFileName,
       );
@@ -674,48 +681,73 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
   }
 
-  /// Procesa bytes de audio con el analizador inyectado y actualiza estado + acordeón
-  Future<AudioLoadResult> processAudioBytes(Uint8List bytes, String fileName) async {
+  /// Carga audio para reproducción. El análisis se solicita explícitamente mediante
+  /// [analyzeLoadedAudio].
+  ///
+  /// {P}: `bytes` contiene audio y `fileName` identifica la pista.
+  /// {Q}: la pista queda disponible para reproducción y no se invoca el analizador.
+  AudioLoadResult loadAudioBytes(Uint8List bytes, String fileName) {
+    if (bytes.isEmpty || fileName.trim().isEmpty) {
+      return const AudioLoadFailure('El archivo de audio está vacío o no tiene nombre.');
+    }
+
     // Detener cualquier reproducción anterior antes de cargar la nueva pista.
     _playbackTimer?.cancel();
     _audioPlayer.stop();
     _audioBridge.allNotesOff();
     _currentBeatNotes = [];
 
-    state = state.copyWith(
-      isAnalyzingAudio: true,
-      loadedAudioFileName: fileName,
-      isPlayingAudio: false,
-      currentAudioTime: 0.0,
-    );
-
-    // Dejar el archivo listo para sonar antes del análisis: el reproductor
-    // conserva sus propios bytes y el DSP trabaja sobre una copia, así una
-    // pista siempre se puede escuchar aunque el análisis falle.
     _audioPlayer.load(bytes, _mimeTypeFor(fileName));
     _audioPlayer.setVolume(state.compasVolume);
-
-    final report = await _analyzer.analyzeAudio(bytes, fileName);
+    _loadedAudioBytes = Uint8List.fromList(bytes);
 
     state = state.copyWith(
       isAnalyzingAudio: false,
-      audioReport: report,
-      totalAudioDuration: report.duration,
+      clearAudioReport: true,
+      loadedAudioFileName: fileName,
+      totalAudioDuration: _audioPlayer.durationSeconds,
       currentAudioTime: 0.0,
+      isPlayingAudio: false,
     );
+    return AudioLoadSuccess(fileName);
+  }
 
-    // Auto-aplicar afinación sugerida al Acordeón 1
-    applyDetectedTuning(report.keyResult);
+  /// Analiza la pista previamente cargada y aplica sus resultados al acordeón.
+  ///
+  /// {P}: hay una pista cargada y el analizador no está ocupado.
+  /// {Q}: el reporte, afinación y compases reflejan el análisis; ante error,
+  /// `isAnalyzingAudio` vuelve a `false` y se devuelve un fallo explícito.
+  Future<AudioLoadResult> analyzeLoadedAudio() async {
+    final bytes = _loadedAudioBytes;
+    final fileName = state.loadedAudioFileName;
+    if (bytes == null || fileName == null) {
+      return const AudioLoadFailure('Primero carga un archivo de audio.');
+    }
+    if (state.isAnalyzingAudio) {
+      return const AudioLoadFailure('El análisis de audio ya está en curso.');
+    }
 
-    // Ajustar la cantidad de compases para que coincida exactamente con la
-    // duración y el BPM del audio, dejando los acordes vacíos para que su
-    // carga sea una decisión posterior del usuario.
-    generateMeasuresForAudio(
-      durationSeconds: report.duration,
-      bpm: report.bpm,
-    );
+    state = state.copyWith(isAnalyzingAudio: true);
+    try {
+      final report = await _analyzer.analyzeAudio(bytes, fileName);
+      state = state.copyWith(
+        isAnalyzingAudio: false,
+        audioReport: report,
+        totalAudioDuration: report.duration,
+        currentAudioTime: 0.0,
+      );
 
-    return AudioLoadSuccess(report, fileName);
+      applyDetectedTuning(report.keyResult);
+      generateMeasuresForAudio(
+        durationSeconds: report.duration,
+        bpm: report.bpm,
+      );
+
+      return AudioAnalysisSuccess(report, fileName);
+    } catch (e) {
+      state = state.copyWith(isAnalyzingAudio: false);
+      return AudioLoadFailure('Error al analizar audio: $e');
+    }
   }
 
   /// Asigna directamente el reporte de análisis de audio (útil para pruebas y sincronización).
@@ -805,6 +837,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
 
   void clearAudioReport() {
     stopAudio();
+    _loadedAudioBytes = null;
     state = state.copyWith(
       clearAudio: true,
       isPlayingAudio: false,

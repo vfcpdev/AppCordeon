@@ -81,7 +81,7 @@ class AudioAnalysisNotifier extends Notifier<AudioAnalysisState> {
       report: report,
     );
 
-    return AudioLoadSuccess(report, fileName);
+    return AudioAnalysisSuccess(report, fileName);
   }
 
   void clear() {

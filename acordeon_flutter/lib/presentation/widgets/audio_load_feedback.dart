@@ -7,7 +7,13 @@ import 'audio_analysis_dialog.dart';
 void presentAudioLoadResult(BuildContext context, AudioLoadResult result) {
   if (!context.mounted) return;
   switch (result) {
-    case AudioLoadSuccess(:final report, :final fileName):
+    case AudioLoadSuccess(:final fileName):
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Audio cargado: $fileName. Analízalo cuando quieras.'),
+        ),
+      );
+    case AudioAnalysisSuccess(:final report, :final fileName):
       showDialog(
         context: context,
         builder: (_) => AudioAnalysisDialog(report: report, fileName: fileName),
