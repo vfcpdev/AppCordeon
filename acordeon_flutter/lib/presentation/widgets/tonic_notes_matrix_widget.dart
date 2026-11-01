@@ -1,0 +1,104 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/enums.dart';
+import '../../domain/theory/chord_catalog.dart';
+import '../controllers/accordion_controller.dart';
+
+/// Matriz de notas tónicas organizada en 2 filas por 6 columnas.
+///
+/// Principios aplicados:
+/// - Single Responsibility Principle (SRP): Encapsula exclusivamente la representación
+///   matricial 2x6 de las 12 notas de tónica para su selección directa.
+/// - Tripla de Hoare:
+///   - Precondición {P}: `rootIndex >= 0 && rootIndex < 12`.
+///   - Ejecución {C}: `notifier.setFreeChordRoot(rootIndex)`.
+///   - Poscondición {Q}: `state.freeChordRoot == rootIndex`.
+class TonicNotesMatrixWidget extends ConsumerWidget {
+  const TonicNotesMatrixWidget({super.key});
+
+  /// Distribución 2 filas x 6 columnas:
+  /// Fila 1: Do, Do#, Re, Mi♭, Mi, Fa (índices 0 a 5)
+  /// Fila 2: Fa#, Sol, Sol#, La, Si♭, Si (índices 6 a 11)
+  static const List<List<int>> matrixRows = [
+    [0, 1, 2, 3, 4, 5],
+    [6, 7, 8, 9, 10, 11],
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(accordionSimulatorProvider);
+    final notifier = ref.read(accordionSimulatorProvider.notifier);
+    final isLatin = state.notation != NotationMode.alemana;
+    final rootNames = isLatin ? ChordCatalog.latinRootNames : ChordCatalog.germanRootNames;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF1F5F9),
+        border: Border(bottom: BorderSide(color: Color(0xFFCBD5E1), width: 0.8)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: matrixRows.map((row) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 1.5),
+            child: Row(
+              children: row.map((rootIndex) {
+                final isSelected = state.freeChordRoot == rootIndex;
+                final rootName = rootNames[rootIndex];
+
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                    child: Tooltip(
+                      message: 'Tónica $rootName',
+                      child: InkWell(
+                        key: ValueKey('tonic_matrix_btn_$rootIndex'),
+                        onTap: () => notifier.setFreeChordRoot(rootIndex),
+                        borderRadius: BorderRadius.circular(4),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 90),
+                          height: 20,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFF059669) : Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
+                              width: isSelected ? 1.2 : 0.8,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(0xFF059669).withValues(alpha: 0.3),
+                                      blurRadius: 3,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              rootName,
+                              style: TextStyle(
+                                fontSize: 9.0,
+                                fontWeight: FontWeight.w900,
+                                height: 1.0,
+                                color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}

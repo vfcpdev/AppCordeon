@@ -77,6 +77,13 @@ void main() {
       // El segundo TextField ahora tiene el foco activo
       final secondFieldWidget = tester.widget<TextField>(secondBeatTextField);
       expect(secondFieldWidget.focusNode?.hasFocus, isTrue);
+
+      // El cursor queda colapsado al final (parpadeando) y no selecciona todo el texto
+      expect(secondFieldWidget.controller?.selection.isCollapsed, isTrue);
+      expect(
+        secondFieldWidget.controller?.selection.baseOffset,
+        equals(secondFieldWidget.controller?.text.length),
+      );
     });
   });
 }

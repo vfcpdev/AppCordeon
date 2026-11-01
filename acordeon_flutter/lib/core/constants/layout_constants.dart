@@ -12,4 +12,16 @@ class CompasCardMetrics {
 
   /// Altura máxima de la cuadrícula de compases antes de activar el scroll.
   static const double gridMaxHeight = 420.0;
+
+  /// Altura base (medida en pantalla) de un cuadro del compás con el TextBox
+  /// denso y su padding actual (~21.6px).
+  static const double beatCellBaseHeight = 21.6;
+
+  /// Altura de un cuadro del compás, aumentada un 5% sobre la base.
+  ///
+  /// Tripla de Hoare:
+  /// - {P} La celda se renderiza dentro del compás horizontal.
+  /// - {C} `height == beatCellBaseHeight * 1.05`.
+  /// - {Q} La celda mantiene legibilidad de acordes y fuente ajustada con +5% de espacio vertical.
+  static const double beatCellHeight = beatCellBaseHeight * 1.05; // 22.68
 }

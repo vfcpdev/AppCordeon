@@ -9,6 +9,7 @@ import '../../core/text/chord_text_fitter.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
 import 'chord_detector_widget.dart';
+import 'tonic_notes_matrix_widget.dart';
 
 class MeasureGridWidget extends ConsumerStatefulWidget {
   final int accordionNumber;
@@ -547,6 +548,9 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
           ),
         ),
 
+          // Matriz de botones de Tónica: 2 filas por 6 columnas (debajo de guardar / importar compás)
+          const TonicNotesMatrixWidget(),
+
           if (state.yellowDecisionBeats.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
@@ -652,6 +656,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                           // número: marca o desmarca los 4 tiempos del compás.
                           Container(
                             width: 15,
+                            height: CompasCardMetrics.beatCellHeight,
                             decoration: const BoxDecoration(
                               color: Color(0xFFF1F5F9),
                               border: Border(
@@ -670,6 +675,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                           // Número de compás
                           Container(
                             width: 18,
+                            height: CompasCardMetrics.beatCellHeight,
                             decoration: const BoxDecoration(
                               color: Color(0xFFF1F5F9),
                               border: Border(right: BorderSide(color: Color(0xFFCBD5E1))),
@@ -1554,9 +1560,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
         widget.onSelected?.call();
         if (!_isEditing) {
           _isEditing = true;
-          _controller.selection = TextSelection(
-            baseOffset: 0,
-            extentOffset: _controller.text.length,
+          // Coloca el cursor al final con selección colapsada para que el cursor
+          // quede parpadeando sin seleccionar todo el texto.
+          _controller.selection = TextSelection.collapsed(
+            offset: _controller.text.length,
           );
         }
         _update();
@@ -1703,9 +1710,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     widget.onSelected?.call();
     _isEditing = true;
     _focusNode.requestFocus();
-    _controller.selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: _controller.text.length,
+    // Coloca el cursor al final con selección colapsada para que el cursor
+    // quede parpadeando sin seleccionar todo el texto.
+    _controller.selection = TextSelection.collapsed(
+      offset: _controller.text.length,
     );
     if (mounted) {
       setState(() {});
@@ -1847,6 +1855,8 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
+          // Altura un 5% mayor para los cuadros de compás {P} C {Q}
+          height: CompasCardMetrics.beatCellHeight,
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
           decoration: BoxDecoration(
             // Radio condicional: bordes "Stateful" no ocasionan problemas; el
