@@ -564,8 +564,7 @@ class AccordionSimulatorState {
       bassRhythmPatterns: bassRhythmPatterns ?? this.bassRhythmPatterns,
       selectedBassRhythmPatternId: clearSelectedBassRhythmPattern
           ? null
-          : (selectedBassRhythmPatternId ??
-                this.selectedBassRhythmPatternId),
+          : (selectedBassRhythmPatternId ?? this.selectedBassRhythmPatternId),
       isBassMetronomeActive:
           isBassMetronomeActive ?? this.isBassMetronomeActive,
       bassRhythmElapsedSeconds:
@@ -1700,10 +1699,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final beatsPerMeasure = _standaloneMetronomeBeatsPerMeasure;
     _standaloneBeat = 0;
     state = state.copyWith(bassRhythmElapsedSeconds: 0);
-    playMetronomeTick(
-      _standaloneBeat,
-      beatsPerMeasure: beatsPerMeasure,
-    );
+    playMetronomeTick(_standaloneBeat, beatsPerMeasure: beatsPerMeasure);
 
     _standaloneMetronomeTimer = Timer.periodic(
       Duration(milliseconds: intervalMs),

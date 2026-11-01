@@ -193,13 +193,7 @@ class BassPanelWidget extends ConsumerWidget {
           // Leyenda inferior de acompañamiento de bajos
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: const BoxDecoration(
-              color: Color(0xFFE2E8F0),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(13),
-                bottomRight: Radius.circular(13),
-              ),
-            ),
+            decoration: const BoxDecoration(color: Color(0xFFE2E8F0)),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
@@ -429,10 +423,9 @@ class BassPanelWidget extends ConsumerWidget {
                     isChordPush: isChordPush,
                     bassMatchPush: pushMatch,
                     bassMatchPull: pullMatch,
-                    isSelectedForRhythm:
-                        rhythmButtonIndexes.contains(
-                          rhythmButtonOffset + entry.key,
-                        ),
+                    isSelectedForRhythm: rhythmButtonIndexes.contains(
+                      rhythmButtonOffset + entry.key,
+                    ),
                     onPointerDown: () =>
                         notifier.pressButton(btn.id, midiToPlay),
                     onPointerUp: () =>

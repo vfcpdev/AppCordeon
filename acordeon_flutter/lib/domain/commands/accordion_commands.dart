@@ -13,7 +13,8 @@ class PreconditionViolationException implements Exception {
   const PreconditionViolationException(this.actionName, this.reason);
 
   @override
-  String toString() => 'Violación de Precondición {P} en [$actionName]: $reason';
+  String toString() =>
+      'Violación de Precondición {P} en [$actionName]: $reason';
 }
 
 /// Contrato base para comandos ejecutables en el simulador (Command Pattern + SRP + Hoare Triples).
@@ -46,7 +47,8 @@ class ClearDiapasonCommand implements AccordionCommand<void> {
     required List<String> detectorSelectedButtons,
     required DetectedChordModel? detectedChord,
     required Set<int> playingChordNotes,
-  }) stateUpdater;
+  })
+  stateUpdater;
 
   /// Callback opcional para cancelar notas de audio residuales y asegurar {Q}.
   final void Function()? onCancelAudioPlayback;
@@ -103,7 +105,10 @@ class AssignDetectedChordCommand implements AccordionCommand<bool> {
 
   @override
   bool canExecute() {
-    return chord != null && barIndex >= 0 && beatIndex >= 0 && trebleData.isNotEmpty;
+    return chord != null &&
+        barIndex >= 0 &&
+        beatIndex >= 0 &&
+        trebleData.isNotEmpty;
   }
 
   @override
@@ -163,7 +168,8 @@ class MultiBeatCommandResult {
 /// Comando para asignar un acorde en múltiples tiempos/compases mediante un patrón.
 /// {P}: chord.isNotEmpty, pattern parseable a posiciones válidas, barNumber <= maxAllowedMeasures.
 /// {Q}: cada posición en pattern contiene chord, markedBeats incluye todas las posiciones.
-class ApplyMultiBeatChordCommand implements AccordionCommand<MultiBeatCommandResult> {
+class ApplyMultiBeatChordCommand
+    implements AccordionCommand<MultiBeatCommandResult> {
   @override
   String get commandName => 'ApplyMultiBeatChordCommand';
 
@@ -187,7 +193,8 @@ class ApplyMultiBeatChordCommand implements AccordionCommand<MultiBeatCommandRes
   bool canExecute() {
     if (chord.trim().isEmpty || pattern.trim().isEmpty) return false;
     final positions = parsePositions(pattern);
-    return positions.isNotEmpty && positions.every((p) => p.bar <= maxAllowedMeasures);
+    return positions.isNotEmpty &&
+        positions.every((p) => p.bar <= maxAllowedMeasures);
   }
 
   @override
@@ -261,7 +268,10 @@ class ApplyMultiBeatChordCommand implements AccordionCommand<MultiBeatCommandRes
           }
         }
         if (modified) {
-          updatedMeasures[m] = MeasureRow(barNumber: row.barNumber, beats: newBeats);
+          updatedMeasures[m] = MeasureRow(
+            barNumber: row.barNumber,
+            beats: newBeats,
+          );
         }
       }
     }
@@ -277,7 +287,10 @@ class ApplyMultiBeatChordCommand implements AccordionCommand<MultiBeatCommandRes
         if (tIdx >= 0 && tIdx < row.beats.length) {
           final beats = List<MeasureBeat>.from(row.beats);
           beats[tIdx] = beats[tIdx].copyWith(chord: trimmedChord);
-          updatedMeasures[bIdx] = MeasureRow(barNumber: row.barNumber, beats: beats);
+          updatedMeasures[bIdx] = MeasureRow(
+            barNumber: row.barNumber,
+            beats: beats,
+          );
           newMarkedBeats.add(bIdx * 4 + tIdx);
           appliedCount++;
         }
@@ -329,7 +342,8 @@ class YellowDecisionResult {
 /// Comando para resolver y aplicar una decisión de fuelle sobre acordes ambiguos marcados en amarillo.
 /// {P}: targetKeys no vacío, mode in {push, pull}.
 /// {Q}: cada beat en targetKeys tiene fuelle == mode, remainingYellowBeats == yellowDecisionBeats \ targetKeys.
-class ApplyYellowDecisionCommand implements AccordionCommand<YellowDecisionResult> {
+class ApplyYellowDecisionCommand
+    implements AccordionCommand<YellowDecisionResult> {
   @override
   String get commandName => 'ApplyYellowDecisionCommand';
 
@@ -380,7 +394,8 @@ class ApplyYellowDecisionCommand implements AccordionCommand<YellowDecisionResul
       return MeasureRow(barNumber: measure.barNumber, beats: updatedBeats);
     }).toList();
 
-    final remainingYellow = Set<int>.from(yellowDecisionBeats)..removeAll(targets);
+    final remainingYellow = Set<int>.from(yellowDecisionBeats)
+      ..removeAll(targets);
 
     return YellowDecisionResult(
       updatedMeasures: updatedMeasures,
@@ -411,7 +426,8 @@ class TransferredChordParams {
 /// de un acorde detectado al constructor libre.
 /// {P}: chord != null.
 /// {Q}: TransferredChordParams con root, type, fourth y bass coherentes con la estructura del acorde.
-class TransferDetectedChordCommand implements AccordionCommand<TransferredChordParams?> {
+class TransferDetectedChordCommand
+    implements AccordionCommand<TransferredChordParams?> {
   @override
   String get commandName => 'TransferDetectedChordCommand';
 
@@ -452,7 +468,8 @@ class TransferDetectedChordCommand implements AccordionCommand<TransferredChordP
       type = 'sus2';
     } else if (f.contains('4') && f.contains('5') && !f.contains('3')) {
       type = 'sus4';
-    } else if (f.contains('♭3') || (sym.contains('m') && !sym.contains('maj'))) {
+    } else if (f.contains('♭3') ||
+        (sym.contains('m') && !sym.contains('maj'))) {
       type = 'min';
     }
 
@@ -468,7 +485,8 @@ class TransferDetectedChordCommand implements AccordionCommand<TransferredChordP
 
     var bass = '';
     if (chord!.bassPitchClass != chord!.rootPitchClass) {
-      final interval = (chord!.bassPitchClass - chord!.rootPitchClass + 12) % 12;
+      final interval =
+          (chord!.bassPitchClass - chord!.rootPitchClass + 12) % 12;
       if (interval == 3 || interval == 4) {
         bass = '3';
       } else if (interval == 6 || interval == 7 || interval == 8) {
@@ -534,7 +552,11 @@ class MarkLiveChordChangeCommand implements AccordionCommand<LiveMarkerResult> {
   });
 
   @override
-  bool canExecute() => bpm > 0 && currentAudioTime >= 0 && startOffset >= 0 && measures.isNotEmpty;
+  bool canExecute() =>
+      bpm > 0 &&
+      currentAudioTime >= 0 &&
+      startOffset >= 0 &&
+      measures.isNotEmpty;
 
   @override
   void assertPreconditions() {
@@ -579,12 +601,16 @@ class MarkLiveChordChangeCommand implements AccordionCommand<LiveMarkerResult> {
     final row = updatedMeasures[targetBar];
     final beats = List<MeasureBeat>.from(row.beats);
 
-    final chordToAssign = (activeChord != null && activeChord!.trim().isNotEmpty)
+    final chordToAssign =
+        (activeChord != null && activeChord!.trim().isNotEmpty)
         ? activeChord!.trim()
         : beats[targetBeat].chord;
 
     beats[targetBeat] = beats[targetBeat].copyWith(chord: chordToAssign);
-    updatedMeasures[targetBar] = MeasureRow(barNumber: row.barNumber, beats: beats);
+    updatedMeasures[targetBar] = MeasureRow(
+      barNumber: row.barNumber,
+      beats: beats,
+    );
 
     final updatedMarked = Set<int>.from(markedBeats)..add(targetKey);
 
@@ -622,8 +648,7 @@ class PlayMetronomeTickCommand implements AccordionCommand<int> {
   });
 
   @override
-  bool canExecute() =>
-      beatIndex >= 0 && volume >= 0.0 && beatsPerMeasure > 0;
+  bool canExecute() => beatIndex >= 0 && volume >= 0.0 && beatsPerMeasure > 0;
 
   @override
   void assertPreconditions() {
@@ -662,7 +687,6 @@ class PlayMetronomeTickCommand implements AccordionCommand<int> {
     return midiNote;
   }
 }
-
 
 /// Comando para calibrar el BPM a partir de dos toques (tecla Control) que marcan
 /// el inicio del Compás 1 y el inicio del compás siguiente durante la reproducción.
@@ -749,7 +773,8 @@ class ApplyMeasureChordsResult {
 ///        [t_beat, t_beat + beatDuration]. Cada beat donde ocurre una transición/cambio de acorde
 ///        queda registrado en `updatedMarkedBeats` con precisión milimétrica.
 /// - {I}: Conserva la cantidad de compases de la cuadrícula; no produce tiempos nulos ni negativos.
-class ApplyMeasureChordsFromAudioCommand implements AccordionCommand<ApplyMeasureChordsResult> {
+class ApplyMeasureChordsFromAudioCommand
+    implements AccordionCommand<ApplyMeasureChordsResult> {
   @override
   String get commandName => 'ApplyMeasureChordsFromAudioCommand';
 
@@ -768,7 +793,8 @@ class ApplyMeasureChordsFromAudioCommand implements AccordionCommand<ApplyMeasur
   });
 
   @override
-  bool canExecute() => measures.isNotEmpty && chords.isNotEmpty && bpm > 0 && startOffset >= 0.0;
+  bool canExecute() =>
+      measures.isNotEmpty && chords.isNotEmpty && bpm > 0 && startOffset >= 0.0;
 
   @override
   void assertPreconditions() {
@@ -822,30 +848,35 @@ class ApplyMeasureChordsFromAudioCommand implements AccordionCommand<ApplyMeasur
         final chordSegment = _findSegmentForTime(chords, midBeatTime);
         final chordText = chordSegment != null
             ? (notation == NotationMode.alemana
-                ? chordSegment.chordSymbol
-                : (chordSegment.chordName.isNotEmpty ? chordSegment.chordName : chordSegment.chordSymbol))
+                  ? chordSegment.chordSymbol
+                  : (chordSegment.chordName.isNotEmpty
+                        ? chordSegment.chordName
+                        : chordSegment.chordSymbol))
             : '';
 
-        final isChange = chordText.isNotEmpty && (chordText != previousChord || updatedMarkedBeats.isEmpty);
+        final isChange =
+            chordText.isNotEmpty &&
+            (chordText != previousChord || updatedMarkedBeats.isEmpty);
         if (isChange) {
           updatedMarkedBeats.add(barIdx * 4 + beatIdx);
           previousChord = chordText;
           totalChanges++;
         }
 
-        newBeats.add(MeasureBeat(
-          barIndex: barIdx,
-          beatIndex: beatIdx,
-          chord: chordText,
-          timeText: '$mins:$secs',
-          isContinue: !isChange && chordText.isNotEmpty,
-        ));
+        newBeats.add(
+          MeasureBeat(
+            barIndex: barIdx,
+            beatIndex: beatIdx,
+            chord: chordText,
+            timeText: '$mins:$secs',
+            isContinue: !isChange && chordText.isNotEmpty,
+          ),
+        );
       }
 
-      updatedMeasures.add(MeasureRow(
-        barNumber: oldRow.barNumber,
-        beats: newBeats,
-      ));
+      updatedMeasures.add(
+        MeasureRow(barNumber: oldRow.barNumber, beats: newBeats),
+      );
     }
 
     return ApplyMeasureChordsResult(
@@ -855,7 +886,10 @@ class ApplyMeasureChordsFromAudioCommand implements AccordionCommand<ApplyMeasur
     );
   }
 
-  DetectedChordSegment? _findSegmentForTime(List<DetectedChordSegment> segments, double time) {
+  DetectedChordSegment? _findSegmentForTime(
+    List<DetectedChordSegment> segments,
+    double time,
+  ) {
     if (segments.isEmpty) return null;
     for (final seg in segments) {
       if (time >= seg.startTime && time < seg.endTime) {
@@ -903,7 +937,8 @@ class PlaybackChordTransitionResult {
 ///        Si `hasTransition == false`:
 ///          - `updatedMeasures == measures && updatedMarkedBeats == markedBeats` (Inmutabilidad garantizada).
 /// - {I}: `updatedMeasures.length == measures.length`.
-class DetectPlaybackChordTransitionCommand implements AccordionCommand<PlaybackChordTransitionResult> {
+class DetectPlaybackChordTransitionCommand
+    implements AccordionCommand<PlaybackChordTransitionResult> {
   @override
   String get commandName => 'DetectPlaybackChordTransitionCommand';
 
@@ -929,7 +964,11 @@ class DetectPlaybackChordTransitionCommand implements AccordionCommand<PlaybackC
 
   @override
   bool canExecute() =>
-      currentAudioTime >= 0.0 && bpm >= 30.0 && measures.isNotEmpty && chords.isNotEmpty && startOffset >= 0.0;
+      currentAudioTime >= 0.0 &&
+      bpm >= 30.0 &&
+      measures.isNotEmpty &&
+      chords.isNotEmpty &&
+      startOffset >= 0.0;
 
   @override
   void assertPreconditions() {
@@ -987,7 +1026,8 @@ class DetectPlaybackChordTransitionCommand implements AccordionCommand<PlaybackC
         : (seg.chordName.isNotEmpty ? seg.chordName : seg.chordSymbol);
 
     // Condición estricta: ÚNICAMENTE cuando hay un cambio de acorde detectable
-    final isChordChange = chordText.isNotEmpty && (chordText != lastDetectedChordText);
+    final isChordChange =
+        chordText.isNotEmpty && (chordText != lastDetectedChordText);
 
     final beatDuration = 60.0 / bpm;
     final elapsed = math.max(0.0, currentAudioTime - startOffset);
@@ -1017,7 +1057,10 @@ class DetectPlaybackChordTransitionCommand implements AccordionCommand<PlaybackC
       chord: chordText,
       isContinue: false,
     );
-    updatedMeasures[targetBar] = MeasureRow(barNumber: row.barNumber, beats: beats);
+    updatedMeasures[targetBar] = MeasureRow(
+      barNumber: row.barNumber,
+      beats: beats,
+    );
 
     final updatedMarked = Set<int>.from(markedBeats)..add(linearKey);
 
@@ -1032,7 +1075,10 @@ class DetectPlaybackChordTransitionCommand implements AccordionCommand<PlaybackC
     );
   }
 
-  DetectedChordSegment? _findSegmentForTime(List<DetectedChordSegment> segments, double time) {
+  DetectedChordSegment? _findSegmentForTime(
+    List<DetectedChordSegment> segments,
+    double time,
+  ) {
     if (segments.isEmpty) return null;
     for (final s in segments) {
       if (time >= s.startTime && time < s.endTime) {
@@ -1070,7 +1116,8 @@ class AdjustBeatOffsetCommand implements AccordionCommand<double> {
   });
 
   @override
-  bool canExecute() => currentOffset.isFinite && deltaSeconds.isFinite && minLimit <= maxLimit;
+  bool canExecute() =>
+      currentOffset.isFinite && deltaSeconds.isFinite && minLimit <= maxLimit;
 
   @override
   void assertPreconditions() {
@@ -1141,7 +1188,8 @@ class SyncBeatToAudioCommand implements AccordionCommand<double> {
     final secondsPerBeat = 60.0 / bpm;
     final relativeTime = currentAudioTime - audioStartOffset;
     final nearestBeatIndex = (relativeTime / secondsPerBeat).round();
-    final idealBeatTime = audioStartOffset + (nearestBeatIndex * secondsPerBeat);
+    final idealBeatTime =
+        audioStartOffset + (nearestBeatIndex * secondsPerBeat);
     final delta = currentAudioTime - idealBeatTime;
     return (delta * 1000.0).roundToDouble() / 1000.0;
   }
@@ -1185,9 +1233,14 @@ class ToggleBellowsCommand implements AccordionCommand<BellowsMode> {
   }
 
   void assertPostconditions(BellowsMode result) {
-    assert(result != currentMode, 'Violación {Q}: El fuelle debe alternar su dirección.');
-    assert(result == BellowsMode.push || result == BellowsMode.pull,
-        'Violación {Q}: El fuelle resultante debe ser push o pull.');
+    assert(
+      result != currentMode,
+      'Violación {Q}: El fuelle debe alternar su dirección.',
+    );
+    assert(
+      result == BellowsMode.push || result == BellowsMode.pull,
+      'Violación {Q}: El fuelle resultante debe ser push o pull.',
+    );
   }
 }
 
@@ -1230,7 +1283,8 @@ class GridChordsDeletionResult {
 ///       - `deletedCount == |{k in V : chord original no vacío}|`
 ///   - Invariante {I}: Toda celda fuera de [targetKeys] permanece intacta;
 ///     el fuelle (bellows) y el resto de campos de cada tiempo no se modifican.
-class DeleteGridChordsCommand implements AccordionCommand<GridChordsDeletionResult> {
+class DeleteGridChordsCommand
+    implements AccordionCommand<GridChordsDeletionResult> {
   @override
   String get commandName => 'DeleteGridChordsCommand';
 
@@ -1248,7 +1302,8 @@ class DeleteGridChordsCommand implements AccordionCommand<GridChordsDeletionResu
 
   @override
   bool canExecute() {
-    return (currentMeasures.isNotEmpty || targetKeys.isEmpty) && targetKeys.every((k) => k >= 0);
+    return (currentMeasures.isNotEmpty || targetKeys.isEmpty) &&
+        targetKeys.every((k) => k >= 0);
   }
 
   @override
@@ -1284,13 +1339,14 @@ class DeleteGridChordsCommand implements AccordionCommand<GridChordsDeletionResu
       final original = beats[beatIdx];
       if (original.chord.trim().isNotEmpty) deletedCount++;
       beats[beatIdx] = original.copyWith(chord: '');
-      updatedMeasures[barIdx] = MeasureRow(barNumber: row.barNumber, beats: beats);
+      updatedMeasures[barIdx] = MeasureRow(
+        barNumber: row.barNumber,
+        beats: beats,
+      );
     }
 
     final updatedMarked = Set<int>.from(currentMarkedBeats);
-    updatedMarked.removeAll(
-      targetKeys.where((k) => k >= 0 && k < totalBeats),
-    );
+    updatedMarked.removeAll(targetKeys.where((k) => k >= 0 && k < totalBeats));
 
     assertPostconditions(updatedMeasures, updatedMarked, deletedCount);
     return GridChordsDeletionResult(
@@ -1322,12 +1378,15 @@ class DeleteGridChordsCommand implements AccordionCommand<GridChordsDeletionResu
     for (var k = 0; k < totalBeats; k++) {
       if (!validTargets.contains(k)) {
         assert(
-          updatedMeasures[k ~/ 4].beats[k % 4].chord == currentMeasures[k ~/ 4].beats[k % 4].chord,
+          updatedMeasures[k ~/ 4].beats[k % 4].chord ==
+              currentMeasures[k ~/ 4].beats[k % 4].chord,
           'Violación {I}: El pulso $k fue alterado indebidamente.',
         );
       }
     }
-    assert(deletedCount >= 0 && deletedCount <= validTargets.length,
-        'Violación {Q}: deletedCount $deletedCount fuera de rango.');
+    assert(
+      deletedCount >= 0 && deletedCount <= validTargets.length,
+      'Violación {Q}: deletedCount $deletedCount fuera de rango.',
+    );
   }
 }

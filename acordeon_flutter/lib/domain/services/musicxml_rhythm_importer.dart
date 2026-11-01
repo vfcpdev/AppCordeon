@@ -66,9 +66,12 @@ class MusicXmlRhythmImporter {
             divisions = parsedDivisions;
           }
           final time = _child(attributes, 'time');
-          final parsedBeats = time == null ? null : _integerChild(time, 'beats');
-          final parsedBeatType =
-              time == null ? null : _integerChild(time, 'beat-type');
+          final parsedBeats = time == null
+              ? null
+              : _integerChild(time, 'beats');
+          final parsedBeatType = time == null
+              ? null
+              : _integerChild(time, 'beat-type');
           if (parsedBeats != null &&
               parsedBeatType != null &&
               parsedBeats > 0 &&
@@ -104,12 +107,11 @@ class MusicXmlRhythmImporter {
         var sourceOrder = 0;
         final pendingHits = <({double onset, double duration, int order})>[];
         for (final child in measure.children.whereType<XmlElement>()) {
-          if (child.name.local == 'backup' ||
-              child.name.local == 'forward') {
+          if (child.name.local == 'backup' || child.name.local == 'forward') {
             final duration = _integerChild(child, 'duration');
             if (duration == null || duration < 0) {
               throw FormatException(
-                'Duración inválida en ${partName}, compás ${measure.getAttribute('number') ?? '?'}.',
+                'Duración inválida en $partName, compás ${measure.getAttribute('number') ?? '?'}.',
               );
             }
             final shift = duration / divisions;
@@ -122,7 +124,7 @@ class MusicXmlRhythmImporter {
           final duration = _integerChild(child, 'duration');
           if (duration == null || duration <= 0) {
             throw FormatException(
-              'Nota sin duración válida en ${partName}, compás ${measure.getAttribute('number') ?? '?'}.',
+              'Nota sin duración válida en $partName, compás ${measure.getAttribute('number') ?? '?'}.',
             );
           }
 
@@ -213,8 +215,9 @@ class MusicXmlRhythmImporter {
       '64th': 0.0625,
       '128th': 0.03125,
     };
-    var quarterNotesPerBeat = beatUnitLengths[beatUnit];
-    if (quarterNotesPerBeat == null) return null;
+    final unitLength = beatUnitLengths[beatUnit];
+    if (unitLength == null) return null;
+    var quarterNotesPerBeat = unitLength;
     var dotValue = 0.5;
     for (final _ in _children(metronome, 'beat-unit-dot')) {
       quarterNotesPerBeat += quarterNotesPerBeat * dotValue;
@@ -234,14 +237,14 @@ class MusicXmlRhythmImporter {
   }
 
   static Iterable<XmlElement> _children(XmlElement element, String name) =>
-      element.children
-          .whereType<XmlElement>()
-          .where((child) => child.name.local == name);
+      element.children.whereType<XmlElement>().where(
+        (child) => child.name.local == name,
+      );
 
   static Iterable<XmlElement> _descendants(XmlElement element, String name) =>
-      element.descendants
-          .whereType<XmlElement>()
-          .where((child) => child.name.local == name);
+      element.descendants.whereType<XmlElement>().where(
+        (child) => child.name.local == name,
+      );
 
   static XmlElement? _descendant(XmlElement element, String name) {
     for (final descendant in _descendants(element, name)) {
