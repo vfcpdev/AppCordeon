@@ -78,10 +78,20 @@ class DiapasonWidget extends ConsumerWidget {
     final isFreeChordBeingEdited = ref.watch(
       accordionSimulatorProvider.select((s) => s.isFreeChordBeingEdited),
     );
+    final freeChordOctave = ref.watch(
+      accordionSimulatorProvider.select((s) => s.freeChordOctave),
+    );
 
     // Acorde activo en el Compás (seleccionado o reproduciéndose)
     final compasChord = ref.watch(
       accordionSimulatorProvider.select((s) => s.activeCompasChord),
+    );
+    final selectedChordButtonIds = _selectChordButtonIds(
+      buttons: trebleData.values.expand((row) => row),
+      pitchClasses: activeChordPitchClasses,
+      octave: freeChordOctave,
+      respectOctave:
+          isFreeChordFixed || isFreeChordBeingEdited || compasChord.isEmpty,
     );
     final formattedCompasChord = compasChord.isNotEmpty
         ? ChordCatalog.formatChordForNotation(compasChord, notation)
@@ -100,25 +110,6 @@ class DiapasonWidget extends ConsumerWidget {
             formattedCompasChord.isNotEmpty)
         ? formattedCompasChord
         : formattedFreeChord;
-    final chordPitchClasses = ChordCatalog.pitchClassesForChordSymbol(
-      chordLabel,
-    );
-    final availablePush = <int>{};
-    final availablePull = <int>{};
-    for (final row in trebleData.values) {
-      for (final button in row) {
-        availablePush.add(button.push % 12);
-        availablePull.add(button.pull % 12);
-      }
-    }
-    final missingPush = chordPitchClasses.difference(availablePush).toList()
-      ..sort();
-    final missingPull = chordPitchClasses.difference(availablePull).toList()
-      ..sort();
-    final noteNames = notation == NotationMode.alemana
-        ? ChordCatalog.germanRootNames
-        : ChordCatalog.latinRootNames;
-
     final rowList = [
       _RowDef(
         rowKey: 'row3',
@@ -305,32 +296,6 @@ class DiapasonWidget extends ConsumerWidget {
                           _ChordStructureSelector(),
                         ],
                       ),
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _MissingChordNotes(
-                              label: 'Cierra',
-                              keyName:
-                                  'diapason_chord_status_push_$accordionNumber',
-                              missingNotes: missingPush
-                                  .map((pitchClass) => noteNames[pitchClass])
-                                  .toList(),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: _MissingChordNotes(
-                              label: 'Abre',
-                              keyName:
-                                  'diapason_chord_status_pull_$accordionNumber',
-                              missingNotes: missingPull
-                                  .map((pitchClass) => noteNames[pitchClass])
-                                  .toList(),
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
@@ -353,6 +318,7 @@ class DiapasonWidget extends ConsumerWidget {
                             buttons: rDef.buttons,
                             topOffset: rDef.topOffset,
                             activeChordPitchClasses: activeChordPitchClasses,
+                            selectedChordButtonIds: selectedChordButtonIds,
                             compasChord: compasChord,
                             isFreeChordBeingEdited: isFreeChordBeingEdited,
                           ),
@@ -455,6 +421,7 @@ class DiapasonWidget extends ConsumerWidget {
     required List<TrebleButtonModel> buttons,
     required double topOffset,
     required Set<int> activeChordPitchClasses,
+    required Set<String> selectedChordButtonIds,
     required String compasChord,
     required bool isFreeChordBeingEdited,
   }) {
@@ -520,9 +487,11 @@ class DiapasonWidget extends ConsumerWidget {
           }
 
           final isChordPull =
+              selectedChordButtonIds.contains(btn.id) &&
               activeChordPitchClasses.contains(btn.pull % 12) &&
               matchesOctave(btn.pull);
           final isChordPush =
+              selectedChordButtonIds.contains(btn.id) &&
               activeChordPitchClasses.contains(btn.push % 12) &&
               matchesOctave(btn.push);
 
@@ -558,6 +527,35 @@ class DiapasonWidget extends ConsumerWidget {
         }),
       ],
     );
+  }
+
+  Set<String> _selectChordButtonIds({
+    required Iterable<TrebleButtonModel> buttons,
+    required Set<int> pitchClasses,
+    required String octave,
+    required bool respectOctave,
+  }) {
+    final selectedButtonIds = <String>{};
+    final availableButtons = buttons.toList();
+
+    for (final pitchClass in pitchClasses) {
+      for (final button in availableButtons) {
+        if (selectedButtonIds.contains(button.id)) continue;
+
+        bool matchesNote(int midi) {
+          if (midi % 12 != pitchClass) return false;
+          if (!respectOctave || octave == 'all' || octave.isEmpty) return true;
+          return '${(midi / 12).floor() - 1}' == octave;
+        }
+
+        if (matchesNote(button.push) || matchesNote(button.pull)) {
+          selectedButtonIds.add(button.id);
+          break;
+        }
+      }
+    }
+
+    return selectedButtonIds;
   }
 }
 
@@ -637,50 +635,6 @@ class _ChordStructureSelector extends ConsumerWidget {
               fontSize: 8,
               fontWeight: FontWeight.w900,
               color: isSelected ? Colors.white : const Color(0xFF9A3412),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MissingChordNotes extends StatelessWidget {
-  const _MissingChordNotes({
-    required this.label,
-    required this.keyName,
-    required this.missingNotes,
-  });
-
-  final String label;
-  final String keyName;
-  final List<String> missingNotes;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasMissingNotes = missingNotes.isNotEmpty;
-    final color = hasMissingNotes
-        ? const Color(0xFFDC2626)
-        : const Color(0xFF15803D);
-    final status = hasMissingNotes
-        ? '$label, faltan: ${missingNotes.join('·')}'
-        : '$label: —';
-
-    return Tooltip(
-      message: status,
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            status,
-            key: ValueKey(keyName),
-            maxLines: 1,
-            style: TextStyle(
-              color: color,
-              fontSize: 7.5,
-              fontWeight: FontWeight.w800,
             ),
           ),
         ),

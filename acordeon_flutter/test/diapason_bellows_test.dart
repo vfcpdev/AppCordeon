@@ -33,6 +33,10 @@ void main() {
     final container = ProviderScope.containerOf(
       tester.element(find.byType(DiapasonWidget)),
     );
+    int highlightedButtonCount() => tester
+        .widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget))
+        .where((button) => button.isChordPull || button.isChordPush)
+        .length;
 
     expect(
       find.byKey(const ValueKey('diapason_structure_selector')),
@@ -69,6 +73,7 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(highlightedButtonCount(), 3);
 
     await tester.tap(find.byKey(const ValueKey('diapason_structure_seventh')));
     await tester.pumpAndSettle();
@@ -76,6 +81,7 @@ void main() {
       container.read(accordionSimulatorProvider).freeChordScaleHarmonicMode,
       'seventh',
     );
+    expect(highlightedButtonCount(), 4);
 
     await tester.tap(find.byKey(const ValueKey('diapason_structure_triad')));
     await tester.pumpAndSettle();
@@ -83,6 +89,7 @@ void main() {
       container.read(accordionSimulatorProvider).freeChordScaleHarmonicMode,
       'triad',
     );
+    expect(highlightedButtonCount(), 3);
 
     await tester.tap(find.byKey(const ValueKey('diapason_structure_five')));
     await tester.pumpAndSettle();
@@ -95,6 +102,15 @@ void main() {
       ),
       [60, 64, 67, 70, 74],
     );
+    expect(highlightedButtonCount(), 5);
+    expect(
+      find.byKey(const ValueKey('diapason_chord_status_push_1')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('diapason_chord_status_pull_1')),
+      findsNothing,
+    );
     expect(
       tester
           .widget<Text>(find.byKey(const ValueKey('diapason_chord_label_1')))
@@ -104,48 +120,7 @@ void main() {
     );
     final fiveNoteChordPcs = ChordCatalog.pitchClassesForChordSymbol('Do9');
     final fiveNoteChordState = container.read(accordionSimulatorProvider);
-    final pushPcs = fiveNoteChordState.trebleData1.values
-        .expand((row) => row)
-        .map((button) => button.push % 12)
-        .toSet();
-    final pullPcs = fiveNoteChordState.trebleData1.values
-        .expand((row) => row)
-        .map((button) => button.pull % 12)
-        .toSet();
-    final expectedPushMissing = fiveNoteChordPcs.difference(pushPcs).toList()
-      ..sort();
-    final expectedPullMissing = fiveNoteChordPcs.difference(pullPcs).toList()
-      ..sort();
-    final pushStatus = tester.widget<Text>(
-      find.byKey(const ValueKey('diapason_chord_status_push_1')),
-    );
-    final pullStatus = tester.widget<Text>(
-      find.byKey(const ValueKey('diapason_chord_status_pull_1')),
-    );
-    expect(
-      pushStatus.data,
-      expectedPushMissing.isEmpty
-          ? 'Cierra: —'
-          : 'Cierra, faltan: ${expectedPushMissing.map((pc) => ChordCatalog.latinRootNames[pc]).join('·')}',
-    );
-    expect(
-      pullStatus.data,
-      expectedPullMissing.isEmpty
-          ? 'Abre: —'
-          : 'Abre, faltan: ${expectedPullMissing.map((pc) => ChordCatalog.latinRootNames[pc]).join('·')}',
-    );
-    expect(
-      pushStatus.style?.color,
-      expectedPushMissing.isEmpty
-          ? const Color(0xFF15803D)
-          : const Color(0xFFDC2626),
-    );
-    expect(
-      pullStatus.style?.color,
-      expectedPullMissing.isEmpty
-          ? const Color(0xFF15803D)
-          : const Color(0xFFDC2626),
-    );
+    expect(highlightedButtonCount(), fiveNoteChordPcs.length);
     expect(find.textContaining('completo'), findsNothing);
     expect(find.textContaining('incompleto'), findsNothing);
   });
