@@ -5,6 +5,7 @@ import 'package:acordeon_flutter/domain/theory/chord_catalog.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/free_chord_widget.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
+import 'package:acordeon_flutter/presentation/widgets/measure_grid_with_chord_quality_widget.dart';
 
 void main() {
   testWidgets('la sección de acordes no muestra botones de tónica', (
@@ -58,7 +59,7 @@ void main() {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(width: 280, child: FreeChordWidget()),
-                  MeasureGridWidget(width: 185),
+                  MeasureGridWithChordQualityWidget(width: 185),
                 ],
               ),
             ),
@@ -68,7 +69,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final container = ProviderScope.containerOf(
-        tester.element(find.byType(MeasureGridWidget)),
+        tester.element(find.byType(MeasureGridWithChordQualityWidget)),
       );
       final qualityKeys = [
         'chord_quality_maj',
@@ -89,6 +90,30 @@ void main() {
         find.byKey(const ValueKey('tonic_matrix_btn_0')),
       );
       expect(firstQuality.dy, closeTo(firstTonic.dy, 1));
+      final compasCardRect = tester.getRect(
+        find.byKey(const ValueKey('measure_grid_section_card')),
+      );
+      final qualityRect = tester.getRect(
+        find.byKey(const ValueKey('chord_quality_maj')),
+      );
+      final layoutRect = tester.getRect(
+        find.byKey(const ValueKey('measure_grid_with_chord_quality_1')),
+      );
+      expect(
+        qualityRect.left,
+        allOf(
+          greaterThan(compasCardRect.right),
+          lessThanOrEqualTo(compasCardRect.right + 6),
+        ),
+      );
+      expect(qualityRect.right, lessThanOrEqualTo(layoutRect.right));
+      expect(
+        find.ancestor(
+          of: find.byKey(const ValueKey('chord_quality_maj')),
+          matching: find.byKey(const ValueKey('measure_grid_section_card')),
+        ),
+        findsNothing,
+      );
       expect(
         tester.getTopLeft(find.byKey(const ValueKey('chord_quality_sus4'))).dy,
         greaterThan(

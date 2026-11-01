@@ -7,7 +7,6 @@ import '../../core/constants/layout_constants.dart';
 import '../../core/di/providers.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
-import 'chord_quality_selector_widget.dart';
 import 'chord_detector_widget.dart';
 import 'tonic_notes_matrix_widget.dart';
 
@@ -15,12 +14,14 @@ class MeasureGridWidget extends ConsumerStatefulWidget {
   final int accordionNumber;
   final double? width;
   final bool isUndocked;
+  final LayerLink? chordQualityLink;
 
   const MeasureGridWidget({
     super.key,
     this.accordionNumber = 1,
     this.width,
     this.isUndocked = false,
+    this.chordQualityLink,
   });
 
   @override
@@ -90,13 +91,13 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         _autoScrollTargetBar != null ||
         nextBar >= state.measures.length) {
       return;
-      }
+    }
     _animatePlaybackScroll(
       targetBar: nextBar,
       targetOffset: target,
       duration: _playbackScrollDuration(state),
-        );
-      }
+    );
+  }
 
   Duration _playbackScrollDuration(AccordionSimulatorState state) {
     final bpm = state.audioReport?.bpm ?? 120;
@@ -159,8 +160,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
     final isUndocked =
         widget.isUndocked ||
         (widget.accordionNumber == 1
-        ? state.isCompas1Undocked
-        : state.isCompas2Undocked);
+            ? state.isCompas1Undocked
+            : state.isCompas2Undocked);
 
     // Detectar si hay un acorde seleccionado en algún cuadro del compás o en el constructor
     final selectedBar = state.selectedBarIndex;
@@ -193,7 +194,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         selectedBeat < state.measures[selectedBar].beats.length;
     final markedCount = state.markedBeats.length;
     final insertTargetLabel = hasSelectedCell
-            ? 'Compás ${selectedBar + 1} · Tiempo ${selectedBeat + 1}'
+        ? 'Compás ${selectedBar + 1} · Tiempo ${selectedBeat + 1}'
         : 'sin casilla seleccionada';
     final canInsertChord = constructorChord.isNotEmpty && hasSelectedCell;
     final canAssignToMarkedBeats =
@@ -236,6 +237,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
               return KeyEventResult.ignored;
             },
             child: Container(
+              key: const ValueKey('measure_grid_section_card'),
               width: effectiveWidth,
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
@@ -435,23 +437,23 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                         bottom: BorderSide(color: Color(0xFFE2E8F0)),
                       ),
                     ),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  width: effectiveWidth > 150 ? effectiveWidth : 180,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Botones de Guardar (JSON), Importar (JSON) y Editar — aumentados 50%
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Tooltip(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        width: effectiveWidth > 150 ? effectiveWidth : 180,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Botones de Guardar (JSON), Importar (JSON) y Editar — aumentados 50%
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Tooltip(
                                   message:
                                       'Guardar compases en JSON (Exportar)',
-                            child: InkWell(
-                              onTap: () async {
+                                  child: InkWell(
+                                    onTap: () async {
                                       final jsonStr = notifier
                                           .exportMeasuresToJson();
                                       final storage = ref.read(
@@ -459,44 +461,44 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       );
                                       final timestamp =
                                           DateTime.now().millisecondsSinceEpoch;
-                                await storage.saveFile(
-                                  fileName: 'compases_$timestamp.json',
-                                  content: jsonStr,
-                                );
-                                if (context.mounted) {
+                                      await storage.saveFile(
+                                        fileName: 'compases_$timestamp.json',
+                                        content: jsonStr,
+                                      );
+                                      if (context.mounted) {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
-                                    const SnackBar(
+                                          const SnackBar(
                                             content: Text(
                                               'Compases guardados en formato JSON.',
                                             ),
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              },
-                              borderRadius: BorderRadius.circular(5),
-                              child: Container(
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    borderRadius: BorderRadius.circular(5),
+                                    child: Container(
                                       padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF0284C7),
-                                  borderRadius: BorderRadius.circular(5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF0284C7),
+                                        borderRadius: BorderRadius.circular(5),
+                                      ),
+                                      child: const FaIcon(
+                                        FontAwesomeIcons.floppyDisk,
+                                        size: 13.5,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                                child: const FaIcon(
-                                  FontAwesomeIcons.floppyDisk,
-                                  size: 13.5,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
                                 const SizedBox(width: 3),
-                          Tooltip(
+                                Tooltip(
                                   message:
                                       'Importar compases desde archivo JSON',
-                            child: InkWell(
-                              onTap: () async {
+                                  child: InkWell(
+                                    onTap: () async {
                                       final storage = ref.read(
                                         fileStorageProvider,
                                       );
@@ -508,56 +510,56 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                           content.isNotEmpty) {
                                         final success = notifier
                                             .loadMeasuresFromJson(content);
-                                  if (context.mounted) {
+                                        if (context.mounted) {
                                           ScaffoldMessenger.of(
                                             context,
                                           ).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          success
-                                              ? 'Compases restaurados exitosamente desde JSON.'
-                                              : 'Error al importar: archivo JSON no válido.',
-                                        ),
+                                            SnackBar(
+                                              content: Text(
+                                                success
+                                                    ? 'Compases restaurados exitosamente desde JSON.'
+                                                    : 'Error al importar: archivo JSON no válido.',
+                                              ),
                                               duration: const Duration(
                                                 seconds: 2,
                                               ),
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                              borderRadius: BorderRadius.circular(5),
-                              child: Container(
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    borderRadius: BorderRadius.circular(5),
+                                    child: Container(
                                       padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF059669),
-                                  borderRadius: BorderRadius.circular(5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF059669),
+                                        borderRadius: BorderRadius.circular(5),
+                                      ),
+                                      child: const FaIcon(
+                                        FontAwesomeIcons.upload,
+                                        size: 13.5,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                                child: const FaIcon(
-                                  FontAwesomeIcons.upload,
-                                  size: 13.5,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
                                 const SizedBox(width: 3),
-                          // Botón de edición a la derecha de importar compás
-                          Tooltip(
-                            message: isEditActive
-                                ? 'Editar asignación múltiple de $chordToEdit'
-                                : 'Selecciona un acorde en el compás para editarlo',
-                            child: InkWell(
+                                // Botón de edición a la derecha de importar compás
+                                Tooltip(
+                                  message: isEditActive
+                                      ? 'Editar asignación múltiple de $chordToEdit'
+                                      : 'Selecciona un acorde en el compás para editarlo',
+                                  child: InkWell(
                                     key: const ValueKey(
                                       'edit_multi_beat_chord_btn',
                                     ),
-                              onTap: isEditActive
-                                  ? () {
-                                      final targetChord = chordToEdit;
+                                    onTap: isEditActive
+                                        ? () {
+                                            final targetChord = chordToEdit;
                                             if (targetChord == null ||
                                                 targetChord.isEmpty)
                                               return;
-                                      final positions = <String>[];
+                                            final positions = <String>[];
                                             for (
                                               var m = 0;
                                               m < state.measures.length;
@@ -581,92 +583,92 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                                   positions.add(
                                                     '${m + 1}.${b + 1}',
                                                   );
+                                                }
+                                              }
+                                            }
+                                            notifier.openMultiBeatModalForChord(
+                                              targetChord,
+                                              pattern: positions.join(', '),
+                                            );
                                           }
-                                        }
-                                      }
-                                      notifier.openMultiBeatModalForChord(
-                                        targetChord,
-                                        pattern: positions.join(', '),
-                                      );
-                                    }
-                                  : null,
-                              borderRadius: BorderRadius.circular(5),
-                              child: Container(
+                                        : null,
+                                    borderRadius: BorderRadius.circular(5),
+                                    child: Container(
                                       padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: isEditActive
-                                      ? const Color(0xFF8B5CF6)
-                                      : const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(5),
-                                  border: Border.all(
-                                    color: isEditActive
-                                        ? const Color(0xFF7C3AED)
-                                        : const Color(0xFFCBD5E1),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: FaIcon(
-                                  FontAwesomeIcons.penToSquare,
-                                  size: 13.5,
+                                      decoration: BoxDecoration(
+                                        color: isEditActive
+                                            ? const Color(0xFF8B5CF6)
+                                            : const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(5),
+                                        border: Border.all(
+                                          color: isEditActive
+                                              ? const Color(0xFF7C3AED)
+                                              : const Color(0xFFCBD5E1),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: FaIcon(
+                                        FontAwesomeIcons.penToSquare,
+                                        size: 13.5,
                                         color: isEditActive
                                             ? Colors.white
                                             : const Color(0xFF94A3B8),
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ),
                                 const SizedBox(width: 3),
-                          Tooltip(
-                            message: canInsertChord
-                                ? 'Agregar $constructorChord a $insertTargetLabel'
-                                : 'Selecciona un acorde y una casilla del Compás',
-                            child: InkWell(
+                                Tooltip(
+                                  message: canInsertChord
+                                      ? 'Agregar $constructorChord a $insertTargetLabel'
+                                      : 'Selecciona un acorde y una casilla del Compás',
+                                  child: InkWell(
                                     key: const ValueKey(
                                       'insert_chord_to_compas_btn',
                                     ),
-                              onTap: canInsertChord
-                                  ? () {
+                                    onTap: canInsertChord
+                                        ? () {
                                             final symbol = notifier
                                                 .insertFreeChordIntoSelectedCell();
-                                      if (symbol == null) return;
-                                      ScaffoldMessenger.of(context)
-                                        ..hideCurrentSnackBar()
-                                        ..showSnackBar(
-                                          SnackBar(
+                                            if (symbol == null) return;
+                                            ScaffoldMessenger.of(context)
+                                              ..hideCurrentSnackBar()
+                                              ..showSnackBar(
+                                                SnackBar(
                                                   content: Text(
                                                     '$symbol → $insertTargetLabel',
                                                   ),
                                                   duration: const Duration(
                                                     milliseconds: 1400,
                                                   ),
-                                          ),
-                                        );
-                                    }
-                                  : null,
-                              borderRadius: BorderRadius.circular(5),
-                              child: Container(
+                                                ),
+                                              );
+                                          }
+                                        : null,
+                                    borderRadius: BorderRadius.circular(5),
+                                    child: Container(
                                       padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: canInsertChord
-                                      ? const Color(0xFF16A34A)
-                                      : const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(5),
-                                  border: Border.all(
-                                    color: canInsertChord
-                                        ? const Color(0xFF16A34A)
-                                        : const Color(0xFFCBD5E1),
+                                      decoration: BoxDecoration(
+                                        color: canInsertChord
+                                            ? const Color(0xFF16A34A)
+                                            : const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(5),
+                                        border: Border.all(
+                                          color: canInsertChord
+                                              ? const Color(0xFF16A34A)
+                                              : const Color(0xFFCBD5E1),
+                                        ),
+                                      ),
+                                      child: FaIcon(
+                                        FontAwesomeIcons.plus,
+                                        size: 13.5,
+                                        color: canInsertChord
+                                            ? Colors.white
+                                            : const Color(0xFF94A3B8),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                                child: FaIcon(
-                                  FontAwesomeIcons.plus,
-                                  size: 13.5,
-                                  color: canInsertChord
-                                      ? Colors.white
-                                      : const Color(0xFF94A3B8),
-                                ),
-                              ),
-                            ),
-                          ),
                                 const SizedBox(width: 3),
                                 Tooltip(
                                   message: canAssignToMarkedBeats
@@ -719,300 +721,306 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                     ),
                                   ),
                                 ),
-                        ],
-                      ),
+                              ],
+                            ),
 
-                  // Botón de borrado, casilla de selección masiva contigua y desmarcado.
-                  // Si la casilla está marcada, borrar elimina todos los acordes;
-                  // en caso contrario, solo los de las casillas marcadas.
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (hasMarks) ...[
-                        _DeleteAllChordsButton(
-                          tooltip: allMarked
-                              ? 'Borrar todos los acordes (casilla marcada)'
-                              : 'Borrar acordes de las casillas marcadas',
-                          onTap: () {
-                            final deleted = allMarked
-                                ? notifier.deleteAllGridChords()
-                                : notifier.deleteMarkedGridChords();
+                            // Botón de borrado, casilla de selección masiva contigua y desmarcado.
+                            // Si la casilla está marcada, borrar elimina todos los acordes;
+                            // en caso contrario, solo los de las casillas marcadas.
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (hasMarks) ...[
+                                  _DeleteAllChordsButton(
+                                    tooltip: allMarked
+                                        ? 'Borrar todos los acordes (casilla marcada)'
+                                        : 'Borrar acordes de las casillas marcadas',
+                                    onTap: () {
+                                      final deleted = allMarked
+                                          ? notifier.deleteAllGridChords()
+                                          : notifier.deleteMarkedGridChords();
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  allMarked
-                                      ? (deleted > 0
-                                          ? 'Acordes borrados de la cuadrícula.'
-                                          : 'La cuadrícula ya está vacía.')
-                                      : (deleted > 0
-                                          ? 'Se borraron $deleted acordes de las casillas marcadas.'
-                                          : 'No hay casillas marcadas para borrar.'),
+                                        SnackBar(
+                                          content: Text(
+                                            allMarked
+                                                ? (deleted > 0
+                                                      ? 'Acordes borrados de la cuadrícula.'
+                                                      : 'La cuadrícula ya está vacía.')
+                                                : (deleted > 0
+                                                      ? 'Se borraron $deleted acordes de las casillas marcadas.'
+                                                      : 'No hay casillas marcadas para borrar.'),
+                                          ),
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(width: 3),
+                                ],
+                                // Casilla al lado del botón borrar: marcada => borrar todo
+                                _SelectAllBeatsButton(
+                                  key: const ValueKey('select_all_beats_btn'),
+                                  allMarked: allMarked,
+                                  onTap: notifier.toggleAllBeatMarks,
                                 ),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                          },
+                                if (hasMarks) ...[
+                                  const SizedBox(width: 3),
+                                  // Desmarcar todas las casillas seleccionadas
+                                  _ClearMarksButton(
+                                    onTap: notifier.clearBeatMarks,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 3),
-                      ],
-                      // Casilla al lado del botón borrar: marcada => borrar todo
-                      _SelectAllBeatsButton(
-                        key: const ValueKey('select_all_beats_btn'),
-                        allMarked: allMarked,
-                        onTap: notifier.toggleAllBeatMarks,
                       ),
-                      if (hasMarks) ...[
-                        const SizedBox(width: 3),
-                        // Desmarcar todas las casillas seleccionadas
-                        _ClearMarksButton(
-                          onTap: notifier.clearBeatMarks,
-                        ),
-                      ],
+                    ),
+                  ),
+
+                  // Matriz de botones de Tónica: 2 filas por 6 columnas (debajo de guardar / importar compás)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: widget.chordQualityLink == null
+                            ? const TonicNotesMatrixWidget()
+                            : CompositedTransformTarget(
+                                link: widget.chordQualityLink!,
+                                child: const TonicNotesMatrixWidget(),
+                              ),
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          ),
-        ),
 
-          // Matriz de botones de Tónica: 2 filas por 6 columnas (debajo de guardar / importar compás)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Expanded(child: TonicNotesMatrixWidget()),
-              ChordQualitySelectorWidget(),
-            ],
-          ),
-
-          if (state.yellowDecisionBeats.isNotEmpty)
-            Container(
+                  if (state.yellowDecisionBeats.isNotEmpty)
+                    Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 5,
                         vertical: 3,
                       ),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFEF9C3),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFEF9C3),
                         border: Border(
                           bottom: BorderSide(color: Color(0xFFFDE047)),
                         ),
-              ),
-              child: Row(
-                children: [
+                      ),
+                      child: Row(
+                        children: [
                           const Icon(
                             Icons.warning_amber_rounded,
                             size: 11,
                             color: Color(0xFFB45309),
                           ),
-                  const SizedBox(width: 3),
-                  Expanded(
-                    child: Text(
-                      '${state.yellowDecisionBeats.length} acordes abren o cierran',
-                      style: const TextStyle(
-                        fontSize: 8.0,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF92400E),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  InkWell(
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(
+                              '${state.yellowDecisionBeats.length} acordes abren o cierran',
+                              style: const TextStyle(
+                                fontSize: 8.0,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF92400E),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          InkWell(
                             key: ValueKey(
                               'apply_yellow_pull_quick_${widget.accordionNumber}',
                             ),
-                    onTap: () {
+                            onTap: () {
                               final n = notifier.applyYellowDecision(
                                 BellowsMode.pull,
                               );
-                      ScaffoldMessenger.of(context).showSnackBar(
+                              ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
                                     '$n acordes asignados a Abre (←)',
                                   ),
                                   duration: const Duration(seconds: 2),
                                 ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(3),
-                    child: Container(
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(3),
+                            child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 4,
                                 vertical: 1.5,
                               ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(3),
                                 border: Border.all(
                                   color: const Color(0xFF3B82F6),
                                   width: 0.8,
                                 ),
-                      ),
-                      child: const Text(
-                        'Abre',
+                              ),
+                              child: const Text(
+                                'Abre',
                                 style: TextStyle(
                                   fontSize: 7.5,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF1D4ED8),
                                 ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                  InkWell(
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          InkWell(
                             key: ValueKey(
                               'apply_yellow_push_quick_${widget.accordionNumber}',
                             ),
-                    onTap: () {
+                            onTap: () {
                               final n = notifier.applyYellowDecision(
                                 BellowsMode.push,
                               );
-                      ScaffoldMessenger.of(context).showSnackBar(
+                              ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
                                     '$n acordes asignados a Cierra (→)',
                                   ),
                                   duration: const Duration(seconds: 2),
                                 ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(3),
-                    child: Container(
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(3),
+                            child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 4,
                                 vertical: 1.5,
                               ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(3),
                                 border: Border.all(
                                   color: const Color(0xFFEF4444),
                                   width: 0.8,
                                 ),
-                      ),
-                      child: const Text(
-                        'Cierra',
+                              ),
+                              child: const Text(
+                                'Cierra',
                                 style: TextStyle(
                                   fontSize: 7.5,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFFB91C1C),
                                 ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          Padding(
+                  Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 3.0,
                       vertical: 4.0,
                     ),
-            child: Container(
-              constraints: const BoxConstraints(maxHeight: 330),
-              child: RawScrollbar(
-                controller: _compasScrollController,
-                thumbVisibility: true,
-                trackVisibility: true,
+                    child: Container(
+                      constraints: const BoxConstraints(maxHeight: 330),
+                      child: RawScrollbar(
+                        controller: _compasScrollController,
+                        thumbVisibility: true,
+                        trackVisibility: true,
                         thickness:
                             8.0, // Aumentado ~30% sobre el grosor estándar (6.0px -> 8.0px)
-                radius: const Radius.circular(4),
-                thumbColor: const Color(0xFF94A3B8),
-                trackColor: const Color(0xFFF1F5F9),
-                trackBorderColor: const Color(0xFFE2E8F0),
-                padding: EdgeInsets.zero,
-                child: ListView.builder(
-                  controller: _compasScrollController,
-                  padding: const EdgeInsets.only(right: 12),
-                  shrinkWrap: true,
-                  itemCount: state.measures.length,
-                  itemBuilder: (context, mIdx) {
-                    final measure = state.measures[mIdx];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 5),
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(6),
+                        radius: const Radius.circular(4),
+                        thumbColor: const Color(0xFF94A3B8),
+                        trackColor: const Color(0xFFF1F5F9),
+                        trackBorderColor: const Color(0xFFE2E8F0),
+                        padding: EdgeInsets.zero,
+                        child: ListView.builder(
+                          controller: _compasScrollController,
+                          padding: const EdgeInsets.only(right: 12),
+                          shrinkWrap: true,
+                          itemCount: state.measures.length,
+                          itemBuilder: (context, mIdx) {
+                            final measure = state.measures[mIdx];
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 5),
+                              clipBehavior: Clip.antiAlias,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
                                   color: const Color(0xFFCBD5E1),
                                 ),
-                      ),
-                      child: Row(
-                        children: [
-                          // Checkbox de marcado del compás, a la izquierda del
-                          // número: marca o desmarca los 4 tiempos del compás.
-                          Container(
-                            width: 15,
-                            height: CompasCardMetrics.beatCellHeight,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
-                              border: Border(
+                              ),
+                              child: Row(
+                                children: [
+                                  // Checkbox de marcado del compás, a la izquierda del
+                                  // número: marca o desmarca los 4 tiempos del compás.
+                                  Container(
+                                    width: 15,
+                                    height: CompasCardMetrics.beatCellHeight,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFF1F5F9),
+                                      border: Border(
                                         right: BorderSide(
                                           color: Color(0xFFE2E8F0),
                                         ),
-                              ),
-                            ),
-                            child: Center(
-                              child: _BeatMarkCheckbox(
-                                key: ValueKey('measure_checkbox_$mIdx'),
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: _BeatMarkCheckbox(
+                                        key: ValueKey('measure_checkbox_$mIdx'),
                                         isChecked: notifier.isMeasureMarked(
                                           mIdx,
                                         ),
                                         onTap: () =>
                                             notifier.toggleMeasureMark(mIdx),
-                              ),
-                            ),
-                          ),
+                                      ),
+                                    ),
+                                  ),
 
-                          // Número de compás
-                          Container(
-                            width: 18,
-                            height: CompasCardMetrics.beatCellHeight,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
+                                  // Número de compás
+                                  Container(
+                                    width: 18,
+                                    height: CompasCardMetrics.beatCellHeight,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFF1F5F9),
                                       border: Border(
                                         right: BorderSide(
                                           color: Color(0xFFCBD5E1),
                                         ),
                                       ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${measure.barNumber}',
-                                style: const TextStyle(
-                                  fontSize: 9.0,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                            ),
-                          ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '${measure.barNumber}',
+                                        style: const TextStyle(
+                                          fontSize: 9.0,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
 
-                          // 4 Cuadros del compás en fila horizontal, uno al lado
-                          // del otro; separados por un hueco que deja ver el
-                          // fondo del compás como divisor entre cuadros.
-                          Expanded(
-                            child: Row(
-                              children: [
+                                  // 4 Cuadros del compás en fila horizontal, uno al lado
+                                  // del otro; separados por un hueco que deja ver el
+                                  // fondo del compás como divisor entre cuadros.
+                                  Expanded(
+                                    child: Row(
+                                      children: [
                                         for (final entry
                                             in measure.beats
                                                 .asMap()
                                                 .entries) ...[
                                           if (entry.key > 0)
                                             const SizedBox(width: 1),
-                                  Expanded(
-                                    child: _InlineBeatChordEditor(
+                                          Expanded(
+                                            child: _InlineBeatChordEditor(
                                               accordionId:
                                                   widget.accordionNumber,
-                                      measureIndex: mIdx,
-                                      beatIndex: entry.key,
+                                              measureIndex: mIdx,
+                                              beatIndex: entry.key,
                                               totalMeasures:
                                                   state.measures.length,
-                                      chord: entry.value.chord,
-                                      timeText: entry.value.timeText,
-                                      bellows: entry.value.bellows,
+                                              chord: entry.value.chord,
+                                              timeText: entry.value.timeText,
+                                              bellows: entry.value.bellows,
                                               isCurrentPlayhead:
                                                   state.isPlayingAudio &&
                                                   state.selectedBarIndex ==
@@ -1033,14 +1041,14 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                                       mIdx &&
                                                   state.selectedBeatIndex ==
                                                       entry.key,
-                                      notation: state.notation,
-                                      onChanged: (newChord) {
+                                              notation: state.notation,
+                                              onChanged: (newChord) {
                                                 notifier.updateMeasureBeat(
                                                   mIdx,
                                                   entry.key,
                                                   newChord,
                                                 );
-                                      },
+                                              },
                                               onCopy: () =>
                                                   notifier.copyChordFromBeat(
                                                     mIdx,
@@ -1048,113 +1056,113 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                                   ),
                                               onPaste: () =>
                                                   notifier.copiedChord,
-                                      onSelected: () {
+                                              onSelected: () {
                                                 notifier.selectBeat(
                                                   mIdx,
                                                   entry.key,
                                                 );
-                                      },
-                                      onNavigate: (bar, beat) {
-                                        notifier.selectBeat(bar, beat);
-                                        _scrollToBar(bar);
-                                      },
-                                      onBellowsChanged: (bellows) {
+                                              },
+                                              onNavigate: (bar, beat) {
+                                                notifier.selectBeat(bar, beat);
+                                                _scrollToBar(bar);
+                                              },
+                                              onBellowsChanged: (bellows) {
                                                 notifier.setBeatBellows(
                                                   mIdx,
                                                   entry.key,
                                                   bellows,
                                                 );
-                                      },
+                                              },
                                               onLiveMarker: () => notifier
                                                   .markLiveChordChange(),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                   ),
                                 ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-
-          // Volumen propio del Compás (pista + acordes marcados)
-          Container(
-            padding: const EdgeInsets.fromLTRB(6, 1, 6, 4),
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-              ),
-              child: Row(
-                children: [
-                  const FaIcon(
-                    FontAwesomeIcons.volumeLow,
-                    size: 9,
-                    color: Color(0xFF0284C7),
-                  ),
-                  const SizedBox(width: 2),
-                  Expanded(
-                    child: SizedBox(
-                      height: 20,
-                      child: SliderTheme(
-                        data: SliderThemeData(
-                          trackHeight: 3,
-                          thumbShape: const RoundSliderThumbShape(
-                            enabledThumbRadius: 5,
-                          ),
-                          overlayShape: const RoundSliderOverlayShape(
-                            overlayRadius: 8,
-                          ),
-                          activeTrackColor: const Color(0xFF0284C7),
-                          inactiveTrackColor: const Color(0xFFCBD5E1),
-                          thumbColor: const Color(0xFF0284C7),
-                        ),
-                        child: Slider(
-                          value: state.compasVolume,
-                          min: 0.0,
-                          max: 1.0,
-                          onChanged: notifier.setCompasVolume,
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
                   ),
-                  SizedBox(
-                    width: 22,
-                    child: Text(
-                      '${(state.compasVolume * 100).toInt()}%',
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF64748B),
-                      ),
+
+                  // Volumen propio del Compás (pista + acordes marcados)
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(6, 1, 6, 4),
+                    decoration: const BoxDecoration(
+                      border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                    ),
+                    child: Row(
+                      children: [
+                        const FaIcon(
+                          FontAwesomeIcons.volumeLow,
+                          size: 9,
+                          color: Color(0xFF0284C7),
+                        ),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: SizedBox(
+                            height: 20,
+                            child: SliderTheme(
+                              data: SliderThemeData(
+                                trackHeight: 3,
+                                thumbShape: const RoundSliderThumbShape(
+                                  enabledThumbRadius: 5,
+                                ),
+                                overlayShape: const RoundSliderOverlayShape(
+                                  overlayRadius: 8,
+                                ),
+                                activeTrackColor: const Color(0xFF0284C7),
+                                inactiveTrackColor: const Color(0xFFCBD5E1),
+                                thumbColor: const Color(0xFF0284C7),
+                              ),
+                              child: Slider(
+                                value: state.compasVolume,
+                                min: 0.0,
+                                max: 1.0,
+                                onChanged: notifier.setCompasVolume,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 22,
+                          child: Text(
+                            '${(state.compasVolume * 100).toInt()}%',
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 6),
+
+          // Sección de Información debajo de la ventana de Compás:
+          // Informa si el acorde está completo o incompleto según el fuelle (Abre y Cierra)
+          _buildChordBellowsInfoCard(context, state, effectiveWidth),
+
+          if (isPrimary) ...[
+            const SizedBox(height: 6),
+            // Sección de Detector de Acordes debajo de Estado del Acorde (desacoplable)
+            if (!state.isChordDetectorUndocked)
+              ChordDetectorWidget(width: effectiveWidth)
+            else
+              _buildDetectorDockPlaceholder(context, effectiveWidth, notifier),
+          ],
         ],
-      ),
-    ),
-  ),
-    const SizedBox(height: 6),
-
-    // Sección de Información debajo de la ventana de Compás:
-    // Informa si el acorde está completo o incompleto según el fuelle (Abre y Cierra)
-    _buildChordBellowsInfoCard(context, state, effectiveWidth),
-
-    if (isPrimary) ...[
-      const SizedBox(height: 6),
-      // Sección de Detector de Acordes debajo de Estado del Acorde (desacoplable)
-      if (!state.isChordDetectorUndocked)
-        ChordDetectorWidget(width: effectiveWidth)
-      else
-        _buildDetectorDockPlaceholder(context, effectiveWidth, notifier),
-    ],
-  ],
       ),
     );
   }
@@ -1692,13 +1700,13 @@ class _BpmInputControlState extends State<_BpmInputControl> {
 
 /// Modificadores de cualidad y extensión armónica para digitación rápida
 enum _ChordModKey {
-  mayor,      // '0'
-  menor,      // '.' o ','
-  septima,    // '/'
-  aumentada,  // '+'
+  mayor, // '0'
+  menor, // '.' o ','
+  septima, // '/'
+  aumentada, // '+'
   disminuida, // '-'
-  sus,        // '8'
-  cuarta,     // '9'
+  sus, // '8'
+  cuarta, // '9'
 }
 
 class _ChordTools {
@@ -2298,17 +2306,17 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                 : (_isEditing
                       ? Colors
                             .white // Fondo blanco limpio al editar
-                    : (isPlaying
-                        ? const Color(0xFFFEF3C7)
-                        : (widget.isYellowDecision
+                      : (isPlaying
+                            ? const Color(0xFFFEF3C7)
+                            : (widget.isYellowDecision
                                   ? const Color(
                                       0xFFFEF08A,
                                     ) // Resaltado amarillo para decidir fuelle
-                            : (isMarked
+                                  : (isMarked
                                         ? const Color(
                                             0xFFF0FDF4,
                                           ) // Tiempo marcado con el checkbox
-                                : Colors.white)))),
+                                        : Colors.white)))),
             border: isCellSelected
                 ? Border.all(
                     color: const Color(0xFF2563EB),
@@ -2319,25 +2327,25 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                           color: const Color(0xFF3B82F6),
                           width: 1.8,
                         ) // Borde activo de edición
-                    : (isPlaying
+                      : (isPlaying
                             ? Border.all(
                                 color: const Color(0xFFF59E0B),
                                 width: 1.8,
                               )
-                        : (widget.isYellowDecision
+                            : (widget.isYellowDecision
                                   ? Border.all(
                                       color: const Color(0xFFEAB308),
                                       width: 1.8,
                                     ) // Borde amarillo dorado
-                            : (isMarked
-                                ? Border.all(
-                                    color: const Color(0xFF059669),
-                                    width: 1.2,
-                                  )
-                                : Border.all(
-                                    color: Colors.transparent,
-                                    width: 0.8,
-                                  ))))),
+                                  : (isMarked
+                                        ? Border.all(
+                                            color: const Color(0xFF059669),
+                                            width: 1.2,
+                                          )
+                                        : Border.all(
+                                            color: Colors.transparent,
+                                            width: 0.8,
+                                          ))))),
             boxShadow: isCellSelected
                 ? [
                     BoxShadow(
@@ -2347,26 +2355,26 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     ),
                   ]
                 : (widget.isYellowDecision
-                    ? [
-                        BoxShadow(
+                      ? [
+                          BoxShadow(
                             color: const Color(
                               0xFFEAB308,
                             ).withValues(alpha: 0.35),
-                          blurRadius: 4,
-                          spreadRadius: 0.8,
-                        ),
-                      ]
-                    : (_isEditing
-                        ? [
-                            BoxShadow(
+                            blurRadius: 4,
+                            spreadRadius: 0.8,
+                          ),
+                        ]
+                      : (_isEditing
+                            ? [
+                                BoxShadow(
                                   color: const Color(
                                     0xFF3B82F6,
                                   ).withValues(alpha: 0.20),
-                              blurRadius: 3,
-                              spreadRadius: 0.5,
-                            ),
-                          ]
-                        : null)),
+                                  blurRadius: 3,
+                                  spreadRadius: 0.5,
+                                ),
+                              ]
+                            : null)),
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -2405,10 +2413,10 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     color: isPlaying
                         ? const Color(0xFFB45309)
                         : (isFocusedOrSelected
-                            ? const Color(0xFF1D4ED8)
-                            : (hasChord
-                                ? const Color(0xFF0F172A)
-                                : const Color(0xFF94A3B8))),
+                              ? const Color(0xFF1D4ED8)
+                              : (hasChord
+                                    ? const Color(0xFF0F172A)
+                                    : const Color(0xFF94A3B8))),
                   ),
                   decoration: const InputDecoration(
                     isDense: true,

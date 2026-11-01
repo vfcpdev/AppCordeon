@@ -8,7 +8,7 @@ import '../widgets/bass_panel_widget.dart';
 import '../widgets/chord_detector_widget.dart';
 import '../widgets/diapason_widget.dart';
 import '../widgets/free_chord_widget.dart';
-import '../widgets/measure_grid_widget.dart';
+import '../widgets/measure_grid_with_chord_quality_widget.dart';
 import '../widgets/multi_beat_chord_dialog.dart';
 import '../widgets/track_info_card_widget.dart';
 
@@ -45,7 +45,9 @@ class HomeScreen extends ConsumerWidget {
                             // El transporte está disponible desde la carga; analizar es opcional.
                             if (state.loadedAudioFileName != null)
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
                                 child: state.isSongBarUndocked
                                     ? _buildSongBarPlaceholder(notifier)
                                     : const TrackInfoCardWidget(),
@@ -64,17 +66,23 @@ class HomeScreen extends ConsumerWidget {
                                       _buildDiapasonColumn(
                                         accordionNumber: 1,
                                         currentTuning: state.tuning1,
-                                        onTuningChanged: (t) => t != null ? notifier.setTuning1(t) : null,
+                                        onTuningChanged: (t) => t != null
+                                            ? notifier.setTuning1(t)
+                                            : null,
                                       ),
                                       const SizedBox(width: 6),
 
                                       // Compás (185 px) + Constructor de Acorde (150 px)
                                       Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           if (!state.isCompas1Undocked)
-                                            const MeasureGridWidget(accordionNumber: 1, width: 185)
+                                            const MeasureGridWithChordQualityWidget(
+                                              accordionNumber: 1,
+                                              width: 185,
+                                            )
                                           else
                                             _buildDockPlaceholder(1, notifier),
                                           const SizedBox(width: 6),
@@ -92,13 +100,18 @@ class HomeScreen extends ConsumerWidget {
                                       _buildDiapasonColumn(
                                         accordionNumber: 2,
                                         currentTuning: state.tuning2,
-                                        onTuningChanged: (t) => t != null ? notifier.setTuning2(t) : null,
+                                        onTuningChanged: (t) => t != null
+                                            ? notifier.setTuning2(t)
+                                            : null,
                                       ),
                                       const SizedBox(width: 6),
 
                                       // Cuadrícula de compases de Acordeón 2 con estructura y opciones completas
                                       if (!state.isCompas2Undocked)
-                                        const MeasureGridWidget(accordionNumber: 2, width: 185)
+                                        const MeasureGridWithChordQualityWidget(
+                                          accordionNumber: 2,
+                                          width: 185,
+                                        )
                                       else
                                         _buildDockPlaceholder(2, notifier),
                                       const SizedBox(width: 10),
@@ -122,7 +135,8 @@ class HomeScreen extends ConsumerWidget {
                   context: context,
                   accordionNumber: 1,
                   position: state.compas1Position,
-                  onPositionChanged: (pos) => notifier.setCompasPosition(1, pos),
+                  onPositionChanged: (pos) =>
+                      notifier.setCompasPosition(1, pos),
                   onDock: () => notifier.toggleUndockCompas(1),
                 ),
               if (state.isCompas2Undocked)
@@ -130,7 +144,8 @@ class HomeScreen extends ConsumerWidget {
                   context: context,
                   accordionNumber: 2,
                   position: state.compas2Position,
-                  onPositionChanged: (pos) => notifier.setCompasPosition(2, pos),
+                  onPositionChanged: (pos) =>
+                      notifier.setCompasPosition(2, pos),
                   onDock: () => notifier.toggleUndockCompas(2),
                 ),
               if (state.isSongBarUndocked && state.loadedAudioFileName != null)
@@ -147,8 +162,7 @@ class HomeScreen extends ConsumerWidget {
                   onPositionChanged: notifier.setChordDetectorPosition,
                   onDock: notifier.toggleUndockChordDetector,
                 ),
-              if (state.showMultiBeatModal)
-                const MultiBeatChordDialog(),
+              if (state.showMultiBeatModal) const MultiBeatChordDialog(),
             ],
           ),
         ),
@@ -200,7 +214,10 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDockPlaceholder(int accordionNumber, AccordionSimulatorNotifier notifier) {
+  Widget _buildDockPlaceholder(
+    int accordionNumber,
+    AccordionSimulatorNotifier notifier,
+  ) {
     final isPrimary = accordionNumber == 1;
     return Container(
       width: 185,
@@ -220,7 +237,9 @@ class HomeScreen extends ConsumerWidget {
           FaIcon(
             FontAwesomeIcons.arrowUpRightFromSquare,
             size: 18,
-            color: isPrimary ? const Color(0xFF0284C7) : const Color(0xFF059669),
+            color: isPrimary
+                ? const Color(0xFF0284C7)
+                : const Color(0xFF059669),
           ),
           const SizedBox(height: 6),
           Text(
@@ -240,9 +259,14 @@ class HomeScreen extends ConsumerWidget {
           ElevatedButton.icon(
             onPressed: () => notifier.toggleUndockCompas(accordionNumber),
             icon: const FaIcon(FontAwesomeIcons.compress, size: 9),
-            label: const Text('Volver a acoplar', style: TextStyle(fontSize: 9.0, fontWeight: FontWeight.bold)),
+            label: const Text(
+              'Volver a acoplar',
+              style: TextStyle(fontSize: 9.0, fontWeight: FontWeight.bold),
+            ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: isPrimary ? const Color(0xFF0284C7) : const Color(0xFF059669),
+              backgroundColor: isPrimary
+                  ? const Color(0xFF0284C7)
+                  : const Color(0xFF059669),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               minimumSize: Size.zero,
@@ -263,8 +287,14 @@ class HomeScreen extends ConsumerWidget {
   }) {
     final screen = MediaQuery.sizeOf(context);
     final isPrimary = accordionNumber == 1;
-    final clampedX = position.dx.clamp(5.0, (screen.width - 200).clamp(5.0, double.infinity));
-    final clampedY = position.dy.clamp(5.0, (screen.height - 350).clamp(5.0, double.infinity));
+    final clampedX = position.dx.clamp(
+      5.0,
+      (screen.width - 235).clamp(5.0, double.infinity),
+    );
+    final clampedY = position.dy.clamp(
+      5.0,
+      (screen.height - 350).clamp(5.0, double.infinity),
+    );
 
     return Positioned(
       left: clampedX,
@@ -272,7 +302,7 @@ class HomeScreen extends ConsumerWidget {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          width: 185,
+          width: 220,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -292,12 +322,22 @@ class HomeScreen extends ConsumerWidget {
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onPanUpdate: (details) {
-                  onPositionChanged(Offset(position.dx + details.delta.dx, position.dy + details.delta.dy));
+                  onPositionChanged(
+                    Offset(
+                      position.dx + details.delta.dx,
+                      position.dy + details.delta.dy,
+                    ),
+                  );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: isPrimary ? const Color(0xFF0284C7) : const Color(0xFF059669),
+                    color: isPrimary
+                        ? const Color(0xFF0284C7)
+                        : const Color(0xFF059669),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(12),
                       topRight: Radius.circular(12),
@@ -343,7 +383,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              MeasureGridWidget(
+              MeasureGridWithChordQualityWidget(
                 accordionNumber: accordionNumber,
                 width: 185,
                 isUndocked: true,
@@ -418,7 +458,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-
   Widget _buildFloatingChordDetector({
     required BuildContext context,
     required Offset position,
@@ -426,8 +465,14 @@ class HomeScreen extends ConsumerWidget {
     required VoidCallback onDock,
   }) {
     final screen = MediaQuery.sizeOf(context);
-    final clampedX = position.dx.clamp(5.0, (screen.width - 220).clamp(5.0, double.infinity));
-    final clampedY = position.dy.clamp(5.0, (screen.height - 300).clamp(5.0, double.infinity));
+    final clampedX = position.dx.clamp(
+      5.0,
+      (screen.width - 220).clamp(5.0, double.infinity),
+    );
+    final clampedY = position.dy.clamp(
+      5.0,
+      (screen.height - 300).clamp(5.0, double.infinity),
+    );
 
     return Positioned(
       left: clampedX,
@@ -454,10 +499,18 @@ class HomeScreen extends ConsumerWidget {
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onPanUpdate: (details) {
-                  onPositionChanged(Offset(position.dx + details.delta.dx, position.dy + details.delta.dy));
+                  onPositionChanged(
+                    Offset(
+                      position.dx + details.delta.dx,
+                      position.dy + details.delta.dy,
+                    ),
+                  );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: const BoxDecoration(
                     color: Color(0xFF7C3AED),
                     borderRadius: BorderRadius.only(
@@ -492,7 +545,10 @@ class HomeScreen extends ConsumerWidget {
                         onTap: onDock,
                         borderRadius: BorderRadius.circular(4),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
@@ -511,11 +567,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              ChordDetectorWidget(
-                width: 200,
-                isFloating: true,
-                onDock: onDock,
-              ),
+              ChordDetectorWidget(width: 200, isFloating: true, onDock: onDock),
             ],
           ),
         ),
@@ -530,8 +582,14 @@ class HomeScreen extends ConsumerWidget {
     required VoidCallback onDock,
   }) {
     final screenSize = MediaQuery.sizeOf(context);
-    final clampedX = position.dx.clamp(0.0, (screenSize.width - 400).clamp(0.0, double.infinity));
-    final clampedY = position.dy.clamp(0.0, (screenSize.height - 100).clamp(0.0, double.infinity));
+    final clampedX = position.dx.clamp(
+      0.0,
+      (screenSize.width - 400).clamp(0.0, double.infinity),
+    );
+    final clampedY = position.dy.clamp(
+      0.0,
+      (screenSize.height - 100).clamp(0.0, double.infinity),
+    );
 
     return Positioned(
       left: clampedX,
@@ -558,12 +616,20 @@ class HomeScreen extends ConsumerWidget {
               // Barra de arrastre superior
               GestureDetector(
                 onPanUpdate: (details) {
-                  onPositionChanged(Offset(clampedX + details.delta.dx, clampedY + details.delta.dy));
+                  onPositionChanged(
+                    Offset(
+                      clampedX + details.delta.dx,
+                      clampedY + details.delta.dy,
+                    ),
+                  );
                 },
                 child: MouseRegion(
                   cursor: SystemMouseCursors.move,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: const BoxDecoration(
                       color: Color(0xFFE0F2FE),
                       borderRadius: BorderRadius.only(
