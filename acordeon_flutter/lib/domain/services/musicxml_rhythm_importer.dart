@@ -187,32 +187,22 @@ class MusicXmlRhythmImporter {
         var chordHitIndex = 0;
         final hits = <BassRhythmHit>[];
         for (final hit in pendingHits) {
-          final fingerNumber =
-              hit.fingerNumber ??
-              switch (hit.buttonType) {
-                BassRhythmButtonType.fundamental =>
-                  fundamentalHitIndex.isEven ? 2 : 3,
-                BassRhythmButtonType.chord => 2,
-                null => null,
-              };
           final buttonIndex = switch (hit.buttonType) {
-            BassRhythmButtonType.fundamental => [
-              1,
-              3,
-              5,
-              7,
-              9,
-              11,
-            ][fundamentalHitIndex++ % 6],
-            BassRhythmButtonType.chord => [
-              0,
-              2,
-              4,
-              6,
-              8,
-              10,
-            ][chordHitIndex++ % 6],
+            BassRhythmButtonType.fundamental => _panelButtonIndex(
+              fundamentalHitIndex++,
+              isChord: false,
+            ),
+            BassRhythmButtonType.chord => _panelButtonIndex(
+              chordHitIndex++,
+              isChord: true,
+            ),
             null => untypedHitIndex++ % 12,
+          };
+          final fingerNumber = switch (hit.buttonType) {
+            BassRhythmButtonType.fundamental =>
+              (fundamentalHitIndex - 1).isEven ? 2 : 3,
+            BassRhythmButtonType.chord => hit.fingerNumber ?? 2,
+            null => hit.fingerNumber,
           };
           hits.add(
             BassRhythmHit(
@@ -304,6 +294,13 @@ class MusicXmlRhythmImporter {
       return BassRhythmButtonType.chord;
     }
     return null;
+  }
+
+  static int _panelButtonIndex(int hitIndex, {required bool isChord}) {
+    final pairRow = (hitIndex ~/ 2) % 3;
+    final columnOffset = hitIndex.isEven ? 0 : 6;
+    final typeOffset = isChord ? 0 : 1;
+    return columnOffset + pairRow * 2 + typeOffset;
   }
 
   static int? _integerChild(XmlElement element, String name) =>

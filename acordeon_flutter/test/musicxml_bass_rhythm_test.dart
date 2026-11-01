@@ -15,7 +15,11 @@ import 'package:acordeon_flutter/presentation/widgets/bass_panel_widget.dart';
 const _musicXml = '''
 <score-partwise version="4.0">
   <part-list>
-    <score-part id="P1"><part-name>Acordeón</part-name></score-part>
+    <score-part id="P1">
+      <part-name>Acordeón</part-name>
+      <score-instrument id="P1-BASS"><instrument-name>Bajo Principal</instrument-name></score-instrument>
+      <score-instrument id="P1-CHORD"><instrument-name>Acorde Acompañante</instrument-name></score-instrument>
+    </score-part>
   </part-list>
   <part id="P1">
     <measure number="1">
@@ -41,8 +45,8 @@ const _musicXml = '''
     <measure number="2">
       <attributes><time><beats>6</beats><beat-type>8</beat-type></time></attributes>
       <direction><direction-type><words>Merengue</words></direction-type></direction>
-      <note><pitch><step>G</step><octave>4</octave></pitch><duration>1</duration></note>
-      <note><pitch><step>A</step><octave>4</octave></pitch><duration>1</duration><notations><articulations><accent/></articulations></notations></note>
+      <note><pitch><step>G</step><octave>4</octave></pitch><duration>1</duration><instrument id="P1-BASS"/></note>
+      <note><pitch><step>A</step><octave>4</octave></pitch><duration>1</duration><instrument id="P1-BASS"/><notations><articulations><accent/></articulations></notations></note>
     </measure>
   </part>
 </score-partwise>
@@ -72,7 +76,7 @@ void main() {
           BassRhythmButtonType.fundamental,
           BassRhythmButtonType.chord,
         ]);
-        expect(paseo.hits.map((hit) => hit.buttonIndex), [1, 3, 0, 5, 2]);
+        expect(paseo.hits.map((hit) => hit.buttonIndex), [1, 7, 0, 3, 6]);
         expect(paseo.hits.map((hit) => hit.onsetQuarterBeats), [
           0,
           1 / 3,
@@ -106,6 +110,7 @@ void main() {
         1.5,
         2.25,
       ]);
+      expect(merengue.hits.map((hit) => hit.buttonIndex), [1, 7, 0, 3]);
       expect(merengue.hits.map((hit) => hit.fingerNumber), [2, 3, 2, 2]);
       expect(merengue.hits.map((hit) => hit.isAccented), [
         false,
@@ -142,6 +147,7 @@ void main() {
         BassRhythmButtonType.chord,
       ]);
       expect(cumbia.hits.map((hit) => hit.fingerNumber), [2, 2, 3, 2]);
+      expect(cumbia.hits.map((hit) => hit.buttonIndex), [1, 0, 7, 6]);
     });
 
     test('preserves meter, tempo, rests, timing, and button order', () {
@@ -163,7 +169,7 @@ void main() {
       expect(merengue.beatsPerMeasure, 6);
       expect(merengue.beatType, 8);
       expect(merengue.durationQuarterBeats, 3);
-      expect(merengue.hits.map((hit) => hit.buttonIndex), [0, 1]);
+      expect(merengue.hits.map((hit) => hit.buttonIndex), [1, 7]);
     });
 
     test('recovers only the known malformed event as a pause', () {
@@ -173,7 +179,7 @@ void main() {
       final xml = _musicXml.replaceFirst(
         '<note><pitch><step>E</step><octave>4</octave></pitch>'
             '<duration>4</duration></note>',
-        '$malformedEvent',
+        malformedEvent,
       );
 
       final result = MusicXmlRhythmImporter().importPatterns(xml);
@@ -285,7 +291,7 @@ void main() {
 
         var state = container.read(accordionSimulatorProvider);
         expect(state.selectedBassRhythmPattern?.name, 'Merengue');
-        expect(state.activeBassRhythmButtonIndexes, contains(0));
+        expect(state.activeBassRhythmButtonIndexes, contains(1));
 
         await tester.tap(
           find.byKey(const ValueKey('bass_metronome_toggle_btn_1')),
@@ -303,12 +309,13 @@ void main() {
         state = container.read(accordionSimulatorProvider);
         expect(state.bassRhythmElapsedSeconds, greaterThan(0));
         expect(audioEngine.clickAccents, [false, true]);
-        expect(state.activeBassRhythmButtonIndexes, contains(1));
+        expect(state.activeBassRhythmButtonIndexes, contains(7));
         final renderedButtons = tester
             .widgetList<AccordionButton3D>(find.byType(AccordionButton3D))
             .toList();
         expect(renderedButtons, hasLength(12));
-        expect(renderedButtons[1].isSelectedForRhythm, isTrue);
+        expect(renderedButtons[1].isSelectedForRhythm, isFalse);
+        expect(renderedButtons[7].isSelectedForRhythm, isTrue);
 
         await tester.tap(
           find.byKey(const ValueKey('bass_metronome_toggle_btn_1')),
