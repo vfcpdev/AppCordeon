@@ -33,6 +33,10 @@ void main() {
     final container = ProviderScope.containerOf(
       tester.element(find.byType(DiapasonWidget)),
     );
+    final diapasonWidth = tester.getSize(find.byType(DiapasonWidget)).width;
+    final chordLabelTop = tester
+        .getTopLeft(find.byKey(const ValueKey('diapason_chord_info_1')))
+        .dy;
     int highlightedButtonCount() => tester
         .widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget))
         .where((button) => button.isChordPull || button.isChordPush)
@@ -66,13 +70,7 @@ void main() {
         0.1,
       ),
     );
-    expect(
-      find.ancestor(
-        of: find.byKey(const ValueKey('diapason_structure_selector')),
-        matching: find.byKey(const ValueKey('diapason_chord_info_1')),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('diapason_chord_info_1')), findsOneWidget);
     expect(highlightedButtonCount(), 3);
 
     await tester.tap(find.byKey(const ValueKey('diapason_structure_seventh')));
@@ -103,6 +101,11 @@ void main() {
       [60, 64, 67, 70, 74],
     );
     expect(highlightedButtonCount(), 5);
+    expect(tester.getSize(find.byType(DiapasonWidget)).width, diapasonWidth);
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('diapason_chord_info_1'))).dy,
+      chordLabelTop,
+    );
     expect(
       find.byKey(const ValueKey('diapason_chord_status_push_1')),
       findsNothing,

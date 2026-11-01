@@ -159,22 +159,171 @@ class DiapasonWidget extends ConsumerWidget {
             ],
           ),
           child: IntrinsicWidth(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: Stack(
               children: [
-                // ── Barra unificada: Fuelle (Ambos / Abrir / Cerrar) + Intercambiar Hileras ──
-                Center(
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // ── Barra unificada: Fuelle (Ambos / Abrir / Cerrar) + Intercambiar Hileras ──
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFF334155),
+                            width: 1.0,
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x33000000),
+                              blurRadius: 4,
+                              offset: Offset(0, 1.5),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // ⇄ Ambos
+                            _BellowsBtn(
+                              icon: FontAwesomeIcons.arrowsLeftRight,
+                              mode: BellowsMode.both,
+                              current: bellowsMode,
+                              activeColor: const Color(0xFFEAB308),
+                              onTap: onBellowsChanged,
+                              tooltip: 'Ambos (Abrir y Cerrar)',
+                            ),
+                            const SizedBox(width: 3),
+
+                            // ← Abre / Pull
+                            _BellowsBtn(
+                              icon: FontAwesomeIcons.arrowLeft,
+                              mode: BellowsMode.pull,
+                              current: bellowsMode,
+                              activeColor: const Color(0xFF0284C7),
+                              onTap: onBellowsChanged,
+                              tooltip: 'Abre (Pull)',
+                            ),
+                            const SizedBox(width: 3),
+
+                            // → Cierra / Push
+                            _BellowsBtn(
+                              icon: FontAwesomeIcons.arrowRight,
+                              mode: BellowsMode.push,
+                              current: bellowsMode,
+                              activeColor: const Color(0xFFEF4444),
+                              onTap: onBellowsChanged,
+                              tooltip: 'Cierra (Push)',
+                            ),
+
+                            // Separador vertical sutil
+                            Container(
+                              width: 1,
+                              height: 18,
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              color: const Color(0xFF334155),
+                            ),
+
+                            // ⇄ Intercambiar Hileras
+                            _BarActionBtn(
+                              icon: FontAwesomeIcons.arrowsRotate,
+                              isActive: isMirror,
+                              activeColor: const Color(0xFF0284C7),
+                              onTap: onToggleMirror,
+                              tooltip: 'Intercambiar hileras',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Reserva el espacio original sin dejar que la etiqueta defina el ancho.
+                    const SizedBox(height: 30),
+                    const SizedBox(height: 10),
+
+                    // ── Hileras de botones + volumen vertical al borde derecho ──
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: effectiveRows.map((rDef) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                              ),
+                              child: _buildRow(
+                                context: context,
+                                ref: ref,
+                                buttons: rDef.buttons,
+                                topOffset: rDef.topOffset,
+                                activeChordPitchClasses:
+                                    activeChordPitchClasses,
+                                selectedChordButtonIds: selectedChordButtonIds,
+                                compasChord: compasChord,
+                                isFreeChordBeingEdited: isFreeChordBeingEdited,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(width: 4),
+                        _VerticalVolumeControl(
+                          volume: ref.watch(
+                            accordionSimulatorProvider.select(
+                              (s) => isPrimary ? s.volume1 : s.volume2,
+                            ),
+                          ),
+                          isMuted: ref.watch(
+                            accordionSimulatorProvider.select(
+                              (s) => isPrimary ? s.isMuted1 : s.isMuted2,
+                            ),
+                          ),
+                          onVolumeChanged: isPrimary
+                              ? notifier.setVolume1
+                              : notifier.setVolume2,
+                          onToggleMute: isPrimary
+                              ? notifier.toggleMute1
+                              : notifier.toggleMute2,
+                          syncVolume: isPrimary
+                              ? ref.watch(
+                                  accordionSimulatorProvider.select(
+                                    (s) => s.syncVolume,
+                                  ),
+                                )
+                              : null,
+                          onToggleSyncVolume: isPrimary
+                              ? notifier.toggleSyncVolume
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Positioned(
+                  top: 35,
+                  left: 0,
+                  right: 0,
                   child: Container(
+                    key: ValueKey('diapason_chord_info_$accordionNumber'),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 3,
+                      horizontal: 8,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
                       border: Border.all(
-                        color: const Color(0xFF334155),
+                        color: const Color(0xFFCBD5E1),
                         width: 1.0,
                       ),
                       boxShadow: const [
@@ -186,176 +335,34 @@ class DiapasonWidget extends ConsumerWidget {
                       ],
                     ),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // ⇄ Ambos
-                        _BellowsBtn(
-                          icon: FontAwesomeIcons.arrowsLeftRight,
-                          mode: BellowsMode.both,
-                          current: bellowsMode,
-                          activeColor: const Color(0xFFEAB308),
-                          onTap: onBellowsChanged,
-                          tooltip: 'Ambos (Abrir y Cerrar)',
-                        ),
-                        const SizedBox(width: 3),
-
-                        // ← Abre / Pull
-                        _BellowsBtn(
-                          icon: FontAwesomeIcons.arrowLeft,
-                          mode: BellowsMode.pull,
-                          current: bellowsMode,
-                          activeColor: const Color(0xFF0284C7),
-                          onTap: onBellowsChanged,
-                          tooltip: 'Abre (Pull)',
-                        ),
-                        const SizedBox(width: 3),
-
-                        // → Cierra / Push
-                        _BellowsBtn(
-                          icon: FontAwesomeIcons.arrowRight,
-                          mode: BellowsMode.push,
-                          current: bellowsMode,
-                          activeColor: const Color(0xFFEF4444),
-                          onTap: onBellowsChanged,
-                          tooltip: 'Cierra (Push)',
-                        ),
-
-                        // Separador vertical sutil
-                        Container(
-                          width: 1,
-                          height: 18,
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          color: const Color(0xFF334155),
-                        ),
-
-                        // ⇄ Intercambiar Hileras
-                        _BarActionBtn(
-                          icon: FontAwesomeIcons.arrowsRotate,
-                          isActive: isMirror,
-                          activeColor: const Color(0xFF0284C7),
-                          onTap: onToggleMirror,
-                          tooltip: 'Intercambiar hileras',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-
-                // ── Etiqueta que ocupa todo el ancho del diapasón ──
-                Container(
-                  key: ValueKey('diapason_chord_info_$accordionNumber'),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                      color: const Color(0xFFCBD5E1),
-                      width: 1.0,
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x33000000),
-                        blurRadius: 4,
-                        offset: Offset(0, 1.5),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Align(
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
                               alignment: Alignment.centerLeft,
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text.rich(
-                                  chordLabel.isEmpty
-                                      ? const TextSpan(text: '—')
-                                      : ChordCatalog.buildChordLabelSpans(
-                                          chord: chordLabel,
-                                          notation: notation,
-                                          fontSize: 9.5,
-                                        ),
-                                  key: ValueKey(
-                                    'diapason_chord_label_$accordionNumber',
-                                  ),
-                                  maxLines: 1,
+                              child: Text.rich(
+                                chordLabel.isEmpty
+                                    ? const TextSpan(text: '—')
+                                    : ChordCatalog.buildChordLabelSpans(
+                                        chord: chordLabel,
+                                        notation: notation,
+                                        fontSize: 9.5,
+                                      ),
+                                key: ValueKey(
+                                  'diapason_chord_label_$accordionNumber',
                                 ),
+                                maxLines: 1,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          _ChordStructureSelector(),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(width: 6),
+                        _ChordStructureSelector(),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-
-                // ── Hileras de botones + volumen vertical al borde derecho ──
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: effectiveRows.map((rDef) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 5),
-                          child: _buildRow(
-                            context: context,
-                            ref: ref,
-                            buttons: rDef.buttons,
-                            topOffset: rDef.topOffset,
-                            activeChordPitchClasses: activeChordPitchClasses,
-                            selectedChordButtonIds: selectedChordButtonIds,
-                            compasChord: compasChord,
-                            isFreeChordBeingEdited: isFreeChordBeingEdited,
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(width: 4),
-                    _VerticalVolumeControl(
-                      volume: ref.watch(
-                        accordionSimulatorProvider.select(
-                          (s) => isPrimary ? s.volume1 : s.volume2,
-                        ),
-                      ),
-                      isMuted: ref.watch(
-                        accordionSimulatorProvider.select(
-                          (s) => isPrimary ? s.isMuted1 : s.isMuted2,
-                        ),
-                      ),
-                      onVolumeChanged: isPrimary
-                          ? notifier.setVolume1
-                          : notifier.setVolume2,
-                      onToggleMute: isPrimary
-                          ? notifier.toggleMute1
-                          : notifier.toggleMute2,
-                      syncVolume: isPrimary
-                          ? ref.watch(
-                              accordionSimulatorProvider.select(
-                                (s) => s.syncVolume,
-                              ),
-                            )
-                          : null,
-                      onToggleSyncVolume: isPrimary
-                          ? notifier.toggleSyncVolume
-                          : null,
-                    ),
-                  ],
                 ),
               ],
             ),

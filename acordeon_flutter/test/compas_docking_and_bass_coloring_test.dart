@@ -49,9 +49,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final buttons = tester
-            .widgetList<DiapasonButtonWidget>(
-              find.byType(DiapasonButtonWidget),
-            )
+            .widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget))
             .toList();
         expect(
           buttons
