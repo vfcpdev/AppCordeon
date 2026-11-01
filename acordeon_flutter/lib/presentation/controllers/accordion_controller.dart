@@ -16,17 +16,24 @@ import '../../domain/commands/accordion_commands.dart';
 import '../../domain/memento/grid_memento.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/audio_analysis_models.dart';
+import '../../domain/models/bass_matrix_layout.dart';
 import '../../domain/models/bass_rhythm_pattern.dart';
+import '../../domain/models/free_chord_state.dart';
 import '../../domain/models/measure_json_serializer.dart';
 import '../../domain/models/measure_models.dart';
 import '../../domain/models/tuning.dart';
 import '../../domain/services/bass_rhythm_catalog.dart';
+import '../../domain/services/grid_metrics_service.dart' as grid_metrics;
+import '../../domain/services/hoare_contract.dart';
 import '../../domain/services/musicxml_rhythm_importer.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../../domain/theory/chord_detector_engine.dart';
+import 'free_chord_playback_coordinator.dart';
 
 export '../../domain/models/measure_json_serializer.dart';
 export '../../domain/models/measure_models.dart';
+
+export '../../domain/models/free_chord_state.dart';
 
 /// Resultado de una operación de carga de audio. La UI decide cómo mostrarlo.
 sealed class AudioLoadResult {
@@ -53,33 +60,12 @@ class AudioLoadFailure extends AudioLoadResult {
   const AudioLoadFailure(this.message);
 }
 
+/// Delegaciones al servicio de métricas de cuadrícula en domain (única
+/// implementación; el controller solo redirige para conservar la API interna).
 String _findChordForTime(
   List<DetectedChordSegment> chords,
   double timeSeconds,
-) {
-  if (chords.isEmpty) return '';
-  var low = 0;
-  var high = chords.length - 1;
-  while (low <= high) {
-    final mid = (low + high) ~/ 2;
-    final segment = chords[mid];
-    if (segment.startTime <= timeSeconds && timeSeconds < segment.endTime) {
-      return segment.chordSymbol;
-    }
-    if (timeSeconds < segment.startTime) {
-      high = mid - 1;
-    } else {
-      low = mid + 1;
-    }
-  }
-  if (low >= chords.length) return chords.last.chordSymbol;
-  if (high < 0) return chords.first.chordSymbol;
-  final distanceToNext = (chords[low].startTime - timeSeconds).abs();
-  final distanceToPrevious = (timeSeconds - chords[high].endTime).abs();
-  return distanceToNext < distanceToPrevious
-      ? chords[low].chordSymbol
-      : chords[high].chordSymbol;
-}
+) => grid_metrics.findChordForTime(chords, timeSeconds);
 
 /// Agrupa el estado de acople/desacople y posición de los paneles flotantes
 /// (Cuadro de compás 1/2, Barra de canción y Detector de acordes).
@@ -130,57 +116,8 @@ class DockState {
 }
 
 /// Agrupa la configuración de la Sección 5: Acorde Libre y Escalas.
-class FreeChordState {
-  final int root; // 0=Do, 1=Do#, etc.
-  final String type; // maj, min, dim, aug, sus2, sus4
-  final String fourth; // five, octave, dom7, maj7, maj6, add9
-  final String octave; // all, 3, 4, 5
-  final String mode; // harmonic, melodic
-  final bool isFixed;
-  final bool isBeingEdited;
-  final BellowsMode bellows;
-  final String scaleHarmonicMode; // triad, seventh, five
-  final String bass; // Bajo alterado / slash chord
-
-  const FreeChordState({
-    this.root = 0,
-    this.type = 'maj',
-    this.fourth = 'none',
-    this.octave = 'all',
-    this.mode = 'harmonic',
-    this.isFixed = false,
-    this.isBeingEdited = false,
-    this.bellows = BellowsMode.both,
-    this.scaleHarmonicMode = 'triad',
-    this.bass = '',
-  });
-
-  FreeChordState copyWith({
-    int? root,
-    String? type,
-    String? fourth,
-    String? octave,
-    String? mode,
-    bool? isFixed,
-    bool? isBeingEdited,
-    BellowsMode? bellows,
-    String? scaleHarmonicMode,
-    String? bass,
-  }) {
-    return FreeChordState(
-      root: root ?? this.root,
-      type: type ?? this.type,
-      fourth: fourth ?? this.fourth,
-      octave: octave ?? this.octave,
-      mode: mode ?? this.mode,
-      isFixed: isFixed ?? this.isFixed,
-      isBeingEdited: isBeingEdited ?? this.isBeingEdited,
-      bellows: bellows ?? this.bellows,
-      scaleHarmonicMode: scaleHarmonicMode ?? this.scaleHarmonicMode,
-      bass: bass ?? this.bass,
-    );
-  }
-}
+/// Implementación consolidada en domain/models; ver el export al inicio
+/// del archivo.
 
 /// Agrupa el transporte del reproductor y la sincronización con el Compás.
 class AudioTransportState {
@@ -310,6 +247,11 @@ class AccordionSimulatorState {
   final String? selectedBassRhythmPatternId;
   final bool isBassMetronomeActive;
   final double bassRhythmElapsedSeconds;
+
+  /// Captura de patrón en curso (matriz 2×2 de bajos 7/8/4/5). `null` cuando
+  /// no hay captura activa.
+  final BassRhythmRecorder? bassRhythmRecorder;
+  bool get isBassCaptureActive => bassRhythmRecorder?.isRecording ?? false;
 
   BassRhythmPattern? get selectedBassRhythmPattern {
     final selectedId = selectedBassRhythmPatternId;
@@ -484,6 +426,7 @@ class AccordionSimulatorState {
     this.selectedBassRhythmPatternId,
     this.isBassMetronomeActive = false,
     this.bassRhythmElapsedSeconds = 0.0,
+    this.bassRhythmRecorder,
     bool? isLiveChordMarkerActive,
     this.copiedChord = '',
     double? bpmCalibrationStart,
@@ -581,6 +524,8 @@ class AccordionSimulatorState {
     bool clearSelectedBassRhythmPattern = false,
     bool? isBassMetronomeActive,
     double? bassRhythmElapsedSeconds,
+    BassRhythmRecorder? bassRhythmRecorder,
+    bool clearBassRhythmRecorder = false,
     bool? isLiveChordMarkerActive,
     String? copiedChord,
     double? bpmCalibrationStart,
@@ -693,6 +638,9 @@ class AccordionSimulatorState {
           isBassMetronomeActive ?? this.isBassMetronomeActive,
       bassRhythmElapsedSeconds:
           bassRhythmElapsedSeconds ?? this.bassRhythmElapsedSeconds,
+      bassRhythmRecorder: clearBassRhythmRecorder
+          ? null
+          : (bassRhythmRecorder ?? this.bassRhythmRecorder),
       isLiveChordMarkerActive:
           isLiveChordMarkerActive ?? this.isLiveChordMarkerActive,
       copiedChord: copiedChord ?? this.copiedChord,
@@ -712,14 +660,24 @@ class AccordionSimulatorState {
       AccordionData.getTransposedBasses(tuning2.offset);
 }
 
-class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
+class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
+    with HoareContract {
   late AudioEngine _audioBridge;
   late AudioAnalyzer _analyzer;
   late AudioFileLoader _fileLoader;
   late AudioFilePlayer _audioPlayer;
   late DemoTrackGenerator _demoGenerator;
+  late FreeChordPlaybackCoordinator _freeChordCoordinator;
   Uint8List? _loadedAudioBytes;
   final GridHistoryManager _gridHistory = GridHistoryManager();
+
+  /// Visibilidad de prueba: reemplaza el estado completo sin pasar por copyWith.
+  @visibleForTesting
+  void applyRawState(AccordionSimulatorState s) => state = s;
+
+  /// Reemplaza el estado completo. Uso interno desde coordinadores de la misma
+  /// capa de presentación que comparten la misma fuente de verdad.
+  void replaceState(AccordionSimulatorState s) => state = s;
 
   bool get canUndoGrid => _gridHistory.canUndo;
   bool get canRedoGrid => _gridHistory.canRedo;
@@ -761,6 +719,11 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     _fileLoader = ref.read(audioFileLoaderProvider);
     _audioPlayer = ref.read(audioFilePlayerProvider);
     _demoGenerator = ref.read(demoTrackGeneratorProvider);
+    _freeChordCoordinator = FreeChordPlaybackCoordinator(
+      () => state,
+      (s) => state = s,
+      () => ref.read(audioEngineProvider),
+    );
     ref.onDispose(() {
       _playbackTimer?.cancel();
       _standaloneMetronomeTimer?.cancel();
@@ -955,6 +918,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   ///      siempre es 0, por lo que aquí se acepta la pista pero sin transport
   ///      real (`isLoaded == false`).
   AudioLoadResult loadAudioBytes(Uint8List bytes, String fileName) {
+    // {P}: bytes no vacío y fileName identificable.
     if (bytes.isEmpty || fileName.trim().isEmpty) {
       return const AudioLoadFailure(
         'El archivo de audio está vacío o no tiene nombre.',
@@ -999,6 +963,17 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       currentAudioTime: 0.0,
       currentCompasTime: 0.0,
       isPlayingAudio: false,
+    );
+    // {Q}: la pista queda registrada sin reproducción activa ni análisis pendiente.
+    ensure(
+      'loadAudioBytes',
+      'la pista cargada queda registrada',
+      state.loadedAudioFileName == fileName,
+    );
+    ensure(
+      'loadAudioBytes',
+      'no hay reproducción activa tras la carga',
+      !state.isPlayingAudio,
     );
     return AudioLoadSuccess(fileName);
   }
@@ -1090,6 +1065,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     }
 
     final bpm = command.execute();
+    // {P} del 2º toque: BPM calculado dentro del rango musical válido.
+    require(
+      'tapBpmCalibration',
+      'el BPM calculado debe estar en [30,300]',
+      bpm >= 30 && bpm <= 300,
+    );
     state = state.copyWith(
       bpmCalibrationStart: -1.0,
       audioStartOffset: startTime,
@@ -1101,6 +1082,17 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     );
     // Aplicar automáticamente la detección precisa de cambios de acorde al compás
     applyDetectedChordChangesToGrid();
+    // {Q}: la calibración termina inactiva y el BPM aplicado coincide con el calculado.
+    ensure(
+      'tapBpmCalibration',
+      'la calibración queda inactiva tras el 2º toque',
+      !state.isCalibratingBpm,
+    );
+    ensure(
+      'tapBpmCalibration',
+      'el BPM aplicado coincide con el calculado',
+      state.audioReport?.bpm == bpm,
+    );
     return bpm;
   }
 
@@ -1160,6 +1152,18 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     final report = state.audioReport;
     if (report == null) return;
 
+    // {P}: bpm ∈ [30, 300] tras el clampeo y rootMod dentro de 0..11 módulo 12.
+    require(
+      'updateAudioKeyAndBpm',
+      'bpm debe estar en [30,300] tras clampear',
+      bpm.clamp(30, 300) >= 30 && bpm.clamp(30, 300) <= 300,
+    );
+    require(
+      'updateAudioKeyAndBpm',
+      'rootMod debe representarse módulo 12',
+      rootMod >= 0,
+    );
+
     final clampedBpm = bpm.clamp(30, 300);
     final semitoneOffset =
         ((rootMod % 12) - (report.mainKey.rootMod % 12) + 12) % 12;
@@ -1210,6 +1214,18 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     );
 
     state = state.copyWith(audioReport: updatedReport, measures: newMeasures);
+
+    // {Q}: el reporte actualizado refleja el BPM clampeado y la cuadrícula es coherente.
+    ensure(
+      'updateAudioKeyAndBpm',
+      'el reporte actualizado mantiene el BPM clampeado',
+      state.audioReport!.bpm == clampedBpm,
+    );
+    ensure(
+      'updateAudioKeyAndBpm',
+      'la cuadrícula reconstruida es no vacía',
+      state.measures.isNotEmpty,
+    );
 
     applyDetectedTuning(updatedKey);
   }
@@ -1329,17 +1345,11 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
         preferFlats: preferFlats,
       );
 
-  /// Formatea un instante (s) como texto `mm:ss` para la cuadrícula.
-  /// Único punto de verdad del formato de tiempos de la cuadrícula.
-  static String formatBeatTime(double seconds) {
-    final mins = (seconds ~/ 60).toString().padLeft(2, '0');
-    final secs = ((seconds % 60).toInt()).toString().padLeft(2, '0');
-    return '$mins:$secs';
-  }
+  /// Delegaciones al servicio de dominio: la implementación vive en
+  /// `domain/services/grid_metrics_service.dart` (único punto de verdad).
+  static String formatBeatTime(double seconds) =>
+      grid_metrics.formatBeatTime(seconds);
 
-  /// Construye un compás de 4 tiempos con su texto de tiempo derivado de
-  /// `secondsPerBeat` y (opcionalmente) el acorde del timeline en cada beat.
-  /// Único punto de verdad para generar filas de compases en la cuadrícula.
   static MeasureRow buildMeasureRow({
     required int barIndex,
     required double secondsPerBeat,
@@ -1347,32 +1357,20 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     List<DetectedChordSegment> chords = const [],
     double chordProbeBias = 0.0,
     bool isContinue = false,
-  }) {
-    return MeasureRow(
-      barNumber: barIndex + 1,
-      beats: List.generate(4, (beatIdx) {
-        final beatTime = startOffset + (barIndex * 4 + beatIdx) * secondsPerBeat;
-        final ch = chords.isEmpty
-            ? ''
-            : _findChordForTime(chords, beatTime + chordProbeBias);
-        return MeasureBeat(
-          barIndex: barIndex,
-          beatIndex: beatIdx,
-          chord: ch,
-          timeText: formatBeatTime(beatTime),
-          isContinue: isContinue,
-        );
-      }),
-    );
-  }
+  }) =>
+      grid_metrics.buildMeasureRow(
+        barIndex: barIndex,
+        secondsPerBeat: secondsPerBeat,
+        startOffset: startOffset,
+        chords: chords,
+        chordProbeBias: chordProbeBias,
+        isContinue: isContinue,
+      );
 
-  /// Visibilidad de prueba: delega en [_formatBeatTime].
+  /// Visibilidad de prueba: delega en [grid_metrics.formatBeatTime].
   @visibleForTesting
   static String formatBeatTimeForTest(double seconds) =>
-      _formatBeatTime(seconds);
-
-  /// Formatea un instante (s) como texto `mm:ss` para la cuadrícula.
-  static String _formatBeatTime(double seconds) => formatBeatTime(seconds);
+      grid_metrics.formatBeatTime(seconds);
 
   /// Reconstruye (o transpone) la cuadrícula de compases tras un cambio de
   /// tonalidad/BPM, respetando los acordes ya cargados cuando existan.
@@ -1443,6 +1441,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
     required int bpm,
     double? startOffset,
   }) {
+    // {P}: BPM efectivo > 0 y duración no negativa.
+    require(
+      'generateMeasuresForAudio',
+      'durationSeconds no negativa',
+      durationSeconds >= 0.0,
+    );
     final offset = startOffset ?? state.audioStartOffset;
     final effectiveBpm = bpm > 0 ? bpm : 120;
     final secondsPerBeat = 60.0 / effectiveBpm;
@@ -1466,6 +1470,18 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
       selectedBeatIndex: 0,
       isManualBeatSelection: false,
       audioStartOffset: offset,
+    );
+
+    // {Q}: la cuadrícula generada tiene entre 8 y 500 compases y cada compás 4 beats.
+    ensure(
+      'generateMeasuresForAudio',
+      'la cuadrícula generada tiene entre 8 y 500 compases',
+      state.measures.length >= 8 && state.measures.length <= 500,
+    );
+    ensure(
+      'generateMeasuresForAudio',
+      'cada compás tiene exactamente 4 tiempos',
+      state.measures.every((m) => m.beats.length == 4),
     );
   }
 
@@ -1939,6 +1955,108 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   void toggleBassMetronome() {
     state = state.copyWith(isBassMetronomeActive: !state.isBassMetronomeActive);
     _syncStandaloneMetronome();
+  }
+
+  /// Inicia la captura de un patrón rítmico tocado sobre la matriz 2×2
+  /// (bajos 7, 8, 4 y 5).
+  ///
+  /// {P}: no hay captura activa y `selectedButtons` es subconjunto de
+  ///      `{7, 8, 4, 5}`.
+  /// {Q}: `isBassCaptureActive == true` y el reloj de captura parte de cero.
+  void startBassRhythmCapture({
+    required String name,
+    required Set<int> selectedButtons,
+  }) {
+    require(
+      'startBassRhythmCapture',
+      'no debe haber una captura en curso',
+      !state.isBassCaptureActive,
+    );
+    require(
+      'startBassRhythmCapture',
+      'selección dentro de la matriz 2×2',
+      selectedButtons.every(BassMatrixLayout.buttonNumbers.contains),
+    );
+    final bpm = _standaloneMetronomeBpm;
+    final recorder = BassRhythmRecorder()
+      ..start(
+        name: name,
+        beatSeconds: 60.0 / bpm,
+        quarterNotesPerMinute: bpm,
+        beatsPerMeasure: _standaloneMetronomeBeatsPerMeasure,
+        beatType: 4,
+        selectedButtons: selectedButtons,
+      );
+    state = state.copyWith(
+      bassRhythmRecorder: recorder,
+      isBassMetronomeActive: false,
+      bassRhythmElapsedSeconds: 0,
+    );
+    ensure(
+      'startBassRhythmCapture',
+      'la captura queda activa',
+      state.isBassCaptureActive,
+    );
+  }
+
+  /// Registra un golpe de la matriz en el instante actual de la captura.
+  ///
+  /// {Q}: el reloj de captura avanza y el golpe queda en la lista del recorder
+  ///      cuando el botón pertenece a la selección.
+  void captureBassMatrixHit(int buttonNumber) {
+    final recorder = state.bassRhythmRecorder;
+    if (recorder == null || !recorder.isRecording) return;
+    recorder.captureDuration = Duration(
+      milliseconds: (state.bassRhythmElapsedSeconds * 1000).round(),
+    );
+    recorder.recordButton(buttonNumber);
+    state = state.copyWith(bassRhythmRecorder: recorder);
+  }
+
+  /// Alterna la selección de una caja de la matriz durante la captura.
+  void toggleBassCaptureSelection(int buttonNumber) {
+    final recorder = state.bassRhythmRecorder;
+    if (recorder == null) return;
+    recorder.toggleSelection(buttonNumber);
+    state = state.copyWith(bassRhythmRecorder: recorder);
+  }
+
+  /// Detiene la captura y registra el patrón resultante en la lista.
+  ///
+  /// {P}: existe una captura en curso.
+  /// {Q}: el patrón aparece primero en `bassRhythmPatterns`, queda seleccionado
+  ///      en modo reproducción (o no, si está vacío) y el recorder se libera.
+  BassRhythmPattern? stopBassRhythmCapture() {
+    final recorder = state.bassRhythmRecorder;
+    if (recorder == null || !recorder.isRecording) return null;
+    final totalSeconds = state.bassRhythmElapsedSeconds;
+    recorder.stop();
+    final pattern = recorder.buildPattern(totalSeconds: totalSeconds);
+
+    state = state.copyWith(
+      bassRhythmPatterns: [pattern, ...state.bassRhythmPatterns],
+      selectedBassRhythmPatternId: pattern.id,
+      isBassMetronomeActive: pattern.hits.isEmpty
+          ? state.isBassMetronomeActive
+          : true,
+      clearBassRhythmRecorder: true,
+      bassRhythmElapsedSeconds: 0,
+    );
+    _syncStandaloneMetronome();
+    ensure(
+      'stopBassRhythmCapture',
+      'el recorder se libera tras guardar el patrón',
+      !state.isBassCaptureActive,
+    );
+    return pattern;
+  }
+
+  /// Cancela la captura sin registrar el patrón.
+  void cancelBassRhythmCapture() {
+    state = state.copyWith(
+      clearBassRhythmRecorder: true,
+      bassRhythmElapsedSeconds: 0,
+    );
   }
 
   /// Alterna el estado del metrónomo (click rítmico de compás).
@@ -3265,160 +3383,17 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState> {
   }
 
   void playFreeChord() {
-    final notes = _calculateFreeChordNotes();
-    for (final midi in notes) {
-      _audioBridge.noteOn(midi);
-    }
-    // Activa visualmente el efecto glow en los botones del diapasón
-    _highlightDiapasonButtonsForNotes(notes, const Duration(milliseconds: 900));
-
-    Future.delayed(const Duration(milliseconds: 900), () {
-      for (final midi in notes) {
-        _audioBridge.noteOff(midi);
-      }
-    });
+    final useArpeggio = state.freeChord.mode == 'melodic';
+    _freeChordCoordinator.playFreeChord(
+      arpeggio: useArpeggio,
+      highlight: const Duration(milliseconds: 900),
+    );
   }
 
-  void arpeggioFreeChord() async {
-    final notes = _calculateFreeChordNotes();
-    for (final midi in notes) {
-      _audioBridge.noteOn(midi);
-      _highlightDiapasonButtonsForNotes([
-        midi,
-      ], const Duration(milliseconds: 210));
-      await Future.delayed(const Duration(milliseconds: 220));
-      _audioBridge.noteOff(midi);
-    }
-  }
-
-  void _highlightDiapasonButtonsForNotes(List<int> notes, Duration duration) {
-    final matchingButtonIds = <String>{};
-    final targetMidis = notes.toSet();
-    final targetPitchClasses = notes.map((n) => n % 12).toSet();
-    final octFilter = state.freeChordOctave;
-
-    final accordions = [
-      (1, state.trebleData1, state.bellows1),
-      (2, state.trebleData2, state.bellows2),
-    ];
-
-    // Busca en cada acordeón los botones correspondientes según la dirección activa del fuelle
-    for (final (accNum, trebleData, bellows) in accordions) {
-      for (final row in trebleData.values) {
-        for (final btn in row) {
-          final matchesPull = octFilter == 'all'
-              ? targetPitchClasses.contains(btn.pull % 12)
-              : targetMidis.contains(btn.pull);
-          final matchesPush = octFilter == 'all'
-              ? targetPitchClasses.contains(btn.push % 12)
-              : targetMidis.contains(btn.push);
-
-          final bool isMatch;
-          switch (bellows) {
-            case BellowsMode.push:
-              isMatch = matchesPush;
-              break;
-            case BellowsMode.pull:
-              isMatch = matchesPull;
-              break;
-            case BellowsMode.both:
-              isMatch = matchesPull || matchesPush;
-              break;
-          }
-
-          if (isMatch) {
-            matchingButtonIds.add('a${accNum}_${btn.id}');
-          }
-        }
-      }
-    }
-
-    // Resalta también los bajos de acompañamiento según el fuelle.
-    // Si existen coincidencias exactas para fundamental y acorde, se priorizan las exactas.
-    final chordRoot =
-        state.detectedChord?.rootPitchClass ??
-        (notes.isNotEmpty ? notes.first % 12 : state.freeChordRoot);
-    final bellows1 = state.bellows1;
-
-    final exactBassIds = <String>[];
-    final closeBassIds = <String>[];
-
-    for (final btn in state.bassData1) {
-      final pushMatch = ChordCatalog.evaluateBassMatch(
-        notes: btn.pushNotes,
-        type: btn.type,
-        chordRoot: chordRoot,
-        chordPitchClasses: targetPitchClasses,
-        btnIndex: btn.btnIndex,
-      );
-      final pullMatch = ChordCatalog.evaluateBassMatch(
-        notes: btn.pullNotes,
-        type: btn.type,
-        chordRoot: chordRoot,
-        chordPitchClasses: targetPitchClasses,
-        btnIndex: btn.btnIndex,
-      );
-
-      final BassMatchType match;
-      switch (bellows1) {
-        case BellowsMode.push:
-          match = pushMatch;
-          break;
-        case BellowsMode.pull:
-          match = pullMatch;
-          break;
-        case BellowsMode.both:
-          if (pushMatch == BassMatchType.exact ||
-              pullMatch == BassMatchType.exact) {
-            match = BassMatchType.exact;
-          } else if (pushMatch == BassMatchType.close ||
-              pullMatch == BassMatchType.close) {
-            match = BassMatchType.close;
-          } else {
-            match = BassMatchType.none;
-          }
-          break;
-      }
-
-      if (match == BassMatchType.exact) {
-        exactBassIds.add(btn.id);
-      } else if (match == BassMatchType.close) {
-        closeBassIds.add(btn.id);
-      }
-    }
-
-    if (exactBassIds.isNotEmpty) {
-      matchingButtonIds.addAll(exactBassIds);
-    } else {
-      matchingButtonIds.addAll(closeBassIds);
-    }
-
-    if (matchingButtonIds.isEmpty) return;
-    final next = Set<String>.from(state.activeButtons)
-      ..addAll(matchingButtonIds);
-    state = state.copyWith(activeButtons: next);
-
-    Future.delayed(duration, () {
-      if (!ref.mounted) return;
-      final remaining = Set<String>.from(state.activeButtons)
-        ..removeAll(matchingButtonIds);
-      state = state.copyWith(activeButtons: remaining);
-    });
-  }
-
-  List<int> _calculateFreeChordNotes() {
-    final oct = state.freeChordOctave;
-    final baseMidi = switch (oct) {
-      '3' => 48,
-      '4' => 60,
-      '5' => 72,
-      _ => 60,
-    };
-    return ChordCatalog.notesFor(
-      root: state.freeChordRoot,
-      type: state.freeChordType,
-      extension: state.freeChordFourth,
-      baseMidi: baseMidi,
+  Future<void> arpeggioFreeChord() async {
+    _freeChordCoordinator.playFreeChord(
+      arpeggio: true,
+      highlight: const Duration(milliseconds: 900),
     );
   }
 
@@ -3827,3 +3802,131 @@ final detectorStatusSliceProvider =
       );
       return (active: mode, count: count, hasChord: hasChord);
     });
+
+/// ─── Selectores finos (ISP + menor reconstrucción de widgets) ───────────────
+///
+/// Selectores atómicos por campo que aíslan a cada widget de los cambios del
+/// resto del estado global. Un widget que solo necesita `isPlayingAudio` no
+/// debe reconstruirse cuando cambia `measures`.
+
+/// Transporte: está reproduciendo el archivo cargado.
+final isPlayingAudioProvider = Provider<bool>((ref) {
+  return ref.watch(
+    accordionSimulatorProvider.select((s) => s.isPlayingAudio),
+  );
+});
+
+/// Transporte: posición actual del archivo (se actualiza cada tick).
+final currentAudioTimeProvider = Provider<double>((ref) {
+  return ref.watch(
+    accordionSimulatorProvider.select((s) => s.currentAudioTime),
+  );
+});
+
+/// Transporte: duración total conocida del archivo cargado.
+final totalAudioDurationProvider = Provider<double>((ref) {
+  return ref.watch(
+    accordionSimulatorProvider.select((s) => s.totalAudioDuration),
+  );
+});
+
+/// Transporte: acoplamiento del Compás con el archivo.
+final isAudioCoupledProvider = Provider<bool>((ref) {
+  return ref.watch(
+    accordionSimulatorProvider.select((s) => s.isAudioCoupled),
+  );
+});
+
+/// Cuadrícula: número de compases (para scrollbars/contadores).
+final measuresCountProvider = Provider<int>((ref) {
+  return ref.watch(
+    accordionSimulatorProvider.select((s) => s.measures.length),
+  );
+});
+
+/// Cuadrícula: acordes visibles por compás, memoizados por identidad de lista.
+/// Útil para widgets que sólo necesitan re-dibujar los textos de acorde.
+final measuresProvider = Provider<List<MeasureRow>>((ref) {
+  return ref.watch(
+    accordionSimulatorProvider.select((s) => s.measures),
+  );
+});
+
+/// Análisis: reporte completo de la pista cargada (o null si no hay).
+final audioReportProvider = Provider<AudioAnalysisReport?>((ref) {
+  return ref.watch(
+    accordionSimulatorProvider.select((s) => s.audioReport),
+  );
+});
+
+/// Análisis: BPM detectado/calibrado, con valor por defecto 120.
+final audioBpmProvider = Provider<int>((ref) {
+  return ref.watch(
+    accordionSimulatorProvider.select((s) => s.audioReport?.bpm ?? 120),
+  );
+});
+
+/// Análisis: pista cargada actualmente (nombre) o null.
+final loadedAudioFileNameProvider = Provider<String?>((ref) {
+  return ref.watch(
+    accordionSimulatorProvider.select((s) => s.loadedAudioFileName),
+  );
+});
+
+/// Análisis: hay un análisis en curso (spinner/botón deshabilitado).
+final isAnalyzingAudioProvider = Provider<bool>((ref) {
+  return ref.watch(
+    accordionSimulatorProvider.select((s) => s.isAnalyzingAudio),
+  );
+});
+
+/// Metrónomo: activación y volumen, empaquetados para widgets del panel.
+final metronomeStateProvider = Provider<({bool active, double volume})>((ref) {
+  final active = ref.watch(
+    accordionSimulatorProvider.select((s) => s.isMetronomeActive),
+  );
+  final volume = ref.watch(
+    accordionSimulatorProvider.select((s) => s.metronomeVolume),
+  );
+  return (active: active, volume: volume);
+});
+
+/// Barra de canción: estado de acople y posición (widgets flotantes).
+final songBarDockProvider = Provider<({bool undocked, Offset position})>((ref) {
+  final undocked = ref.watch(
+    accordionSimulatorProvider.select((s) => s.isSongBarUndocked),
+  );
+  final position = ref.watch(
+    accordionSimulatorProvider.select((s) => s.songBarPosition),
+  );
+  return (undocked: undocked, position: position);
+});
+
+/// Calibración de BPM: en curso con marca temporal inicial (-1 = inactiva).
+final bpmCalibrationProvider = Provider<({bool calibrating, double start})>((ref) {
+  final start = ref.watch(
+    accordionSimulatorProvider.select((s) => s.bpmCalibrationStart),
+  );
+  return (calibrating: start >= 0.0, start: start);
+});
+
+/// Notación activa (latina/alemana) para widgets de texto de acordes.
+final notationModeProvider = Provider<NotationMode>((ref) {
+  return ref.watch(
+    accordionSimulatorProvider.select((s) => s.notation),
+  );
+});
+
+/// Volúmenes de ambos acordeones, empaquetados para el mezclador.
+final mixerVolumesProvider = Provider<({double v1, double v2, bool sync})>((ref) {
+  final v1 = ref.watch(
+    accordionSimulatorProvider.select((s) => s.volume1),
+  );
+  final v2 = ref.watch(
+    accordionSimulatorProvider.select((s) => s.volume2),
+  );
+  final sync = ref.watch(
+    accordionSimulatorProvider.select((s) => s.syncVolume),
+  );
+  return (v1: v1, v2: v2, sync: sync);
+});

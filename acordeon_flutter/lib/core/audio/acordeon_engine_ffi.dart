@@ -15,6 +15,24 @@ typedef AcordeonVolumeNative = Void Function(Float volume);
 typedef AcordeonVolumeDart = void Function(double volume);
 
 /// Puente FFI con la librería dinámica en Rust `acordeon_engine.dll`
+///
+/// # Estado y contrato (Mejora 5 del informe de arquitectura)
+///
+/// **División de responsabilidades Dart/Rust** (regla acordada):
+/// - **Rust** (`acordeon_engine` crate): síntesis DSP y análisis pesado
+///   (FFT, chromagrama, detección de tonalidad/BPM/acordes) expuestos vía
+///   C ABI estable.
+/// - **Dart**: orquestación, estado de UI, y pipeline de análisis puro
+///   (`core/audio/analysis/*`) como fallback cuando la DLL no está disponible.
+///
+/// **Carga**: se intentan las rutas candidatas en orden; si ninguna existe
+/// (`_isAvailable == false`) el bridge degrada silenciosamente y la UI usa el
+/// fallback Dart. No se lanza excepción para no romper el arranque en
+/// entornos sin la DLL compilada (web, CI).
+///
+/// **Para habilitar**: compilar `cargo build --release` en `acordeon_engine/`
+/// y copiar `target/release/acordeon_engine.dll` junto al ejecutable o en una
+/// de las rutas candidatas de abajo.
 class AcordeonEngineFFI {
   static AcordeonEngineFFI? _instance;
   static AcordeonEngineFFI get instance => _instance ??= AcordeonEngineFFI._();

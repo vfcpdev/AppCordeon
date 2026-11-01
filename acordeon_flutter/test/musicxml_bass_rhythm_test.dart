@@ -301,7 +301,7 @@ void main() {
     });
 
     testWidgets(
-      'imports and selects patterns, highlights basses, and reuses the metronome',
+      'captura un patrón desde la matriz 2×2 de bajos (7, 8, 4, 5)',
       (tester) async {
         tester.view.physicalSize = const Size(900, 900);
         tester.view.devicePixelRatio = 1;
@@ -310,9 +310,6 @@ void main() {
         final audioEngine = _RecordingAudioEngine();
         final container = ProviderContainer(
           overrides: [
-            fileStorageProvider.overrideWithValue(
-              _MemoryFileStorage(_musicXml),
-            ),
             audioEngineProvider.overrideWithValue(audioEngine),
           ],
         );
@@ -326,123 +323,73 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        final headerRect = tester.getRect(
-          find.byKey(const ValueKey('bass_panel_header_1')),
-        );
-        final panelRect = tester.getRect(
-          find.byKey(const ValueKey('bass_panel_container_1')),
-        );
-        final closeRect = tester.getRect(
-          find.byKey(const ValueKey('bass_panel_collapse_btn_1')),
-        );
-        final importRect = tester.getRect(
-          find.byKey(const ValueKey('bass_rhythm_import_btn_1')),
-        );
-        final boardRect = tester.getRect(
-          find.byKey(const ValueKey('bass_panel_board_1')),
-        );
-        expect(headerRect.width, greaterThan(boardRect.width));
-        expect(headerRect.width, closeTo(panelRect.width - 10, 1));
-        expect(headerRect.right - closeRect.right, lessThan(12));
-        expect(importRect.top, greaterThanOrEqualTo(headerRect.bottom));
-        expect(boardRect.top, greaterThan(importRect.bottom));
-
+        // El panel ya no expone combobox ni modal de listado de ritmos.
         expect(
-          container
-              .read(accordionSimulatorProvider)
-              .bassRhythmPatterns
-              .map((pattern) => pattern.name),
-          [
-            'Paseo Vallenato',
-            'Merengue Vallenato',
-            'Puya Vallenata',
-            'Son Vallenato (Bajo Arrastrado)',
-            'Chandé',
-            'Cumbia Colombiana',
-          ],
-        );
-        await tester.tap(
           find.byKey(const ValueKey('bass_rhythm_pattern_picker_1')),
+          findsNothing,
         );
-        await tester.pumpAndSettle();
-        await tester.tap(
-          find.byKey(const ValueKey('bass_rhythm_option_builtin:merengue')),
-        );
-        await tester.pump();
-
-        // El selector sigue abierto mientras el ritmo se reproduce.
-        expect(find.text('Selecciona un ritmo'), findsOneWidget);
-        var state = container.read(accordionSimulatorProvider);
-        expect(state.selectedBassRhythmPattern?.name, 'Merengue Vallenato');
-        expect(state.isBassMetronomeActive, isTrue);
-        expect(audioEngine.clickCount, 1);
-
-        // El stop del selector detiene el ritmo sin cerrar el panel.
-        await tester.tap(find.byKey(const ValueKey('bass_rhythm_stop_btn_1')));
-        await tester.pump();
-        state = container.read(accordionSimulatorProvider);
-        expect(state.isBassMetronomeActive, isFalse);
-        expect(find.text('Selecciona un ritmo'), findsOneWidget);
-
-        // Cerrar el selector para continuar con la importación.
-        await tester.tapAt(const Offset(5, 5));
-        await tester.pumpAndSettle();
-        expect(find.text('Selecciona un ritmo'), findsNothing);
-
-        audioEngine.clickCount = 0;
-        audioEngine.clickAccents.clear();
-
-        await tester.tap(
+        expect(
           find.byKey(const ValueKey('bass_rhythm_import_btn_1')),
+          findsNothing,
+        );
+
+        final patternCountBefore = container
+            .read(accordionSimulatorProvider)
+            .bassRhythmPatterns
+            .length;
+
+        await tester.tap(
+          find.byKey(const ValueKey('bass_rhythm_capture_btn_1')),
         );
         await tester.pumpAndSettle();
-        expect(
-          container.read(accordionSimulatorProvider).bassRhythmPatterns,
-          hasLength(8),
-        );
+        expect(find.text('Capturar patrón rítmico'), findsOneWidget);
 
-        final patternPicker = find.byKey(
-          const ValueKey('bass_rhythm_pattern_picker_1'),
+        // La matriz relaciona las cuatro cajas con los botones 7, 8, 4, 5.
+        for (final n in const [7, 8, 4, 5]) {
+          expect(
+            find.byKey(ValueKey('bass_matrix_cell_$n')),
+            findsOneWidget,
+          );
+        }
+        expect(find.text('Bajos externos'), findsOneWidget);
+        expect(find.text('Bajos internos'), findsOneWidget);
+
+        // Nombre del patrón y arranque de la captura.
+        await tester.enterText(
+          find.byKey(const ValueKey('bass_capture_name_field')),
+          'Mi Paseo',
         );
-        await tester.tap(patternPicker);
+        await tester.tap(
+          find.byKey(const ValueKey('bass_capture_start_btn')),
+        );
         await tester.pumpAndSettle();
-        expect(find.text('Selecciona un ritmo'), findsOneWidget);
-        expect(
-          find.byKey(const ValueKey('bass_rhythm_option_P1:2')),
-          findsOneWidget,
-        );
-        await tester.tap(find.byKey(const ValueKey('bass_rhythm_option_P1:2')));
+
+        var state = container.read(accordionSimulatorProvider);
+        expect(state.isBassCaptureActive, isTrue);
+
+        // Tocar el bajo 7 registra un golpe.
+        container
+            .read(accordionSimulatorProvider.notifier)
+            .captureBassMatrixHit(7);
         await tester.pump();
+        state = container.read(accordionSimulatorProvider);
+        expect(state.bassRhythmRecorder?.hits, hasLength(1));
+        expect(state.bassRhythmRecorder!.hits.first.buttonIndex, 7);
+
+        // Detener la captura registra el patrón con el nombre indicado.
+        await tester.tap(
+          find.byKey(const ValueKey('bass_capture_stop_btn')),
+        );
+        await tester.pumpAndSettle();
 
         state = container.read(accordionSimulatorProvider);
-        expect(state.selectedBassRhythmPattern?.name, 'Merengue');
-        // Primer golpe: pareja bajo 1 + acorde 1.
-        expect(state.activeBassRhythmButtonIndexes, containsAll([1, 0]));
-        expect(state.isBassMetronomeActive, isTrue);
-        expect(audioEngine.clickCount, 1);
-        expect(audioEngine.clickAccents, [false]);
-        expect(find.text('Selecciona un ritmo'), findsOneWidget);
-
-        await tester.pump(const Duration(milliseconds: 375));
-        state = container.read(accordionSimulatorProvider);
-        expect(state.bassRhythmElapsedSeconds, greaterThan(0));
-        expect(audioEngine.clickAccents, [false, true]);
-        // Segundo golpe: pareja bajo 2 + acorde 2.
-        expect(state.activeBassRhythmButtonIndexes, containsAll([7, 6]));
-        final renderedButtons = tester
-            .widgetList<AccordionButton3D>(find.byType(AccordionButton3D))
-            .toList();
-        expect(renderedButtons, hasLength(12));
-        expect(renderedButtons[1].isSelectedForRhythm, isFalse);
-        expect(renderedButtons[7].isSelectedForRhythm, isTrue);
-        expect(renderedButtons[6].isSelectedForRhythm, isTrue);
-
-        await tester.tap(find.byKey(const ValueKey('bass_rhythm_stop_btn_1')));
-        await tester.pump();
+        expect(state.isBassCaptureActive, isFalse);
         expect(
-          container.read(accordionSimulatorProvider).isBassMetronomeActive,
-          isFalse,
+          state.bassRhythmPatterns.length,
+          patternCountBefore + 1,
         );
+        expect(state.bassRhythmPatterns.first.name, 'Mi Paseo');
+        expect(state.bassRhythmPatterns.first.hits, hasLength(1));
       },
     );
   });
