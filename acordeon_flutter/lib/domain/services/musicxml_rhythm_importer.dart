@@ -160,10 +160,9 @@ class MusicXmlRhythmImporter {
         final measureNumber =
             int.tryParse(measure.getAttribute('number') ?? '') ??
             patterns.length + 1;
-        final measureDuration = math.max(
-          cursor,
-          beatsPerMeasure * 4 / beatType,
-        );
+        final measureDuration = math
+            .max(cursor, beatsPerMeasure * 4 / beatType)
+            .toDouble();
         patterns.add(
           BassRhythmPattern(
             id: '$partId:$measureNumber',

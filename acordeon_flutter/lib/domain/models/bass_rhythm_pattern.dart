@@ -33,8 +33,12 @@ class BassRhythmPattern {
     required List<BassRhythmHit> hits,
   }) : hits = List.unmodifiable(hits);
 
-  int get beatsPerMeasureInQuarterNotes =>
-      (beatsPerMeasure * 4 / beatType).round().clamp(1, 32);
+  int get beatsPerMeasureInQuarterNotes {
+    final quarterNotes = (beatsPerMeasure * 4 / beatType).round();
+    if (quarterNotes < 1) return 1;
+    if (quarterNotes > 32) return 32;
+    return quarterNotes;
+  }
 }
 
 class BassRhythmImportSummary {
