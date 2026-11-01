@@ -119,7 +119,6 @@ void main() {
       'Do9   (Do - Mi - Sol - Si♭ - Re)',
     );
     final fiveNoteChordPcs = ChordCatalog.pitchClassesForChordSymbol('Do9');
-    final fiveNoteChordState = container.read(accordionSimulatorProvider);
     expect(highlightedButtonCount(), fiveNoteChordPcs.length);
     expect(find.textContaining('completo'), findsNothing);
     expect(find.textContaining('incompleto'), findsNothing);
@@ -374,6 +373,12 @@ void main() {
         tester.element(find.byType(DiapasonWidget)),
       );
       final notifier = container.read(accordionSimulatorProvider.notifier);
+      final chordState = container.read(accordionSimulatorProvider);
+      final chordPitchClasses = ChordCatalog.notesFor(
+        root: chordState.freeChordRoot,
+        type: chordState.freeChordType,
+        extension: chordState.freeChordFourth,
+      ).map((note) => note % 12).toSet();
 
       // 1. Cerrar (Push): solo los botones cuya nota push pertenece al acorde se muestran presionados
       notifier.setBellows1(BellowsMode.push);
@@ -386,7 +391,7 @@ void main() {
       final pressedInPush = pushButtons.where((btn) => btn.isPressed).toList();
       expect(pressedInPush, isNotEmpty);
       for (final btn in pressedInPush) {
-        expect(btn.isChordPush, isTrue);
+        expect(chordPitchClasses, contains(btn.pushMidi % 12));
       }
 
       // Esperar a que se liberen los botones del acorde anterior
@@ -403,7 +408,7 @@ void main() {
       final pressedInPull = pullButtons.where((btn) => btn.isPressed).toList();
       expect(pressedInPull, isNotEmpty);
       for (final btn in pressedInPull) {
-        expect(btn.isChordPull, isTrue);
+        expect(chordPitchClasses, contains(btn.pullMidi % 12));
       }
 
       // Esperar a que se liberen los botones del acorde anterior
@@ -420,7 +425,7 @@ void main() {
       final pressedInArp = arpButtons.where((btn) => btn.isPressed).toList();
       expect(pressedInArp, isNotEmpty);
       for (final btn in pressedInArp) {
-        expect(btn.isChordPush, isTrue);
+        expect(chordPitchClasses, contains(btn.pushMidi % 12));
       }
 
       // Limpieza de temporizadores de Future.delayed en el test

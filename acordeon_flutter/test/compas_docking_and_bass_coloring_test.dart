@@ -51,6 +51,12 @@ void main() {
         final buttons = tester
             .widgetList<DiapasonButtonWidget>(find.byType(DiapasonButtonWidget))
             .toList();
+        expect(
+          buttons
+              .where((button) => button.isChordPush || button.isChordPull)
+              .length,
+          chordPitchClasses.length,
+        );
         final highlightedMidis = <int>[
           for (final button in buttons) ...[
             if (button.isChordPush) button.pushMidi,

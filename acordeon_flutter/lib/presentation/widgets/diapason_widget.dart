@@ -89,6 +89,7 @@ class DiapasonWidget extends ConsumerWidget {
     final selectedChordButtonIds = _selectChordButtonIds(
       buttons: trebleData.values.expand((row) => row),
       pitchClasses: activeChordPitchClasses,
+      bellowsMode: bellowsMode,
       octave: freeChordOctave,
       respectOctave:
           isFreeChordFixed || isFreeChordBeingEdited || compasChord.isEmpty,
@@ -532,6 +533,7 @@ class DiapasonWidget extends ConsumerWidget {
   Set<String> _selectChordButtonIds({
     required Iterable<TrebleButtonModel> buttons,
     required Set<int> pitchClasses,
+    required BellowsMode bellowsMode,
     required String octave,
     required bool respectOctave,
   }) {
@@ -539,19 +541,43 @@ class DiapasonWidget extends ConsumerWidget {
     final availableButtons = buttons.toList();
 
     for (final pitchClass in pitchClasses) {
-      for (final button in availableButtons) {
-        if (selectedButtonIds.contains(button.id)) continue;
+      bool matchesNote(int midi) {
+        if (midi % 12 != pitchClass) return false;
+        if (!respectOctave || octave == 'all' || octave.isEmpty) return true;
+        return '${(midi / 12).floor() - 1}' == octave;
+      }
 
-        bool matchesNote(int midi) {
-          if (midi % 12 != pitchClass) return false;
-          if (!respectOctave || octave == 'all' || octave.isEmpty) return true;
-          return '${(midi / 12).floor() - 1}' == octave;
-        }
+      bool matchesPreferredDirection(TrebleButtonModel button) {
+        return switch (bellowsMode) {
+          BellowsMode.push => matchesNote(button.push),
+          BellowsMode.pull => matchesNote(button.pull),
+          BellowsMode.both =>
+            matchesNote(button.push) || matchesNote(button.pull),
+        };
+      }
 
-        if (matchesNote(button.push) || matchesNote(button.pull)) {
-          selectedButtonIds.add(button.id);
-          break;
+      bool matchesOtherDirection(TrebleButtonModel button) {
+        return switch (bellowsMode) {
+          BellowsMode.push => matchesNote(button.pull),
+          BellowsMode.pull => matchesNote(button.push),
+          BellowsMode.both => false,
+        };
+      }
+
+      TrebleButtonModel? findButton(bool Function(TrebleButtonModel) matches) {
+        for (final button in availableButtons) {
+          if (!selectedButtonIds.contains(button.id) && matches(button)) {
+            return button;
+          }
         }
+        return null;
+      }
+
+      final matchingButton =
+          findButton(matchesPreferredDirection) ??
+          findButton(matchesOtherDirection);
+      if (matchingButton != null) {
+        selectedButtonIds.add(matchingButton.id);
       }
     }
 
