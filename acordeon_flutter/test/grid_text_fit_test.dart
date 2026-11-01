@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:acordeon_flutter/core/constants/layout_constants.dart';
-import 'package:acordeon_flutter/core/text/chord_text_fitter.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
@@ -41,13 +40,9 @@ void main() {
       expect(state.measures[0].beats[1].chord, equals('Dom7b5/Sol'));
 
       // Encuentra el TextField del cuadro (0, 1) e inspecciona su tipografía
-      final cellField = tester.widget<TextField>(
-        find
-            .byType(TextField)
-            .where((w) =>
-                w.controller?.text != null &&
-                w.controller!.text == 'Dom7b5/Sol')
-            .first,
+      final fields = tester.widgetList<TextField>(find.byType(TextField)).toList();
+      final cellField = fields.firstWhere(
+        (f) => f.controller?.text == 'Dom7b5/Sol',
       );
       final fontSize = cellField.style?.fontSize;
       expect(fontSize, isNotNull);
@@ -66,11 +61,9 @@ void main() {
       notifier.updateMeasureBeat(0, 0, 'Do');
       await tester.pumpAndSettle();
 
-      final cellField = tester.widget<TextField>(
-        find
-            .byType(TextField)
-            .where((w) => w.controller?.text == 'Do')
-            .first,
+      final fields = tester.widgetList<TextField>(find.byType(TextField)).toList();
+      final cellField = fields.firstWhere(
+        (f) => f.controller?.text == 'Do',
       );
       expect(cellField.style?.fontSize, equals(10.0));
 
