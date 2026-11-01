@@ -157,6 +157,26 @@ class AudioAnalysisReport {
     this.engine = 'Rust (WebAssembly / Native DSP)',
   });
 
+  /// Reporte de reserva usado cuando el usuario ajusta el BPM sin haber
+  /// cargado/analizado todavía ningún archivo de audio.
+  factory AudioAnalysisReport.placeholder(int bpm) {
+    return AudioAnalysisReport(
+      duration: 16.0,
+      bpm: bpm,
+      mainKey: const KeyDetectionResult(
+        rootMod: 0,
+        mode: 'major',
+        keyNameLat: 'Do Mayor',
+        keyNameAle: 'C Major',
+        recommendedTuning: 'Cinco Letras (Bb-Eb-Ab)',
+        recommendedOffset: 10,
+        recommendedRow: 'row2',
+        correlation: 1.0,
+      ),
+      chords: const [],
+    );
+  }
+
   AudioAnalysisReport copyWith({
     double? duration,
     int? bpm,
