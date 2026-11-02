@@ -179,14 +179,18 @@ class TrackInfoCardWidget extends ConsumerWidget {
                 ),
                 const SizedBox(width: 4),
 
-                // Contador de Tiempo actual / total
-                Text(
-                  '${_formatTime(state.currentAudioTime)} / ${_formatTime(totalDur)}',
-                  style: const TextStyle(
-                    fontSize: 9.0,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'monospace',
-                    color: Color(0xFF0284C7),
+                // Contador de Tiempo actual / total (Sincronizado con Compás)
+                Tooltip(
+                  message: 'Tiempo transcurrido (${_formatTime(state.compasTime)} compás) / Duración total',
+                  child: Text(
+                    '${_formatTime(state.currentAudioTime)} / ${_formatTime(totalDur)}',
+                    key: const ValueKey('track_info_time_display'),
+                    style: const TextStyle(
+                      fontSize: 9.0,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
+                      color: Color(0xFF0284C7),
+                    ),
                   ),
                 ),
               ],

@@ -1911,6 +1911,8 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final int totalMeasures;
   final String chord;
   final String timeText;
+  final double? startTime;
+  final double? endTime;
   final BellowsMode bellows;
   final bool isMultiBeatAssignmentMode;
   final bool isMultiBeatAssignmentTarget;
@@ -1935,6 +1937,8 @@ class _InlineBeatChordEditor extends StatefulWidget {
     required this.totalMeasures,
     required this.chord,
     required this.timeText,
+    this.startTime,
+    this.endTime,
     this.bellows = BellowsMode.both,
     this.isMultiBeatAssignmentMode = false,
     this.isMultiBeatAssignmentTarget = false,
@@ -2552,17 +2556,25 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (showTime) ...[
-                          Text(
-                            widget.timeText,
-                            style: TextStyle(
-                              fontSize: 7.5,
-                              fontWeight: isCellSelected
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
-                              color: isCellSelected
-                                  ? const Color(0xFF1D4ED8)
-                                  : const Color(0xFF64748B),
-                              fontFamily: 'monospace',
+                          InkWell(
+                            onTap: () => _showBeatTimingDialog(context),
+                            child: Tooltip(
+                              message: 'Editar tiempo del compás: ${widget.timeText}',
+                              child: Text(
+                                widget.timeText,
+                                style: TextStyle(
+                                  fontSize: 7.5,
+                                  fontWeight: isCellSelected
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                  color: isCellSelected
+                                      ? const Color(0xFF1D4ED8)
+                                      : const Color(0xFF64748B),
+                                  fontFamily: 'monospace',
+                                  decoration: TextDecoration.underline,
+                                  decorationStyle: TextDecorationStyle.dotted,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 3),
@@ -2598,6 +2610,81 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
             },
           ),
         ),
+      ),
+    );
+  }
+
+  void _showBeatTimingDialog(BuildContext context) {
+    final defaultStart = widget.startTime ?? ((widget.measureIndex * 4 + widget.beatIndex) * 0.5);
+    final defaultEnd = widget.endTime ?? (defaultStart + 0.5);
+
+    final startCtrl = TextEditingController(text: defaultStart.toStringAsFixed(2));
+    final endCtrl = TextEditingController(text: defaultEnd.toStringAsFixed(2));
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(
+          'Editar Tiempo Compás ${widget.measureIndex + 1}.${widget.beatIndex + 1}',
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Ajusta los segundos de inicio y fin para sincronizar exactamente con el audio.',
+              style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: startCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Tiempo Inicio (segundos)',
+                isDense: true,
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.timer_outlined, size: 16),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: endCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Tiempo Fin (segundos)',
+                isDense: true,
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.timer_off_outlined, size: 16),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final s = double.tryParse(startCtrl.text.trim());
+              final e = double.tryParse(endCtrl.text.trim());
+              if (s != null && e != null && s >= 0 && s <= e) {
+                // Notifier actualización formal mediante Hoare Triples
+                final notifier = ProviderScope.containerOf(context, listen: false)
+                    .read(accordionSimulatorProvider.notifier);
+                notifier.updateMeasureBeatTiming(
+                  barIndex: widget.measureIndex,
+                  beatIndex: widget.beatIndex,
+                  startTime: s,
+                  endTime: e,
+                );
+                Navigator.pop(dialogCtx);
+              }
+            },
+            child: const Text('Aplicar'),
+          ),
+        ],
       ),
     );
   }
