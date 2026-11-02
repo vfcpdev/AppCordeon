@@ -22,6 +22,7 @@ class WebAudioFilePlayer implements AudioFilePlayer {
   Completer<double>? _durationCompleter;
   JSFunction? _loadedMetadataHandler;
   JSFunction? _durationChangeHandler;
+  JSFunction? _errorHandler;
 
   @override
   bool get isLoaded => _audio != null;
@@ -80,8 +81,17 @@ class WebAudioFilePlayer implements AudioFilePlayer {
       }
     }).toJS;
 
+    // Si el navegador no puede decodificar el archivo, se libera la espera de
+    // inmediato (duración 0) para que la carga se reporte como fallida.
+    _errorHandler = ((web.Event _) {
+      if (!(_durationCompleter?.isCompleted ?? true)) {
+        _durationCompleter?.complete(0);
+      }
+    }).toJS;
+
     audio.addEventListener('loadedmetadata', _loadedMetadataHandler!);
     audio.addEventListener('durationchange', _durationChangeHandler!);
+    audio.addEventListener('error', _errorHandler!);
   }
 
   void _detachDurationListeners(web.HTMLAudioElement audio) {
@@ -93,8 +103,13 @@ class WebAudioFilePlayer implements AudioFilePlayer {
     if (dc != null) {
       audio.removeEventListener('durationchange', dc);
     }
+    final err = _errorHandler;
+    if (err != null) {
+      audio.removeEventListener('error', err);
+    }
     _loadedMetadataHandler = null;
     _durationChangeHandler = null;
+    _errorHandler = null;
     if (!(_durationCompleter?.isCompleted ?? true)) {
       _durationCompleter?.complete(durationSeconds);
     }

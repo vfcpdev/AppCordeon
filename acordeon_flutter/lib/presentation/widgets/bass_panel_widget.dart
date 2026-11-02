@@ -9,6 +9,7 @@ import '../../domain/theory/music_theory.dart';
 import '../controllers/accordion_controller.dart';
 import 'accordion_button_3d.dart';
 import 'bass_rhythm_capture_dialog.dart';
+import 'bass_rhythm_pattern_library_dialog.dart';
 
 class BassPanelWidget extends ConsumerWidget {
   final int accordionNumber;
@@ -645,6 +646,23 @@ class BassPanelWidget extends ConsumerWidget {
               color: isCapturing
                   ? const Color(0xFFDC2626)
                   : const Color(0xFF334155),
+            ),
+          ),
+          const SizedBox(width: 2),
+          IconButton(
+            key: ValueKey('bass_rhythm_library_btn_$accordionNumber'),
+            tooltip: 'Biblioteca de patrones ($patternCount)',
+            onPressed: () => BassRhythmPatternLibraryDialog.show(
+              context,
+              accordionNumber: accordionNumber,
+            ),
+            constraints: const BoxConstraints.tightFor(width: 29, height: 31),
+            padding: EdgeInsets.zero,
+            splashRadius: 15,
+            icon: const Icon(
+              Icons.library_music_outlined,
+              size: 17,
+              color: Color(0xFF334155),
             ),
           ),
           const SizedBox(width: 4),

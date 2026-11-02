@@ -243,6 +243,11 @@ class _TestAudioFilePlayer implements AudioFilePlayer {
   double get durationSeconds => 6;
 
   @override
+  Future<double> waitForDuration({
+    Duration timeout = const Duration(seconds: 10),
+  }) async => durationSeconds;
+
+  @override
   bool get isLoaded => _isLoaded;
 
   @override

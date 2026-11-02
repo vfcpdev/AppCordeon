@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../audio/acordeon_engine_ffi.dart';
@@ -11,6 +9,7 @@ import '../audio/audio_file_loader.dart';
 import '../audio/audio_file_player.dart';
 import '../audio/demo_track_generator.dart';
 import '../audio/file_picker_audio_loader.dart';
+import '../platform/platform_environment.dart';
 import '../storage/file_storage.dart';
 
 /// Composition root: único lugar donde se eligen implementaciones concretas.
@@ -32,7 +31,7 @@ final audioAnalyzerProvider = Provider<AudioAnalyzer>((ref) {
   // análisis vía FFI (detectado en la sonda FFI). En runtime real (flutter
   // run -d windows / dart CLI) la misma llamada funciona y devuelve JSON
   // válido, por lo que el guard sólo excluye el entorno de pruebas.
-  final inFlutterTest = Platform.environment['FLUTTER_TEST'] == 'true';
+  final inFlutterTest = !kIsWeb && isFlutterTestEnvironment;
   final engine = AcordeonEngineFFI.instance;
   if (!inFlutterTest && engine.analysisAvailable) {
     debugPrint('[DI] Análisis de audio vía Rust FFI');

@@ -5,7 +5,6 @@ import '../../core/constants/enums.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/bass_matrix_layout.dart';
 import '../controllers/accordion_controller.dart';
-import 'bass_rhythm_pattern_library_widget.dart';
 
 /// Panel INLINE (no modal) de captura de patrones rítmicos de bajos.
 ///
@@ -104,8 +103,7 @@ class _BassRhythmCapturePanelState
           ),
         ),
       );
-      // El panel permanece abierto para mostrar el patrón recién guardado en
-      // la biblioteca y permitir reproducirlo de inmediato.
+      widget.onClose?.call();
     }
   }
 
@@ -206,8 +204,6 @@ class _BassRhythmCapturePanelState
                 color: Color(0xFF64748B),
               ),
             ),
-          const Divider(height: 12),
-          BassRhythmPatternLibraryWidget(accordionNumber: widget.accordionNumber),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,

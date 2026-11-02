@@ -193,7 +193,12 @@ void main() {
           container.read(accordionSimulatorProvider).bassRhythmPatterns.first;
       expect(pattern.name, 'Paseo propio');
 
-      // La biblioteca permanece visible y lista para reproducir.
+      // Abrir la biblioteca y reproducir el patrón recién guardado.
+      await tester.tap(
+        find.byKey(const ValueKey('bass_rhythm_library_btn_1')),
+      );
+      await tester.pumpAndSettle();
+
       expect(
         find.byKey(ValueKey('bass_pattern_row_${pattern.id}')),
         findsOneWidget,
@@ -214,6 +219,11 @@ void main() {
       await tester.pump();
       state = container.read(accordionSimulatorProvider);
       expect(state.isBassMetronomeActive, isFalse);
+
+      await tester.tap(
+        find.byKey(const ValueKey('bass_rhythm_library_close_btn')),
+      );
+      await tester.pumpAndSettle();
     });
   });
 }

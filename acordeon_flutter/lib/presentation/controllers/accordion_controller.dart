@@ -677,6 +677,15 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
   late DemoTrackGenerator _demoGenerator;
   late FreeChordPlaybackCoordinator _freeChordCoordinator;
   Uint8List? _loadedAudioBytes;
+
+  /// Identificador de la carga vigente. Sirve para descartar hidrataciones de
+  /// duración que llegan tarde (p. ej. al reemplazar la pista antes de que el
+  /// navegador publique `loadedmetadata`).
+  int _audioLoadGeneration = 0;
+
+  /// Marca de ciclo de vida para no mutar el estado tras el `dispose` del
+  /// notifier (p. ej. hidrataciones de duración que llegan tarde en tests).
+  bool _disposed = false;
   final GridHistoryManager _gridHistory = GridHistoryManager();
 
   /// Visibilidad de prueba: reemplaza el estado completo sin pasar por copyWith.
@@ -733,6 +742,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       () => ref.read(audioEngineProvider),
     );
     ref.onDispose(() {
+      _disposed = true;
       _playbackTimer?.cancel();
       _standaloneMetronomeTimer?.cancel();
       _bassCaptureTimer?.cancel();
@@ -896,7 +906,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     try {
       final picked = await _fileLoader.pickAudioFile();
       if (picked == null) return const AudioLoadCancelled();
-      return loadAudioBytes(picked.bytes, picked.name);
+      final result = loadAudioBytes(picked.bytes, picked.name);
+      if (result is AudioLoadFailure) return result;
+      return await _confirmEffectiveAudioLoad(picked.name);
     } catch (e) {
       state = state.copyWith(isAnalyzingAudio: false);
       return AudioLoadFailure('Error al cargar audio: $e');
@@ -906,14 +918,45 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
   /// Carga una pista demo clásica de Vallenato sin analizarla.
   Future<AudioLoadResult> loadDemoAudioTrack() async {
     try {
-      return loadAudioBytes(
+      final result = loadAudioBytes(
         _demoGenerator.generate(),
         DemoTrackGenerator.demoFileName,
       );
+      if (result is AudioLoadFailure) return result;
+      return await _confirmEffectiveAudioLoad(DemoTrackGenerator.demoFileName);
     } catch (e) {
       state = state.copyWith(isAnalyzingAudio: false);
       return AudioLoadFailure('Error al procesar demo: $e');
     }
+  }
+
+  /// Confirma que el reproductor decodificó efectivamente el archivo.
+  ///
+  /// {P}: hay una pista registrada y el reproductor ya recibió los bytes.
+  /// {Q}: devuelve [AudioLoadSuccess] con la duración hidratada cuando el
+  ///      reproductor expone una duración positiva; en plataformas sin
+  ///      transport (stub nativo) también hay éxito. Si el navegador no pudo
+  ///      decodificar el archivo, la pista fantasma se limpia y se devuelve
+  ///      [AudioLoadFailure].
+  Future<AudioLoadResult> _confirmEffectiveAudioLoad(String fileName) async {
+    if (!_audioPlayer.isLoaded) {
+      // Plataforma sin reproducción real (stub): la pista se acepta.
+      return AudioLoadSuccess(fileName);
+    }
+    final duration = await _audioPlayer.waitForDuration(
+      timeout: const Duration(seconds: 8),
+    );
+    if (duration > 0) {
+      if (!_disposed && state.loadedAudioFileName == fileName) {
+        state = state.copyWith(totalAudioDuration: duration);
+      }
+      return AudioLoadSuccess(fileName);
+    }
+    // El navegador no publicó metadatos: el archivo no es decodificable.
+    clearAudioReport();
+    return const AudioLoadFailure(
+      'El navegador no pudo decodificar el archivo de audio seleccionado.',
+    );
   }
 
   /// Carga audio para reproducción. El análisis se solicita explícitamente mediante
@@ -952,27 +995,25 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       return AudioLoadFailure('Error al preparar la pista para reproducción: $e');
     }
 
-    // En la web, `durationSeconds == 0` indica que el navegador no pudo cargar
-    // el elemento de audio. En nativo el stub también devuelve 0, por lo que
-    // sólo tratamos el caso como fallo cuando el reproductor declara estar cargado.
+    // La duración puede no conocerse todavía: en web el `<audio>` publica
+    // `loadedmetadata` después de `load()`. No se trata como error; se hidrata
+    // en segundo plano para conservar la carga efectiva del archivo.
     final loadedDuration = _audioPlayer.durationSeconds;
-    if (_audioPlayer.isLoaded && loadedDuration <= 0) {
-      return const AudioLoadFailure(
-        'El navegador no pudo cargar el archivo de audio seleccionado.',
-      );
-    }
-
     _loadedAudioBytes = Uint8List.fromList(bytes);
+
+    // Invalida cualquier hidratación en vuelo de una pista anterior.
+    final generation = ++_audioLoadGeneration;
 
     state = state.copyWith(
       isAnalyzingAudio: false,
       clearAudioReport: true,
       loadedAudioFileName: fileName,
-      totalAudioDuration: loadedDuration,
+      totalAudioDuration: loadedDuration > 0 ? loadedDuration : 0.0,
       currentAudioTime: 0.0,
       currentCompasTime: 0.0,
       isPlayingAudio: false,
     );
+    _hydrateAudioDuration(generation, fileName);
     // {Q}: la pista queda registrada sin reproducción activa ni análisis pendiente.
     ensure(
       'loadAudioBytes',
@@ -985,6 +1026,24 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       !state.isPlayingAudio,
     );
     return AudioLoadSuccess(fileName);
+  }
+
+  /// Completa la duración real del audio cuando el reproductor la publica.
+  ///
+  /// {P}: `generation` corresponde a la última carga y `fileName` sigue siendo
+  ///      la pista activa.
+  /// {Q}: si el reproductor expone una duración finita y positiva,
+  ///      `totalAudioDuration` coincide con ella; en caso contrario el estado
+  ///      no se altera.
+  void _hydrateAudioDuration(int generation, String fileName) {
+    unawaited(() async {
+      final duration = await _audioPlayer.waitForDuration();
+      if (_disposed) return;
+      if (generation != _audioLoadGeneration) return;
+      if (state.loadedAudioFileName != fileName) return;
+      if (!duration.isFinite || duration <= 0) return;
+      state = state.copyWith(totalAudioDuration: duration);
+    }());
   }
 
   /// Analiza la pista previamente cargada y aplica sus resultados al acordeón.
@@ -1125,41 +1184,46 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
   void clearAudioReport() {
     stopAudio();
     _loadedAudioBytes = null;
+    // Invalida hidrataciones pendientes de la pista cerrada.
+    _audioLoadGeneration++;
     state = state.copyWith(clearAudio: true, isPlayingAudio: false);
   }
 
   void updateAudioKey(int rootMod, String mode) {
     final report = state.audioReport;
-    if (report == null) return;
-    updateAudioKeyAndBpm(rootMod: rootMod, mode: mode, bpm: report.bpm);
+    updateAudioKeyAndBpm(
+      rootMod: rootMod,
+      mode: mode,
+      bpm: report?.bpm ?? 120,
+    );
   }
 
   void updateAudioBpm(int newBpm) {
     final report = state.audioReport;
-    if (report == null) {
-      final clampedBpm = newBpm.clamp(30, 300);
-      state = state.copyWith(
-        audioReport: AudioAnalysisReport.placeholder(clampedBpm),
-      );
-      generateMeasuresForAudio(durationSeconds: 16.0, bpm: clampedBpm);
-      return;
-    }
     updateAudioKeyAndBpm(
-      rootMod: report.mainKey.rootMod,
-      mode: report.mainKey.mode,
+      rootMod: report?.mainKey.rootMod ?? 0,
+      mode: report?.mainKey.mode ?? 'major',
       bpm: newBpm,
     );
   }
 
   /// Actualiza la tonalidad principal y el BPM de forma conjunta y atómica,
-  /// recalculando de forma efectiva los acordes en el reporte y en la cuadrícula de compases.
+  /// recalculando de forma efectiva los acordes en el reporte y en la cuadrícula
+  /// de compases.
+  ///
+  /// Si aún no hay reporte (pista cargada sin analizar), se crea uno de reserva
+  /// para que las opciones de tono/BPM estén siempre disponibles.
+  ///
+  /// {P}: `bpm` se clampea a [30, 300] y `rootMod` se interpreta módulo 12.
+  /// {Q}: `audioReport` refleja el BPM clampeado y la tónica indicada, la
+  ///      cuadrícula se reconstruye coherente y la afinación se aplica al
+  ///      diapasón.
   void updateAudioKeyAndBpm({
     required int rootMod,
     required String mode,
     required int bpm,
   }) {
-    final report = state.audioReport;
-    if (report == null) return;
+    final existingReport = state.audioReport;
 
     // {P}: bpm ∈ [30, 300] tras el clampeo y rootMod dentro de 0..11 módulo 12.
     require(
@@ -1174,6 +1238,11 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     );
 
     final clampedBpm = bpm.clamp(30, 300);
+    final report =
+        existingReport ?? AudioAnalysisReport.placeholder(clampedBpm);
+    final effectiveDuration = state.totalAudioDuration > 0
+        ? state.totalAudioDuration
+        : report.duration;
     final semitoneOffset =
         ((rootMod % 12) - (report.mainKey.rootMod % 12) + 12) % 12;
 
@@ -1203,13 +1272,14 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     );
 
     final updatedReport = report.copyWith(
+      duration: effectiveDuration,
       bpm: clampedBpm,
       mainKey: updatedKey,
       chords: updatedChords,
     );
 
     final secondsPerBeat = 60.0 / clampedBpm;
-    final totalBeats = (report.duration / secondsPerBeat).ceil();
+    final totalBeats = (effectiveDuration / secondsPerBeat).ceil();
     final totalBars = ((totalBeats + 3) ~/ 4).clamp(8, 500);
 
     final newMeasures = _rebuildMeasuresForKeyChange(

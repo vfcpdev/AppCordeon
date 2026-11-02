@@ -52,7 +52,9 @@ class _EditAudioKeyBpmDialogState extends ConsumerState<EditAudioKeyBpmDialog> {
 
   void _saveChanges() {
     final notifier = ref.read(accordionSimulatorProvider.notifier);
-    final parsedBpm = int.tryParse(_bpmController.text.trim()) ?? widget.report.bpm;
+    final parsedBpm =
+        (int.tryParse(_bpmController.text.trim()) ?? widget.report.bpm)
+            .clamp(30, 300);
 
     notifier.updateAudioKeyAndBpm(
       rootMod: _selectedRootMod,
@@ -60,9 +62,10 @@ class _EditAudioKeyBpmDialogState extends ConsumerState<EditAudioKeyBpmDialog> {
       bpm: parsedBpm,
     );
 
+    final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.showSnackBar(
       SnackBar(
         content: Text(
           'Tono y BPM corregidos: ${_selectedMode == "major" ? "Mayor" : "Menor"} a $parsedBpm BPM',

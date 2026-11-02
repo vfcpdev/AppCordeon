@@ -20,19 +20,24 @@ import '../controllers/accordion_controller.dart';
 class BassRhythmPatternLibraryWidget extends ConsumerWidget {
   final int accordionNumber;
 
+  /// Ancho fijo de la lista.
+  ///
+  /// Cuando el widget se embebe en contenedores con `IntrinsicWidth` es
+  /// necesario un ancho concreto: un `ListView` (viewport) no implementa
+  /// dimensiones intrínsecas.
+  final double width;
+
+  /// Altura máxima visible de la lista antes de hacer scroll.
+  final double maxHeight;
+
   const BassRhythmPatternLibraryWidget({
     super.key,
     this.accordionNumber = 1,
+    this.width = 210,
+    this.maxHeight = 168,
   });
 
-  static const double _maxListHeight = 168;
-
-  /// Ancho fijo de la lista.
-  ///
-  /// El panel de bajos usa `IntrinsicWidth`; un `ListView` (viewport) no
-  /// implementa dimensiones intrínsecas, así que se le da un ancho concreto
-  /// para que el cálculo intrínseco del panel sea estable.
-  static const double _listWidth = 210;
+  static const double _rowExtent = 38.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -86,8 +91,10 @@ class BassRhythmPatternLibraryWidget extends ConsumerWidget {
         ),
         const SizedBox(height: 4),
         SizedBox(
-          width: _listWidth,
-          height: (patterns.length * 38.0).clamp(38.0, _maxListHeight),
+          width: width,
+          height: (patterns.length * _rowExtent)
+              .clamp(_rowExtent, maxHeight)
+              .toDouble(),
           child: Scrollbar(
             child: ListView.separated(
               padding: EdgeInsets.zero,

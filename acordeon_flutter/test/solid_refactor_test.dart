@@ -65,6 +65,11 @@ class FakeAudioFilePlayer implements AudioFilePlayer {
   double get durationSeconds => duration;
 
   @override
+  Future<double> waitForDuration({
+    Duration timeout = const Duration(seconds: 10),
+  }) async => duration;
+
+  @override
   void load(Uint8List bytes, String mimeType) {
     loaded = true;
     calls.add('load:${bytes.length}:$mimeType');

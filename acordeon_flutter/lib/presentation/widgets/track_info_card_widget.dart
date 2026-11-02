@@ -206,31 +206,56 @@ class TrackInfoCardWidget extends ConsumerWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-            )
-          else ...[
-            // Opciones armónicas que solo existen después del análisis.
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2.5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFCBD5E1)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _GroupedOptionBadge(
-                    icon: FontAwesomeIcons.key,
-                    label: 'Tono: ${report.keyResult.keyNameLat}',
-                    tooltip: 'Tono detectado (clic para editar o corregir)',
-                    background: const Color(0xFFF8FAFC),
-                    border: const Color(0xFFCBD5E1),
-                    foreground: const Color(0xFF334155),
-                    onTap: () => showDialog(
-                      context: context,
-                      builder: (_) => EditAudioKeyBpmDialog(report: report),
+            ),
+          // Las opciones de tono y BPM están siempre disponibles: si la pista
+          // aún no se analizó, el diálogo parte de un reporte de reserva.
+          Container(
+            key: const ValueKey('audio_key_bpm_options'),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2.5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFCBD5E1)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _GroupedOptionBadge(
+                  key: const ValueKey('audio_key_option'),
+                  icon: FontAwesomeIcons.key,
+                  label: report == null
+                      ? 'Tono'
+                      : 'Tono: ${report.keyResult.keyNameLat}',
+                  tooltip: 'Cambiar tono / tonalidad (clic para editar o corregir)',
+                  background: const Color(0xFFF8FAFC),
+                  border: const Color(0xFFCBD5E1),
+                  foreground: const Color(0xFF334155),
+                  onTap: () => showDialog(
+                    context: context,
+                    builder: (_) => EditAudioKeyBpmDialog(
+                      report: report ??
+                          AudioAnalysisReport.placeholder(120),
                     ),
                   ),
+                ),
+                const SizedBox(width: 4),
+                _GroupedOptionBadge(
+                  key: const ValueKey('audio_bpm_option'),
+                  icon: FontAwesomeIcons.gaugeHigh,
+                  label: report == null ? 'BPM' : 'BPM: ${report.bpm}',
+                  tooltip: 'Cambiar BPM / tempo (clic para editar o corregir)',
+                  background: const Color(0xFFF8FAFC),
+                  border: const Color(0xFFCBD5E1),
+                  foreground: const Color(0xFF334155),
+                  onTap: () => showDialog(
+                    context: context,
+                    builder: (_) => EditAudioKeyBpmDialog(
+                      report: report ??
+                          AudioAnalysisReport.placeholder(120),
+                    ),
+                  ),
+                ),
+                if (report != null) ...[
                   const SizedBox(width: 4),
                   _GroupedOptionBadge(
                     icon: FontAwesomeIcons.tableCells,
@@ -250,9 +275,9 @@ class TrackInfoCardWidget extends ConsumerWidget {
                     },
                   ),
                 ],
-              ),
+              ],
             ),
-          ],
+          ),
           const SizedBox(width: 6),
           _GroupedOptionBadge(
             icon: state.isAudioCoupled
