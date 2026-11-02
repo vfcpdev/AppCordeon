@@ -229,6 +229,37 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         );
     final isEditActive = selectedChord != null || hasOccurrences;
 
+    // Estado del fuelle para los botones situados en la barra de herramientas:
+    // Determina si hay casillas seleccionadas o marcadas con acordes para cambiar dirección
+    BellowsMode activeBellows = BellowsMode.both;
+    bool canChangeBellows = false;
+    if (state.isMultiBeatAssignmentMode && state.multiBeatAssignmentTargets.isNotEmpty) {
+      canChangeBellows = true;
+      for (final key in state.multiBeatAssignmentTargets) {
+        final m = key ~/ 4;
+        final b = key % 4;
+        if (m < state.measures.length && b < state.measures[m].beats.length) {
+          activeBellows = state.measures[m].beats[b].bellows;
+          break;
+        }
+      }
+    } else if (hasMarks) {
+      canChangeBellows = true;
+      for (final key in state.markedBeats) {
+        final m = key ~/ 4;
+        final b = key % 4;
+        if (m < state.measures.length && b < state.measures[m].beats.length) {
+          activeBellows = state.measures[m].beats[b].bellows;
+          break;
+        }
+      }
+    } else if (hasSelectedCell) {
+      final selectedMeasureBeat = state.measures[selectedBar].beats[selectedBeat];
+      canChangeBellows = selectedMeasureBeat.chord.trim().isNotEmpty;
+      activeBellows = selectedMeasureBeat.bellows;
+    }
+
+
     return SizedBox(
       width: effectiveWidth,
       child: SingleChildScrollView(
@@ -450,7 +481,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: SizedBox(
-                        width: effectiveWidth > 150 ? effectiveWidth : 180,
+                        width: effectiveWidth > 220 ? effectiveWidth : 220,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -662,6 +693,29 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       ),
                                     ),
                                   ),
+                                ),
+                                const SizedBox(width: 4),
+                                // Botones de Fuelle: Abre (←) y Cierra (→) situados a la derecha de Selección Múltiple
+                                _BeatBellowsArrows(
+                                  bellows: activeBellows,
+                                  isEnabled: canChangeBellows,
+                                  onBellowsChanged: (b) {
+                                    if (state.isMultiBeatAssignmentMode && state.multiBeatAssignmentTargets.isNotEmpty) {
+                                      for (final key in state.multiBeatAssignmentTargets) {
+                                        final m = key ~/ 4;
+                                        final beat = key % 4;
+                                        notifier.setBeatBellows(m, beat, b);
+                                      }
+                                    } else if (hasMarks) {
+                                      for (final key in state.markedBeats) {
+                                        final m = key ~/ 4;
+                                        final beat = key % 4;
+                                        notifier.setBeatBellows(m, beat, b);
+                                      }
+                                    } else if (hasSelectedCell) {
+                                      notifier.setBeatBellows(selectedBar, selectedBeat, b);
+                                    }
+                                  },
                                 ),
                               ],
                             ),
@@ -2508,7 +2562,6 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
               //   fuelle se ocultan si no caben. La marcación por checkbox vive
               //   a la izquierda del número del compás, no en la celda.
               final showArrows = constraints.maxWidth >= 110;
-              final showCompactArrows = constraints.maxWidth >= 52;
               final showTime = constraints.maxWidth >= 155;
               final chordTextWidth =
                   (constraints.maxWidth - (showArrows ? 30 : 0)).clamp(
@@ -2577,77 +2630,39 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                 ),
               );
 
-              final bellowsArrows = _BeatBellowsArrows(
-                bellows: widget.bellows,
-                isEnabled: hasChord,
-                onBellowsChanged: hasChord ? widget.onBellowsChanged : null,
-              );
-
-              if (showArrows) {
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Acorde del cuadro, alineado a la izquierda (sin checkbox:
-                    // el marcado vive a la izquierda del número del compás)
-                    Expanded(
-                      child: IgnorePointer(
-                        ignoring: widget.isMultiBeatAssignmentMode,
-                        child: chordField,
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: IgnorePointer(
+                      ignoring: widget.isMultiBeatAssignmentMode,
+                      child: chordField,
+                    ),
+                  ),
+                  if (showTime) ...[
+                    InkWell(
+                      onTap: () => _showBeatTimingDialog(context),
+                      child: Tooltip(
+                        message: 'Editar tiempo del compás: ',
+                        child: Text(
+                          widget.timeText,
+                          style: TextStyle(
+                            fontSize: 7.5,
+                            fontWeight: isCellSelected
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                            color: isCellSelected
+                                ? const Color(0xFF1D4ED8)
+                                : const Color(0xFF64748B),
+                            fontFamily: 'monospace',
+                            decoration: TextDecoration.underline,
+                            decorationStyle: TextDecorationStyle.dotted,
+                          ),
+                        ),
                       ),
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (showTime) ...[
-                          InkWell(
-                            onTap: () => _showBeatTimingDialog(context),
-                            child: Tooltip(
-                              message: 'Editar tiempo del compás: ${widget.timeText}',
-                              child: Text(
-                                widget.timeText,
-                                style: TextStyle(
-                                  fontSize: 7.5,
-                                  fontWeight: isCellSelected
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
-                                  color: isCellSelected
-                                      ? const Color(0xFF1D4ED8)
-                                      : const Color(0xFF64748B),
-                                  fontFamily: 'monospace',
-                                  decoration: TextDecoration.underline,
-                                  decorationStyle: TextDecorationStyle.dotted,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 3),
-                        ],
-                        // Flechas Abre/Cierre a la derecha del acorde
-                        Padding(
-                          padding: const EdgeInsets.only(right: 2.0),
-                          child: bellowsArrows,
-                        ),
-                      ],
-                    ),
+                    const SizedBox(width: 2),
                   ],
-                );
-              }
-
-              // Modo compacto: los 4 cuadros del compás en fila horizontal.
-              // Únicamente el acorde centrado y (si cabe) el fuelle debajo:
-              // la celda no lleva checkbox.
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IgnorePointer(
-                    ignoring: widget.isMultiBeatAssignmentMode,
-                    child: chordField,
-                  ),
-                  if (showCompactArrows)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 1),
-                      child: bellowsArrows,
-                    ),
                 ],
               );
             },
@@ -3595,7 +3610,7 @@ class _BeatAdjustButton extends StatelessWidget {
               color: isNudged
                   ? const Color(0xFF2563EB)
                   : const Color(0xFF64748B),
-            ),r
+            ),
             const SizedBox(width: 3),
             Text(
               isNudged ? '${ms >= 0 ? "+" : ""}$ms' : 'Beat',
