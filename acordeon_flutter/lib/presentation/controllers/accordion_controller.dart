@@ -3180,6 +3180,61 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     );
   }
 
+  /// Edita y sincroniza formalmente los tiempos de inicio y fin de un compás/cuadro (Hoare Triples + SRP).
+  ///
+  /// {P}: `barIndex` y `beatIndex` válidos dentro de `measures`, y si se proveen ambos, `startTime <= endTime`.
+  /// {Q}: el cuadro de compás actualiza su etiqueta `timeText`, `startTime` y `endTime`.
+  void updateMeasureBeatTiming({
+    required int barIndex,
+    required int beatIndex,
+    required double startTime,
+    required double endTime,
+  }) {
+    require(
+      'updateMeasureBeatTiming',
+      'índice de compás y tiempo dentro de rango',
+      barIndex >= 0 && barIndex < state.measures.length &&
+          beatIndex >= 0 && beatIndex < state.measures[barIndex].beats.length,
+    );
+    require(
+      'updateMeasureBeatTiming',
+      'startTime no negativo y menor o igual que endTime',
+      startTime >= 0.0 && startTime <= endTime,
+    );
+
+    final row = state.measures[barIndex];
+    final updatedBeats = List<MeasureBeat>.from(row.beats);
+    final minSecStr = _formatTimeSeconds(startTime);
+
+    updatedBeats[beatIndex] = updatedBeats[beatIndex].copyWith(
+      timeText: minSecStr,
+      startTime: startTime,
+      endTime: endTime,
+    );
+
+    final updatedMeasures = List<MeasureRow>.from(state.measures);
+    updatedMeasures[barIndex] = MeasureRow(
+      barNumber: row.barNumber,
+      beats: updatedBeats,
+    );
+
+    state = state.copyWith(measures: updatedMeasures);
+
+    ensure(
+      'updateMeasureBeatTiming',
+      'el cuadro del compás refleja el tiempo actualizado',
+      state.measures[barIndex].beats[beatIndex].startTime == startTime &&
+          state.measures[barIndex].beats[beatIndex].endTime == endTime,
+    );
+  }
+
+  static String _formatTimeSeconds(double seconds) {
+    final totalSec = seconds.toInt();
+    final mins = (totalSec ~/ 60).toString().padLeft(2, '0');
+    final secs = (totalSec % 60).toString().padLeft(2, '0');
+    return '$mins:$secs';
+  }
+
   /// Define el fuelle (Abre o Cierra) para un tiempo del compás.
   /// Solo es válido para cuadros que tengan un acorde registrado.
   /// No modifica el acorde ni aplica acordes a cuadros anteriores o actuales.

@@ -8,6 +8,8 @@ class MeasureBeat {
   String get chord => _chord ?? '';
   final String? _timeText;
   String get timeText => _timeText ?? '';
+  final double? startTime;
+  final double? endTime;
   final bool isContinue;
   final BellowsMode bellows;
 
@@ -16,6 +18,8 @@ class MeasureBeat {
     required this.beatIndex,
     String? chord,
     String? timeText,
+    this.startTime,
+    this.endTime,
     this.isContinue = false,
     this.bellows = BellowsMode.both,
   })  : _chord = chord ?? '',
@@ -24,6 +28,8 @@ class MeasureBeat {
   MeasureBeat copyWith({
     String? chord,
     String? timeText,
+    double? startTime,
+    double? endTime,
     bool? isContinue,
     BellowsMode? bellows,
   }) {
@@ -32,6 +38,8 @@ class MeasureBeat {
       beatIndex: beatIndex,
       chord: chord ?? this.chord,
       timeText: timeText ?? this.timeText,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
       isContinue: isContinue ?? this.isContinue,
       bellows: bellows ?? this.bellows,
     );

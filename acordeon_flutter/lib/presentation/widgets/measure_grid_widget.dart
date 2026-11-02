@@ -1035,6 +1035,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                                   state.measures.length,
                                               chord: entry.value.chord,
                                               timeText: entry.value.timeText,
+                                              startTime: entry.value.startTime,
+                                              endTime: entry.value.endTime,
                                               bellows: entry.value.bellows,
                                               isCurrentPlayhead:
                                                   state.isPlayingAudio &&
@@ -1106,6 +1108,15 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                               },
                                               onLiveMarker: () => notifier
                                                   .markLiveChordChange(),
+                                              onTimeChanged: (start, end) {
+                                                notifier
+                                                    .updateMeasureBeatTiming(
+                                                  barIndex: mIdx,
+                                                  beatIndex: entry.key,
+                                                  startTime: start,
+                                                  endTime: end,
+                                                );
+                                              },
                                             ),
                                           ),
                                         ],
@@ -1926,6 +1937,15 @@ class _InlineBeatChordEditor extends StatefulWidget {
   final ValueChanged<BellowsMode>? onBellowsChanged;
   final VoidCallback? onLiveMarker;
 
+  /// Tiempo de inicio y fin en segundos del beat (opcional).
+  final double? startTime;
+  final double? endTime;
+
+  /// Callback invocado cuando el usuario confirma un cambio de timing.
+  /// {P} el usuario ingresó startTime y endTime válidos
+  /// {Q} se notifica al controlador con los nuevos valores
+  final void Function(double startTime, double endTime)? onTimeChanged;
+
   const _InlineBeatChordEditor({
     required this.accordionId,
     required this.measureIndex,
@@ -1949,6 +1969,9 @@ class _InlineBeatChordEditor extends StatefulWidget {
     this.onNavigate,
     this.onBellowsChanged,
     this.onLiveMarker,
+    this.startTime,
+    this.endTime,
+    this.onTimeChanged,
   });
 
   @override
@@ -2550,17 +2573,33 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (showTime) ...[
-                          Text(
-                            widget.timeText,
-                            style: TextStyle(
-                              fontSize: 7.5,
-                              fontWeight: isCellSelected
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
-                              color: isCellSelected
-                                  ? const Color(0xFF1D4ED8)
-                                  : const Color(0xFF64748B),
-                              fontFamily: 'monospace',
+                          Tooltip(
+                            message: 'Toca para editar tiempo de inicio/fin del compás',
+                            waitDuration: const Duration(milliseconds: 500),
+                            child: InkWell(
+                              onTap: () => _showBeatTimingModal(context),
+                              borderRadius: BorderRadius.circular(3),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                  vertical: 1,
+                                ),
+                                child: Text(
+                                  widget.timeText,
+                                  style: TextStyle(
+                                    fontSize: 7.5,
+                                    fontWeight: isCellSelected
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
+                                    color: isCellSelected
+                                        ? const Color(0xFF1D4ED8)
+                                        : const Color(0xFF64748B),
+                                    fontFamily: 'monospace',
+                                    decoration: TextDecoration.underline,
+                                    decorationStyle: TextDecorationStyle.dotted,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 3),

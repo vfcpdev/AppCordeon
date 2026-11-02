@@ -56,6 +56,8 @@ class MeasureJsonSerializer {
             'beatIndex': b.beatIndex,
             'chord': b.chord,
             'timeText': b.timeText,
+            if (b.startTime != null) 'startTime': b.startTime,
+            if (b.endTime != null) 'endTime': b.endTime,
             'isContinue': b.isContinue,
             'bellows': b.bellows.name,
           };
@@ -130,6 +132,8 @@ class MeasureJsonSerializer {
         final isContinue = beatMap?['isContinue'] == true;
         final timeText =
             beatMap?['timeText']?.toString() ?? _defaultTimeText(bIdx, beatIdx);
+        final startTime = (beatMap?['startTime'] as num?)?.toDouble();
+        final endTime = (beatMap?['endTime'] as num?)?.toDouble();
         final bellowsStr = beatMap?['bellows']?.toString();
         final bellows = BellowsMode.values.firstWhere(
           (v) => v.name == bellowsStr,
@@ -141,6 +145,8 @@ class MeasureJsonSerializer {
           beatIndex: beatIdx,
           chord: chord,
           timeText: timeText,
+          startTime: startTime,
+          endTime: endTime,
           isContinue: isContinue,
           bellows: bellows,
         ));
