@@ -40,7 +40,10 @@ class WebAudioFilePlayer implements AudioFilePlayer {
 
   /// Espera a que el navegador resuelva la duración real del archivo.
   /// Devuelve la duración en segundos o 0 si no está disponible.
-  Future<double> waitForDuration({Duration timeout = const Duration(seconds: 10)}) async {
+  @override
+  Future<double> waitForDuration({
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
     final completer = _durationCompleter;
     if (completer == null) {
       final d = durationSeconds;

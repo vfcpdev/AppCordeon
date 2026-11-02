@@ -83,6 +83,9 @@ class _BassRhythmCapturePanelState
 
   void _startCapture() {
     if (_selectedButtons.isEmpty) return;
+    // Quita el foco del campo de nombre: mientras se captura, las teclas
+    // 4/5/7/8 deben llegar al listener global y no al editor de texto.
+    FocusManager.instance.primaryFocus?.unfocus();
     ref.read(accordionSimulatorProvider.notifier).startBassRhythmCapture(
           name: _nameController.text,
           selectedButtons: _selectedButtons,
@@ -173,6 +176,12 @@ class _BassRhythmCapturePanelState
           const Text(
             'Selecciona los bajos y tócalos en el panel mientras capturas',
             style: TextStyle(fontSize: 10.5, color: Color(0xFF475569)),
+          ),
+          const SizedBox(height: 2),
+          const Text(
+            'Teclado: 7 = ext. fila 1 · 8 = ext. fila 2 · 4 = int. fila 1 · 5 = int. fila 2',
+            key: ValueKey('bass_capture_keyboard_hint'),
+            style: TextStyle(fontSize: 9.5, color: Color(0xFF2563EB)),
           ),
           const SizedBox(height: 6),
           _buildMatrix(isRecording),

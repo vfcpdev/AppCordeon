@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/bass_rhythm_pattern.dart';
+import '../../domain/services/bass_capture_matrix_mapper.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../../domain/theory/music_theory.dart';
 import '../controllers/accordion_controller.dart';
@@ -471,32 +472,15 @@ class BassPanelWidget extends ConsumerWidget {
                     onPointerDown: () {
                       notifier.pressButton(btn.id, midiToPlay);
                       if (state.isBassCaptureActive) {
-                        // La matriz 2×2 de captura mapea sus cajas a los
-                        // BOTONES FÍSICOS 7, 8, 4 y 5 del panel:
-                        //   Exterior (col 0): fila1=7, fila2=8
-                        //   Interior  (col 1): fila1=4, fila2=5
-                        //
-                        // Layout de cada columna del panel (6 botones):
-                        //   entry.key 0: chord_(1|2)   → acorde, NO captura
-                        //   entry.key 1: bass_(1|2)    → bajo del par 1|2
-                        //   entry.key 3: bass_(3|4)    → bajo del par 3|4
-                        //   entry.key 5: bass_(5|6)    → bajo del par 5|6
-                        //
-                        // Los números de botón físico que el usuario pide
-                        // (7, 8, 4, 5) corresponden a los TRES bajos de la
-                        // columna, repetidos: fila1=el bajo más agudo
-                        // (btnIndex 1|2) y fila2=el bajo medio (btnIndex
-                        // 3|4); el bajo grave (5|6) queda fuera de la
-                        // matriz de 2×2.
-                        if (btn.type == ButtonType.fundamental) {
-                          final int matrixButton;
-                          if (rhythmButtonOffset == 0) {
-                            // Columna EXTERIOR → pares impares (1, 3, 5)
-                            matrixButton = btn.btnIndex == 1 ? 7 : 8;
-                          } else {
-                            // Columna INTERIOR → pares pares (2, 4, 6)
-                            matrixButton = btn.btnIndex == 2 ? 4 : 5;
-                          }
+                        // La regla de mapeo vive en el dominio
+                        // (BassCaptureMatrixMapper) para mantener alta
+                        // cohesión y evitar duplicidad con la ruta de teclado.
+                        final matrixButton = BassCaptureMatrixMapper.fromPhysical(
+                          rhythmButtonOffset: rhythmButtonOffset,
+                          btnIndex: btn.btnIndex,
+                          type: btn.type,
+                        );
+                        if (matrixButton != null) {
                           notifier.captureBassMatrixHit(matrixButton);
                         }
                       }
