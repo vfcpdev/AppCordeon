@@ -27,6 +27,13 @@ class BassRhythmPatternLibraryWidget extends ConsumerWidget {
 
   static const double _maxListHeight = 168;
 
+  /// Ancho fijo de la lista.
+  ///
+  /// El panel de bajos usa `IntrinsicWidth`; un `ListView` (viewport) no
+  /// implementa dimensiones intrínsecas, así que se le da un ancho concreto
+  /// para que el cálculo intrínseco del panel sea estable.
+  static const double _listWidth = 210;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final patterns = ref.watch(
@@ -78,11 +85,11 @@ class BassRhythmPatternLibraryWidget extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 4),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: _maxListHeight),
+        SizedBox(
+          width: _listWidth,
+          height: (patterns.length * 38.0).clamp(38.0, _maxListHeight),
           child: Scrollbar(
             child: ListView.separated(
-              shrinkWrap: true,
               padding: EdgeInsets.zero,
               itemCount: patterns.length,
               separatorBuilder: (_, index) => const SizedBox(height: 3),
