@@ -1,5 +1,6 @@
 import 'dart:ffi';
 import 'dart:io';
+import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 
 typedef AcordeonInitNative = Void Function(Float sampleRate);
@@ -13,6 +14,32 @@ typedef AcordeonVoidDart = void Function();
 
 typedef AcordeonVolumeNative = Void Function(Float volume);
 typedef AcordeonVolumeDart = void Function(double volume);
+
+/// Render de buffer PCM mono (render en hilo WASAPI).
+typedef AcordeonProcessNative = Void Function(Pointer<Float> buffer, UintPtr length);
+typedef AcordeonProcessDart = void Function(Pointer<Float> buffer, int length);
+
+/// Detección de acorde desde notas MIDI → CString JSON.
+typedef AcordeonDetectChordNative = Pointer<Utf8> Function(
+    Pointer<Uint8> notes, UintPtr count);
+typedef AcordeonDetectChordDart = Pointer<Utf8> Function(
+    Pointer<Uint8> notes, int count);
+
+/// Análisis completo de audio Float32 → CString JSON.
+typedef AcordeonAnalyzeNative = Pointer<Utf8> Function(
+    Pointer<Float> data, UintPtr length, Float sampleRate);
+typedef AcordeonAnalyzeDart = Pointer<Utf8> Function(
+    Pointer<Float> data, int length, double sampleRate);
+
+/// Acordes sincronizados por compás → CString JSON.
+typedef AcordeonBeatChordsNative = Pointer<Utf8> Function(
+    Pointer<Float> data, UintPtr length, Float sampleRate, Float bpm, Float startOffset);
+typedef AcordeonBeatChordsDart = Pointer<Utf8> Function(
+    Pointer<Float> data, int length, double sampleRate, double bpm, double startOffset);
+
+/// Liberación de cadenas asignadas por Rust.
+typedef AcordeonFreeStringNative = Void Function(Pointer<Utf8> ptr);
+typedef AcordeonFreeStringDart = void Function(Pointer<Utf8> ptr);
 
 /// Puente FFI con la librería dinámica en Rust `acordeon_engine.dll`
 ///
@@ -43,6 +70,10 @@ class AcordeonEngineFFI {
   AcordeonNoteDart? _noteOffFn;
   AcordeonVoidDart? _allNotesOffFn;
   AcordeonVolumeDart? _setVolumeFn;
+  AcordeonDetectChordDart? _detectChordFn;
+  AcordeonAnalyzeDart? _analyzeFn;
+  AcordeonBeatChordsDart? _beatChordsFn;
+  AcordeonFreeStringDart? _freeStringFn;
   bool _isAvailable = false;
 
   bool get isAvailable => _isAvailable;
@@ -59,7 +90,9 @@ class AcordeonEngineFFI {
       if (Platform.isWindows) ...[
         '${File(Platform.resolvedExecutable).parent.path}\\acordeon_engine.dll',
         r'..\acordeon_engine\target\release\acordeon_engine.dll',
-        r'C:\Users\USUARIO\AppCordeon\acordeon_engine\target\release\acordeon_engine.dll',
+        r'C:\Users\vfcp1\Documents\SideProjects\AppCordeon\acordeon_engine\target\release\acordeon_engine.dll',
+        // Ruta absoluta derivada del proyecto para tests y CLI.
+        r'd:\Documents\SideProjects\AppCordeon\acordeon_engine\target\release\acordeon_engine.dll',
       ],
     ];
 
@@ -80,6 +113,10 @@ class AcordeonEngineFFI {
         _noteOffFn = _lib!.lookupFunction<AcordeonNoteNative, AcordeonNoteDart>('acordeon_engine_note_off');
         _allNotesOffFn = _lib!.lookupFunction<AcordeonVoidNative, AcordeonVoidDart>('acordeon_engine_all_notes_off');
         _setVolumeFn = _lib!.lookupFunction<AcordeonVolumeNative, AcordeonVolumeDart>('acordeon_engine_set_volume');
+        _detectChordFn = _lib!.lookupFunction<AcordeonDetectChordNative, AcordeonDetectChordDart>('acordeon_detect_chord_ffi');
+        _analyzeFn = _lib!.lookupFunction<AcordeonAnalyzeNative, AcordeonAnalyzeDart>('acordeon_analyze_audio_ffi');
+        _beatChordsFn = _lib!.lookupFunction<AcordeonBeatChordsNative, AcordeonBeatChordsDart>('acordeon_detect_beat_chords_ffi');
+        _freeStringFn = _lib!.lookupFunction<AcordeonFreeStringNative, AcordeonFreeStringDart>('acordeon_free_string');
         _isAvailable = true;
       } catch (e) {
         debugPrint('[AcordeonEngineFFI] Error al vincular símbolos C ABI: $e');
@@ -116,6 +153,93 @@ class AcordeonEngineFFI {
   void setVolume(double volume) {
     if (_isAvailable && _setVolumeFn != null) {
       _setVolumeFn!(volume);
+    }
+  }
+
+  /// Indica si las funciones de análisis Rust están vinculadas.
+  bool get analysisAvailable => _isAvailable && _analyzeFn != null;
+
+  /// Helper: convierte el CString JSON de Rust a String Dart y libera la
+  /// memoria nativa con `acordeon_free_string` (evita fugas).
+  String? _takeCString(Pointer<Utf8>? ptr) {
+    if (ptr == null || ptr == nullptr) return null;
+    final value = ptr.toDartString();
+    _freeStringFn?.call(ptr);
+    return value;
+  }
+
+  /// Detección de acorde desde notas MIDI vía Rust.
+  ///
+  /// # Tripla de Hoare
+  /// - {P}: `midiNotes` no vacío; el motor está disponible.
+  /// - {Q}: retorna el JSON del acorde detectado (`"{}"` si no hay match).
+  String? detectChordJson(List<int> midiNotes) {
+    if (!analysisAvailable || midiNotes.isEmpty) return null;
+    final ptr = malloc.allocate<Uint8>(midiNotes.length);
+    try {
+      ptr.asTypedList(midiNotes.length)
+          .setAll(0, midiNotes.map((n) => n.clamp(0, 255)).toList());
+      final result = _detectChordFn!(ptr, midiNotes.length);
+      return _takeCString(result);
+    } catch (e) {
+      debugPrint('[AcordeonEngineFFI] detectChordJson falló: $e');
+      return null;
+    } finally {
+      malloc.free(ptr);
+    }
+  }
+
+  /// Análisis completo de audio (tonalidad, BPM, acordes) vía Rust.
+  ///
+  /// # Tripla de Hoare
+  /// - {P}: `samples.length >= 4096` y `sampleRate > 0`.
+  /// - {Q}: retorna JSON válido o `null` si el motor llama con datos
+  ///        insuficientes (fallback a Dart en el llamador).
+  String? analyzeAudioJson(Float32List samples, double sampleRate) {
+    if (!analysisAvailable || samples.length < 4096 || sampleRate <= 0) {
+      return null;
+    }
+    Pointer<Float>? copied;
+    try {
+      copied = malloc.allocate<Float>(samples.length);
+      copied.asTypedList(samples.length).setAll(0, samples);
+      final result = _analyzeFn!(copied, samples.length, sampleRate);
+      return _takeCString(result);
+    } catch (e) {
+      debugPrint('[AcordeonEngineFFI] analyzeAudioJson falló: $e');
+      return null;
+    } finally {
+      if (copied != null) malloc.free(copied);
+    }
+  }
+
+  /// Acordes sincronizados por compás vía Rust.
+  String? detectBeatChordsJson(
+    Float32List samples,
+    double sampleRate, {
+    required double bpm,
+    required double startOffset,
+  }) {
+    if (!analysisAvailable || samples.length < 4096 || sampleRate <= 0) {
+      return null;
+    }
+    Pointer<Float>? copied;
+    try {
+      copied = malloc.allocate<Float>(samples.length);
+      copied.asTypedList(samples.length).setAll(0, samples);
+      final result = _beatChordsFn!(
+        copied,
+        samples.length,
+        sampleRate,
+        bpm,
+        startOffset,
+      );
+      return _takeCString(result);
+    } catch (e) {
+      debugPrint('[AcordeonEngineFFI] detectBeatChordsJson falló: $e');
+      return null;
+    } finally {
+      if (copied != null) malloc.free(copied);
     }
   }
 }
