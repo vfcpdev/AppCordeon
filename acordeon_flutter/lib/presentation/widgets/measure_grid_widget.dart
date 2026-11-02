@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -413,62 +414,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                     ),
                   ),
 
-                  // 2. Fila de controles rítmicos: BPM + Metrónomo + Marcador Espacio + Acordes Completos
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isPrimary
-                          ? const Color(0xFFF1F5F9)
-                          : const Color(0xFFD1FAE5),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: isPrimary
-                              ? const Color(0xFFE2E8F0)
-                              : const Color(0xFFA7F3D0),
-                        ),
-                      ),
-                    ),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _AutoChordDetectButton(
-                                accordionNumber: widget.accordionNumber,
-                                isActive:
-                                    state.isPlaybackAutoChordDetectEnabled,
-                                onTap: notifier.togglePlaybackAutoChordDetect,
-                              ),
-                              const SizedBox(width: 3),
-                              _BeatAdjustButton(
-                                accordionNumber: widget.accordionNumber,
-                                nudgeOffsetSeconds: state.beatNudgeOffset,
-                                onNudge: notifier.adjustBeatOffset,
-                                onSync: notifier.syncBeatToCurrentAudioTime,
-                                onReset: notifier.resetBeatOffset,
-                              ),
-                              const SizedBox(width: 3),
-                              _CompleteChordsButton(
-                                accordionNumber: widget.accordionNumber,
-                                hasYellowDecisions:
-                                    state.yellowDecisionBeats.isNotEmpty,
-                                yellowDecisionsCount:
-                                    state.yellowDecisionBeats.length,
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-
-                  // 3. Minibarra superior: selección masiva de checkboxes y borrado de acordes
+                                    // Minibarra superior homogénea: Guardar, Importar, Auto, Beat, Completo, Editar, Asignación Múltiple y Fuelle
                   Container(
                     padding: const EdgeInsets.fromLTRB(4, 3, 4, 3),
                     decoration: const BoxDecoration(
@@ -481,14 +427,15 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: SizedBox(
-                        width: effectiveWidth > 220 ? effectiveWidth : 220,
+                        width: effectiveWidth > 280 ? effectiveWidth : 280,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            // Botones de Guardar (JSON), Importar (JSON) y Editar — aumentados 50%
+                            // Botones cuadrados (22x22 px, estilo _PlaybackMiniBtn de audio)
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                // 1. Guardar compás
                                 Tooltip(
                                   message:
                                       'Guardar compases en JSON (Exportar)',
@@ -520,20 +467,29 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                     },
                                     borderRadius: BorderRadius.circular(5),
                                     child: Container(
-                                      padding: const EdgeInsets.all(4),
+                                      width: 22,
+                                      height: 22,
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF0284C7),
                                         borderRadius: BorderRadius.circular(5),
+                                        border: Border.all(
+                                          color: const Color(0xFF0284C7),
+                                          width: 0.8,
+                                        ),
                                       ),
-                                      child: const FaIcon(
-                                        FontAwesomeIcons.floppyDisk,
-                                        size: 13.5,
-                                        color: Colors.white,
+                                      child: const Center(
+                                        child: FaIcon(
+                                          FontAwesomeIcons.floppyDisk,
+                                          size: 10.5,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 3),
+
+                                // 2. Importar compás
                                 Tooltip(
                                   message:
                                       'Importar compases desde archivo JSON',
@@ -570,21 +526,58 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                     },
                                     borderRadius: BorderRadius.circular(5),
                                     child: Container(
-                                      padding: const EdgeInsets.all(4),
+                                      width: 22,
+                                      height: 22,
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF059669),
                                         borderRadius: BorderRadius.circular(5),
+                                        border: Border.all(
+                                          color: const Color(0xFF059669),
+                                          width: 0.8,
+                                        ),
                                       ),
-                                      child: const FaIcon(
-                                        FontAwesomeIcons.upload,
-                                        size: 13.5,
-                                        color: Colors.white,
+                                      child: const Center(
+                                        child: FaIcon(
+                                          FontAwesomeIcons.upload,
+                                          size: 10.5,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 3),
-                                // Botón de edición a la derecha de importar compás
+
+                                // 3. Auto-acorde (cuadrado 22x22 en la misma fila)
+                                _AutoChordDetectButton(
+                                  accordionNumber: widget.accordionNumber,
+                                  isActive:
+                                      state.isPlaybackAutoChordDetectEnabled,
+                                  onTap: notifier.togglePlaybackAutoChordDetect,
+                                ),
+                                const SizedBox(width: 3),
+
+                                // 4. Beat Adjust / Sync (cuadrado 22x22 en la misma fila)
+                                _BeatAdjustButton(
+                                  accordionNumber: widget.accordionNumber,
+                                  nudgeOffsetSeconds: state.beatNudgeOffset,
+                                  onNudge: notifier.adjustBeatOffset,
+                                  onSync: notifier.syncBeatToCurrentAudioTime,
+                                  onReset: notifier.resetBeatOffset,
+                                ),
+                                const SizedBox(width: 3),
+
+                                // 5. Acordes Completos por Fuelle (cuadrado 22x22 en la misma fila)
+                                _CompleteChordsButton(
+                                  accordionNumber: widget.accordionNumber,
+                                  hasYellowDecisions:
+                                      state.yellowDecisionBeats.isNotEmpty,
+                                  yellowDecisionsCount:
+                                      state.yellowDecisionBeats.length,
+                                ),
+                                const SizedBox(width: 3),
+
+                                // 6. Editar asignación múltiple
                                 Tooltip(
                                   message: isEditActive
                                       ? 'Editar asignación múltiple de $chordToEdit'
@@ -635,7 +628,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                         : null,
                                     borderRadius: BorderRadius.circular(5),
                                     child: Container(
-                                      padding: const EdgeInsets.all(4),
+                                      width: 22,
+                                      height: 22,
                                       decoration: BoxDecoration(
                                         color: isEditActive
                                             ? const Color(0xFF8B5CF6)
@@ -645,20 +639,24 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                           color: isEditActive
                                               ? const Color(0xFF7C3AED)
                                               : const Color(0xFFCBD5E1),
-                                          width: 1,
+                                          width: 0.8,
                                         ),
                                       ),
-                                      child: FaIcon(
-                                        FontAwesomeIcons.penToSquare,
-                                        size: 13.5,
-                                        color: isEditActive
-                                            ? Colors.white
-                                            : const Color(0xFF94A3B8),
+                                      child: Center(
+                                        child: FaIcon(
+                                          FontAwesomeIcons.penToSquare,
+                                          size: 10.5,
+                                          color: isEditActive
+                                              ? Colors.white
+                                              : const Color(0xFF94A3B8),
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 3),
+
+                                // 7. Selección múltiple de casillas de acorde
                                 Tooltip(
                                   message: state.isMultiBeatAssignmentMode
                                       ? 'Cancelar selección de cajas ($assignmentTargetCount seleccionada${assignmentTargetCount == 1 ? '' : 's'})'
@@ -672,7 +670,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                         : null,
                                     borderRadius: BorderRadius.circular(5),
                                     child: Container(
-                                      padding: const EdgeInsets.all(4),
+                                      width: 22,
+                                      height: 22,
                                       decoration: BoxDecoration(
                                         color: state.isMultiBeatAssignmentMode
                                             ? const Color(0xFF7C3AED)
@@ -682,20 +681,26 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                           color: state.isMultiBeatAssignmentMode
                                               ? const Color(0xFF6D28D9)
                                               : const Color(0xFFCBD5E1),
+                                          width: 0.8,
                                         ),
                                       ),
-                                      child: FaIcon(
-                                        FontAwesomeIcons.squareCheck,
-                                        size: 13.5,
-                                        color: canToggleMultiBeatAssignment
-                                            ? Colors.white
-                                            : const Color(0xFF94A3B8),
+                                      child: Center(
+                                        child: FaIcon(
+                                          FontAwesomeIcons.squareCheck,
+                                          size: 10.5,
+                                          color: canToggleMultiBeatAssignment
+                                              ? (state.isMultiBeatAssignmentMode
+                                                  ? Colors.white
+                                                  : const Color(0xFF7C3AED))
+                                              : const Color(0xFF94A3B8),
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                // Botones de Fuelle: Abre (←) y Cierra (→) situados a la derecha de Selección Múltiple
+
+                                // 8. Botones de Fuelle: Abre (←) y Cierra (→) situados a la derecha de Selección Múltiple
                                 _BeatBellowsArrows(
                                   bellows: activeBellows,
                                   isEnabled: canChangeBellows,
@@ -720,9 +725,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                               ],
                             ),
 
-                            // Botón de borrado, casilla de selección masiva contigua y desmarcado.
-                            // Si la casilla está marcada, borrar elimina todos los acordes;
-                            // en caso contrario, solo los de las casillas marcadas.
+                            // Botón de borrado, casilla de selección masiva contigua y desmarcado (22x22 px)
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -970,22 +973,45 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                       constraints: const BoxConstraints(
                         maxHeight: CompasCardMetrics.gridMaxHeight,
                       ),
-                      child: RawScrollbar(
-                        controller: _compasScrollController,
-                        thumbVisibility: true,
-                        trackVisibility: true,
-                        thickness:
-                            8.0, // Aumentado ~30% sobre el grosor estándar (6.0px -> 8.0px)
-                        radius: const Radius.circular(4),
-                        thumbColor: const Color(0xFF94A3B8),
-                        trackColor: const Color(0xFFF1F5F9),
-                        trackBorderColor: const Color(0xFFE2E8F0),
-                        padding: EdgeInsets.zero,
-                        child: ListView.builder(
-                          controller: _compasScrollController,
-                          padding: const EdgeInsets.only(right: 12),
-                          shrinkWrap: true,
-                          itemCount: state.measures.length,
+                      // Aislamiento completo del scroll del compás:
+                      // 1. NotificationListener absorbe las notificaciones de scroll para que no viajen a HomeScreen.
+                      // 2. Listener + pointerSignalResolver consume los eventos de rueda del ratón/trackpad,
+                      //    evitando que muevan el resto de la interfaz principal.
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: (notification) => true,
+                        child: Listener(
+                          onPointerSignal: (pointerSignal) {
+                            if (pointerSignal is PointerScrollEvent) {
+                              GestureBinding.instance.pointerSignalResolver.register(
+                                pointerSignal,
+                                (event) {},
+                              );
+                              if (_compasScrollController.hasClients) {
+                                final pos = _compasScrollController.position;
+                                final newOffset = (pos.pixels + pointerSignal.scrollDelta.dy)
+                                    .clamp(0.0, pos.maxScrollExtent);
+                                if (pos.pixels != newOffset) {
+                                  _compasScrollController.jumpTo(newOffset);
+                                }
+                              }
+                            }
+                          },
+                          child: RawScrollbar(
+                            controller: _compasScrollController,
+                            thumbVisibility: true,
+                            trackVisibility: true,
+                            thickness: 8.0,
+                            radius: const Radius.circular(4),
+                            thumbColor: const Color(0xFF94A3B8),
+                            trackColor: const Color(0xFFF1F5F9),
+                            trackBorderColor: const Color(0xFFE2E8F0),
+                            padding: EdgeInsets.zero,
+                            child: ListView.builder(
+                              controller: _compasScrollController,
+                              physics: const ClampingScrollPhysics(),
+                              padding: const EdgeInsets.only(right: 12),
+                              shrinkWrap: true,
+                              itemCount: state.measures.length,
                           itemBuilder: (context, mIdx) {
                             final measure = state.measures[mIdx];
                             return Container(
@@ -1154,6 +1180,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                               ),
                             );
                           },
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -2919,23 +2947,23 @@ class _SelectAllBeatsButton extends StatelessWidget {
           checked: allMarked,
           label: 'Seleccionar todos los tiempos',
           child: Container(
-            width: 15,
-            height: 15,
+            width: 22,
+            height: 22,
             decoration: BoxDecoration(
               color: allMarked ? const Color(0xFF0284C7) : Colors.white,
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(5),
               border: Border.all(
                 color: allMarked
-                    ? const Color(0xFF0369A1)
-                    : const Color(0xFF94A3B8),
-                width: 1.2,
+                    ? const Color(0xFF0284C7)
+                    : const Color(0xFFCBD5E1),
+                width: 0.8,
               ),
             ),
             child: allMarked
                 ? const Center(
                     child: FaIcon(
                       FontAwesomeIcons.check,
-                      size: 8,
+                      size: 10,
                       color: Colors.white,
                     ),
                   )
@@ -2969,15 +2997,15 @@ class _DeleteAllChordsButton extends StatelessWidget {
         onTapDown: (_) => onTap(),
         behavior: HitTestBehavior.opaque,
         child: Container(
-          width: 15,
-          height: 15,
+          width: 22,
+          height: 22,
           decoration: BoxDecoration(
             color: const Color(0xFFDC2626),
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(color: const Color(0xFFB91C1C), width: 1.2),
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(color: const Color(0xFFDC2626), width: 0.8),
           ),
           child: const Center(
-            child: FaIcon(FontAwesomeIcons.trash, size: 8, color: Colors.white),
+            child: FaIcon(FontAwesomeIcons.trash, size: 10, color: Colors.white),
           ),
         ),
       ),
@@ -3000,17 +3028,17 @@ class _ClearMarksButton extends StatelessWidget {
         onTapDown: (_) => onTap(),
         behavior: HitTestBehavior.opaque,
         child: Container(
-          width: 15,
-          height: 15,
+          width: 22,
+          height: 22,
           decoration: BoxDecoration(
             color: const Color(0xFFF59E0B),
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(color: const Color(0xFFD97706), width: 1.2),
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(color: const Color(0xFFF59E0B), width: 0.8),
           ),
           child: const Center(
             child: FaIcon(
               FontAwesomeIcons.squareXmark,
-              size: 8,
+              size: 10,
               color: Colors.white,
             ),
           ),
@@ -3107,53 +3135,48 @@ class _CompleteChordsButton extends ConsumerWidget {
     return PopupMenuButton<String>(
       key: ValueKey('complete_chords_btn_$accordionNumber'),
       tooltip: 'Opciones de Acordes Completos por Fuelle',
-      offset: const Offset(0, 26),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      offset: const Offset(0, 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       elevation: 6,
       onSelected: (val) => _handleAction(context, ref, val),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+        width: 22,
+        height: 22,
         decoration: BoxDecoration(
-          color: hasYellowDecisions ? const Color(0xFFFEF9C3) : Colors.white,
-          borderRadius: BorderRadius.circular(4),
+          color: hasYellowDecisions
+              ? const Color(0xFFFEF9C3)
+              : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(5),
           border: Border.all(
             color: hasYellowDecisions
                 ? const Color(0xFFEAB308)
                 : const Color(0xFFCBD5E1),
-            width: hasYellowDecisions ? 1.2 : 0.8,
+            width: hasYellowDecisions ? 1.0 : 0.8,
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
             FaIcon(
               FontAwesomeIcons.checkDouble,
-              size: 8.5,
+              size: 10.0,
               color: hasYellowDecisions
                   ? const Color(0xFFB45309)
                   : const Color(0xFF0284C7),
             ),
-            if (hasYellowDecisions) ...[
-              const SizedBox(width: 2),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 2.5,
-                  vertical: 0.5,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '$yellowDecisionsCount',
-                  style: const TextStyle(
-                    fontSize: 7.0,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
+            if (hasYellowDecisions)
+              Positioned(
+                top: 1,
+                right: 1,
+                child: Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF59E0B),
+                    shape: BoxShape.circle,
                   ),
                 ),
               ),
-            ],
           ],
         ),
       ),
@@ -3394,35 +3417,24 @@ class _AutoChordDetectButton extends StatelessWidget {
       child: InkWell(
         key: ValueKey('auto_chord_detect_btn_$accordionNumber'),
         onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(5),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+          width: 22,
+          height: 22,
           decoration: BoxDecoration(
-            color: isActive ? activeBg : const Color(0xFFE2E8F0),
-            borderRadius: BorderRadius.circular(4),
+            color: isActive ? activeBg : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(5),
             border: Border.all(
               color: isActive ? activeBorder : const Color(0xFFCBD5E1),
-              width: 0.9,
+              width: 0.8,
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FaIcon(
-                FontAwesomeIcons.bolt,
-                size: 9.0,
-                color: isActive ? Colors.white : const Color(0xFF64748B),
-              ),
-              const SizedBox(width: 3),
-              Text(
-                'Auto',
-                style: TextStyle(
-                  fontSize: 8.5,
-                  fontWeight: FontWeight.w800,
-                  color: isActive ? Colors.white : const Color(0xFF475569),
-                ),
-              ),
-            ],
+          child: Center(
+            child: FaIcon(
+              FontAwesomeIcons.bolt,
+              size: 10.0,
+              color: isActive ? Colors.white : const Color(0xFF64748B),
+            ),
           ),
         ),
       ),
@@ -3592,37 +3604,24 @@ class _BeatAdjustButton extends StatelessWidget {
         ),
       ],
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+        width: 22,
+        height: 22,
         decoration: BoxDecoration(
-          color: isNudged ? const Color(0xFFEFF6FF) : const Color(0xFFE2E8F0),
-          borderRadius: BorderRadius.circular(4),
+          color: isNudged ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(5),
           border: Border.all(
             color: isNudged ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
-            width: 0.9,
+            width: 0.8,
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FaIcon(
-              FontAwesomeIcons.sliders,
-              size: 9.0,
-              color: isNudged
-                  ? const Color(0xFF2563EB)
-                  : const Color(0xFF64748B),
-            ),
-            const SizedBox(width: 3),
-            Text(
-              isNudged ? '${ms >= 0 ? "+" : ""}$ms' : 'Beat',
-              style: TextStyle(
-                fontSize: 8.5,
-                fontWeight: FontWeight.w800,
-                color: isNudged
-                    ? const Color(0xFF1D4ED8)
-                    : const Color(0xFF475569),
-              ),
-            ),
-          ],
+        child: Center(
+          child: FaIcon(
+            FontAwesomeIcons.sliders,
+            size: 10.0,
+            color: isNudged
+                ? const Color(0xFF1D4ED8)
+                : const Color(0xFF64748B),
+          ),
         ),
       ),
     );
