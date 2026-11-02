@@ -10,10 +10,18 @@ AudioFilePlayer getAudioFilePlayer() => WebAudioFilePlayer();
 
 /// Reproduce el archivo cargado usando un elemento `<audio>` con un Blob URL.
 /// No requiere plugins: funciona en cualquier navegador moderno.
+///
+/// Principios aplicados: SRP (solo reproducción), alta cohesión, bajo acoplamiento.
+/// Usa eventos `loadedmetadata`/`durationchange` para garantizar la duración
+/// completa antes de usarla en el transporte.
 class WebAudioFilePlayer implements AudioFilePlayer {
   web.HTMLAudioElement? _audio;
   String? _objectUrl;
   double _volume = 0.8;
+
+  Completer<double>? _durationCompleter;
+  JSFunction? _loadedMetadataHandler;
+  JSFunction? _durationChangeHandler;
 
   @override
   bool get isLoaded => _audio != null;
@@ -24,7 +32,70 @@ class WebAudioFilePlayer implements AudioFilePlayer {
   @override
   double get durationSeconds {
     final d = _audio?.duration ?? 0;
-    return d.isFinite && d > 0 ? d : 0;
+    if (d.isFinite && d > 0) {
+      return d;
+    }
+    return 0;
+  }
+
+  /// Espera a que el navegador resuelva la duración real del archivo.
+  /// Devuelve la duración en segundos o 0 si no está disponible.
+  Future<double> waitForDuration({Duration timeout = const Duration(seconds: 10)}) async {
+    final completer = _durationCompleter;
+    if (completer == null) {
+      final d = durationSeconds;
+      if (d > 0) return d;
+      return 0;
+    }
+    try {
+      final d = await completer.future.timeout(timeout);
+      return d.isFinite && d > 0 ? d : durationSeconds;
+    } catch (_) {
+      return durationSeconds;
+    }
+  }
+
+  void _attachDurationListeners(web.HTMLAudioElement audio) {
+    _detachDurationListeners(audio);
+    _durationCompleter = Completer<double>();
+
+    _loadedMetadataHandler = ((web.Event _) {
+      final d = audio.duration;
+      if (d.isFinite && d > 0) {
+        if (!(_durationCompleter?.isCompleted ?? true)) {
+          _durationCompleter?.complete(d);
+        }
+      }
+    }).toJS;
+
+    _durationChangeHandler = ((web.Event _) {
+      final d = audio.duration;
+      if (d.isFinite && d > 0) {
+        if (!(_durationCompleter?.isCompleted ?? true)) {
+          _durationCompleter?.complete(d);
+        }
+      }
+    }).toJS;
+
+    audio.addEventListener('loadedmetadata', _loadedMetadataHandler!);
+    audio.addEventListener('durationchange', _durationChangeHandler!);
+  }
+
+  void _detachDurationListeners(web.HTMLAudioElement audio) {
+    final lm = _loadedMetadataHandler;
+    if (lm != null) {
+      audio.removeEventListener('loadedmetadata', lm);
+    }
+    final dc = _durationChangeHandler;
+    if (dc != null) {
+      audio.removeEventListener('durationchange', dc);
+    }
+    _loadedMetadataHandler = null;
+    _durationChangeHandler = null;
+    if (!(_durationCompleter?.isCompleted ?? true)) {
+      _durationCompleter?.complete(durationSeconds);
+    }
+    _durationCompleter = null;
   }
 
   @override
@@ -44,6 +115,7 @@ class WebAudioFilePlayer implements AudioFilePlayer {
         ..volume = _volume;
       audio.style.display = 'none';
       web.document.body?.appendChild(audio);
+      _attachDurationListeners(audio);
       audio.load();
       _audio = audio;
     } catch (e) {
@@ -102,6 +174,7 @@ class WebAudioFilePlayer implements AudioFilePlayer {
   void _release() {
     final audio = _audio;
     if (audio != null) {
+      _detachDurationListeners(audio);
       audio.pause();
       audio.removeAttribute('src');
       audio.load();

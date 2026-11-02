@@ -919,13 +919,13 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
   /// Carga audio para reproducción. El análisis se solicita explícitamente mediante
   /// [analyzeLoadedAudio].
   ///
-  /// {P}: `bytes` contiene audio y `fileName` identifica la pista.
-  /// {Q}: la pista queda disponible para reproducción y no se invoca el analizador;
-  ///      si el reproductor falla al cargar o no expone una duración válida se
-  ///      devuelve `AudioLoadFailure` y el estado no se marca como cargado.
-  ///      En plataformas nativas el reproductor es un stub sin audio: su duración
-  ///      siempre es 0, por lo que aquí se acepta la pista pero sin transport
-  ///      real (`isLoaded == false`).
+  /// {P}: `bytes` no vacío y `fileName` identifica la pista.
+  /// {Q}: la pista queda disponible para reproducción y no se invoca el analizador.
+  ///      La duración real puede resolverse de forma asíncrona cuando el
+  ///      navegador publica `loadedmetadata`; [unawaited] de [_hydrateAudioDuration]
+  ///      mantiene el transporte sincronizado sin bloquear el gesto del usuario.
+  ///      En plataformas nativas el reproductor es un stub sin audio: la pista
+  ///      se acepta pero sin transport real (`isLoaded == false`).
   AudioLoadResult loadAudioBytes(Uint8List bytes, String fileName) {
     // {P}: bytes no vacío y fileName identificable.
     if (bytes.isEmpty || fileName.trim().isEmpty) {

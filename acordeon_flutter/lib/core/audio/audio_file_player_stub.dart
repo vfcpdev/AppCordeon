@@ -17,6 +17,11 @@ class AudioFilePlayerStub implements AudioFilePlayer {
   double get durationSeconds => 0;
 
   @override
+  Future<double> waitForDuration({
+    Duration timeout = const Duration(seconds: 10),
+  }) async => 0;
+
+  @override
   void load(Uint8List bytes, String mimeType) {}
 
   @override

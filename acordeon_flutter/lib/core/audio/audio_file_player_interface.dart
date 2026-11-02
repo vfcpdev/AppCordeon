@@ -23,4 +23,13 @@ abstract class AudioFilePlayer {
 
   /// Duración real del archivo en segundos (0 si aún no se conoce).
   double get durationSeconds;
+
+  /// Espera a que el reproductor conozca la duración real del archivo.
+  ///
+  /// {P}: puede llamarse antes o después de [load].
+  /// {Q}: retorna una duración finita `>= 0`; `0` si la plataforma no puede
+  ///      exponerla (por ejemplo, el stub nativo).
+  Future<double> waitForDuration({
+    Duration timeout = const Duration(seconds: 10),
+  });
 }
