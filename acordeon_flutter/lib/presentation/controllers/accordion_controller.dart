@@ -23,6 +23,7 @@ import '../../domain/models/measure_json_serializer.dart';
 import '../../domain/models/measure_models.dart';
 import '../../domain/models/tuning.dart';
 import '../../domain/services/bass_rhythm_catalog.dart';
+import '../../domain/services/bass_row_pair_resolver.dart';
 import '../../domain/services/grid_metrics_service.dart' as grid_metrics;
 import '../../domain/services/hoare_contract.dart';
 import '../../domain/services/musicxml_rhythm_importer.dart';
@@ -245,8 +246,11 @@ class AccordionSimulatorState {
 
   final List<BassRhythmPattern> bassRhythmPatterns;
   final String? selectedBassRhythmPatternId;
+  final AccordionRowTarget selectedBassRowTarget;
   final bool isBassMetronomeActive;
   final double bassRhythmElapsedSeconds;
+  final double? _manualMetronomeBpm;
+  double get manualMetronomeBpm => _manualMetronomeBpm ?? 120.0;
 
   /// Captura de patrón en curso (matriz 2×2 de bajos 7/8/4/5). `null` cuando
   /// no hay captura activa.
@@ -271,11 +275,10 @@ class AccordionSimulatorState {
     if (pattern == null || pattern.durationQuarterBeats <= 0) return 0;
     final bpm = isPlayingAudio
         ? audioReport?.bpm.toDouble() ??
-              pattern.quarterNotesPerMinute ??
-              120.0
+              manualMetronomeBpm
         : pattern.quarterNotesPerMinute ??
               audioReport?.bpm.toDouble() ??
-              120.0;
+              manualMetronomeBpm;
     final elapsedSeconds = isPlayingAudio
         ? math.max(0.0, compasTime - effectiveAudioStartOffset)
         : bassRhythmElapsedSeconds;
@@ -286,24 +289,33 @@ class AccordionSimulatorState {
     final pattern = selectedBassRhythmPattern;
     if (pattern == null) return const {};
     final position = bassRhythmPositionQuarterBeats;
-    return {
+    final rawIndexes = {
       for (final hit in pattern.hits)
         if (position >= hit.onsetQuarterBeats &&
             position < hit.onsetQuarterBeats + hit.durationQuarterBeats)
           ...hit.buttonIndexes,
     };
+    return rawIndexes
+        .map((idx) => BassRowPairResolver.remapButtonIndex(idx, selectedBassRowTarget))
+        .toSet();
   }
 
   Map<int, BassRhythmHit> get activeBassRhythmHits {
     final pattern = selectedBassRhythmPattern;
     if (pattern == null) return const {};
     final position = bassRhythmPositionQuarterBeats;
-    return {
-      for (final hit in pattern.hits)
-        if (position >= hit.onsetQuarterBeats &&
-            position < hit.onsetQuarterBeats + hit.durationQuarterBeats)
-          for (final buttonIndex in hit.buttonIndexes) buttonIndex: hit,
-    };
+    final result = <int, BassRhythmHit>{};
+    for (final hit in pattern.hits) {
+      if (position >= hit.onsetQuarterBeats &&
+          position < hit.onsetQuarterBeats + hit.durationQuarterBeats) {
+        for (final buttonIndex in hit.buttonIndexes) {
+          final remapped =
+              BassRowPairResolver.remapButtonIndex(buttonIndex, selectedBassRowTarget);
+          result[remapped] = hit;
+        }
+      }
+    }
+    return result;
   }
 
   final bool? _isLiveChordMarkerActive;
@@ -428,8 +440,10 @@ class AccordionSimulatorState {
     double? metronomeVolume,
     this.bassRhythmPatterns = const [],
     this.selectedBassRhythmPatternId,
+    this.selectedBassRowTarget = AccordionRowTarget.middleRow,
     this.isBassMetronomeActive = false,
     this.bassRhythmElapsedSeconds = 0.0,
+    double? manualMetronomeBpm,
     this.bassRhythmRecorder,
     this.isBassCapturePanelOpen = false,
     bool? isLiveChordMarkerActive,
@@ -440,6 +454,7 @@ class AccordionSimulatorState {
     double? beatNudgeOffset,
   }) : _audioStartOffset = audioStartOffset ?? 0.0,
        _bpmCalibrationStart = bpmCalibrationStart ?? -1.0,
+       _manualMetronomeBpm = manualMetronomeBpm ?? 120.0,
        _isPlaybackAutoChordDetectEnabled =
            isPlaybackAutoChordDetectEnabled ?? false,
        _beatNudgeOffset = beatNudgeOffset ?? 0.0,
@@ -527,8 +542,10 @@ class AccordionSimulatorState {
     List<BassRhythmPattern>? bassRhythmPatterns,
     String? selectedBassRhythmPatternId,
     bool clearSelectedBassRhythmPattern = false,
+    AccordionRowTarget? selectedBassRowTarget,
     bool? isBassMetronomeActive,
     double? bassRhythmElapsedSeconds,
+    double? manualMetronomeBpm,
     BassRhythmRecorder? bassRhythmRecorder,
     bool clearBassRhythmRecorder = false,
     bool? isBassCapturePanelOpen,
@@ -640,10 +657,13 @@ class AccordionSimulatorState {
       selectedBassRhythmPatternId: clearSelectedBassRhythmPattern
           ? null
           : (selectedBassRhythmPatternId ?? this.selectedBassRhythmPatternId),
+      selectedBassRowTarget:
+          selectedBassRowTarget ?? this.selectedBassRowTarget,
       isBassMetronomeActive:
           isBassMetronomeActive ?? this.isBassMetronomeActive,
       bassRhythmElapsedSeconds:
           bassRhythmElapsedSeconds ?? this.bassRhythmElapsedSeconds,
+      manualMetronomeBpm: manualMetronomeBpm ?? this.manualMetronomeBpm,
       bassRhythmRecorder: clearBassRhythmRecorder
           ? null
           : (bassRhythmRecorder ?? this.bassRhythmRecorder),
@@ -2004,6 +2024,15 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     _syncStandaloneMetronome();
   }
 
+  /// Selecciona la hilera melódica objetivo (Externa, Media, Interna) para el patrón de bajos.
+  ///
+  /// {P}: `target` no nulo.
+  /// {Q}: `state.selectedBassRowTarget == target`.
+  void selectBassRowTarget(AccordionRowTarget target) {
+    if (state.selectedBassRowTarget == target) return;
+    state = state.copyWith(selectedBassRowTarget: target);
+  }
+
   /// Selecciona un ritmo del catálogo y comienza a ejecutarlo inmediatamente.
   void playBassRhythmPattern(String patternId) {
     if (!state.bassRhythmPatterns.any((pattern) => pattern.id == patternId)) {
@@ -2114,6 +2143,121 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       'el patrón eliminado ya no está en la biblioteca',
       !state.bassRhythmPatterns.any((pattern) => pattern.id == patternId),
     );
+  }
+
+  /// Actualiza un patrón existente de bajos (Update en CRUD).
+  ///
+  /// {P}: `patternId` existe en la biblioteca y `name` no está vacío.
+  /// {Q}: el patrón conserva su id pero refleja los nuevos campos actualizados.
+  void updateBassRhythmPattern({
+    required String patternId,
+    String? newName,
+    double? newQuarterNotesPerMinute,
+  }) {
+    require(
+      'updateBassRhythmPattern',
+      'el patrón existe en la biblioteca',
+      state.bassRhythmPatterns.any((p) => p.id == patternId),
+    );
+    if (newName != null) {
+      require(
+        'updateBassRhythmPattern',
+        'el nombre del patrón no puede estar vacío',
+        newName.trim().isNotEmpty,
+      );
+    }
+    if (newQuarterNotesPerMinute != null) {
+      require(
+        'updateBassRhythmPattern',
+        'el tempo debe estar en el rango [30, 300] BPM',
+        newQuarterNotesPerMinute >= 30 && newQuarterNotesPerMinute <= 300,
+      );
+    }
+
+    final updatedList = state.bassRhythmPatterns.map((p) {
+      if (p.id == patternId) {
+        return p.copyWith(
+          name: newName?.trim() ?? p.name,
+          quarterNotesPerMinute: newQuarterNotesPerMinute ?? p.quarterNotesPerMinute,
+        );
+      }
+      return p;
+    }).toList(growable: false);
+
+    state = state.copyWith(bassRhythmPatterns: updatedList);
+    _syncStandaloneMetronome();
+
+    ensure(
+      'updateBassRhythmPattern',
+      'el patrón fue actualizado correctamente',
+      state.bassRhythmPatterns.firstWhere((p) => p.id == patternId).name ==
+          (newName?.trim() ?? state.bassRhythmPatterns.firstWhere((p) => p.id == patternId).name),
+    );
+  }
+
+  /// Duplica un patrón existente (Create a partir de existente).
+  ///
+  /// {P}: `sourcePatternId` existe.
+  /// {Q}: se añade un nuevo patrón con nuevo identificador al inicio de la lista.
+  void duplicateBassRhythmPattern(String sourcePatternId) {
+    require(
+      'duplicateBassRhythmPattern',
+      'el patrón origen existe en la biblioteca',
+      state.bassRhythmPatterns.any((p) => p.id == sourcePatternId),
+    );
+    final source = state.bassRhythmPatterns.firstWhere((p) => p.id == sourcePatternId);
+    final newId = 'custom:${DateTime.now().millisecondsSinceEpoch}';
+    final duplicated = source.copyWith(
+      id: newId,
+      name: '${source.name} (Copia)',
+    );
+
+    state = state.copyWith(
+      bassRhythmPatterns: [duplicated, ...state.bassRhythmPatterns],
+      selectedBassRhythmPatternId: newId,
+    );
+
+    ensure(
+      'duplicateBassRhythmPattern',
+      'el nuevo patrón está presente en la biblioteca',
+      state.bassRhythmPatterns.any((p) => p.id == newId),
+    );
+  }
+
+  /// Establece o acopla el tempo del patrón seleccionado o manual del metrónomo principal.
+  ///
+  /// {P}: `bpm` en el rango musical [30, 300].
+  /// {Q}: `state.manualMetronomeBpm == bpm`. Si hay un patrón seleccionado,
+  ///      su tempo también se actualiza para sincronización perfecta.
+  void setManualMetronomeBpm(double bpm) {
+    require(
+      'setManualMetronomeBpm',
+      'el BPM debe estar dentro de [30, 300]',
+      bpm >= 30.0 && bpm <= 300.0,
+    );
+    final selectedPattern = state.selectedBassRhythmPattern;
+    if (selectedPattern != null) {
+      updateBassRhythmPattern(
+        patternId: selectedPattern.id,
+        newQuarterNotesPerMinute: bpm,
+      );
+    }
+    state = state.copyWith(manualMetronomeBpm: bpm);
+    _syncStandaloneMetronome();
+    ensure(
+      'setManualMetronomeBpm',
+      'el BPM manual coincide con el asignado',
+      state.manualMetronomeBpm == bpm,
+    );
+  }
+
+  /// Conmuta la reproducción del metrónomo principal independiente.
+  ///
+  /// Funciona aún sin archivo de audio cargado.
+  void toggleStandaloneMetronome() {
+    final nextState = !state.isMetronomeActive;
+    state = state.copyWith(isMetronomeActive: nextState);
+    _syncStandaloneMetronome();
   }
 
   void toggleBassMetronome() {
@@ -2350,7 +2494,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
   double get _standaloneMetronomeBpm =>
       state.selectedBassRhythmPattern?.quarterNotesPerMinute ??
       state.audioReport?.bpm.toDouble() ??
-      120.0;
+      state.manualMetronomeBpm;
 
   int get _standaloneMetronomeBeatsPerMeasure =>
       state.selectedBassRhythmPattern?.beatsPerMeasureInQuarterNotes ?? 4;

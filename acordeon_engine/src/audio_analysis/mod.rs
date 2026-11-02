@@ -88,7 +88,7 @@ pub fn analyze_audio(channel_data: &[f32], sample_rate: f32) -> Result<String, S
     let report = AudioAnalysisReport {
         duration: (duration * 10.0).round() / 10.0,
         bpm,
-        mainKey: main_key,
+        main_key,
         chords,
         chromagram: raw_chromagram,
     };

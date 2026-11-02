@@ -67,6 +67,31 @@ class BassRhythmPattern {
     required List<BassRhythmHit> hits,
   }) : hits = List.unmodifiable(hits);
 
+  /// Genera una copia inmutable del patrón con atributos actualizados.
+  BassRhythmPattern copyWith({
+    String? id,
+    String? name,
+    String? partName,
+    int? measureNumber,
+    int? beatsPerMeasure,
+    int? beatType,
+    double? durationQuarterBeats,
+    double? quarterNotesPerMinute,
+    List<BassRhythmHit>? hits,
+  }) {
+    return BassRhythmPattern(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      partName: partName ?? this.partName,
+      measureNumber: measureNumber ?? this.measureNumber,
+      beatsPerMeasure: beatsPerMeasure ?? this.beatsPerMeasure,
+      beatType: beatType ?? this.beatType,
+      durationQuarterBeats: durationQuarterBeats ?? this.durationQuarterBeats,
+      quarterNotesPerMinute: quarterNotesPerMinute ?? this.quarterNotesPerMinute,
+      hits: hits ?? this.hits,
+    );
+  }
+
   int get beatsPerMeasureInQuarterNotes {
     final quarterNotes = (beatsPerMeasure * 4 / beatType).round();
     if (quarterNotes < 1) return 1;

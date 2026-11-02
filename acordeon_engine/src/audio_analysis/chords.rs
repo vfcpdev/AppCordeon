@@ -135,7 +135,7 @@ fn evaluate_chroma(
 
             // Prioridad modal para la tonalidad detectada (I - IV - V - vi)
             let mut tonality_bonus = 0.0f32;
-            let tonic = main_key.rootMod;
+            let tonic = main_key.root_mod;
             if root == tonic {
                 tonality_bonus += 0.20;
             } else if root == (tonic + 7) % 12 {
@@ -211,19 +211,18 @@ pub fn segment_chords(
     let mut current_start = 0usize;
     let mut current_det = frame_detections[0].clone();
 
-    for i in 1..frame_detections.len() {
-        let det = &frame_detections[i];
+    for (i, det) in frame_detections.iter().enumerate().skip(1) {
         // Cambio de acorde tras hysteresis de al menos 3 frames
         if (det.root_mod != current_det.root_mod || det.quality != current_det.quality) && (i - current_start >= 3) {
             segments.push(DetectedChordSegment {
-                startTime: ((current_start as f32) * frame_duration * 10.0).round() / 10.0,
-                endTime: ((i as f32) * frame_duration * 10.0).round() / 10.0,
-                rootMod: current_det.root_mod,
+                start_time: ((current_start as f32) * frame_duration * 10.0).round() / 10.0,
+                end_time: ((i as f32) * frame_duration * 10.0).round() / 10.0,
+                root_mod: current_det.root_mod,
                 quality: current_det.quality.clone(),
-                chordName: current_det.chord_name.clone(),
-                chordSymbol: current_det.chord_symbol.clone(),
-                noteMods: current_det.note_mods.clone(),
-                playbackMidis: current_det.playback_midis.clone(),
+                chord_name: current_det.chord_name.clone(),
+                chord_symbol: current_det.chord_symbol.clone(),
+                note_mods: current_det.note_mods.clone(),
+                playback_midis: current_det.playback_midis.clone(),
                 confidence: current_det.confidence,
             });
             current_start = i;
@@ -233,14 +232,14 @@ pub fn segment_chords(
 
     // Último segmento cubriendo hasta el final del flujo
     segments.push(DetectedChordSegment {
-        startTime: ((current_start as f32) * frame_duration * 10.0).round() / 10.0,
-        endTime: ((frame_detections.len() as f32) * frame_duration * 10.0).round() / 10.0,
-        rootMod: current_det.root_mod,
+        start_time: ((current_start as f32) * frame_duration * 10.0).round() / 10.0,
+        end_time: ((frame_detections.len() as f32) * frame_duration * 10.0).round() / 10.0,
+        root_mod: current_det.root_mod,
         quality: current_det.quality,
-        chordName: current_det.chord_name,
-        chordSymbol: current_det.chord_symbol,
-        noteMods: current_det.note_mods,
-        playbackMidis: current_det.playback_midis,
+        chord_name: current_det.chord_name,
+        chord_symbol: current_det.chord_symbol,
+        note_mods: current_det.note_mods,
+        playback_midis: current_det.playback_midis,
         confidence: current_det.confidence,
     });
 

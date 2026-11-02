@@ -36,3 +36,32 @@ enum BassMatchType {
 
   bool get isMatch => this != BassMatchType.none;
 }
+
+/// Identifica la hilera melódica objetivo del acordeón diatónico (3 hileras).
+enum AccordionRowTarget {
+  externalRow,
+  middleRow,
+  internalRow;
+
+  String get label {
+    switch (this) {
+      case AccordionRowTarget.externalRow:
+        return 'Ext';
+      case AccordionRowTarget.middleRow:
+        return 'Med';
+      case AccordionRowTarget.internalRow:
+        return 'Int';
+    }
+  }
+
+  String get fullName {
+    switch (this) {
+      case AccordionRowTarget.externalRow:
+        return 'Hilera Externa';
+      case AccordionRowTarget.middleRow:
+        return 'Hilera Media';
+      case AccordionRowTarget.internalRow:
+        return 'Hilera Interna';
+    }
+  }
+}

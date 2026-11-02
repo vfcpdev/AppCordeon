@@ -57,13 +57,13 @@ pub fn detect_global_key(global_chroma: &[f32; 12]) -> KeyDetectionResult {
     let (tuning_name, offset, row_key) = recommend_accordion_tuning(best_root);
 
     KeyDetectionResult {
-        rootMod: best_root,
+        root_mod: best_root,
         mode: best_mode.to_string(),
-        keyNameLat: format!("{} {}", root_lat, mode_label_lat),
-        keyNameAle: format!("{} {}", root_ale, mode_label_ale),
-        recommendedTuning: tuning_name,
-        recommendedOffset: offset,
-        recommendedRow: row_key,
+        key_name_lat: format!("{} {}", root_lat, mode_label_lat),
+        key_name_ale: format!("{} {}", root_ale, mode_label_ale),
+        recommended_tuning: tuning_name,
+        recommended_offset: offset,
+        recommended_row: row_key,
         correlation: (best_score * 100.0).round() / 100.0,
     }
 }

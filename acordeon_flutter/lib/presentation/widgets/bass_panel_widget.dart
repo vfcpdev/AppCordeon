@@ -139,6 +139,9 @@ class BassPanelWidget extends ConsumerWidget {
                       color: Color(0xFF059669),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  // Selector compacto de Hilera objetivo (Ext | Med | Int)
+                  _buildRowTargetSelector(state, notifier),
                   const Spacer(),
                   IconButton(
                     key: ValueKey('bass_panel_collapse_btn_$accordionNumber'),
@@ -666,22 +669,21 @@ class BassPanelWidget extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 4),
+          // Selector rápido de patrón o estado de captura
           Expanded(
-            child: Text(
-              isCapturing
-                  ? 'Capturando… ${recorder?.hits.length ?? 0} golpe(s)'
-                  : 'Capturar patrón ($patternCount)',
-              key: ValueKey('bass_rhythm_capture_label_$accordionNumber'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                color: isCapturing
-                    ? const Color(0xFFDC2626)
-                    : const Color(0xFF334155),
-              ),
-            ),
+            child: isCapturing
+                ? Text(
+                    'Capturando… ${recorder?.hits.length ?? 0} golpe(s)',
+                    key: ValueKey('bass_rhythm_capture_label_$accordionNumber'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFDC2626),
+                    ),
+                  )
+                : _buildPatternQuickSelector(state, notifier),
           ),
           if (isCapturing)
             IconButton(
@@ -696,7 +698,12 @@ class BassPanelWidget extends ConsumerWidget {
                 size: 18,
                 color: Color(0xFFDC2626),
               ),
-            ),
+            )
+          else ...[
+            const SizedBox(width: 4),
+            // Control compacto de velocidad BPM con acoplamiento al tempo del patrón
+            _buildBpmSpeedControl(context, state, notifier),
+          ],
         ],
       ),
     );
@@ -783,6 +790,208 @@ class BassPanelWidget extends ConsumerWidget {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRowTargetSelector(
+    AccordionSimulatorState state,
+    AccordionSimulatorNotifier notifier,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFCBD5E1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      padding: const EdgeInsets.all(1.5),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: AccordionRowTarget.values.map((target) {
+          final isSelected = state.selectedBassRowTarget == target;
+          return InkWell(
+            key: ValueKey('bass_row_target_${target.name}_$accordionNumber'),
+            onTap: () => notifier.selectBassRowTarget(target),
+            borderRadius: BorderRadius.circular(4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF059669) : Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                target.label,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w800,
+                  color: isSelected ? Colors.white : const Color(0xFF334155),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildPatternQuickSelector(
+    AccordionSimulatorState state,
+    AccordionSimulatorNotifier notifier,
+  ) {
+    final selectedPattern = state.selectedBassRhythmPattern;
+    final patterns = state.bassRhythmPatterns;
+    final label = selectedPattern != null ? selectedPattern.name : 'Elegir ritmo…';
+
+    return PopupMenuButton<String>(
+      key: ValueKey('bass_pattern_quick_selector_$accordionNumber'),
+      tooltip: 'Cambiar patrón activo',
+      onSelected: (patternId) => notifier.selectBassRhythmPattern(patternId),
+      itemBuilder: (context) {
+        return patterns.map((p) {
+          final isCurrent = p.id == state.selectedBassRhythmPatternId;
+          return PopupMenuItem<String>(
+            value: p.id,
+            height: 32,
+            child: Row(
+              children: [
+                Icon(
+                  isCurrent ? Icons.check_circle : Icons.circle_outlined,
+                  size: 14,
+                  color: isCurrent ? const Color(0xFF059669) : const Color(0xFF94A3B8),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    p.name,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: isCurrent ? FontWeight.w800 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList();
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              key: ValueKey('bass_rhythm_quick_label_$accordionNumber'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+          ),
+          const Icon(
+            Icons.arrow_drop_down,
+            size: 14,
+            color: Color(0xFF64748B),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBpmSpeedControl(
+    BuildContext context,
+    AccordionSimulatorState state,
+    AccordionSimulatorNotifier notifier,
+  ) {
+    final currentBpm = state.selectedBassRhythmPattern?.quarterNotesPerMinute ??
+        state.audioReport?.bpm.toDouble() ??
+        state.manualMetronomeBpm;
+
+    return Tooltip(
+      message: 'Velocidad del patrón / Metrónomo (BPM)',
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFCBD5E1),
+          borderRadius: BorderRadius.circular(5),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            InkWell(
+              onTap: () {
+                final newBpm = (currentBpm - 5).clamp(30.0, 300.0);
+                notifier.setManualMetronomeBpm(newBpm);
+              },
+              borderRadius: BorderRadius.circular(3),
+              child: const Icon(Icons.remove, size: 12, color: Color(0xFF1E293B)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: InkWell(
+                onTap: () => _showBpmInputDialog(context, currentBpm, notifier),
+                child: Text(
+                  '${currentBpm.round()} BPM',
+                  key: ValueKey('bass_bpm_control_$accordionNumber'),
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+              ),
+            ),
+            InkWell(
+              onTap: () {
+                final newBpm = (currentBpm + 5).clamp(30.0, 300.0);
+                notifier.setManualMetronomeBpm(newBpm);
+              },
+              borderRadius: BorderRadius.circular(3),
+              child: const Icon(Icons.add, size: 12, color: Color(0xFF1E293B)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showBpmInputDialog(
+    BuildContext context,
+    double initialBpm,
+    AccordionSimulatorNotifier notifier,
+  ) {
+    final ctrl = TextEditingController(text: initialBpm.round().toString());
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Ajustar BPM / Tempo', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: ctrl,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Tempo (30 - 300 BPM)',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final parsed = double.tryParse(ctrl.text.trim());
+              if (parsed != null && parsed >= 30 && parsed <= 300) {
+                notifier.setManualMetronomeBpm(parsed);
+                Navigator.pop(dialogCtx);
+              }
+            },
+            child: const Text('Aplicar'),
           ),
         ],
       ),

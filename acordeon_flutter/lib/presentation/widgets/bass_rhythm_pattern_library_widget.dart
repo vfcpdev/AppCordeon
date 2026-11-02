@@ -4,40 +4,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/bass_rhythm_pattern.dart';
 import '../controllers/accordion_controller.dart';
 
-/// Biblioteca de patrones rítmicos de bajos.
-///
-/// Lista los patrones integrados del catálogo, los importados desde MusicXML
-/// y los capturados en vivo (matriz 2×2 o teclado). Desde aquí se pueden
-/// reproducir, seleccionar y eliminar los patrones guardados.
+/// Biblioteca de patrones rítmicos de bajos con soporte CRUD completo (Create/Copy, Read, Update, Delete).
 ///
 /// Principios aplicados:
-/// - **SRP**: sólo presenta la lista y delega la lógica al notifier.
-/// - **ISP / bajo acoplamiento**: usa selectores finos; no escucha el estado
-///   completo del simulador ni reconstruye el panel de bajos.
-/// - **OCP**: agregar patrones no requiere tocar este widget.
-/// - **Triplas de Hoare**: las precondiciones ({P}) se validan en el
-///   notifier con `require`; aquí sólo se ofrecen acciones válidas.
+/// - **SRP**: sólo presenta la lista y diálogos auxiliares de edición, delegando la lógica al notifier.
+/// - **ISP / bajo acoplamiento**: selectores finos para reactividad controlada.
+/// - **Triplas de Hoare**: valida las precondiciones formales en el controlador.
 class BassRhythmPatternLibraryWidget extends ConsumerWidget {
   final int accordionNumber;
-
-  /// Ancho fijo de la lista.
-  ///
-  /// Cuando el widget se embebe en contenedores con `IntrinsicWidth` es
-  /// necesario un ancho concreto: un `ListView` (viewport) no implementa
-  /// dimensiones intrínsecas.
   final double width;
-
-  /// Altura máxima visible de la lista antes de hacer scroll.
   final double maxHeight;
 
   const BassRhythmPatternLibraryWidget({
     super.key,
     this.accordionNumber = 1,
-    this.width = 210,
-    this.maxHeight = 168,
+    this.width = 240,
+    this.maxHeight = 220,
   });
 
-  static const double _rowExtent = 38.0;
+  static const double _rowExtent = 42.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -110,6 +95,8 @@ class BassRhythmPatternLibraryWidget extends ConsumerWidget {
                       notifier.toggleBassRhythmPatternPlayback(pattern.id),
                   onSelect: () =>
                       notifier.selectBassRhythmPattern(pattern.id),
+                  onEdit: () => _showEditPatternDialog(context, pattern, notifier),
+                  onDuplicate: () => notifier.duplicateBassRhythmPattern(pattern.id),
                   onDelete: pattern.id.startsWith('builtin:')
                       ? null
                       : () => notifier.deleteBassRhythmPattern(pattern.id),
@@ -121,6 +108,68 @@ class BassRhythmPatternLibraryWidget extends ConsumerWidget {
       ],
     );
   }
+
+  void _showEditPatternDialog(
+    BuildContext context,
+    BassRhythmPattern pattern,
+    AccordionSimulatorNotifier notifier,
+  ) {
+    final nameCtrl = TextEditingController(text: pattern.name);
+    final bpmCtrl = TextEditingController(
+      text: (pattern.quarterNotesPerMinute ?? 120.0).round().toString(),
+    );
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Editar Patrón de Bajos', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del patrón',
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: bpmCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Tempo (BPM)',
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final newName = nameCtrl.text.trim();
+              final parsedBpm = double.tryParse(bpmCtrl.text.trim());
+              if (newName.isNotEmpty && parsedBpm != null && parsedBpm >= 30 && parsedBpm <= 300) {
+                notifier.updateBassRhythmPattern(
+                  patternId: pattern.id,
+                  newName: newName,
+                  newQuarterNotesPerMinute: parsedBpm,
+                );
+                Navigator.pop(dialogCtx);
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _PatternRow extends StatelessWidget {
@@ -129,6 +178,8 @@ class _PatternRow extends StatelessWidget {
   final bool isPlaying;
   final VoidCallback onTogglePlayback;
   final VoidCallback onSelect;
+  final VoidCallback onEdit;
+  final VoidCallback onDuplicate;
   final VoidCallback? onDelete;
 
   const _PatternRow({
@@ -137,6 +188,8 @@ class _PatternRow extends StatelessWidget {
     required this.isPlaying,
     required this.onTogglePlayback,
     required this.onSelect,
+    required this.onEdit,
+    required this.onDuplicate,
     required this.onDelete,
   });
 
@@ -160,7 +213,7 @@ class _PatternRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(7),
         onTap: onSelect,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(7),
             border: Border.all(
@@ -221,19 +274,47 @@ class _PatternRow extends StatelessWidget {
                   ],
                 ),
               ),
+              // Botón Editar (Update)
+              IconButton(
+                key: ValueKey('bass_pattern_edit_${pattern.id}'),
+                tooltip: 'Editar patrón',
+                onPressed: onEdit,
+                constraints: const BoxConstraints.tightFor(width: 22, height: 22),
+                padding: EdgeInsets.zero,
+                splashRadius: 11,
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  size: 14,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              // Botón Duplicar (Create / Duplicate)
+              IconButton(
+                key: ValueKey('bass_pattern_copy_${pattern.id}'),
+                tooltip: 'Duplicar patrón',
+                onPressed: onDuplicate,
+                constraints: const BoxConstraints.tightFor(width: 22, height: 22),
+                padding: EdgeInsets.zero,
+                splashRadius: 11,
+                icon: const Icon(
+                  Icons.copy_rounded,
+                  size: 13,
+                  color: Color(0xFF64748B),
+                ),
+              ),
               if (onDelete != null)
                 IconButton(
                   key: ValueKey('bass_pattern_delete_${pattern.id}'),
                   tooltip: 'Eliminar patrón',
                   onPressed: onDelete,
                   constraints:
-                      const BoxConstraints.tightFor(width: 24, height: 24),
+                      const BoxConstraints.tightFor(width: 22, height: 22),
                   padding: EdgeInsets.zero,
-                  splashRadius: 12,
+                  splashRadius: 11,
                   icon: const Icon(
                     Icons.delete_outline,
-                    size: 15,
-                    color: Color(0xFF94A3B8),
+                    size: 14,
+                    color: Color(0xFFEF4444),
                   ),
                 ),
             ],

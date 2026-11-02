@@ -20,10 +20,11 @@ static REED_B_TABLE: OnceLock<[f32; WAVETABLE_SIZE]> = OnceLock::new();
 fn get_reed_a_table() -> &'static [f32; WAVETABLE_SIZE] {
     REED_A_TABLE.get_or_init(|| {
         let mut table = [0.0; WAVETABLE_SIZE];
-        for i in 0..WAVETABLE_SIZE {
-            let phase = 2.0 * PI * (i as f32) / (WAVETABLE_SIZE as f32);
+        let factor = 2.0 * PI / (WAVETABLE_SIZE as f32);
+        for (i, sample) in table.iter_mut().enumerate() {
+            let phase = (i as f32) * factor;
             // Armónicos 1, 2, 3, 4 característicos de la lengüeta metálica de acordeón
-            table[i] = (phase.sin() * 0.55)
+            *sample = (phase.sin() * 0.55)
                 + ((phase * 2.0).sin() * 0.25)
                 + ((phase * 3.0).sin() * 0.12)
                 + ((phase * 4.0).sin() * 0.05);
@@ -35,10 +36,11 @@ fn get_reed_a_table() -> &'static [f32; WAVETABLE_SIZE] {
 fn get_reed_b_table() -> &'static [f32; WAVETABLE_SIZE] {
     REED_B_TABLE.get_or_init(|| {
         let mut table = [0.0; WAVETABLE_SIZE];
-        for i in 0..WAVETABLE_SIZE {
-            let phase = 2.0 * PI * (i as f32) / (WAVETABLE_SIZE as f32);
+        let factor = 2.0 * PI / (WAVETABLE_SIZE as f32);
+        for (i, sample) in table.iter_mut().enumerate() {
+            let phase = (i as f32) * factor;
             // Armónicos 1, 2, 3 para la segunda lengüeta con batimento musette
-            table[i] = (phase.sin() * 0.55)
+            *sample = (phase.sin() * 0.55)
                 + ((phase * 2.0).sin() * 0.25)
                 + ((phase * 3.0).sin() * 0.12);
         }
