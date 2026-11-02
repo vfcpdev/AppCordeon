@@ -16,6 +16,9 @@ class MultiBeatChordDialog extends ConsumerStatefulWidget {
 
 class _MultiBeatChordDialogState extends ConsumerState<MultiBeatChordDialog> {
   late final TextEditingController _controller;
+  late final TextEditingController _startTimeController;
+  late final TextEditingController _endTimeController;
+  bool _enableTiming = false;
   Offset _position = const Offset(260, 90);
   bool _hasCalculatedInitialPos = false;
 
@@ -23,6 +26,12 @@ class _MultiBeatChordDialogState extends ConsumerState<MultiBeatChordDialog> {
   void initState() {
     super.initState();
     final state = ref.read(accordionSimulatorProvider);
+    _startTimeController = TextEditingController(
+      text: state.currentAudioTime.toStringAsFixed(2),
+    );
+    _endTimeController = TextEditingController(
+      text: (state.currentAudioTime + 2.0).toStringAsFixed(2),
+    );
     var pattern = state.multiBeatPattern;
     if (pattern.isEmpty) {
       final currentChord = state.multiBeatChord?.trim().isNotEmpty == true
@@ -51,6 +60,8 @@ class _MultiBeatChordDialogState extends ConsumerState<MultiBeatChordDialog> {
   @override
   void dispose() {
     _controller.dispose();
+    _startTimeController.dispose();
+    _endTimeController.dispose();
     super.dispose();
   }
 
@@ -78,10 +89,23 @@ class _MultiBeatChordDialogState extends ConsumerState<MultiBeatChordDialog> {
       return;
     }
 
+    double? startVal;
+    double? endVal;
+    if (_enableTiming) {
+      final s = double.tryParse(_startTimeController.text.trim());
+      final e = double.tryParse(_endTimeController.text.trim());
+      if (s != null && e != null && s >= 0 && s <= e) {
+        startVal = s;
+        endVal = e;
+      }
+    }
+
     final count = notifier.applyMultiBeatChord(
       chord: chord,
       pattern: pattern,
       replaceExisting: true,
+      startTime: startVal,
+      endTime: endVal,
     );
     notifier.setShowMultiBeatModal(false);
 
@@ -368,6 +392,101 @@ class _MultiBeatChordDialogState extends ConsumerState<MultiBeatChordDialog> {
                         _buildPresetChip('1.1, 2.1, 3.1, 4.1', label: 'Tiempos 1 (1-4)'),
                         _buildPresetChip('1.1, 1.2, 1.3, 1.4', label: 'Compás 1 completo'),
                       ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Opción: Definir tiempo de inicio y fin en el transcurso del audio
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: Checkbox(
+                                  value: _enableTiming,
+                                  onChanged: (val) => setState(() => _enableTiming = val ?? false),
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Expanded(
+                                child: Text(
+                                  'Definir tiempo de inicio y fin (Audio)',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1E293B),
+                                  ),
+                                ),
+                              ),
+                              if (state.isPlayingAudio || state.currentAudioTime > 0)
+                                InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _enableTiming = true;
+                                      _startTimeController.text = state.currentAudioTime.toStringAsFixed(2);
+                                      _endTimeController.text = (state.currentAudioTime + 2.0).toStringAsFixed(2);
+                                    });
+                                  },
+                                  child: const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                    child: Text(
+                                      'Tomar actual',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF0284C7),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          if (_enableTiming) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _startTimeController,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    style: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Inicio (s)',
+                                      isDense: true,
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _endTimeController,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    style: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Fin (s)',
+                                      isDense: true,
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 12),
 

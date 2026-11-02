@@ -48,7 +48,6 @@ class TrackInfoCardWidget extends ConsumerWidget {
     return Container(
       margin: isFloating ? EdgeInsets.zero : const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      constraints: const BoxConstraints(maxWidth: 440),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),

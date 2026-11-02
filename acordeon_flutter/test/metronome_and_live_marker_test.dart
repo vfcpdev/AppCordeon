@@ -256,24 +256,17 @@ void main() {
       expect(metronomeBtn, findsOneWidget);
       expect(find.descendant(of: metronomeBtn, matching: find.byType(FaIcon)), findsOneWidget);
 
-      // 3. Botón de Marcador en Vivo (Espacio) presente
-      final liveMarkerBtn = find.byKey(const ValueKey('live_chord_marker_btn_1'));
-      expect(liveMarkerBtn, findsOneWidget);
-      expect(find.text('Espacio'), findsOneWidget);
-
-      // 4. Activar metrónomo al pulsar el botón Click
+      // 3. Activar metrónomo al pulsar el botón Click
       await tester.tap(metronomeBtn);
       await tester.pumpAndSettle();
 
       expect(container.read(accordionSimulatorProvider).isMetronomeActive, isTrue);
 
-      // 5. Activar marcador en vivo al pulsar el botón Espacio
-      await tester.tap(liveMarkerBtn);
-      await tester.pumpAndSettle();
-
+      // 4. Activar marcador en vivo vía toggle directo del controlador
+      container.read(accordionSimulatorProvider.notifier).toggleLiveChordMarker();
       expect(container.read(accordionSimulatorProvider).isLiveChordMarkerActive, isTrue);
 
-      // 6. Apagar metrónomo para cancelar el temporizador periódico
+      // 5. Apagar metrónomo para cancelar el temporizador periódico
       await tester.tap(metronomeBtn);
       await tester.pumpAndSettle();
       expect(container.read(accordionSimulatorProvider).isMetronomeActive, isFalse);

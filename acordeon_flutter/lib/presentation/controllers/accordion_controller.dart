@@ -3638,6 +3638,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     required String chord,
     required String pattern,
     bool replaceExisting = true,
+    double? startTime,
+    double? endTime,
   }) {
     if (chord.trim().isEmpty) return 0;
     final positions = parseMultiBeatPositions(pattern);
@@ -3654,6 +3656,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       pattern: pattern,
       currentMeasures: state.measures,
       replaceExisting: replaceExisting,
+      startTime: startTime,
+      endTime: endTime,
     );
     final result = command.execute();
     if (result.appliedCount == 0) return 0;

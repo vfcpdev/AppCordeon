@@ -139,9 +139,35 @@ class BassPanelWidget extends ConsumerWidget {
                       color: Color(0xFF059669),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   // Selector compacto de Hilera objetivo (Ext | Med | Int)
                   _buildRowTargetSelector(state, notifier),
+                  const SizedBox(width: 4),
+                  // Combobox / Selector rápido de patrón ubicado inmediatamente a la derecha de Ext, Med, Int
+                  Flexible(
+                    child: _buildPatternQuickSelector(context, state, notifier),
+                  ),
+                  const SizedBox(width: 2),
+                  // Botón de acceso directo a la biblioteca de patrones
+                  IconButton(
+                    key: ValueKey('bass_rhythm_library_btn_$accordionNumber'),
+                    tooltip: 'Biblioteca de patrones',
+                    onPressed: () => BassRhythmPatternLibraryDialog.show(
+                      context,
+                      accordionNumber: accordionNumber,
+                    ),
+                    constraints: const BoxConstraints.tightFor(
+                      width: 24,
+                      height: 24,
+                    ),
+                    padding: EdgeInsets.zero,
+                    splashRadius: 14,
+                    icon: const Icon(
+                      Icons.library_music_outlined,
+                      size: 15,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
                   const Spacer(),
                   IconButton(
                     key: ValueKey('bass_panel_collapse_btn_$accordionNumber'),
@@ -618,14 +644,14 @@ class BassPanelWidget extends ConsumerWidget {
                     : 'Reproducir patrón de bajos',
             onPressed:
                 hasPatterns ? notifier.toggleSelectedBassRhythmPlayback : null,
-            constraints: const BoxConstraints.tightFor(width: 29, height: 31),
+            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
             padding: EdgeInsets.zero,
-            splashRadius: 15,
+            splashRadius: 16,
             icon: Icon(
               isPatternPlaying
                   ? Icons.pause_circle_filled
                   : Icons.play_circle_fill,
-              size: 18,
+              size: 22,
               color: !hasPatterns
                   ? const Color(0xFF94A3B8)
                   : isPatternPlaying
@@ -633,74 +659,55 @@ class BassPanelWidget extends ConsumerWidget {
                       : const Color(0xFF0284C7),
             ),
           ),
-          const SizedBox(width: 2),
+          const SizedBox(width: 4),
           IconButton(
             key: ValueKey('bass_rhythm_capture_btn_$accordionNumber'),
             tooltip: isCapturing
                 ? 'Capturando patrón… ($patternCount)'
                 : 'Capturar patrón rítmico de bajos',
             onPressed: () => notifier.toggleBassCapturePanel(),
-            constraints: const BoxConstraints.tightFor(width: 29, height: 31),
+            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
             padding: EdgeInsets.zero,
-            splashRadius: 15,
+            splashRadius: 16,
             icon: Icon(
               isCapturing ? Icons.fiber_manual_record : Icons.grid_view_rounded,
-              size: 16.5,
+              size: 20,
               color: isCapturing
                   ? const Color(0xFFDC2626)
                   : const Color(0xFF334155),
             ),
           ),
-          const SizedBox(width: 2),
-          IconButton(
-            key: ValueKey('bass_rhythm_library_btn_$accordionNumber'),
-            tooltip: 'Biblioteca de patrones ($patternCount)',
-            onPressed: () => BassRhythmPatternLibraryDialog.show(
-              context,
-              accordionNumber: accordionNumber,
+          // Estado de captura (si está activo)
+          if (isCapturing) ...[
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                'Capturando… ${recorder?.hits.length ?? 0} golpe(s)',
+                key: ValueKey('bass_rhythm_capture_label_$accordionNumber'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFDC2626),
+                ),
+              ),
             ),
-            constraints: const BoxConstraints.tightFor(width: 29, height: 31),
-            padding: EdgeInsets.zero,
-            splashRadius: 15,
-            icon: const Icon(
-              Icons.library_music_outlined,
-              size: 17,
-              color: Color(0xFF334155),
-            ),
-          ),
-          const SizedBox(width: 4),
-          // Selector rápido de patrón o estado de captura
-          Expanded(
-            child: isCapturing
-                ? Text(
-                    'Capturando… ${recorder?.hits.length ?? 0} golpe(s)',
-                    key: ValueKey('bass_rhythm_capture_label_$accordionNumber'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFFDC2626),
-                    ),
-                  )
-                : _buildPatternQuickSelector(state, notifier),
-          ),
-          if (isCapturing)
             IconButton(
               key: ValueKey('bass_rhythm_quick_stop_btn_$accordionNumber'),
               tooltip: 'Detener captura',
               onPressed: notifier.stopBassRhythmCapture,
-              constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+              constraints: const BoxConstraints.tightFor(width: 28, height: 28),
               padding: EdgeInsets.zero,
-              splashRadius: 13,
+              splashRadius: 14,
               icon: const Icon(
                 Icons.stop_rounded,
-                size: 18,
+                size: 20,
                 color: Color(0xFFDC2626),
               ),
-            )
-          else ...[
-            const SizedBox(width: 4),
+            ),
+          ] else ...[
+            const Spacer(),
             // Control compacto de velocidad BPM con acoplamiento al tempo del patrón
             _buildBpmSpeedControl(context, state, notifier),
           ],
@@ -836,6 +843,7 @@ class BassPanelWidget extends ConsumerWidget {
   }
 
   Widget _buildPatternQuickSelector(
+    BuildContext context,
     AccordionSimulatorState state,
     AccordionSimulatorNotifier notifier,
   ) {
@@ -846,34 +854,69 @@ class BassPanelWidget extends ConsumerWidget {
     return PopupMenuButton<String>(
       key: ValueKey('bass_pattern_quick_selector_$accordionNumber'),
       tooltip: 'Cambiar patrón activo',
-      onSelected: (patternId) => notifier.selectBassRhythmPattern(patternId),
+      onSelected: (val) {
+        if (val == '__open_library__') {
+          BassRhythmPatternLibraryDialog.show(
+            context,
+            accordionNumber: accordionNumber,
+          );
+        } else {
+          notifier.selectBassRhythmPattern(val);
+        }
+      },
       itemBuilder: (context) {
-        return patterns.map((p) {
-          final isCurrent = p.id == state.selectedBassRhythmPatternId;
-          return PopupMenuItem<String>(
-            value: p.id,
-            height: 32,
-            child: Row(
-              children: [
-                Icon(
-                  isCurrent ? Icons.check_circle : Icons.circle_outlined,
-                  size: 14,
-                  color: isCurrent ? const Color(0xFF059669) : const Color(0xFF94A3B8),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    p.name,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: isCurrent ? FontWeight.w800 : FontWeight.normal,
+        return [
+          ...patterns.map((p) {
+            final isCurrent = p.id == state.selectedBassRhythmPatternId;
+            return PopupMenuItem<String>(
+              value: p.id,
+              height: 32,
+              child: Row(
+                children: [
+                  Icon(
+                    isCurrent ? Icons.check_circle : Icons.circle_outlined,
+                    size: 14,
+                    color: isCurrent ? const Color(0xFF059669) : const Color(0xFF94A3B8),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      p.name,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isCurrent ? FontWeight.w800 : FontWeight.normal,
+                      ),
                     ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          const PopupMenuDivider(),
+          PopupMenuItem<String>(
+            key: ValueKey('bass_rhythm_library_btn_$accordionNumber'),
+            value: '__open_library__',
+            height: 34,
+            child: Row(
+              children: const [
+                Icon(
+                  Icons.library_music_outlined,
+                  size: 15,
+                  color: Color(0xFF0284C7),
+                ),
+                SizedBox(width: 6),
+                Text(
+                  'Biblioteca de patrones…',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0284C7),
                   ),
                 ),
               ],
             ),
-          );
-        }).toList();
+          ),
+        ];
       },
       child: Row(
         mainAxisSize: MainAxisSize.min,

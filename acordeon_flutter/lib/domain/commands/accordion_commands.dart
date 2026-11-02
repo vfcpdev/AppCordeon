@@ -180,6 +180,8 @@ class ApplyMultiBeatChordCommand
   final bool replaceExisting;
   final List<MeasureRow> currentMeasures;
   final int maxAllowedMeasures;
+  final double? startTime;
+  final double? endTime;
 
   const ApplyMultiBeatChordCommand({
     required this.chord,
@@ -187,6 +189,8 @@ class ApplyMultiBeatChordCommand
     required this.currentMeasures,
     this.replaceExisting = true,
     this.maxAllowedMeasures = defaultMaxAllowedMeasures,
+    this.startTime,
+    this.endTime,
   });
 
   @override
@@ -286,7 +290,15 @@ class ApplyMultiBeatChordCommand
         final row = updatedMeasures[bIdx];
         if (tIdx >= 0 && tIdx < row.beats.length) {
           final beats = List<MeasureBeat>.from(row.beats);
-          beats[tIdx] = beats[tIdx].copyWith(chord: trimmedChord);
+          final timeStr = startTime != null
+              ? '${(startTime!.toInt() ~/ 60).toString().padLeft(2, '0')}:${((startTime!.toInt() % 60)).toString().padLeft(2, '0')}'
+              : beats[tIdx].timeText;
+          beats[tIdx] = beats[tIdx].copyWith(
+            chord: trimmedChord,
+            startTime: startTime ?? beats[tIdx].startTime,
+            endTime: endTime ?? beats[tIdx].endTime,
+            timeText: timeStr,
+          );
           updatedMeasures[bIdx] = MeasureRow(
             barNumber: row.barNumber,
             beats: beats,

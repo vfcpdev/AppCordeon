@@ -146,7 +146,7 @@ class AppHeaderWidget extends ConsumerWidget {
                   message: state.isAnalyzingAudio
                       ? 'Analizando ${state.loadedAudioFileName}'
                       : 'Analizar ${state.loadedAudioFileName}',
-                  child: ElevatedButton.icon(
+                  child: ElevatedButton(
                     key: const ValueKey('analyze_loaded_audio_btn'),
                     onPressed: state.isAnalyzingAudio
                         ? null
@@ -156,24 +156,25 @@ class AppHeaderWidget extends ConsumerWidget {
                               presentAudioLoadResult(context, result);
                             }
                           },
-                    icon: state.isAnalyzingAudio
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF059669),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.all(8),
+                      minimumSize: const Size(32, 32),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: state.isAnalyzingAudio
                         ? const SizedBox(
-                            width: 12,
-                            height: 12,
+                            width: 14,
+                            height: 14,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.white,
                             ),
                           )
-                        : const FaIcon(FontAwesomeIcons.magnifyingGlassChart, size: 12),
-                    label: Text(state.isAnalyzingAudio ? 'Analizando' : 'Analizar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF059669),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                      minimumSize: const Size(0, 30),
-                      textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
+                        : const FaIcon(FontAwesomeIcons.magnifyingGlassChart, size: 14),
                   ),
                 ),
               ],

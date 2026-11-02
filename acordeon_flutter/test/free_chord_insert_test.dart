@@ -52,7 +52,7 @@ void main() {
     expect(chordField.controller?.text, ChordCatalog.maxChordName);
     final fittedFontSize = chordField.style!.fontSize!;
     expect(fittedFontSize, greaterThanOrEqualTo(6));
-    expect(fittedFontSize, lessThanOrEqualTo(10));
+    expect(fittedFontSize, lessThanOrEqualTo(11.0));
     expect(
       ChordCatalog.maxChordName.length *
               ChordTextFitter.defaultCharWidthFactor *

@@ -14,7 +14,9 @@ import '../controllers/accordion_controller.dart';
 ///   - Ejecución {C}: `notifier.setFreeChordRoot(rootIndex)`.
 ///   - Poscondición {Q}: `state.freeChordRoot == rootIndex`.
 class TonicNotesMatrixWidget extends ConsumerWidget {
-  const TonicNotesMatrixWidget({super.key});
+  final Widget? trailing;
+
+  const TonicNotesMatrixWidget({super.key, this.trailing});
 
   /// Distribución 2 filas x 6 columnas:
   /// Fila 1: Do, Do#, Re, Mi♭, Mi, Fa (índices 0 a 5)
@@ -37,67 +39,83 @@ class TonicNotesMatrixWidget extends ConsumerWidget {
         color: Color(0xFFF1F5F9),
         border: Border(bottom: BorderSide(color: Color(0xFFCBD5E1), width: 0.8)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: matrixRows.map((row) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 1.5),
-            child: Row(
-              children: row.map((rootIndex) {
-                final isSelected = state.freeChordRoot == rootIndex;
-                final rootName = rootNames[rootIndex];
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: matrixRows.map((row) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 1.5),
+                  child: Row(
+                    children: row.map((rootIndex) {
+                      final isSelected = state.freeChordRoot == rootIndex;
+                      final rootName = rootNames[rootIndex];
 
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                    child: Tooltip(
-                      message: 'Tónica $rootName',
-                      child: InkWell(
-                        key: ValueKey('tonic_matrix_btn_$rootIndex'),
-                        onTap: () => notifier.setFreeChordRoot(rootIndex),
-                        borderRadius: BorderRadius.circular(4),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 90),
-                          height: 20,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFF059669) : Colors.white,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: isSelected ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
-                              width: isSelected ? 1.2 : 0.8,
-                            ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: const Color(0xFF059669).withValues(alpha: 0.3),
-                                      blurRadius: 3,
-                                      offset: const Offset(0, 1),
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                          child: Tooltip(
+                            message: 'Tónica $rootName',
+                            child: InkWell(
+                              key: ValueKey('tonic_matrix_btn_$rootIndex'),
+                              onTap: () => notifier.setFreeChordRoot(rootIndex),
+                              borderRadius: BorderRadius.circular(4),
+                              child: AspectRatio(
+                                aspectRatio: 1.0,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 90),
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? const Color(0xFF059669) : Colors.white,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: isSelected ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
+                                      width: isSelected ? 1.2 : 0.8,
                                     ),
-                                  ]
-                                : null,
-                          ),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              rootName,
-                              style: TextStyle(
-                                fontSize: 9.0,
-                                fontWeight: FontWeight.w900,
-                                height: 1.0,
-                                color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: const Color(0xFF059669).withValues(alpha: 0.3),
+                                              blurRadius: 3,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(1.0),
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        rootName,
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w900,
+                                          height: 1.0,
+                                          color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    }).toList(),
                   ),
                 );
               }).toList(),
             ),
-          );
-        }).toList(),
+          ),
+          if (trailing != null) ...[
+            const SizedBox(width: 4),
+            trailing!,
+          ],
+        ],
       ),
     );
   }

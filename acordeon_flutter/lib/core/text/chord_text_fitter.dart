@@ -27,7 +27,7 @@ class ChordTextFitter {
 
   /// Factor de ancho estimado por carácter para la tipografía del acorde
   /// (conservador para glifos anchos como `m` o `b`).
-  static const double defaultCharWidthFactor = 0.62;
+  static const double defaultCharWidthFactor = 0.58;
 
   /// Calcula el tamaño de fuente tal que el texto completo quepa con seguridad
   /// en [availableWidth]. Nunca devuelve tamaños no positivos.

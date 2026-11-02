@@ -231,10 +231,12 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
 
     return SizedBox(
       width: effectiveWidth,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+      child: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           Focus(
             autofocus: false,
             onKeyEvent: (node, event) {
@@ -406,13 +408,6 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _LiveMarkerButton(
-                                accordionNumber: widget.accordionNumber,
-                                isActive: state.isLiveChordMarkerActive,
-                                isPlaying: state.isPlayingAudio,
-                                onTap: notifier.toggleLiveChordMarker,
-                              ),
-                              const SizedBox(width: 3),
                               _AutoChordDetectButton(
                                 accordionNumber: widget.accordionNumber,
                                 isActive:
@@ -635,72 +630,6 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                 const SizedBox(width: 3),
                                 Tooltip(
                                   message: state.isMultiBeatAssignmentMode
-                                      ? canInsertChord
-                                            ? 'Asignar $constructorChord a $assignmentTargetCount caja${assignmentTargetCount == 1 ? '' : 's'}'
-                                            : 'Selecciona las cajas de destino para asignar $constructorChord'
-                                      : canInsertChord
-                                      ? 'Agregar $constructorChord a $insertTargetLabel'
-                                      : 'Selecciona un acorde y una casilla del Compás',
-                                  child: InkWell(
-                                    key: const ValueKey(
-                                      'insert_chord_to_compas_btn',
-                                    ),
-                                    onTap: canInsertChord
-                                        ? () {
-                                            final symbol =
-                                                state.isMultiBeatAssignmentMode
-                                                ? notifier
-                                                      .assignFreeChordToMultiBeatTargets()
-                                                : notifier
-                                                      .insertFreeChordIntoSelectedCell();
-                                            if (symbol == null) return;
-                                            ScaffoldMessenger.of(context)
-                                              ..hideCurrentSnackBar()
-                                              ..showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    state.isMultiBeatAssignmentMode
-                                                        ? '$symbol asignado a $assignmentTargetCount caja${assignmentTargetCount == 1 ? '' : 's'}'
-                                                        : '$symbol → $insertTargetLabel',
-                                                  ),
-                                                  duration: const Duration(
-                                                    milliseconds: 1400,
-                                                  ),
-                                                ),
-                                              );
-                                          }
-                                        : null,
-                                    borderRadius: BorderRadius.circular(5),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        color: canInsertChord
-                                            ? state.isMultiBeatAssignmentMode
-                                                  ? const Color(0xFF7C3AED)
-                                                  : const Color(0xFF16A34A)
-                                            : const Color(0xFFF1F5F9),
-                                        borderRadius: BorderRadius.circular(5),
-                                        border: Border.all(
-                                          color: canInsertChord
-                                              ? state.isMultiBeatAssignmentMode
-                                                    ? const Color(0xFF6D28D9)
-                                                    : const Color(0xFF16A34A)
-                                              : const Color(0xFFCBD5E1),
-                                        ),
-                                      ),
-                                      child: FaIcon(
-                                        FontAwesomeIcons.plus,
-                                        size: 13.5,
-                                        color: canInsertChord
-                                            ? Colors.white
-                                            : const Color(0xFF94A3B8),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 3),
-                                Tooltip(
-                                  message: state.isMultiBeatAssignmentMode
                                       ? 'Cancelar selección de cajas ($assignmentTargetCount seleccionada${assignmentTargetCount == 1 ? '' : 's'})'
                                       : 'Activar asignación múltiple de $constructorChord tocando sus cajas',
                                   child: InkWell(
@@ -794,15 +723,68 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                   ),
 
                   // Matriz de botones de Tónica: 2 filas por 6 columnas (debajo de guardar / importar compás)
+                  // A la derecha de la matriz: Botón + para agregar el acorde (cuadrado, 2 filas de alto)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: widget.chordQualityLink == null
-                            ? const TonicNotesMatrixWidget()
+                            ? TonicNotesMatrixWidget(
+                                trailing: _buildAddChordSquareButton(
+                                  canInsertChord: canInsertChord,
+                                  isMultiBeatMode: state.isMultiBeatAssignmentMode,
+                                  targetLabel: insertTargetLabel,
+                                  targetCount: assignmentTargetCount,
+                                  chordSymbol: constructorChord,
+                                  onTap: () {
+                                    final symbol = state.isMultiBeatAssignmentMode
+                                        ? notifier.assignFreeChordToMultiBeatTargets()
+                                        : notifier.insertFreeChordIntoSelectedCell();
+                                    if (symbol == null) return;
+                                    ScaffoldMessenger.of(context)
+                                      ..hideCurrentSnackBar()
+                                      ..showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            state.isMultiBeatAssignmentMode
+                                                ? ' asignado a  caja'
+                                                : ' → ',
+                                          ),
+                                          duration: const Duration(milliseconds: 1400),
+                                        ),
+                                      );
+                                  },
+                                ),
+                              )
                             : CompositedTransformTarget(
                                 link: widget.chordQualityLink!,
-                                child: const TonicNotesMatrixWidget(),
+                                child: TonicNotesMatrixWidget(
+                                  trailing: _buildAddChordSquareButton(
+                                    canInsertChord: canInsertChord,
+                                    isMultiBeatMode: state.isMultiBeatAssignmentMode,
+                                    targetLabel: insertTargetLabel,
+                                    targetCount: assignmentTargetCount,
+                                    chordSymbol: constructorChord,
+                                    onTap: () {
+                                      final symbol = state.isMultiBeatAssignmentMode
+                                          ? notifier.assignFreeChordToMultiBeatTargets()
+                                          : notifier.insertFreeChordIntoSelectedCell();
+                                      if (symbol == null) return;
+                                      ScaffoldMessenger.of(context)
+                                        ..hideCurrentSnackBar()
+                                        ..showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              state.isMultiBeatAssignmentMode
+                                                  ? ' asignado a  caja'
+                                                  : ' → ',
+                                            ),
+                                            duration: const Duration(milliseconds: 1400),
+                                          ),
+                                        );
+                                    },
+                                  ),
+                                ),
                               ),
                       ),
                     ],
@@ -1197,6 +1179,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
           ],
         ],
       ),
+    ),
     );
   }
 
@@ -1591,6 +1574,66 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
 }
 
 /// Control de BPM compacto y editable con cuadro de texto y botones de subir / bajar
+
+  Widget _buildAddChordSquareButton({
+    required bool canInsertChord,
+    required bool isMultiBeatMode,
+    required String targetLabel,
+    required int targetCount,
+    required String chordSymbol,
+    required VoidCallback onTap,
+  }) {
+    final tooltip = isMultiBeatMode
+        ? (canInsertChord
+            ? 'Asignar  a  caja'
+            : 'Selecciona las cajas de destino para asignar ')
+        : (canInsertChord
+            ? 'Agregar  a '
+            : 'Selecciona un acorde y una casilla del Compás');
+
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        key: const ValueKey('insert_chord_to_compas_btn'),
+        onTap: canInsertChord ? onTap : null,
+        borderRadius: BorderRadius.circular(6),
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: canInsertChord
+                  ? (isMultiBeatMode ? const Color(0xFF7C3AED) : const Color(0xFF16A34A))
+                  : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: canInsertChord
+                    ? (isMultiBeatMode ? const Color(0xFF6D28D9) : const Color(0xFF16A34A))
+                    : const Color(0xFFCBD5E1),
+              ),
+              boxShadow: canInsertChord
+                  ? [
+                      BoxShadow(
+                        color: (isMultiBeatMode ? const Color(0xFF7C3AED) : const Color(0xFF16A34A))
+                            .withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1.5),
+                      )
+                    ]
+                  : null,
+            ),
+            child: FaIcon(
+              FontAwesomeIcons.plus,
+              size: 16,
+              color: canInsertChord ? Colors.white : const Color(0xFF94A3B8),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
 class _BpmInputControl extends StatefulWidget {
   final int bpm;
   final ValueChanged<int> onChanged;
@@ -2357,7 +2400,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
           constraints: const BoxConstraints(
             minHeight: CompasCardMetrics.beatCellHeight,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 1.5, vertical: 0.5),
           decoration: BoxDecoration(
             // Radio condicional: bordes "Stateful" no ocasionan problemas; el
             // divisor entre cuadros es un hueco (no un borde), así que el
@@ -2475,8 +2518,8 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
               final chordFontSize = ChordTextFitter.fitFontSize(
                 text: _controller.text,
                 availableWidth: chordTextWidth,
-                baseFontSize: 10,
-                minFontSize: 6,
+                baseFontSize: 11.0,
+                minFontSize: 6.6,
               );
 
               final chordField = Tooltip(
@@ -2517,7 +2560,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     isDense: true,
                     hintText: '-',
                     hintStyle: TextStyle(
-                      fontSize: 10.0,
+                      fontSize: 11.0,
                       fontWeight: FontWeight.w500,
                       color: Color(0xFF94A3B8),
                     ),
@@ -3311,72 +3354,6 @@ class _MetronomeButton extends StatelessWidget {
   }
 }
 
-/// Botón del marcador en vivo que indica y activa la captura de acordes con la Barra Espaciadora.
-class _LiveMarkerButton extends StatelessWidget {
-  final int accordionNumber;
-  final bool isActive;
-  final bool isPlaying;
-  final VoidCallback onTap;
-
-  const _LiveMarkerButton({
-    required this.accordionNumber,
-    required this.isActive,
-    required this.isPlaying,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final activeBg = isPlaying
-        ? const Color(0xFFF59E0B)
-        : const Color(0xFF8B5CF6);
-    final activeBorder = isPlaying
-        ? const Color(0xFFD97706)
-        : const Color(0xFF7C3AED);
-
-    return Tooltip(
-      message: isActive
-          ? 'Marcador en Vivo Activo: Presiona [Espacio] para marcar el acorde en el tiempo del slider'
-          : 'Activar Marcador en Vivo [Espacio] sincronizado con la reproducción',
-      child: InkWell(
-        key: ValueKey('live_chord_marker_btn_$accordionNumber'),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-          decoration: BoxDecoration(
-            color: isActive ? activeBg : const Color(0xFFE2E8F0),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: isActive ? activeBorder : const Color(0xFFCBD5E1),
-              width: 0.9,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FaIcon(
-                FontAwesomeIcons.bookmark,
-                size: 9.0,
-                color: isActive ? Colors.white : const Color(0xFF64748B),
-              ),
-              const SizedBox(width: 3),
-              Text(
-                'Espacio',
-                style: TextStyle(
-                  fontSize: 8.5,
-                  fontWeight: FontWeight.w800,
-                  color: isActive ? Colors.white : const Color(0xFF475569),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Botón para activar/desactivar la detección automática de acordes en reproducción
 /// (actuando exclusivamente cuando se detecta un cambio armónico).
 class _AutoChordDetectButton extends StatelessWidget {
@@ -3618,7 +3595,7 @@ class _BeatAdjustButton extends StatelessWidget {
               color: isNudged
                   ? const Color(0xFF2563EB)
                   : const Color(0xFF64748B),
-            ),
+            ),r
             const SizedBox(width: 3),
             Text(
               isNudged ? '${ms >= 0 ? "+" : ""}$ms' : 'Beat',
