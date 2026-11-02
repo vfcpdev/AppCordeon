@@ -588,6 +588,9 @@ class BassPanelWidget extends ConsumerWidget {
     final recorder = state.bassRhythmRecorder;
     final isCapturing = state.isBassCaptureActive;
     final patternCount = state.bassRhythmPatterns.length;
+    final hasPatterns = state.bassRhythmPatterns.isNotEmpty;
+    final isPatternPlaying =
+        state.isBassMetronomeActive && state.selectedBassRhythmPattern != null;
 
     return Container(
       key: ValueKey('bass_rhythm_controls_$accordionNumber'),
@@ -602,6 +605,31 @@ class BassPanelWidget extends ConsumerWidget {
       child: Row(
         mainAxisSize: MainAxisSize.max,
         children: [
+          IconButton(
+            key: ValueKey('bass_rhythm_play_btn_$accordionNumber'),
+            tooltip: !hasPatterns
+                ? 'Sin patrones para reproducir'
+                : isPatternPlaying
+                    ? 'Detener patrón de bajos'
+                    : 'Reproducir patrón de bajos',
+            onPressed:
+                hasPatterns ? notifier.toggleSelectedBassRhythmPlayback : null,
+            constraints: const BoxConstraints.tightFor(width: 29, height: 31),
+            padding: EdgeInsets.zero,
+            splashRadius: 15,
+            icon: Icon(
+              isPatternPlaying
+                  ? Icons.pause_circle_filled
+                  : Icons.play_circle_fill,
+              size: 18,
+              color: !hasPatterns
+                  ? const Color(0xFF94A3B8)
+                  : isPatternPlaying
+                      ? const Color(0xFF16A34A)
+                      : const Color(0xFF0284C7),
+            ),
+          ),
+          const SizedBox(width: 2),
           IconButton(
             key: ValueKey('bass_rhythm_capture_btn_$accordionNumber'),
             tooltip: isCapturing

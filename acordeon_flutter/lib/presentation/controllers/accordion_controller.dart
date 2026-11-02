@@ -1961,6 +1961,91 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     _syncStandaloneMetronome();
   }
 
+  /// Alterna la reproducción del patrón indicado: si ya suena, lo detiene;
+  /// si no, lo selecciona y arranca el metrónomo de bajos.
+  ///
+  /// {P}: `patternId` pertenece a `bassRhythmPatterns`.
+  /// {Q}: tras la llamada `isBassMetronomeActive == false` (si sonaba ese
+  ///      patrón) o `selectedBassRhythmPatternId == patternId ∧
+  ///      isBassMetronomeActive == true` (si no sonaba).
+  void toggleBassRhythmPatternPlayback(String patternId) {
+    require(
+      'toggleBassRhythmPatternPlayback',
+      'el patrón existe en la biblioteca',
+      state.bassRhythmPatterns.any((pattern) => pattern.id == patternId),
+    );
+    final isCurrent = state.selectedBassRhythmPatternId == patternId;
+    if (isCurrent && state.isBassMetronomeActive) {
+      stopBassRhythm();
+      return;
+    }
+    playBassRhythmPattern(patternId);
+    ensure(
+      'toggleBassRhythmPatternPlayback',
+      'el patrón queda seleccionado y sonando',
+      state.selectedBassRhythmPatternId == patternId &&
+          state.isBassMetronomeActive,
+    );
+  }
+
+  /// Reproduce el patrón seleccionado, o el primero disponible si no hay
+  /// selección. Si ya está sonando, lo detiene.
+  ///
+  /// {Q}: si hay patrones, el transporte de bajos queda en reproducción o
+  ///      detenido de forma consistente con su estado previo.
+  void toggleSelectedBassRhythmPlayback() {
+    final selectedId = state.selectedBassRhythmPatternId;
+    final targetId = selectedId ??
+        (state.bassRhythmPatterns.isNotEmpty
+            ? state.bassRhythmPatterns.first.id
+            : null);
+    if (targetId == null) return;
+    toggleBassRhythmPatternPlayback(targetId);
+  }
+
+  /// Elimina un patrón capturado o importado de la biblioteca.
+  ///
+  /// Los patrones del catálogo (`builtin:`) son inmutables y no se eliminan.
+  ///
+  /// {P}: `patternId` existe y no es del catálogo integrado.
+  /// {Q}: el patrón desaparece de `bassRhythmPatterns`; si era el
+  ///      seleccionado, la selección pasa al primero restante o se limpia;
+  ///      si estaba sonando, la reproducción se detiene.
+  void deleteBassRhythmPattern(String patternId) {
+    require(
+      'deleteBassRhythmPattern',
+      'el patrón existe en la biblioteca',
+      state.bassRhythmPatterns.any((pattern) => pattern.id == patternId),
+    );
+    require(
+      'deleteBassRhythmPattern',
+      'los patrones integrados del catálogo no se eliminan',
+      !patternId.startsWith('builtin:'),
+    );
+    final wasSelected = state.selectedBassRhythmPatternId == patternId;
+    final remaining = state.bassRhythmPatterns
+        .where((pattern) => pattern.id != patternId)
+        .toList(growable: false);
+
+    if (wasSelected && state.isBassMetronomeActive) {
+      _stopStandaloneMetronome();
+    }
+
+    state = state.copyWith(
+      bassRhythmPatterns: remaining,
+      clearSelectedBassRhythmPattern: wasSelected && remaining.isEmpty,
+      selectedBassRhythmPatternId:
+          wasSelected && remaining.isNotEmpty ? remaining.first.id : null,
+      isBassMetronomeActive: wasSelected ? false : state.isBassMetronomeActive,
+      bassRhythmElapsedSeconds: wasSelected ? 0 : state.bassRhythmElapsedSeconds,
+    );
+    ensure(
+      'deleteBassRhythmPattern',
+      'el patrón eliminado ya no está en la biblioteca',
+      !state.bassRhythmPatterns.any((pattern) => pattern.id == patternId),
+    );
+  }
+
   void toggleBassMetronome() {
     state = state.copyWith(isBassMetronomeActive: !state.isBassMetronomeActive);
     _syncStandaloneMetronome();
