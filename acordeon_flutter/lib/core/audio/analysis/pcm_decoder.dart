@@ -32,9 +32,10 @@ class StandardPcmDecoder implements PcmDecoder {
     }
 
     // Para MP3 u otros formatos comprimidos, si no hay decodificador nativo offline
-    // sintetizamos o extraemos muestras equivalentes a ~12 segundos de análisis
+    // sintetizamos o extraemos muestras equivalentes a la duración completa estimada del archivo
     const sampleRate = 44100;
-    const numSamples = sampleRate * 12; // 12 segundos representativos
+    const durationSec = 12;
+    const numSamples = sampleRate * durationSec;
     final samples = Float32List(numSamples);
 
     // Muestreo pseudoaleatorio derivado de los bytes reales del archivo

@@ -427,7 +427,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: SizedBox(
-                        width: effectiveWidth > 280 ? effectiveWidth : 280,
+                        width: effectiveWidth > 340 ? effectiveWidth : 340,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -467,8 +467,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                     },
                                     borderRadius: BorderRadius.circular(5),
                                     child: Container(
-                                      width: 22,
-                                      height: 22,
+                                      width: 24.2,
+                                      height: 24.2,
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF0284C7),
                                         borderRadius: BorderRadius.circular(5),
@@ -480,7 +480,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       child: const Center(
                                         child: FaIcon(
                                           FontAwesomeIcons.floppyDisk,
-                                          size: 10.5,
+                                          size: 11.5,
                                           color: Colors.white,
                                         ),
                                       ),
@@ -526,8 +526,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                     },
                                     borderRadius: BorderRadius.circular(5),
                                     child: Container(
-                                      width: 22,
-                                      height: 22,
+                                      width: 24.2,
+                                      height: 24.2,
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF059669),
                                         borderRadius: BorderRadius.circular(5),
@@ -539,7 +539,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       child: const Center(
                                         child: FaIcon(
                                           FontAwesomeIcons.upload,
-                                          size: 10.5,
+                                          size: 11.5,
                                           color: Colors.white,
                                         ),
                                       ),
@@ -628,8 +628,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                         : null,
                                     borderRadius: BorderRadius.circular(5),
                                     child: Container(
-                                      width: 22,
-                                      height: 22,
+                                      width: 24.2,
+                                      height: 24.2,
                                       decoration: BoxDecoration(
                                         color: isEditActive
                                             ? const Color(0xFF8B5CF6)
@@ -645,7 +645,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       child: Center(
                                         child: FaIcon(
                                           FontAwesomeIcons.penToSquare,
-                                          size: 10.5,
+                                          size: 11.5,
                                           color: isEditActive
                                               ? Colors.white
                                               : const Color(0xFF94A3B8),
@@ -670,8 +670,8 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                         : null,
                                     borderRadius: BorderRadius.circular(5),
                                     child: Container(
-                                      width: 22,
-                                      height: 22,
+                                      width: 24.2,
+                                      height: 24.2,
                                       decoration: BoxDecoration(
                                         color: state.isMultiBeatAssignmentMode
                                             ? const Color(0xFF7C3AED)
@@ -687,7 +687,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       child: Center(
                                         child: FaIcon(
                                           FontAwesomeIcons.squareCheck,
-                                          size: 10.5,
+                                          size: 11.5,
                                           color: canToggleMultiBeatAssignment
                                               ? (state.isMultiBeatAssignmentMode
                                                   ? Colors.white
@@ -2287,11 +2287,6 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     widget.onSelected?.call();
     if (mounted) {
       setState(() {});
-      Scrollable.ensureVisible(
-        context,
-        alignment: 0.5,
-        duration: const Duration(milliseconds: 100),
-      );
     }
   }
 
@@ -2320,11 +2315,6 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
     );
     if (mounted) {
       setState(() {});
-      Scrollable.ensureVisible(
-        context,
-        alignment: 0.5,
-        duration: const Duration(milliseconds: 100),
-      );
     }
   }
 
@@ -2611,6 +2601,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                 child: TextField(
                   controller: _controller,
                   focusNode: _focusNode,
+                  scrollPadding: EdgeInsets.zero,
                   readOnly: widget.isMultiBeatAssignmentMode || !_isEditing,
                   textAlignVertical: TextAlignVertical.center,
                   textAlign: showArrows ? TextAlign.start : TextAlign.center,
@@ -2796,11 +2787,11 @@ class _BeatBellowsArrows extends StatelessWidget {
     final isPush = isEnabled && bellows == BellowsMode.push;
 
     return Opacity(
-      opacity: isEnabled ? 1.0 : 0.30,
+      opacity: isEnabled ? 1.0 : 0.35,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Flecha Abre (Pull) - Izquierda Azul
+          // Flecha Abre (Pull) - Botón cuadrado homogéneo 24.2 x 24.2 px
           Tooltip(
             message: isEnabled
                 ? 'Abre (Fuelle abriendo)'
@@ -2811,32 +2802,32 @@ class _BeatBellowsArrows extends StatelessWidget {
                   ? () => onBellowsChanged?.call(BellowsMode.pull)
                   : null,
               child: Container(
-                width: 13.5,
-                height: 13.5,
+                width: 24.2,
+                height: 24.2,
                 decoration: BoxDecoration(
-                  color: isPull ? const Color(0xFFEFF6FF) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(3),
+                  color: isPull ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(5),
                   border: Border.all(
                     color: isPull
                         ? const Color(0xFF3B82F6)
                         : const Color(0xFFCBD5E1),
-                    width: 1,
+                    width: 0.8,
                   ),
                 ),
                 child: Center(
                   child: FaIcon(
                     FontAwesomeIcons.arrowLeft,
-                    size: 7.0,
+                    size: 11.0,
                     color: isPull
                         ? const Color(0xFF2563EB)
-                        : const Color(0xFF94A3B8),
+                        : const Color(0xFF64748B),
                   ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 2),
-          // Flecha Cierre (Push) - Derecha Roja
+          const SizedBox(width: 3),
+          // Flecha Cierra (Push) - Botón cuadrado homogéneo 24.2 x 24.2 px
           Tooltip(
             message: isEnabled
                 ? 'Cierra (Fuelle cerrando)'
@@ -2847,25 +2838,25 @@ class _BeatBellowsArrows extends StatelessWidget {
                   ? () => onBellowsChanged?.call(BellowsMode.push)
                   : null,
               child: Container(
-                width: 13.5,
-                height: 13.5,
+                width: 24.2,
+                height: 24.2,
                 decoration: BoxDecoration(
-                  color: isPush ? const Color(0xFFFEF2F2) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(3),
+                  color: isPush ? const Color(0xFFFEF2F2) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(5),
                   border: Border.all(
                     color: isPush
                         ? const Color(0xFFEF4444)
                         : const Color(0xFFCBD5E1),
-                    width: 1,
+                    width: 0.8,
                   ),
                 ),
                 child: Center(
                   child: FaIcon(
                     FontAwesomeIcons.arrowRight,
-                    size: 7.0,
+                    size: 11.0,
                     color: isPush
                         ? const Color(0xFFDC2626)
-                        : const Color(0xFF94A3B8),
+                        : const Color(0xFF64748B),
                   ),
                 ),
               ),
@@ -2947,8 +2938,8 @@ class _SelectAllBeatsButton extends StatelessWidget {
           checked: allMarked,
           label: 'Seleccionar todos los tiempos',
           child: Container(
-            width: 22,
-            height: 22,
+            width: 24.2,
+            height: 24.2,
             decoration: BoxDecoration(
               color: allMarked ? const Color(0xFF0284C7) : Colors.white,
               borderRadius: BorderRadius.circular(5),
@@ -2963,7 +2954,7 @@ class _SelectAllBeatsButton extends StatelessWidget {
                 ? const Center(
                     child: FaIcon(
                       FontAwesomeIcons.check,
-                      size: 10,
+                      size: 11,
                       color: Colors.white,
                     ),
                   )
@@ -2997,15 +2988,15 @@ class _DeleteAllChordsButton extends StatelessWidget {
         onTapDown: (_) => onTap(),
         behavior: HitTestBehavior.opaque,
         child: Container(
-          width: 22,
-          height: 22,
+          width: 24.2,
+          height: 24.2,
           decoration: BoxDecoration(
             color: const Color(0xFFDC2626),
             borderRadius: BorderRadius.circular(5),
             border: Border.all(color: const Color(0xFFDC2626), width: 0.8),
           ),
           child: const Center(
-            child: FaIcon(FontAwesomeIcons.trash, size: 10, color: Colors.white),
+            child: FaIcon(FontAwesomeIcons.trash, size: 11, color: Colors.white),
           ),
         ),
       ),
@@ -3028,8 +3019,8 @@ class _ClearMarksButton extends StatelessWidget {
         onTapDown: (_) => onTap(),
         behavior: HitTestBehavior.opaque,
         child: Container(
-          width: 22,
-          height: 22,
+          width: 24.2,
+          height: 24.2,
           decoration: BoxDecoration(
             color: const Color(0xFFF59E0B),
             borderRadius: BorderRadius.circular(5),
@@ -3038,7 +3029,7 @@ class _ClearMarksButton extends StatelessWidget {
           child: const Center(
             child: FaIcon(
               FontAwesomeIcons.squareXmark,
-              size: 10,
+              size: 11,
               color: Colors.white,
             ),
           ),
@@ -3140,8 +3131,8 @@ class _CompleteChordsButton extends ConsumerWidget {
       elevation: 6,
       onSelected: (val) => _handleAction(context, ref, val),
       child: Container(
-        width: 22,
-        height: 22,
+        width: 24.2,
+        height: 24.2,
         decoration: BoxDecoration(
           color: hasYellowDecisions
               ? const Color(0xFFFEF9C3)
@@ -3159,7 +3150,7 @@ class _CompleteChordsButton extends ConsumerWidget {
           children: [
             FaIcon(
               FontAwesomeIcons.checkDouble,
-              size: 10.0,
+              size: 11.0,
               color: hasYellowDecisions
                   ? const Color(0xFFB45309)
                   : const Color(0xFF0284C7),
@@ -3169,8 +3160,8 @@ class _CompleteChordsButton extends ConsumerWidget {
                 top: 1,
                 right: 1,
                 child: Container(
-                  width: 6,
-                  height: 6,
+                  width: 6.5,
+                  height: 6.5,
                   decoration: const BoxDecoration(
                     color: Color(0xFFF59E0B),
                     shape: BoxShape.circle,
@@ -3419,8 +3410,8 @@ class _AutoChordDetectButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(5),
         child: Container(
-          width: 22,
-          height: 22,
+          width: 24.2,
+          height: 24.2,
           decoration: BoxDecoration(
             color: isActive ? activeBg : const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(5),
@@ -3432,7 +3423,7 @@ class _AutoChordDetectButton extends StatelessWidget {
           child: Center(
             child: FaIcon(
               FontAwesomeIcons.bolt,
-              size: 10.0,
+              size: 11.0,
               color: isActive ? Colors.white : const Color(0xFF64748B),
             ),
           ),
@@ -3604,8 +3595,8 @@ class _BeatAdjustButton extends StatelessWidget {
         ),
       ],
       child: Container(
-        width: 22,
-        height: 22,
+        width: 24.2,
+        height: 24.2,
         decoration: BoxDecoration(
           color: isNudged ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(5),
@@ -3617,7 +3608,7 @@ class _BeatAdjustButton extends StatelessWidget {
         child: Center(
           child: FaIcon(
             FontAwesomeIcons.sliders,
-            size: 10.0,
+            size: 11.0,
             color: isNudged
                 ? const Color(0xFF1D4ED8)
                 : const Color(0xFF64748B),

@@ -969,6 +969,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     if (duration > 0) {
       if (!_disposed && state.loadedAudioFileName == fileName) {
         state = state.copyWith(totalAudioDuration: duration);
+        generateMeasuresForAudio(
+          durationSeconds: duration,
+          bpm: state.audioReport?.bpm ?? 120,
+        );
       }
       return AudioLoadSuccess(fileName);
     }
@@ -1063,6 +1067,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       if (state.loadedAudioFileName != fileName) return;
       if (!duration.isFinite || duration <= 0) return;
       state = state.copyWith(totalAudioDuration: duration);
+      generateMeasuresForAudio(
+        durationSeconds: duration,
+        bpm: state.audioReport?.bpm ?? 120,
+      );
     }());
   }
 
@@ -1084,17 +1092,23 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     state = state.copyWith(isAnalyzingAudio: true);
     try {
       final report = await _analyzer.analyzeAudio(bytes, fileName);
+      final playerDuration = state.totalAudioDuration;
+      final effectiveDuration = (playerDuration > report.duration && report.duration <= 15.0)
+          ? playerDuration
+          : report.duration;
+      final effectiveReport = report.copyWith(duration: effectiveDuration);
+
       state = state.copyWith(
         isAnalyzingAudio: false,
-        audioReport: report,
-        totalAudioDuration: report.duration,
+        audioReport: effectiveReport,
+        totalAudioDuration: effectiveDuration,
         currentAudioTime: 0.0,
         currentCompasTime: 0.0,
       );
 
       applyDetectedTuning(report.keyResult);
       generateMeasuresForAudio(
-        durationSeconds: report.duration,
+        durationSeconds: effectiveDuration,
         bpm: report.bpm,
       );
 

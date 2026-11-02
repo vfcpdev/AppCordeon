@@ -111,11 +111,12 @@ class BassPanelWidget extends ConsumerWidget {
         ],
       ),
       child: IntrinsicWidth(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Cabecera del panel de bajos
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+            // Cabecera del panel de bajos (compacta en dos micro-filas para ajustar al ancho de los botones)
             Container(
               key: ValueKey('bass_panel_header_$accordionNumber'),
               width: double.infinity,
@@ -127,63 +128,73 @@ class BassPanelWidget extends ConsumerWidget {
                   topRight: Radius.circular(13),
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.max,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'Bajos',
-                    key: ValueKey('bass_panel_title_$accordionNumber'),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF059669),
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Text(
+                        'Bajos',
+                        key: ValueKey('bass_panel_title_$accordionNumber'),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF059669),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      // Selector compacto de Hilera objetivo (Ext | Med | Int)
+                      _buildRowTargetSelector(state, notifier),
+                      const Spacer(),
+                      IconButton(
+                        key: ValueKey('bass_panel_collapse_btn_$accordionNumber'),
+                        tooltip: 'Ocultar bajos',
+                        onPressed: () => _toggleCollapsed(notifier, isPrimary),
+                        constraints: const BoxConstraints.tightFor(
+                          width: 22,
+                          height: 22,
+                        ),
+                        padding: EdgeInsets.zero,
+                        splashRadius: 12,
+                        icon: const Icon(
+                          Icons.close,
+                          size: 14,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 6),
-                  // Selector compacto de Hilera objetivo (Ext | Med | Int)
-                  _buildRowTargetSelector(state, notifier),
-                  const SizedBox(width: 4),
-                  // Combobox / Selector rápido de patrón ubicado inmediatamente a la derecha de Ext, Med, Int
-                  Flexible(
-                    child: _buildPatternQuickSelector(context, state, notifier),
-                  ),
-                  const SizedBox(width: 2),
-                  // Botón de acceso directo a la biblioteca de patrones
-                  IconButton(
-                    key: ValueKey('bass_rhythm_library_btn_$accordionNumber'),
-                    tooltip: 'Biblioteca de patrones',
-                    onPressed: () => BassRhythmPatternLibraryDialog.show(
-                      context,
-                      accordionNumber: accordionNumber,
-                    ),
-                    constraints: const BoxConstraints.tightFor(
-                      width: 24,
-                      height: 24,
-                    ),
-                    padding: EdgeInsets.zero,
-                    splashRadius: 14,
-                    icon: const Icon(
-                      Icons.library_music_outlined,
-                      size: 15,
-                      color: Color(0xFF475569),
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    key: ValueKey('bass_panel_collapse_btn_$accordionNumber'),
-                    tooltip: 'Ocultar bajos',
-                    onPressed: () => _toggleCollapsed(notifier, isPrimary),
-                    constraints: const BoxConstraints.tightFor(
-                      width: 24,
-                      height: 24,
-                    ),
-                    padding: EdgeInsets.zero,
-                    splashRadius: 14,
-                    icon: const Icon(
-                      Icons.close,
-                      size: 14,
-                      color: Color(0xFF64748B),
-                    ),
+                  const SizedBox(height: 3),
+                  Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      // Combobox / Selector rápido de patrón
+                      Expanded(
+                        child: _buildPatternQuickSelector(context, state, notifier),
+                      ),
+                      const SizedBox(width: 2),
+                      // Botón de acceso directo a la biblioteca de patrones
+                      IconButton(
+                        key: ValueKey('bass_rhythm_library_btn_$accordionNumber'),
+                        tooltip: 'Biblioteca de patrones',
+                        onPressed: () => BassRhythmPatternLibraryDialog.show(
+                          context,
+                          accordionNumber: accordionNumber,
+                        ),
+                        constraints: const BoxConstraints.tightFor(
+                          width: 24,
+                          height: 24,
+                        ),
+                        padding: EdgeInsets.zero,
+                        splashRadius: 14,
+                        icon: const Icon(
+                          Icons.library_music_outlined,
+                          size: 15,
+                          color: Color(0xFF475569),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -200,12 +211,12 @@ class BassPanelWidget extends ConsumerWidget {
                 onClose: notifier.toggleBassCapturePanel,
               ),
 
-            // Cuerpo: Tablero de bajos
+            // Cuerpo: Tablero de bajos - Ancho estrictamente ajustado a los botones sin espacio vacío lateral
             Padding(
-              padding: const EdgeInsets.fromLTRB(2.2, 4.4, 6.5, 4.4),
+              padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
               child: Container(
                 key: ValueKey('bass_panel_board_$accordionNumber'),
-                padding: const EdgeInsets.fromLTRB(19.6, 8.7, 6.5, 8.7),
+                padding: const EdgeInsets.only(left: 14.0, right: 8.0, top: 8.0, bottom: 8.0),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1E293B),
                   borderRadius: BorderRadius.circular(12),
@@ -218,6 +229,7 @@ class BassPanelWidget extends ConsumerWidget {
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     _buildBassColumn(
                       title: 'Exterior',
@@ -229,8 +241,7 @@ class BassPanelWidget extends ConsumerWidget {
                       rhythmButtonIndexes: rhythmButtonIndexes,
                       rhythmButtonOffset: 0,
                     ),
-                    // Espacio suficiente para los números de la columna interior.
-                    const SizedBox(width: 18.0),
+                    const SizedBox(width: 14.0),
                     _buildBassColumn(
                       title: 'Interior',
                       buttons: interiorButtons,
@@ -293,6 +304,7 @@ class BassPanelWidget extends ConsumerWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -615,7 +627,6 @@ class BassPanelWidget extends ConsumerWidget {
     AccordionSimulatorState state,
     AccordionSimulatorNotifier notifier,
   ) {
-    final recorder = state.bassRhythmRecorder;
     final isCapturing = state.isBassCaptureActive;
     final patternCount = state.bassRhythmPatterns.length;
     final hasPatterns = state.bassRhythmPatterns.isNotEmpty;
@@ -644,14 +655,14 @@ class BassPanelWidget extends ConsumerWidget {
                     : 'Reproducir patrón de bajos',
             onPressed:
                 hasPatterns ? notifier.toggleSelectedBassRhythmPlayback : null,
-            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
             padding: EdgeInsets.zero,
-            splashRadius: 16,
+            splashRadius: 14,
             icon: Icon(
               isPatternPlaying
                   ? Icons.pause_circle_filled
                   : Icons.play_circle_fill,
-              size: 22,
+              size: 20,
               color: !hasPatterns
                   ? const Color(0xFF94A3B8)
                   : isPatternPlaying
@@ -659,30 +670,29 @@ class BassPanelWidget extends ConsumerWidget {
                       : const Color(0xFF0284C7),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 2),
           IconButton(
             key: ValueKey('bass_rhythm_capture_btn_$accordionNumber'),
             tooltip: isCapturing
                 ? 'Capturando patrón… ($patternCount)'
                 : 'Capturar patrón rítmico de bajos',
             onPressed: () => notifier.toggleBassCapturePanel(),
-            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
             padding: EdgeInsets.zero,
-            splashRadius: 16,
+            splashRadius: 14,
             icon: Icon(
               isCapturing ? Icons.fiber_manual_record : Icons.grid_view_rounded,
-              size: 20,
+              size: 18,
               color: isCapturing
                   ? const Color(0xFFDC2626)
                   : const Color(0xFF334155),
             ),
           ),
-          // Estado de captura (si está activo)
           if (isCapturing) ...[
             const SizedBox(width: 4),
             Expanded(
               child: Text(
-                'Capturando… ${recorder?.hits.length ?? 0} golpe(s)',
+                'Capturando… ($patternCount)',
                 key: ValueKey('bass_rhythm_capture_label_$accordionNumber'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -697,18 +707,17 @@ class BassPanelWidget extends ConsumerWidget {
               key: ValueKey('bass_rhythm_quick_stop_btn_$accordionNumber'),
               tooltip: 'Detener captura',
               onPressed: notifier.stopBassRhythmCapture,
-              constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+              constraints: const BoxConstraints.tightFor(width: 26, height: 26),
               padding: EdgeInsets.zero,
-              splashRadius: 14,
+              splashRadius: 13,
               icon: const Icon(
                 Icons.stop_rounded,
-                size: 20,
+                size: 18,
                 color: Color(0xFFDC2626),
               ),
             ),
           ] else ...[
             const Spacer(),
-            // Control compacto de velocidad BPM con acoplamiento al tempo del patrón
             _buildBpmSpeedControl(context, state, notifier),
           ],
         ],
@@ -921,14 +930,15 @@ class BassPanelWidget extends ConsumerWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Flexible(
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 110),
             child: Text(
               label,
               key: ValueKey('bass_rhythm_quick_label_$accordionNumber'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 9.5,
+                fontSize: 9.0,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF1E293B),
               ),
