@@ -165,9 +165,24 @@ void main() {
       expect(find.byKey(const ValueKey('audio_not_analyzed_status')), findsOneWidget);
       expect(analyzer.calls, 0);
 
-      await tester.tap(find.byKey(const ValueKey('audio_compas_sync_toggle')));
+      // Desacoplar: el estado cambia y la versión flotante sigue operativa.
+      notifier.toggleUndockSongBar();
       await tester.pump();
-      expect(widgetContainer.read(accordionSimulatorProvider).isAudioCoupled, isFalse);
+      expect(widgetContainer.read(accordionSimulatorProvider).isSongBarUndocked, isTrue);
+
+      // Al estar desacoplada, la barra dock se oculta (isFloating=false no muestra).
+      // Se monta la versión flotante (isFloating=true) que SÍ es visible.
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: widgetContainer,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: Stack(children: [TrackInfoCardWidget(isFloating: true)]),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
 
       await tester.tap(find.byTooltip('Reproducir'));
       await tester.pump();

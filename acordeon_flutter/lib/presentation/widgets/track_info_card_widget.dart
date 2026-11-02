@@ -37,6 +37,9 @@ class TrackInfoCardWidget extends ConsumerWidget {
 
     if (state.loadedAudioFileName == null) return const SizedBox.shrink();
 
+    // Oculto cuando desacoplada: la versión flotante es LA barra activa.
+    if (state.isSongBarUndocked != isFloating) return const SizedBox.shrink();
+
     final isPlaying = state.isPlayingAudio;
     final totalDur = state.totalAudioDuration > 0
         ? state.totalAudioDuration
@@ -45,6 +48,7 @@ class TrackInfoCardWidget extends ConsumerWidget {
     return Container(
       margin: isFloating ? EdgeInsets.zero : const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      constraints: const BoxConstraints(maxWidth: 440),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -60,9 +64,11 @@ class TrackInfoCardWidget extends ConsumerWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           // ─── Ícono musical indicador ─────────────────────────────────────
           Container(
             padding: const EdgeInsets.all(5.5),
@@ -327,6 +333,7 @@ class TrackInfoCardWidget extends ConsumerWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }

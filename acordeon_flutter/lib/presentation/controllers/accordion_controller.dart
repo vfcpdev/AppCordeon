@@ -253,6 +253,10 @@ class AccordionSimulatorState {
   final BassRhythmRecorder? bassRhythmRecorder;
   bool get isBassCaptureActive => bassRhythmRecorder?.isRecording ?? false;
 
+  /// Panel inline de captura visible sobre el propio panel de bajos (no
+  /// modal: los bajos deben seguir tocables durante la captura).
+  final bool isBassCapturePanelOpen;
+
   BassRhythmPattern? get selectedBassRhythmPattern {
     final selectedId = selectedBassRhythmPatternId;
     if (selectedId == null) return null;
@@ -427,6 +431,7 @@ class AccordionSimulatorState {
     this.isBassMetronomeActive = false,
     this.bassRhythmElapsedSeconds = 0.0,
     this.bassRhythmRecorder,
+    this.isBassCapturePanelOpen = false,
     bool? isLiveChordMarkerActive,
     this.copiedChord = '',
     double? bpmCalibrationStart,
@@ -526,6 +531,7 @@ class AccordionSimulatorState {
     double? bassRhythmElapsedSeconds,
     BassRhythmRecorder? bassRhythmRecorder,
     bool clearBassRhythmRecorder = false,
+    bool? isBassCapturePanelOpen,
     bool? isLiveChordMarkerActive,
     String? copiedChord,
     double? bpmCalibrationStart,
@@ -641,6 +647,8 @@ class AccordionSimulatorState {
       bassRhythmRecorder: clearBassRhythmRecorder
           ? null
           : (bassRhythmRecorder ?? this.bassRhythmRecorder),
+      isBassCapturePanelOpen:
+          isBassCapturePanelOpen ?? this.isBassCapturePanelOpen,
       isLiveChordMarkerActive:
           isLiveChordMarkerActive ?? this.isLiveChordMarkerActive,
       copiedChord: copiedChord ?? this.copiedChord,
@@ -2076,13 +2084,14 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     state = state.copyWith(
       bassRhythmPatterns: [pattern, ...state.bassRhythmPatterns],
       selectedBassRhythmPatternId: pattern.id,
-      isBassMetronomeActive: pattern.hits.isEmpty
-          ? state.isBassMetronomeActive
-          : true,
+      // La captura termina SIN auto-reproducir: el usuario decide cuándo
+      // lanzar el patrón guardado desde el panel. Esto además evita dejar
+      // timers del metrónomo pendientes al cerrar el diálogo.
+      isBassMetronomeActive: false,
       clearBassRhythmRecorder: true,
       bassRhythmElapsedSeconds: 0,
     );
-    _syncStandaloneMetronome();
+    _stopStandaloneMetronome();
     ensure(
       'stopBassRhythmCapture',
       'el recorder se libera tras guardar el patrón',
@@ -2098,6 +2107,18 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       clearBassRhythmRecorder: true,
       bassRhythmElapsedSeconds: 0,
     );
+  }
+
+  /// Muestra u oculta el panel inline de captura (no modal).
+  ///
+  /// {Q}: al abrirse con una captura ya activa el panel refleja su estado;
+  ///      al cerrarse con captura en curso, la captura se cancela.
+  void toggleBassCapturePanel() {
+    final opening = !state.isBassCapturePanelOpen;
+    if (!opening && state.isBassCaptureActive) {
+      cancelBassRhythmCapture();
+    }
+    state = state.copyWith(isBassCapturePanelOpen: opening);
   }
 
   /// Alterna el estado del metrónomo (click rítmico de compás).

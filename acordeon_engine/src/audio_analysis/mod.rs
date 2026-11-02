@@ -13,6 +13,12 @@ use key::detect_global_key;
 use types::{AudioAnalysisReport, BeatAlignedChordsReport};
 
 /// Analiza un flujo de audio PCM mono Float32 y devuelve el reporte armónico en JSON.
+///
+/// # Tripla de Hoare:
+/// - {P}: `channel_data.len() >= 4096 && sample_rate > 0.0`.
+/// - {Q}: JSON válido o `Err(...)` — nunca pánico que cruce la FFI
+///        (un pánico aquí mata el proceso host con 0xC0000005).
+/// - {I}: todos los accesos a `channel_data` respetan `len()`.
 pub fn analyze_audio(channel_data: &[f32], sample_rate: f32) -> Result<String, String> {
     let window_size = 4096usize;
     let hop_size = 2048usize;

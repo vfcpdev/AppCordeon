@@ -4,14 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/bass_matrix_layout.dart';
-import '../../domain/models/bass_rhythm_pattern.dart';
 import '../controllers/accordion_controller.dart';
 
-/// Diálogo de captura de patrones rítmicos de bajos.
+/// Panel INLINE (no modal) de captura de patrones rítmicos de bajos.
 ///
-/// Reemplaza al antiguo combobox de selección de patrón y al listado modal:
-/// ahora la fuente de verdad es una **matriz 2×2** que relaciona cada caja con
-/// un bajo físico del instrumento:
+/// **Por qué inline y no diálogo**: la captura requiere tocar los bajos del
+/// panel mientras el temporizador corre. Un `showDialog` crea una barrera
+/// modal que absorbe los pointers, impidiendo registrar golpes. Como widget
+/// embebido sobre el propio panel, los bajos siguen accesibles.
+///
+/// La fuente de verdad es una **matriz 2×2** que relaciona cada caja con un
+/// bajo físico del instrumento:
 ///
 /// |            | Externos (col 0) | Internos (col 1) |
 /// |------------|------------------|------------------|
@@ -20,33 +23,43 @@ import '../controllers/accordion_controller.dart';
 ///
 /// Principios aplicados:
 /// - **SRP**: este widget sólo presenta la matriz y delega toda la lógica al
-///   notifier / [BassRhythmRecorder] del dominio.
+///   notifier / `BassRhythmRecorder` del dominio.
 /// - **OCP**: la disposición vive en [BassMatrixLayout]; cambiar el mapeo no
 ///   toca la UI.
 /// - **ISP / bajo acoplamiento**: usa selectores finos, no el estado completo.
 /// - **Hoare**: las precondiciones ({P}) se validan en el notifier con
 ///   `require`, no en el widget.
-class BassRhythmCaptureDialog extends ConsumerStatefulWidget {
+class BassRhythmCapturePanel extends ConsumerStatefulWidget {
   final int accordionNumber;
+  final VoidCallback? onClose;
 
-  const BassRhythmCaptureDialog({super.key, this.accordionNumber = 1});
+  const BassRhythmCapturePanel({
+    super.key,
+    this.accordionNumber = 1,
+    this.onClose,
+  });
 
   @override
-  ConsumerState<BassRhythmCaptureDialog> createState() =>
-      _BassRhythmCaptureDialogState();
+  ConsumerState<BassRhythmCapturePanel> createState() =>
+      _BassRhythmCapturePanelState();
 }
 
-class _BassRhythmCaptureDialogState
-    extends ConsumerState<BassRhythmCaptureDialog> {
+class _BassRhythmCapturePanelState
+    extends ConsumerState<BassRhythmCapturePanel> {
   late final TextEditingController _nameController;
-  final Set<int> _selectedButtons = {...BassMatrixLayout.buttonNumbers};
+  Set<int> _selectedButtons = {...BassMatrixLayout.buttonNumbers};
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(
-      text: 'Patrón ${DateTime.now().minute.toString().padLeft(2, '0')}',
-    );
+    _nameController = TextEditingController();
+    // Si hay una captura ya activa (panel reabierto), refleja su selección.
+    final recorder =
+        ref.read(accordionSimulatorProvider).bassRhythmRecorder;
+    if (recorder != null && recorder.isRecording) {
+      _selectedButtons = {...recorder.selectedButtons};
+      _nameController.text = recorder.name;
+    }
   }
 
   @override
@@ -87,11 +100,13 @@ class _BassRhythmCaptureDialogState
           ),
         ),
       );
+      widget.onClose?.call();
     }
   }
 
   void _cancelCapture() {
     ref.read(accordionSimulatorProvider.notifier).cancelBassRhythmCapture();
+    widget.onClose?.call();
   }
 
   @override
@@ -105,109 +120,125 @@ class _BassRhythmCaptureDialogState
     final isRecording = recorder?.isRecording ?? false;
     final capturedHits = recorder?.hits.length ?? 0;
 
-    return Dialog(
-      insetPadding: const EdgeInsets.all(16),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 560),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF8FAFC),
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFCBD5E1), width: 0.6),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Capturar patrón rítmico',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    key: const ValueKey('bass_capture_close_btn'),
-                    tooltip: 'Cerrar',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, size: 20),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                key: const ValueKey('bass_capture_name_field'),
-                controller: _nameController,
-                enabled: !isRecording,
-                maxLength: 40,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre del patrón',
-                  isDense: true,
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Selecciona los bajos que ejecutarán el patrón',
-                style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
-              ),
-              const SizedBox(height: 8),
-              _buildMatrix(isRecording),
-              const SizedBox(height: 6),
-              if (isRecording)
-                Text(
-                  'Capturando… $capturedHits golpe(s)',
-                  key: const ValueKey('bass_capture_status'),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFDC2626),
+              const Expanded(
+                child: Text(
+                  'Capturar patrón rítmico',
+                  key: ValueKey('bass_capture_title'),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-              if (!isRecording)
-                Text(
-                  '$patterns patrón(es) disponible(s)',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    key: const ValueKey('bass_capture_cancel_btn'),
-                    onPressed: isRecording
-                        ? () {
-                            _cancelCapture();
-                          }
-                        : () => Navigator.of(context).pop(),
-                    child: Text(isRecording ? 'Cancelar' : 'Cerrar'),
-                  ),
-                  const SizedBox(width: 8),
-                  if (isRecording)
-                    FilledButton.icon(
-                      key: const ValueKey('bass_capture_stop_btn'),
-                      onPressed: _stopCapture,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFDC2626),
-                      ),
-                      icon: const Icon(Icons.stop_rounded, size: 18),
-                      label: const Text('Detener captura'),
-                    )
-                  else
-                    FilledButton.icon(
-                      key: const ValueKey('bass_capture_start_btn'),
-                      onPressed: _selectedButtons.isEmpty ? null : _startCapture,
-                      icon: const Icon(Icons.fiber_manual_record, size: 16),
-                      label: const Text('Capturar'),
-                    ),
-                ],
+              ),
+              IconButton(
+                key: const ValueKey('bass_capture_close_btn'),
+                tooltip: 'Cerrar',
+                constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+                padding: EdgeInsets.zero,
+                splashRadius: 13,
+                onPressed: isRecording ? _cancelCapture : widget.onClose,
+                icon: const Icon(Icons.close, size: 16),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 6),
+          TextField(
+            key: const ValueKey('bass_capture_name_field'),
+            controller: _nameController,
+            enabled: !isRecording,
+            maxLength: 40,
+            style: const TextStyle(fontSize: 12),
+            decoration: const InputDecoration(
+              labelText: 'Nombre del patrón',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Selecciona los bajos y tócalos en el panel mientras capturas',
+            style: TextStyle(fontSize: 10.5, color: Color(0xFF475569)),
+          ),
+          const SizedBox(height: 6),
+          _buildMatrix(isRecording),
+          const SizedBox(height: 4),
+          if (isRecording)
+            Text(
+              'Capturando… $capturedHits golpe(s)',
+              key: const ValueKey('bass_capture_status'),
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFDC2626),
+              ),
+            )
+          else
+            Text(
+              '$patterns patrón(es) disponible(s)',
+              style: const TextStyle(
+                fontSize: 10.5,
+                color: Color(0xFF64748B),
+              ),
+            ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                key: const ValueKey('bass_capture_cancel_btn'),
+                onPressed: isRecording ? _cancelCapture : widget.onClose,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  minimumSize: const Size(0, 30),
+                ),
+                child: Text(isRecording ? 'Cancelar' : 'Cerrar'),
+              ),
+              const SizedBox(width: 8),
+              if (isRecording)
+                FilledButton.icon(
+                  key: const ValueKey('bass_capture_stop_btn'),
+                  onPressed: _stopCapture,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    minimumSize: const Size(0, 30),
+                  ),
+                  icon: const Icon(Icons.stop_rounded, size: 15),
+                  label: const Text('Detener',
+                      style: TextStyle(fontSize: 11.5)),
+                )
+              else
+                FilledButton.icon(
+                  key: const ValueKey('bass_capture_start_btn'),
+                  onPressed:
+                      _selectedButtons.isEmpty ? null : _startCapture,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    minimumSize: const Size(0, 30),
+                  ),
+                  icon: const Icon(Icons.fiber_manual_record, size: 13),
+                  label: const Text('Capturar',
+                      style: TextStyle(fontSize: 11.5)),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -217,14 +248,14 @@ class _BassRhythmCaptureDialogState
       children: [
         Row(
           children: [
-            const SizedBox(width: 56),
+            const SizedBox(width: 40),
             for (var c = 0; c < BassMatrixLayout.columns; c++)
               Expanded(
                 child: Center(
                   child: Text(
                     BassMatrixLayout.columnLabelFor(c),
                     style: const TextStyle(
-                      fontSize: 10.5,
+                      fontSize: 9.5,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFF475569),
                     ),
@@ -233,18 +264,18 @@ class _BassRhythmCaptureDialogState
               ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 3),
         for (var r = 0; r < BassMatrixLayout.rows; r++)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
             child: Row(
               children: [
                 SizedBox(
-                  width: 56,
+                  width: 40,
                   child: Text(
                     'Fila ${r + 1}',
                     style: const TextStyle(
-                      fontSize: 10.5,
+                      fontSize: 9.5,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF64748B),
                     ),
@@ -258,7 +289,6 @@ class _BassRhythmCaptureDialogState
                       isSelected: _selectedButtons.contains(
                         BassMatrixLayout.buttonNumberFor(row: r, column: c),
                       ),
-                      isRecording: isRecording,
                       onTap: () => _toggleButton(
                         BassMatrixLayout.buttonNumberFor(row: r, column: c),
                       ),
@@ -277,14 +307,12 @@ class _BassMatrixCell extends ConsumerWidget {
   final int row;
   final int column;
   final bool isSelected;
-  final bool isRecording;
   final VoidCallback onTap;
 
   const _BassMatrixCell({
     required this.row,
     required this.column,
     required this.isSelected,
-    required this.isRecording,
     required this.onTap,
   });
 
@@ -292,11 +320,12 @@ class _BassMatrixCell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final buttonNumber =
         BassMatrixLayout.buttonNumberFor(row: row, column: column);
-    final state = ref.watch(accordionSimulatorProvider);
-    final bassData = state.bassData1;
+    final bassData = ref.watch(
+      accordionSimulatorProvider.select((s) => s.bassData1),
+    );
 
     // Nombre genérico del bajo físico (push/pull) para esa caja.
-    final label = _genericLabelFor(bassData, buttonNumber, state.notation);
+    final label = _genericLabelFor(bassData, buttonNumber);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3),
@@ -308,7 +337,7 @@ class _BassMatrixCell extends ConsumerWidget {
           borderRadius: BorderRadius.circular(8),
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
@@ -327,19 +356,19 @@ class _BassMatrixCell extends ConsumerWidget {
                     Text(
                       '$buttonNumber',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.w900,
                         color: isSelected
                             ? const Color(0xFF15803D)
                             : const Color(0xFF475569),
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 3),
                     Icon(
                       isSelected
                           ? Icons.check_circle
                           : Icons.radio_button_unchecked,
-                      size: 13,
+                      size: 11,
                       color: isSelected
                           ? const Color(0xFF16A34A)
                           : const Color(0xFF94A3B8),
@@ -352,7 +381,7 @@ class _BassMatrixCell extends ConsumerWidget {
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 9.5, height: 1.1),
+                  style: const TextStyle(fontSize: 8.5, height: 1.1),
                 ),
               ],
             ),
@@ -363,11 +392,7 @@ class _BassMatrixCell extends ConsumerWidget {
   }
 
   /// Etiqueta genérica `Cierra / Abre` del bajo indicado.
-  String _genericLabelFor(
-    List<BassButtonModel> basses,
-    int buttonNumber,
-    NotationMode notation,
-  ) {
+  String _genericLabelFor(List<BassButtonModel> basses, int buttonNumber) {
     if (basses.isEmpty) return 'Bajo $buttonNumber';
     final fundamental = basses
         .where((b) =>
@@ -377,27 +402,3 @@ class _BassMatrixCell extends ConsumerWidget {
     return '${resolved.namePush} / ${resolved.namePull}';
   }
 }
-
-/// Abre el diálogo de captura de patrones de bajos.
-///
-/// {P}: `context.mounted`.
-/// {Q}: el diálogo se cierra y la captura en curso (si la hay) queda cancelada.
-Future<void> showBassRhythmCaptureDialog(
-  BuildContext context, {
-  int accordionNumber = 1,
-}) async {
-  await showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogContext) => BassRhythmCaptureDialog(
-      accordionNumber: accordionNumber,
-    ),
-  );
-}
-
-/// Lista compacta de patrones capturados, usada en el panel de bajos.
-final bassRhythmPatternsProvider = Provider<List<BassRhythmPattern>>((ref) {
-  return ref.watch(
-    accordionSimulatorProvider.select((s) => s.bassRhythmPatterns),
-  );
-});

@@ -23,18 +23,19 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
+      // Stack EXTERIOR: separa el contenido scrolleable de los paneles
+      // flotantes. Los flotantes NO participan del layout del scroll, así
+      // abrir/cerrar la ventana de Compás no desplaza ningún elemento.
       body: AccordionKeyboardListener(
         child: SafeArea(
           left: false,
           child: Stack(
             children: [
+              // ─── Capa 1: contenido principal con scroll ───
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Cabecera superior completa
                   const AppHeaderWidget(),
-
-                  // Cuerpo principal con scroll vertical y horizontal
                   Expanded(
                     child: Align(
                       alignment: Alignment.topLeft,
@@ -43,18 +44,16 @@ class HomeScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // El transporte está disponible desde la carga; analizar es opcional.
+                            // El transporte está disponible desde la carga;
+                            // analizar es opcional.
                             if (state.loadedAudioFileName != null)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                ),
-                                child: state.isSongBarUndocked
-                                    ? _buildSongBarPlaceholder(notifier)
-                                    : const TrackInfoCardWidget(),
+                              const Padding(
+                                padding:
+                                    EdgeInsets.symmetric(horizontal: 8),
+                                child: TrackInfoCardWidget(),
                               ),
 
-                            // ================= FILA SUPERIOR: ESCENARIO DE DIAPASONES =================
+                            // ============ FILA SUPERIOR: DIAPASONES ============
                             Align(
                               alignment: Alignment.centerLeft,
                               child: SingleChildScrollView(
@@ -72,8 +71,7 @@ class HomeScreen extends ConsumerWidget {
                                             : null,
                                       ),
                                       const SizedBox(width: 6),
-
-                                      // Compás (185 px) + Constructor de Acorde (150 px)
+                                      // Compás (185 px) + Constructor (150 px)
                                       Row(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -96,8 +94,7 @@ class HomeScreen extends ConsumerWidget {
                                       ),
                                       const SizedBox(width: 10),
                                     ],
-
-                                    // DIAPASÓN 2 (Comparativo / Equivalente)
+                                    // DIAPASÓN 2 (Comparativo)
                                     if (state.showDiapason2) ...[
                                       _buildDiapasonColumn(
                                         accordionNumber: 2,
@@ -107,8 +104,6 @@ class HomeScreen extends ConsumerWidget {
                                             : null,
                                       ),
                                       const SizedBox(width: 6),
-
-                                      // Cuadrícula de compases de Acordeón 2 con estructura y opciones completas
                                       if (!state.isCompas2Undocked)
                                         const MeasureGridWithChordQualityWidget(
                                           accordionNumber: 2,
@@ -122,7 +117,6 @@ class HomeScreen extends ConsumerWidget {
                                 ),
                               ),
                             ),
-
                             const SizedBox(height: 10),
                           ],
                         ),
@@ -131,7 +125,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              // Ventanas flotantes desacopladas y movibles de Compás
+              // ─── Capa 2: ventanas flotantes desacopladas (superpuestas) ───
               if (state.isCompas1Undocked)
                 _buildFloatingCompas(
                   context: context,
@@ -266,9 +260,8 @@ class HomeScreen extends ConsumerWidget {
               style: TextStyle(fontSize: 9.0, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: isPrimary
-                  ? const Color(0xFF0284C7)
-                  : const Color(0xFF059669),
+              backgroundColor:
+                  isPrimary ? const Color(0xFF0284C7) : const Color(0xFF059669),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               minimumSize: Size.zero,
@@ -294,10 +287,7 @@ class HomeScreen extends ConsumerWidget {
     );
     final clampedX = position.dx.clamp(
       5.0,
-      (screen.width - contentWidth - 40).clamp(
-        5.0,
-        double.infinity,
-      ),
+      (screen.width - contentWidth - 40).clamp(5.0, double.infinity),
     );
     final clampedY = position.dy.clamp(
       5.0,
@@ -403,69 +393,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSongBarPlaceholder(AccordionSimulatorNotifier notifier) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF86EFAC), width: 1.0),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const FaIcon(
-            FontAwesomeIcons.music,
-            size: 11,
-            color: Color(0xFF16A34A),
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            'Barra de canción desacoplada (flotante)',
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF15803D),
-            ),
-          ),
-          const SizedBox(width: 12),
-          InkWell(
-            onTap: notifier.toggleUndockSongBar,
-            borderRadius: BorderRadius.circular(5),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(5),
-                border: Border.all(color: const Color(0xFF86EFAC)),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FaIcon(
-                    FontAwesomeIcons.compress,
-                    size: 9,
-                    color: Color(0xFF16A34A),
-                  ),
-                  SizedBox(width: 4),
-                  Text(
-                    'Volver a acoplar',
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF15803D),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildFloatingChordDetector({
     required BuildContext context,
     required Offset position,
@@ -481,14 +408,13 @@ class HomeScreen extends ConsumerWidget {
       5.0,
       (screen.height - 300).clamp(5.0, double.infinity),
     );
-
     return Positioned(
       left: clampedX,
       top: clampedY,
       child: Material(
         color: Colors.transparent,
         child: Container(
-          width: 200,
+          width: 220,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -515,12 +441,10 @@ class HomeScreen extends ConsumerWidget {
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: const BoxDecoration(
-                    color: Color(0xFF7C3AED),
+                    color: Color(0xFF8B5CF6),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(12),
                       topRight: Radius.circular(12),
@@ -548,24 +472,15 @@ class HomeScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      InkWell(
-                        key: const ValueKey('dock_floating_detector_btn'),
-                        onTap: onDock,
-                        borderRadius: BorderRadius.circular(4),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'Acoplar',
-                            style: TextStyle(
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
+                      Tooltip(
+                        message: 'Volver a acoplar',
+                        child: InkWell(
+                          onTap: onDock,
+                          child: const Padding(
+                            padding: EdgeInsets.all(2.0),
+                            child: FaIcon(
+                              FontAwesomeIcons.compress,
+                              size: 10,
                               color: Colors.white,
                             ),
                           ),
@@ -575,7 +490,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              ChordDetectorWidget(width: 200, isFloating: true, onDock: onDock),
+              const ChordDetectorWidget(),
             ],
           ),
         ),
@@ -589,104 +504,98 @@ class HomeScreen extends ConsumerWidget {
     required ValueChanged<Offset> onPositionChanged,
     required VoidCallback onDock,
   }) {
-    final screenSize = MediaQuery.sizeOf(context);
+    final screen = MediaQuery.sizeOf(context);
     final clampedX = position.dx.clamp(
-      0.0,
-      (screenSize.width - 400).clamp(0.0, double.infinity),
+      5.0,
+      (screen.width - 360).clamp(5.0, double.infinity),
     );
     final clampedY = position.dy.clamp(
-      0.0,
-      (screenSize.height - 100).clamp(0.0, double.infinity),
+      5.0,
+      (screen.height - 120).clamp(5.0, double.infinity),
     );
-
     return Positioned(
       left: clampedX,
       top: clampedY,
       child: Material(
         color: Colors.transparent,
         child: Container(
+          width: 360,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF38BDF8), width: 1.5),
+            borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.22),
-                blurRadius: 18,
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 16,
+                spreadRadius: 2,
                 offset: const Offset(0, 6),
               ),
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Barra de arrastre superior
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onPanUpdate: (details) {
                   onPositionChanged(
                     Offset(
-                      clampedX + details.delta.dx,
-                      clampedY + details.delta.dy,
+                      position.dx + details.delta.dx,
+                      position.dy + details.delta.dy,
                     ),
                   );
                 },
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.move,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF16A34A),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
                     ),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE0F2FE),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const FaIcon(
-                          FontAwesomeIcons.upDownLeftRight,
-                          size: 9.5,
-                          color: Color(0xFF0284C7),
-                        ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'Barra de Canción (Móvil)',
-                          style: TextStyle(
-                            fontSize: 10.0,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF0369A1),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FaIcon(
+                            FontAwesomeIcons.upDownLeftRight,
+                            size: 9,
+                            color: Colors.white70,
                           ),
-                        ),
-                        const SizedBox(width: 20),
-                        Tooltip(
-                          message: 'Volver a acoplar',
-                          child: InkWell(
-                            onTap: onDock,
-                            child: const Padding(
-                              padding: EdgeInsets.all(2.0),
-                              child: FaIcon(
-                                FontAwesomeIcons.compress,
-                                size: 9.5,
-                                color: Color(0xFF0284C7),
-                              ),
+                          SizedBox(width: 5),
+                          Text(
+                            'Barra de Canción (Móvil)',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Tooltip(
+                        message: 'Volver a acoplar',
+                        child: InkWell(
+                          onTap: onDock,
+                          child: const Padding(
+                            padding: EdgeInsets.all(2.0),
+                            child: FaIcon(
+                              FontAwesomeIcons.compress,
+                              size: 10,
+                              color: Colors.white,
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              // Contenido interactivo (los botones responden de inmediato)
-              const Padding(
-                padding: EdgeInsets.all(4.0),
-                child: TrackInfoCardWidget(isFloating: true),
-              ),
+              const TrackInfoCardWidget(isFloating: true),
             ],
           ),
         ),

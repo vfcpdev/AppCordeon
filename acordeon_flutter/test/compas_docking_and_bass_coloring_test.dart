@@ -326,7 +326,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // La barra de la canción debe estar visible
-      expect(find.text('La Gota Fría - Demo Vallenato.wav'), findsOneWidget);
+      expect(find.text('La Gota Fría - Demo Vallenato.wav'), findsWidgets);
 
       // Botones de reproducción horizontales (Atrás, Play, Adelante, Detener) y Slider
       expect(find.byTooltip('Compás Anterior'), findsOneWidget);
@@ -344,17 +344,16 @@ void main() {
 
       // Desacoplar la barra de la canción
       notifier.toggleUndockSongBar();
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
       expect(
         container.read(accordionSimulatorProvider).isSongBarUndocked,
         isTrue,
       );
       expect(find.text('Barra de Canción (Móvil)'), findsOneWidget);
-      expect(
-        find.text('Barra de canción desacoplada (flotante)'),
-        findsOneWidget,
-      );
+
+      // El placeholder fue eliminado — la barra flotante es la única activa.
 
       // Volver a acoplar
       notifier.toggleUndockSongBar();

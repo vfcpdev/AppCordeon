@@ -1,18 +1,18 @@
-// Sonda de heap: analiza muchas veces dentro del proceso Rust para descartar
-// corrupción interna de la DLL (el crash sólo ocurre desde Dart/FFI).
-use acordeon_engine::audio_analysis::analyze_audio;
+// Diagnóstico binario: reproduce analyze_audio con zeros a 4096 vía DLL C-ABI
+// dentro de Rust (para descartar ABI vs código).
+use acordeon_engine::{acordeon_analyze_audio_ffi, acordeon_free_string};
+use std::ffi::CStr;
 
 fn main() {
-    let n = 8192usize;
-    for iter in 0..50 {
-        let mut samples = vec![0.0f32; n];
-        for i in 0..n {
-            samples[i] = (i % 441) as f32 / 441.0;
-        }
-        match analyze_audio(&samples, 44100.0) {
-            Ok(json) => println!("iter {} OK ({} chars)", iter, json.len()),
-            Err(e) => println!("iter {} ERR {}", iter, e),
-        }
+    let n = 4096usize;
+    let samples = vec![0.0f32; n];
+    println!("LLAMANDO via C-ABI desde Rust (mismo runtime)...");
+    let ptr = samples.as_ptr();
+    unsafe {
+        let result = acordeon_analyze_audio_ffi(ptr as *const f32, n, 44100.0);
+        let cstr = CStr::from_ptr(result);
+        println!("respuesta: {}", cstr.to_str().unwrap_or("<invalid>"));
+        acordeon_free_string(result);
     }
-    println!("50 iteraciones dentro de Rust: sin corrupción");
+    println!("sin crash");
 }

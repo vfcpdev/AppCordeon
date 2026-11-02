@@ -48,9 +48,10 @@ void main() {
       );
       expect(recorder.isRecording, isTrue);
 
-      recorder.captureDuration = const Duration(milliseconds: 0);
+      // El reloj interno del recorder manda; los ticks simulados van a 10 ms.
+      recorder.tick(ticks: 0); // t = 0
       expect(recorder.recordButton(7), isTrue);
-      recorder.captureDuration = const Duration(milliseconds: 500);
+      recorder.tick(ticks: 50); // 500 ms → 1 negra (beatSeconds = 0.5)
       expect(recorder.recordButton(5), isTrue);
 
       final hits = recorder.hits;
@@ -85,7 +86,7 @@ void main() {
         beatType: 4,
         selectedButtons: const {7},
       );
-      recorder.captureDuration = const Duration(milliseconds: 0);
+      recorder.tick(ticks: 0);
       recorder.recordButton(7);
 
       final pattern = recorder.buildPattern(totalSeconds: 2.0);

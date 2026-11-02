@@ -36,14 +36,20 @@ pub fn detect_bpm(channel_data: &[f32], sample_rate: f32) -> i32 {
     let mut best_corr = 0.0f32;
     let mut best_lag = min_lag;
 
+    // {I}: onset.len() == num_sub_samples; todo acceso onset[i + lag] debe
+    // cumplir i + lag < num_sub_samples. Se acota el rango de búsqueda para
+    // que sea imposible el out-of-bounds (fuente de un Access Violation
+    // nativo que mata el proceso host — crash 0xC0000005 detectado vía FFI).
     let search_len = num_sub_samples.saturating_sub(max_lag);
     if search_len == 0 {
         return 120;
     }
+    let max_search_lag = max_lag.min(num_sub_samples.saturating_sub(1));
 
-    for lag in min_lag..=max_lag {
+    for lag in min_lag..=max_search_lag {
         let mut corr = 0.0f32;
-        for i in 0..search_len {
+        let reach = search_len.min(num_sub_samples - lag);
+        for i in 0..reach {
             corr += onset[i] * onset[i + lag];
         }
         if corr > best_corr {

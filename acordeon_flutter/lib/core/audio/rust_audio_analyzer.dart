@@ -6,6 +6,7 @@ import '../../domain/models/audio_analysis_models.dart';
 import 'acordeon_engine_ffi.dart';
 import 'analysis/pcm_decoder.dart';
 import 'audio_analyzer.dart';
+import 'audio_analyzer_service.dart';
 import 'web_audio_decoder.dart';
 
 /// Analizador que delega el DSP pesado en el crate Rust vía FFI.
@@ -16,19 +17,21 @@ import 'web_audio_decoder.dart';
 /// cuando no (sin cambiar nada del controlador).
 ///
 /// # Triplas de Hoare
-/// - `analyzeAudio` {P}: `bytes` contiene audio decodificable y la DLL Rust
-///   está cargada. {Q}: retorna un [AudioAnalysisReport] válido o propaga la
-///   excepción hacia `analyzeLoadedAudio`, que muestra el fallo en la UI.
-/// - El fallback a Dart se decide en el Composition Root, no aquí (SRP).
+/// - `analyzeAudio` {P}: `bytes` contiene audio decodificable.
+///   {Q}: SIEMPRE retorna un [AudioAnalysisReport] válido (nunca lanza):
+///   vía Rust si la DLL produjo JSON utilizable, o vía el pipeline Dart
+///   puro como fallback garantizado ante cualquier fallo de Rust (DLL
+///   ausente, JSON con "error", muestras insuficientes, excepción FFI).
+///   La causa del fallback queda registrada en el log de depuración.
 class RustAudioAnalyzer implements AudioAnalyzer {
   final AcordeonEngineFFI _engine;
+  final AudioAnalyzer _dartFallback;
 
-  /// Límite de muestras por llamada (DSP Rust procesa en bloque ~0.5 s a
-  /// 44.1 kHz por frame de análisis; evita transacciones FFI excesivas).
-  static const int _maxSamplesPerCall = 1 << 20;
-
-  RustAudioAnalyzer({AcordeonEngineFFI? engine})
-      : _engine = engine ?? AcordeonEngineFFI.instance;
+  RustAudioAnalyzer({
+    AcordeonEngineFFI? engine,
+    AudioAnalyzer? dartFallback,
+  })  : _engine = engine ?? AcordeonEngineFFI.instance,
+        _dartFallback = dartFallback ?? AudioAnalyzerService();
 
   @override
   Future<AudioAnalysisReport> analyzeAudio(
@@ -46,29 +49,39 @@ class RustAudioAnalyzer implements AudioAnalyzer {
       samples = decoded.samples;
       sampleRate = decoded.sampleRate;
     } else {
-      const decoder = StandardPcmDecoderFallback();
-      samples = decoder.decodePcmOrSimulate(bytes);
+      samples = pcmDecoderShared.decodePcmOrSimulate(bytes);
     }
 
-    // 2. Llamada FFI al análisis Rust. Las muestras largas se recortan al
-    //    máximo soportado por transacción (suficiente para 12 s @44.1kHz).
-    final clipped = samples.length > _maxSamplesPerCall
-        ? Float32List.sublistView(samples, 0, _maxSamplesPerCall)
-        : samples;
-    final json = _engine.analyzeAudioJson(clipped, sampleRate);
-    if (json == null || json.isEmpty) {
-      throw StateError(
-        'El motor Rust no devolvió análisis para $fileName '
-        '(¿DLL cargada? ¿muestras ≥ 4096?).',
+    // 2. Intento Rust: TODAS las muestras (el buffer de Rust crece dinámicamente;
+    //    sin límite — el análisis cubre el audio completo cargado).
+    try {
+      final json = _engine.analyzeAudioJson(samples, sampleRate);
+      if (json != null && json.isNotEmpty) {
+        final decodedJson = jsonDecode(json) as Map<String, dynamic>;
+        if (decodedJson.containsKey('error')) {
+          debugPrint(
+            '[RustAudioAnalyzer] Rust rechazó $fileName: '
+            '${decodedJson['error']}',
+          );
+        } else {
+          debugPrint('[RustAudioAnalyzer] análisis listo para $fileName');
+          return AudioAnalysisReport.fromJson(decodedJson);
+        }
+      } else {
+        debugPrint(
+          '[RustAudioAnalyzer] Rust no devolvió análisis para $fileName '
+          '(¿DLL cargada? ¿muestras ≥ 4096?). Usando fallback Dart.',
+        );
+      }
+    } catch (rustError) {
+      debugPrint(
+        '[RustAudioAnalyzer] fallo vía FFI para $fileName: $rustError. '
+        'Usando fallback Dart.',
       );
     }
-    debugPrint('[RustAudioAnalyzer] análisis listo para $fileName');
 
-    // 3. El JSON de Rust ya respeta el formato de AudioAnalysisReport.
-    final report = AudioAnalysisReport.fromJson(
-      jsonDecode(json) as Map<String, dynamic>,
-    );
-    return report;
+    // 3. Fallback garantizado: el pipeline Dart puro produce el reporte.
+    return _dartFallback.analyzeAudio(bytes, fileName);
   }
 
   /// Detección de acorde puntual desde notas MIDI (uso directo por el
@@ -94,15 +107,3 @@ class RustAudioAnalyzer implements AudioAnalyzer {
 /// Instancia compartida del decodificador PCM de respaldo (SRP: una sola
 /// fuente de síntesis de emergencia para Rust y para el pipeline Dart).
 const StandardPcmDecoder pcmDecoderShared = StandardPcmDecoder();
-
-/// Envoltorio mínimo para no importar pcm_decoder aquí y mantener el
-/// fallback explícito (SRP sin acoplar a los detalles del pipeline Dart).
-class StandardPcmDecoderFallback {
-  const StandardPcmDecoderFallback();
-
-  Float32List decodePcmOrSimulate(Uint8List bytes) {
-    // Reutiliza la misma lógica que el pipeline Dart: delega al servicio
-    // compartido para no duplicar la síntesis de emergencia.
-    return pcmDecoderShared.decodePcmOrSimulate(bytes);
-  }
-}

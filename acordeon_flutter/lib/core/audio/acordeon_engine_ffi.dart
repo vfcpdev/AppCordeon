@@ -41,6 +41,14 @@ typedef AcordeonBeatChordsDart = Pointer<Utf8> Function(
 typedef AcordeonFreeStringNative = Void Function(Pointer<Utf8> ptr);
 typedef AcordeonFreeStringDart = void Function(Pointer<Utf8> ptr);
 
+/// Reserva de buffer DE RUST (evita el bug del malloc de Dart SDK 3.12).
+typedef AcordeonAllocBufferNative = Pointer<Float> Function(UintPtr len);
+typedef AcordeonAllocBufferDart = Pointer<Float> Function(int len);
+
+/// Liberación de buffer de Rust.
+typedef AcordeonFreeBufferNative = Void Function(Pointer<Float> ptr, UintPtr len);
+typedef AcordeonFreeBufferDart = void Function(Pointer<Float> ptr, int len);
+
 /// Puente FFI con la librería dinámica en Rust `acordeon_engine.dll`
 ///
 /// # Estado y contrato (Mejora 5 del informe de arquitectura)
@@ -74,6 +82,8 @@ class AcordeonEngineFFI {
   AcordeonAnalyzeDart? _analyzeFn;
   AcordeonBeatChordsDart? _beatChordsFn;
   AcordeonFreeStringDart? _freeStringFn;
+  AcordeonAllocBufferDart? _allocBufferFn;
+  AcordeonFreeBufferDart? _freeBufferFn;
   bool _isAvailable = false;
 
   bool get isAvailable => _isAvailable;
@@ -117,6 +127,8 @@ class AcordeonEngineFFI {
         _analyzeFn = _lib!.lookupFunction<AcordeonAnalyzeNative, AcordeonAnalyzeDart>('acordeon_analyze_audio_ffi');
         _beatChordsFn = _lib!.lookupFunction<AcordeonBeatChordsNative, AcordeonBeatChordsDart>('acordeon_detect_beat_chords_ffi');
         _freeStringFn = _lib!.lookupFunction<AcordeonFreeStringNative, AcordeonFreeStringDart>('acordeon_free_string');
+        _allocBufferFn = _lib!.lookupFunction<AcordeonAllocBufferNative, AcordeonAllocBufferDart>('acordeon_alloc_buffer');
+        _freeBufferFn = _lib!.lookupFunction<AcordeonFreeBufferNative, AcordeonFreeBufferDart>('acordeon_free_buffer');
         _isAvailable = true;
       } catch (e) {
         debugPrint('[AcordeonEngineFFI] Error al vincular símbolos C ABI: $e');
@@ -159,6 +171,77 @@ class AcordeonEngineFFI {
   /// Indica si las funciones de análisis Rust están vinculadas.
   bool get analysisAvailable => _isAvailable && _analyzeFn != null;
 
+  /// Buffer nativo REUTILIZABLE asignado POR RUST.
+  ///
+  /// # Por qué Rust asigna (bug crítico del heap de Dart detectado con sondas)
+  ///
+  /// `malloc.allocate<Float>(n)` del paquete `ffi` 2.x con SDK 3.12 en
+  /// Windows crashea (0xC0000005) cuando `n > 4096` y se escribe el buffer:
+  /// 4096 OK, 4097 crash — reproducido SIN DLL, es bug del allocator Dart.
+  ///
+  /// Solución: Rust expone `acordeon_alloc_buffer`/`acordeon_free_buffer`
+  /// (allocator del sistema, estable). El buffer vive mientras viva el
+  /// singleton; se reutiliza y crece si hace falta; se libera con la función
+  /// de Rust correspondiente, NUNCA con `malloc.free` de Dart.
+  Pointer<Float>? _sharedAnalysisBuffer;
+  int _sharedAnalysisCapacity = 0;
+
+  Pointer<Uint8>? _sharedByteBuffer;
+  int _sharedByteCapacity = 0;
+
+  /// Garantiza un buffer de floats nativo DE RUST de al menos [required].
+  ///
+  /// # Tripla de Hoare
+  /// - {P}: `required > 0` y motor disponible.
+  /// - {Q}: retorna puntero válido con capacidad ≥ [required]; el buffer
+  ///   previo (si era suficiente) se reutiliza SIN reasignar.
+  Pointer<Float> _ensureBuffer(int required) {
+    final current = _sharedAnalysisBuffer;
+    if (current != null && _sharedAnalysisCapacity >= required) {
+      return current;
+    }
+    // {I}: el buffer anterior se libera con la función DE RUST (mismo
+    // allocator), nunca con malloc.free de Dart.
+    if (current != null) {
+      _freeBufferFn?.call(current, _sharedAnalysisCapacity);
+    }
+    final allocated = _allocBufferFn!(required);
+    _sharedAnalysisBuffer = allocated;
+    _sharedAnalysisCapacity = required;
+    return allocated;
+  }
+
+  /// Garantiza un buffer de bytes nativo DE RUST de al menos [required].
+  Pointer<Uint8> _ensureUint8Buffer(int required) {
+    final current = _sharedByteBuffer;
+    if (current != null && _sharedByteCapacity >= required) {
+      return current;
+    }
+    if (current != null) {
+      _freeBufferFn?.call(current.cast<Float>(), _sharedByteCapacity);
+    }
+    final allocated = _allocBufferFn!(required).cast<Uint8>();
+    _sharedByteBuffer = allocated;
+    _sharedByteCapacity = required;
+    return allocated;
+  }
+
+  /// Copia [samples] al buffer compartido vía vista TypedData.
+  ///
+  /// # Por qué este camino y no otro (bug del SDK 3.12, documentado)
+  ///
+  /// `Pointer[i] = expr(i)` en bucle JIT caliente corrompe el heap del SDK
+  /// 3.12 en Windows con allocations grandes (crash 0xC0000005, reproducido
+  /// con sondas FFI SIN DLL — es un bug del runtime, no de Rust).
+  ///
+  /// La copia vía la vista TypedData del pointer (setAll) usa el camino
+  /// nativo `_memMove` del runtime, estable y validada con 5 análisis
+  /// consecutivos sin crash — AHORA sobre buffers asignados por Rust,
+  /// que además eliminaron el crash original del free de malloc Dart.
+  void _copyToBuffer(Pointer<Float> buffer, Float32List samples) {
+    buffer.asTypedList(samples.length).setAll(0, samples);
+  }
+
   /// Helper: convierte el CString JSON de Rust a String Dart y libera la
   /// memoria nativa con `acordeon_free_string` (evita fugas).
   String? _takeCString(Pointer<Utf8>? ptr) {
@@ -175,17 +258,16 @@ class AcordeonEngineFFI {
   /// - {Q}: retorna el JSON del acorde detectado (`"{}"` si no hay match).
   String? detectChordJson(List<int> midiNotes) {
     if (!analysisAvailable || midiNotes.isEmpty) return null;
-    final ptr = malloc.allocate<Uint8>(midiNotes.length);
+    final byteBuffer = _ensureUint8Buffer(midiNotes.length);
+    for (var i = 0; i < midiNotes.length; i++) {
+      byteBuffer[i] = midiNotes[i].clamp(0, 255);
+    }
     try {
-      ptr.asTypedList(midiNotes.length)
-          .setAll(0, midiNotes.map((n) => n.clamp(0, 255)).toList());
-      final result = _detectChordFn!(ptr, midiNotes.length);
+      final result = _detectChordFn!(byteBuffer, midiNotes.length);
       return _takeCString(result);
     } catch (e) {
       debugPrint('[AcordeonEngineFFI] detectChordJson falló: $e');
       return null;
-    } finally {
-      malloc.free(ptr);
     }
   }
 
@@ -199,17 +281,14 @@ class AcordeonEngineFFI {
     if (!analysisAvailable || samples.length < 4096 || sampleRate <= 0) {
       return null;
     }
-    Pointer<Float>? copied;
     try {
-      copied = malloc.allocate<Float>(samples.length);
-      copied.asTypedList(samples.length).setAll(0, samples);
-      final result = _analyzeFn!(copied, samples.length, sampleRate);
+      final buffer = _ensureBuffer(samples.length);
+      _copyToBuffer(buffer, samples);
+      final result = _analyzeFn!(buffer, samples.length, sampleRate);
       return _takeCString(result);
     } catch (e) {
       debugPrint('[AcordeonEngineFFI] analyzeAudioJson falló: $e');
       return null;
-    } finally {
-      if (copied != null) malloc.free(copied);
     }
   }
 
@@ -223,12 +302,11 @@ class AcordeonEngineFFI {
     if (!analysisAvailable || samples.length < 4096 || sampleRate <= 0) {
       return null;
     }
-    Pointer<Float>? copied;
     try {
-      copied = malloc.allocate<Float>(samples.length);
-      copied.asTypedList(samples.length).setAll(0, samples);
+      final buffer = _ensureBuffer(samples.length);
+      _copyToBuffer(buffer, samples);
       final result = _beatChordsFn!(
-        copied,
+        buffer,
         samples.length,
         sampleRate,
         bpm,
@@ -238,8 +316,6 @@ class AcordeonEngineFFI {
     } catch (e) {
       debugPrint('[AcordeonEngineFFI] detectBeatChordsJson falló: $e');
       return null;
-    } finally {
-      if (copied != null) malloc.free(copied);
     }
   }
 }

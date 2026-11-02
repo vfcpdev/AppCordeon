@@ -213,3 +213,45 @@ pub extern "C" fn acordeon_free_string(ptr: *mut c_char) {
         drop(CString::from_raw(ptr));
     }));
 }
+
+/// Reserva un buffer de floats gestionado por RUST (allocator del sistema,
+/// sin el bug del heap-allocator de Dart SDK 3.12 que crashea con
+/// allocations > 16 KB — ver sonda 4096 OK / 4097 crash).
+///
+/// # Tripla de Hoare:
+/// - {P}: `len > 0`.
+/// - {Q}: retorna puntero válido alineado para `f32` con capacidad `len`, o
+///        null si `len == 0`. La memoria debe liberarse con
+///        [`acordeon_free_buffer`] — NUNCA con `free` de Dart.
+#[no_mangle]
+pub extern "C" fn acordeon_alloc_buffer(len: usize) -> *mut f32 {
+    if len == 0 {
+        return std::ptr::null_mut();
+    }
+    let layout = match std::alloc::Layout::array::<f32>(len) {
+        Ok(l) => l,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    unsafe { std::alloc::alloc(layout) as *mut f32 }
+}
+
+/// Libera un buffer reservado por [`acordeon_alloc_buffer`].
+///
+/// # Tripla de Hoare:
+/// - {P}: `ptr` es nulo o fue retornado por `acordeon_alloc_buffer` con el
+///        mismo `len` usado en la reserva.
+/// - {Q}: memoria liberada sin fugas ni doble liberación; llamada con null
+///        es no-op segura.
+#[no_mangle]
+pub extern "C" fn acordeon_free_buffer(ptr: *mut f32, len: usize) {
+    if ptr.is_null() || len == 0 {
+        return;
+    }
+    let layout = match std::alloc::Layout::array::<f32>(len) {
+        Ok(l) => l,
+        Err(_) => return,
+    };
+    let _ = catch_unwind(AssertUnwindSafe(|| unsafe {
+        std::alloc::dealloc(ptr as *mut u8, layout);
+    }));
+}
