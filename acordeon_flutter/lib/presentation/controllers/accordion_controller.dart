@@ -1037,6 +1037,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       currentCompasTime: 0.0,
       isPlayingAudio: false,
     );
+    if (loadedDuration > 0) {
+      generateMeasuresForAudio(
+        durationSeconds: loadedDuration,
+        bpm: state.audioReport?.bpm ?? 120,
+      );
+    }
     _hydrateAudioDuration(generation, fileName);
     // {Q}: la pista queda registrada sin reproducción activa ni análisis pendiente.
     ensure(

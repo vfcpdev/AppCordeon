@@ -97,3 +97,4 @@ void main() {
   tempFile.deleteSync();
   print('Duration in ms: $lengthStr, initial pos: $posStr');
 }
+

@@ -152,14 +152,14 @@ class TrackInfoCardWidget extends ConsumerWidget {
                 ),
                 const SizedBox(width: 6),
 
-                // Slider de tiempo de reproducción
+                // Slider de tiempo de reproducción (ampliado para precisión en pistas largas)
                 SizedBox(
-                  width: 95,
+                  width: 130,
                   height: 18,
                   child: SliderTheme(
                     data: SliderTheme.of(context).copyWith(
-                      trackHeight: 2.5,
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4.5),
+                      trackHeight: 3.0,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4.8),
                       overlayShape: const RoundSliderOverlayShape(overlayRadius: 8.0),
                       activeTrackColor: const Color(0xFF0284C7),
                       inactiveTrackColor: const Color(0xFFCBD5E1),
@@ -171,6 +171,9 @@ class TrackInfoCardWidget extends ConsumerWidget {
                       min: 0.0,
                       max: totalDur > 0 ? totalDur : 1.0,
                       onChanged: (val) {
+                        notifier.seekAudio(val);
+                      },
+                      onChangeEnd: (val) {
                         notifier.seekAudio(val);
                       },
                     ),
