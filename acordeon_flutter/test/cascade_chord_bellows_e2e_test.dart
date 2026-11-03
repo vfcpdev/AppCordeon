@@ -12,7 +12,25 @@ void main() {
     testWidgets(
       'Activar botón de Cascada y pulsar Abre asigna fuelle en cascada a todos los compases con ese mismo acorde',
       (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
         final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              home: Scaffold(
+                body: MeasureGridWidget(accordionNumber: 1),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
         final notifier = container.read(accordionSimulatorProvider.notifier);
 
         // Preparamos varios compases con diferentes acordes:
@@ -28,17 +46,6 @@ void main() {
 
         // Seleccionamos la celda C1.1 ('Do')
         notifier.selectBeat(0, 0);
-
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: container,
-            child: const MaterialApp(
-              home: Scaffold(
-                body: MeasureGridWidget(accordionNumber: 1),
-              ),
-            ),
-          ),
-        );
         await tester.pumpAndSettle();
 
         // 1. Verificamos que inicialmente todas las celdas tienen fuelle 'both' (indefinido)
@@ -61,7 +68,7 @@ void main() {
         expect(state.isCascadeBellowsActive, isTrue);
 
         // 3. Pulsamos la flecha de 'Abre' (Pull)
-        final pullBtnFinder = find.byTooltip('Abre (Fuelle abriendo)');
+        final pullBtnFinder = find.byKey(const ValueKey('bellows_pull_button'));
         expect(pullBtnFinder, findsOneWidget);
 
         await tester.tap(pullBtnFinder);

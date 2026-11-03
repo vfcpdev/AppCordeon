@@ -3062,6 +3062,7 @@ class _BeatBellowsArrows extends StatelessWidget {
         children: [
           // Flecha Abre (Pull) - Botón cuadrado homogéneo 29.0 x 29.0 px colorizado completamente
           Tooltip(
+            key: const ValueKey('bellows_pull_button'),
             message: isEnabled
                 ? 'Abre (Fuelle abriendo)'
                 : 'Asigna un acorde al tiempo para definir el fuelle',
@@ -3121,6 +3122,7 @@ class _BeatBellowsArrows extends StatelessWidget {
           const SizedBox(width: 3),
           // Flecha Cierra (Push) - Botón cuadrado homogéneo 29.0 x 29.0 px colorizado completamente
           Tooltip(
+            key: const ValueKey('bellows_push_button'),
             message: isEnabled
                 ? 'Cierra (Fuelle cerrando)'
                 : 'Asigna un acorde al tiempo para definir el fuelle',
