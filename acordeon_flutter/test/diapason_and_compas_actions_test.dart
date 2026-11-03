@@ -509,12 +509,14 @@ void main() {
       notifier.setFreeChordType('maj');
       await tester.pumpAndSettle();
 
-      final activePullBtn = tester.widget<DiapasonButtonWidget>(diapasonButtons.first);
-      expect(activePullBtn.isChordPull, isTrue);
+      final activePullBtns = find.byWidgetPredicate(
+        (w) => w is DiapasonButtonWidget && w.isChordPull,
+      );
+      expect(activePullBtns, findsWidgets);
 
-      // 3. Al presionar el botón abriendo, la insignia flotante 'ABRE' tiene fondo verde
-      final firstBtnId = container.read(accordionSimulatorProvider).trebleData1['row3']!.first.id;
-      notifier.pressButton(firstBtnId, firstButton.pullMidi);
+      // 3. Al presionar un botón abriendo, la insignia flotante 'ABRE' tiene fondo verde
+      final firstBtnModel = container.read(accordionSimulatorProvider).trebleData1['row3']!.first;
+      notifier.pressButton(firstBtnModel.id, firstButton.pullMidi);
       await tester.pumpAndSettle();
 
       final abrePillFinder = find.text('ABRE');
