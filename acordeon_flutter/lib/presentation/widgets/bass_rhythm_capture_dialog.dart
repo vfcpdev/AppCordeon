@@ -237,7 +237,6 @@ class _BassRhythmCapturePanelState
         return;
       }
       final step = (intervalMs / 1000.0) * (_bpm / 60.0);
-      final prevQuarter = _playbackQuarter;
       var nextQuarter = _playbackQuarter + step;
 
       if (nextQuarter >= totalQuarters) {
@@ -720,7 +719,6 @@ class _BassRhythmCapturePanelState
   }
 
   Widget _buildTimelineHitCard(int index, BassRhythmHit hit, {required bool isSelected}) {
-    final hasFund = hit.pairedButtonIndex == null || hit.buttonIndex == _resolveFundamental(hit.buttonIndex);
     final isBoth = hit.pairedButtonIndex != null;
 
     final badgeLabel = isBoth ? '2 Botones' : '1 Botón';
