@@ -167,8 +167,11 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
 
     final bpm = state.audioReport?.bpm ?? 120;
     final totalBeats = state.measures.length * 4;
-    final allMarked = totalBeats > 0 && state.markedBeats.length == totalBeats;
-    final hasMarks = state.markedBeats.isNotEmpty;
+    final allMarked = totalBeats > 0 &&
+        (state.markedBeats.length >= totalBeats ||
+            state.multiBeatAssignmentTargets.length >= totalBeats);
+    final hasMarks = state.markedBeats.isNotEmpty ||
+        state.multiBeatAssignmentTargets.isNotEmpty;
     final effectiveWidth = widget.width ?? CompasCardMetrics.gridWidth;
     final isUndocked =
         widget.isUndocked ||
@@ -272,15 +275,62 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
           Focus(
             autofocus: false,
             onKeyEvent: (node, event) {
-              if (event is KeyDownEvent &&
-                  event.logicalKey == LogicalKeyboardKey.space) {
+              if (event is KeyDownEvent) {
                 final isAnyEditing =
                     FocusManager.instance.primaryFocus?.context?.widget
                         is EditableText;
                 if (!isAnyEditing) {
-                  final res = notifier.markLiveChordChange();
-                  if (res != null) {
+                  final isControlOrMeta =
+                      HardwareKeyboard.instance.isControlPressed ||
+                      HardwareKeyboard.instance.isMetaPressed;
+                  if (isControlOrMeta &&
+                      event.logicalKey == LogicalKeyboardKey.keyZ) {
+                    if (HardwareKeyboard.instance.isShiftPressed) {
+                      final ok = notifier.redoGrid();
+                      if (ok && mounted) {
+                        ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(
+                            const SnackBar(
+                              content: Text('Rehecho cambio en compases.'),
+                              duration: Duration(milliseconds: 1200),
+                            ),
+                          );
+                      }
+                      return KeyEventResult.handled;
+                    } else {
+                      final ok = notifier.undoGrid();
+                      if (ok && mounted) {
+                        ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(
+                            const SnackBar(
+                              content: Text('Deshecho cambio en compases.'),
+                              duration: Duration(milliseconds: 1200),
+                            ),
+                          );
+                      }
+                      return KeyEventResult.handled;
+                    }
+                  } else if (isControlOrMeta &&
+                      event.logicalKey == LogicalKeyboardKey.keyY) {
+                    final ok = notifier.redoGrid();
+                    if (ok && mounted) {
+                      ScaffoldMessenger.of(context)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(
+                          const SnackBar(
+                            content: Text('Rehecho cambio en compases.'),
+                            duration: Duration(milliseconds: 1200),
+                          ),
+                        );
+                    }
                     return KeyEventResult.handled;
+                  } else if (event.logicalKey == LogicalKeyboardKey.space) {
+                    final res = notifier.markLiveChordChange();
+                    if (res != null) {
+                      return KeyEventResult.handled;
+                    }
                   }
                 }
               }
@@ -427,11 +477,11 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: SizedBox(
-                        width: effectiveWidth > 340 ? effectiveWidth : 340,
+                        width: effectiveWidth > 380 ? effectiveWidth : 380,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            // Botones cuadrados (22x22 px, estilo _PlaybackMiniBtn de audio)
+                            // Botones cuadrados (29x29 px, aumentado 20% homogéneo)
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -465,13 +515,13 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                         );
                                       }
                                     },
-                                    borderRadius: BorderRadius.circular(5),
+                                    borderRadius: BorderRadius.circular(6),
                                     child: Container(
-                                      width: 24.2,
-                                      height: 24.2,
+                                      width: 29.0,
+                                      height: 29.0,
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF0284C7),
-                                        borderRadius: BorderRadius.circular(5),
+                                        borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
                                           color: const Color(0xFF0284C7),
                                           width: 0.8,
@@ -480,7 +530,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       child: const Center(
                                         child: FaIcon(
                                           FontAwesomeIcons.floppyDisk,
-                                          size: 11.5,
+                                          size: 14.0,
                                           color: Colors.white,
                                         ),
                                       ),
@@ -524,13 +574,13 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                         }
                                       }
                                     },
-                                    borderRadius: BorderRadius.circular(5),
+                                    borderRadius: BorderRadius.circular(6),
                                     child: Container(
-                                      width: 24.2,
-                                      height: 24.2,
+                                      width: 29.0,
+                                      height: 29.0,
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF059669),
-                                        borderRadius: BorderRadius.circular(5),
+                                        borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
                                           color: const Color(0xFF059669),
                                           width: 0.8,
@@ -539,7 +589,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       child: const Center(
                                         child: FaIcon(
                                           FontAwesomeIcons.upload,
-                                          size: 11.5,
+                                          size: 14.0,
                                           color: Colors.white,
                                         ),
                                       ),
@@ -626,15 +676,15 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                             );
                                           }
                                         : null,
-                                    borderRadius: BorderRadius.circular(5),
+                                    borderRadius: BorderRadius.circular(6),
                                     child: Container(
-                                      width: 24.2,
-                                      height: 24.2,
+                                      width: 29.0,
+                                      height: 29.0,
                                       decoration: BoxDecoration(
                                         color: isEditActive
                                             ? const Color(0xFF8B5CF6)
                                             : const Color(0xFFF1F5F9),
-                                        borderRadius: BorderRadius.circular(5),
+                                        borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
                                           color: isEditActive
                                               ? const Color(0xFF7C3AED)
@@ -645,7 +695,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       child: Center(
                                         child: FaIcon(
                                           FontAwesomeIcons.penToSquare,
-                                          size: 11.5,
+                                          size: 14.0,
                                           color: isEditActive
                                               ? Colors.white
                                               : const Color(0xFF94A3B8),
@@ -668,15 +718,15 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                     onTap: canToggleMultiBeatAssignment
                                         ? notifier.toggleMultiBeatAssignmentMode
                                         : null,
-                                    borderRadius: BorderRadius.circular(5),
+                                    borderRadius: BorderRadius.circular(6),
                                     child: Container(
-                                      width: 24.2,
-                                      height: 24.2,
+                                      width: 29.0,
+                                      height: 29.0,
                                       decoration: BoxDecoration(
                                         color: state.isMultiBeatAssignmentMode
                                             ? const Color(0xFF7C3AED)
                                             : const Color(0xFFF1F5F9),
-                                        borderRadius: BorderRadius.circular(5),
+                                        borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
                                           color: state.isMultiBeatAssignmentMode
                                               ? const Color(0xFF6D28D9)
@@ -687,7 +737,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                       child: Center(
                                         child: FaIcon(
                                           FontAwesomeIcons.squareCheck,
-                                          size: 11.5,
+                                          size: 14.0,
                                           color: canToggleMultiBeatAssignment
                                               ? (state.isMultiBeatAssignmentMode
                                                   ? Colors.white
@@ -725,52 +775,63 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                               ],
                             ),
 
-                            // Botón de borrado, casilla de selección masiva contigua y desmarcado (22x22 px)
+                            // Botones de acción masiva: Borrar (Rojo), Seleccionar Todos (Azul), Desmarcar (Naranja)
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (hasMarks) ...[
-                                  _DeleteAllChordsButton(
-                                    tooltip: allMarked
-                                        ? 'Borrar todos los acordes (casilla marcada)'
-                                        : 'Borrar acordes de las casillas marcadas',
-                                    onTap: () {
-                                      final deleted = allMarked
-                                          ? notifier.deleteAllGridChords()
-                                          : notifier.deleteMarkedGridChords();
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            allMarked
-                                                ? (deleted > 0
-                                                      ? 'Acordes borrados de la cuadrícula.'
-                                                      : 'La cuadrícula ya está vacía.')
-                                                : (deleted > 0
-                                                      ? 'Se borraron $deleted acordes de las casillas marcadas.'
-                                                      : 'No hay casillas marcadas para borrar.'),
+                                _DeleteAllChordsButton(
+                                  isEnabled: hasMarks,
+                                  tooltip: allMarked
+                                      ? 'Borrar todos los acordes de la cuadrícula'
+                                      : (hasMarks
+                                          ? 'Borrar acordes de las casillas marcadas'
+                                          : 'Selecciona casillas o pulsa "Seleccionar todos" para borrar'),
+                                  onTap: () {
+                                    if (!hasMarks) {
+                                      ScaffoldMessenger.of(context)
+                                        ..hideCurrentSnackBar()
+                                        ..showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Marca casillas o pulsa "Seleccionar todos" para borrar acordes.'),
+                                            duration: Duration(seconds: 2),
                                           ),
-                                          duration: const Duration(seconds: 2),
+                                        );
+                                      return;
+                                    }
+                                    final deleted = allMarked
+                                        ? notifier.deleteAllGridChords()
+                                        : notifier.deleteMarkedGridChords();
+                                    ScaffoldMessenger.of(
+                                      context,
+                                    ).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          allMarked
+                                              ? (deleted > 0
+                                                    ? 'Acordes borrados de la cuadrícula.'
+                                                    : 'La cuadrícula ya está vacía.')
+                                              : (deleted > 0
+                                                    ? 'Se borraron $deleted acordes de las casillas marcadas.'
+                                                    : 'No hay acordes en las casillas marcadas.'),
                                         ),
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(width: 3),
-                                ],
-                                // Casilla al lado del botón borrar: marcada => borrar todo
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 3),
+                                // Casilla al lado del botón borrar: marcada => borrar todo / seleccionar todo
                                 _SelectAllBeatsButton(
                                   key: const ValueKey('select_all_beats_btn'),
                                   allMarked: allMarked,
                                   onTap: notifier.toggleAllBeatMarks,
                                 ),
-                                if (hasMarks) ...[
-                                  const SizedBox(width: 3),
-                                  // Desmarcar todas las casillas seleccionadas
-                                  _ClearMarksButton(
-                                    onTap: notifier.clearBeatMarks,
-                                  ),
-                                ],
+                                const SizedBox(width: 3),
+                                // Desmarcar todas las casillas seleccionadas
+                                _ClearMarksButton(
+                                  isEnabled: hasMarks,
+                                  onTap: hasMarks ? notifier.clearBeatMarks : () {},
+                                ),
                               ],
                             ),
                           ],
@@ -779,70 +840,107 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                     ),
                   ),
 
-                  // Matriz de botones de Tónica: 2 filas por 6 columnas (debajo de guardar / importar compás)
-                  // A la derecha de la matriz: Botón + para agregar el acorde (cuadrado, 2 filas de alto)
+                  // Matriz de botones de Tónica (2x6) y Cualidades (1x6) debajo,
+                  // con columna de botones de acción a la derecha (Limpiar Selecciones Armónicas, Reproducir Acorde Continuo, Agregar Acorde)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: widget.chordQualityLink == null
-                            ? TonicNotesMatrixWidget(
-                                trailing: _buildAddChordSquareButton(
-                                  canInsertChord: canInsertChord,
-                                  isMultiBeatMode: state.isMultiBeatAssignmentMode,
-                                  targetLabel: insertTargetLabel,
-                                  targetCount: assignmentTargetCount,
-                                  chordSymbol: constructorChord,
-                                  onTap: () {
-                                    final symbol = state.isMultiBeatAssignmentMode
-                                        ? notifier.assignFreeChordToMultiBeatTargets()
-                                        : notifier.insertFreeChordIntoSelectedCell();
-                                    if (symbol == null) return;
-                                    ScaffoldMessenger.of(context)
-                                      ..hideCurrentSnackBar()
-                                      ..showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            state.isMultiBeatAssignmentMode
-                                                ? ' asignado a  caja'
-                                                : ' → ',
-                                          ),
-                                          duration: const Duration(milliseconds: 1400),
-                                        ),
-                                      );
-                                  },
-                                ),
-                              )
-                            : CompositedTransformTarget(
-                                link: widget.chordQualityLink!,
-                                child: TonicNotesMatrixWidget(
-                                  trailing: _buildAddChordSquareButton(
-                                    canInsertChord: canInsertChord,
-                                    isMultiBeatMode: state.isMultiBeatAssignmentMode,
-                                    targetLabel: insertTargetLabel,
-                                    targetCount: assignmentTargetCount,
-                                    chordSymbol: constructorChord,
+                        child: TonicNotesMatrixWidget(
+                          trailing: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildClearHarmonicSelectionsSquareButton(
+                                    isSynced: state.isClearSynced,
                                     onTap: () {
-                                      final symbol = state.isMultiBeatAssignmentMode
-                                          ? notifier.assignFreeChordToMultiBeatTargets()
-                                          : notifier.insertFreeChordIntoSelectedCell();
-                                      if (symbol == null) return;
+                                      notifier.clearHarmonicSelections();
                                       ScaffoldMessenger.of(context)
                                         ..hideCurrentSnackBar()
                                         ..showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              state.isMultiBeatAssignmentMode
-                                                  ? ' asignado a  caja'
-                                                  : ' → ',
+                                              state.isClearSynced
+                                                  ? 'Diapasón y selecciones armónicas limpiados (sincronizado).'
+                                                  : 'Selecciones armónicas restablecidas (independiente).',
+                                            ),
+                                            duration: const Duration(milliseconds: 1200),
+                                          ),
+                                        );
+                                    },
+                                  ),
+                                  const SizedBox(width: 2.5),
+                                  _buildSyncClearButton(
+                                    isSynced: state.isClearSynced,
+                                    onTap: () {
+                                      notifier.toggleSyncClear();
+                                      final next = !state.isClearSynced;
+                                      ScaffoldMessenger.of(context)
+                                        ..hideCurrentSnackBar()
+                                        ..showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              next
+                                                  ? 'Sincronización de borrado activada: diapasón y compás sincronizados.'
+                                                  : 'Sincronización de borrado desactivada: borrado independiente.',
                                             ),
                                             duration: const Duration(milliseconds: 1400),
                                           ),
                                         );
                                     },
                                   ),
-                                ),
+                                ],
                               ),
+                              const SizedBox(height: 3),
+                              _buildPlayContinuousChordSquareButton(
+                                isPlaying: state.isPlayingAudio,
+                                onTap: () {
+                                  final isPlaying = notifier.togglePlayChordSequence();
+                                  ScaffoldMessenger.of(context)
+                                    ..hideCurrentSnackBar()
+                                    ..showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          isPlaying
+                                              ? 'Reproduciendo acordes continuamente a ${state.audioReport?.bpm ?? state.manualMetronomeBpm.toInt()} BPM.'
+                                              : 'Reproducción continua pausada.',
+                                        ),
+                                        duration: const Duration(milliseconds: 1200),
+                                      ),
+                                    );
+                                },
+                              ),
+                              const SizedBox(height: 3),
+                              _buildAddChordSquareButton(
+                                canInsertChord: canInsertChord,
+                                isMultiBeatMode: state.isMultiBeatAssignmentMode,
+                                targetLabel: insertTargetLabel,
+                                targetCount: assignmentTargetCount,
+                                chordSymbol: constructorChord,
+                                onTap: () {
+                                  final symbol = state.isMultiBeatAssignmentMode
+                                      ? notifier.assignFreeChordToMultiBeatTargets()
+                                      : notifier.insertFreeChordIntoSelectedCell();
+                                  if (symbol == null) return;
+                                  ScaffoldMessenger.of(context)
+                                    ..hideCurrentSnackBar()
+                                    ..showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          state.isMultiBeatAssignmentMode
+                                              ? '$symbol asignado a $assignmentTargetCount caja${assignmentTargetCount == 1 ? '' : 's'}'
+                                              : '$symbol → $insertTargetLabel',
+                                        ),
+                                        duration: const Duration(milliseconds: 1400),
+                                      ),
+                                    );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1657,6 +1755,126 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
 
 /// Control de BPM compacto y editable con cuadro de texto y botones de subir / bajar
 
+  Widget _buildClearHarmonicSelectionsSquareButton({
+    required VoidCallback onTap,
+    bool isSynced = false,
+  }) {
+    final message = isSynced
+        ? 'Limpiar diapasón y selecciones armónicas (Sincronizado)'
+        : 'Limpiar selecciones armónicas (Independiente: Tónica, Cualidad, Estructura, Octava, Extensiones)';
+
+    return Tooltip(
+      message: message,
+      child: InkWell(
+        key: const ValueKey('clear_harmonic_selections_btn'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: SizedBox(
+          width: 33,
+          height: 33,
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isSynced ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1),
+                width: isSynced ? 1.0 : 0.8,
+              ),
+            ),
+            child: const FaIcon(
+              FontAwesomeIcons.broom,
+              size: 14.5,
+              color: Color(0xFFDC2626),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Botón para activar o desactivar la sincronización entre el borrado del diapasón y de compás
+  /// (diseño homólogo al interruptor de enlace de volumen en el diapasón).
+  Widget _buildSyncClearButton({
+    required bool isSynced,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: isSynced
+          ? 'Borrado sincronizado activo (limpia diapasón y selecciones armónicas juntas)'
+          : 'Borrado independiente (activar sincronización de borrado con diapasón)',
+      child: InkWell(
+        key: const ValueKey('sync_clear_toggle_btn'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(5),
+        child: Container(
+          width: 14,
+          height: 33,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSynced ? const Color(0xFFE0F2FE) : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(
+              color: isSynced ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1),
+              width: isSynced ? 1.0 : 0.8,
+            ),
+          ),
+          child: FaIcon(
+            isSynced ? FontAwesomeIcons.link : FontAwesomeIcons.linkSlash,
+            size: 9.0,
+            color: isSynced ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlayContinuousChordSquareButton({
+    required bool isPlaying,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: isPlaying
+          ? 'Detener reproducción continua de acordes'
+          : 'Reproducir acorde continuamente en los siguientes compases según BPM',
+      child: InkWell(
+        key: const ValueKey('play_chord_sequence_btn'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: SizedBox(
+          width: 33,
+          height: 33,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isPlaying ? const Color(0xFF10B981) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isPlaying ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
+                width: isPlaying ? 1.2 : 0.8,
+              ),
+              boxShadow: isPlaying
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: FaIcon(
+              isPlaying ? FontAwesomeIcons.stop : FontAwesomeIcons.play,
+              size: 14.5,
+              color: isPlaying ? Colors.white : const Color(0xFF059669),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAddChordSquareButton({
     required bool canInsertChord,
     required bool isMultiBeatMode,
@@ -1667,10 +1885,10 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
   }) {
     final tooltip = isMultiBeatMode
         ? (canInsertChord
-            ? 'Asignar  a  caja'
-            : 'Selecciona las cajas de destino para asignar ')
+            ? 'Asignar $chordSymbol a $targetCount caja${targetCount == 1 ? '' : 's'}'
+            : 'Selecciona las cajas de destino para asignar $chordSymbol')
         : (canInsertChord
-            ? 'Agregar  a '
+            ? 'Agregar $chordSymbol a $targetLabel'
             : 'Selecciona un acorde y una casilla del Compás');
 
     return Tooltip(
@@ -1680,34 +1898,25 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         onTap: canInsertChord ? onTap : null,
         borderRadius: BorderRadius.circular(6),
         child: SizedBox(
-          width: 44,
-          height: 44,
+          width: 33,
+          height: 33,
           child: Container(
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: canInsertChord
-                  ? (isMultiBeatMode ? const Color(0xFF7C3AED) : const Color(0xFF16A34A))
+                  ? const Color(0xFF059669)
                   : const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
                 color: canInsertChord
-                    ? (isMultiBeatMode ? const Color(0xFF6D28D9) : const Color(0xFF16A34A))
+                    ? const Color(0xFF047857)
                     : const Color(0xFFCBD5E1),
+                width: 0.8,
               ),
-              boxShadow: canInsertChord
-                  ? [
-                      BoxShadow(
-                        color: (isMultiBeatMode ? const Color(0xFF7C3AED) : const Color(0xFF16A34A))
-                            .withValues(alpha: 0.3),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1.5),
-                      )
-                    ]
-                  : null,
             ),
             child: FaIcon(
               FontAwesomeIcons.plus,
-              size: 16,
+              size: 14.5,
               color: canInsertChord ? Colors.white : const Color(0xFF94A3B8),
             ),
           ),
@@ -2791,7 +3000,7 @@ class _BeatBellowsArrows extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Flecha Abre (Pull) - Botón cuadrado homogéneo 24.2 x 24.2 px
+          // Flecha Abre (Pull) - Botón cuadrado homogéneo 29.0 x 29.0 px
           Tooltip(
             message: isEnabled
                 ? 'Abre (Fuelle abriendo)'
@@ -2802,11 +3011,11 @@ class _BeatBellowsArrows extends StatelessWidget {
                   ? () => onBellowsChanged?.call(BellowsMode.pull)
                   : null,
               child: Container(
-                width: 24.2,
-                height: 24.2,
+                width: 29.0,
+                height: 29.0,
                 decoration: BoxDecoration(
                   color: isPull ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: isPull
                         ? const Color(0xFF3B82F6)
@@ -2817,7 +3026,7 @@ class _BeatBellowsArrows extends StatelessWidget {
                 child: Center(
                   child: FaIcon(
                     FontAwesomeIcons.arrowLeft,
-                    size: 11.0,
+                    size: 13.5,
                     color: isPull
                         ? const Color(0xFF2563EB)
                         : const Color(0xFF64748B),
@@ -2827,7 +3036,7 @@ class _BeatBellowsArrows extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 3),
-          // Flecha Cierra (Push) - Botón cuadrado homogéneo 24.2 x 24.2 px
+          // Flecha Cierra (Push) - Botón cuadrado homogéneo 29.0 x 29.0 px
           Tooltip(
             message: isEnabled
                 ? 'Cierra (Fuelle cerrando)'
@@ -2838,11 +3047,11 @@ class _BeatBellowsArrows extends StatelessWidget {
                   ? () => onBellowsChanged?.call(BellowsMode.push)
                   : null,
               child: Container(
-                width: 24.2,
-                height: 24.2,
+                width: 29.0,
+                height: 29.0,
                 decoration: BoxDecoration(
                   color: isPush ? const Color(0xFFFEF2F2) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: isPush
                         ? const Color(0xFFEF4444)
@@ -2853,7 +3062,7 @@ class _BeatBellowsArrows extends StatelessWidget {
                 child: Center(
                   child: FaIcon(
                     FontAwesomeIcons.arrowRight,
-                    size: 11.0,
+                    size: 13.5,
                     color: isPush
                         ? const Color(0xFFDC2626)
                         : const Color(0xFF64748B),
@@ -2915,8 +3124,8 @@ class _BeatMarkCheckbox extends StatelessWidget {
   }
 }
 
-/// Botón cuadrado de la minibarra que marca o desmarca todos los checkboxes
-/// de la cuadrícula del Compás.
+/// Botón cuadrado azul de la minibarra con ícono de check que marca o desmarca
+/// todos los tiempos de la cuadrícula del Compás.
 class _SelectAllBeatsButton extends StatelessWidget {
   final bool allMarked;
   final VoidCallback onTap;
@@ -2930,7 +3139,7 @@ class _SelectAllBeatsButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: allMarked ? 'Deseleccionar todos' : 'Seleccionar todos',
+      message: allMarked ? 'Deseleccionar todos' : 'Seleccionar todos los acordes',
       child: GestureDetector(
         onTapDown: (_) => onTap(),
         behavior: HitTestBehavior.opaque,
@@ -2938,27 +3147,23 @@ class _SelectAllBeatsButton extends StatelessWidget {
           checked: allMarked,
           label: 'Seleccionar todos los tiempos',
           child: Container(
-            width: 24.2,
-            height: 24.2,
+            width: 29.0,
+            height: 29.0,
             decoration: BoxDecoration(
               color: allMarked ? const Color(0xFF0284C7) : Colors.white,
-              borderRadius: BorderRadius.circular(5),
+              borderRadius: BorderRadius.circular(6),
               border: Border.all(
-                color: allMarked
-                    ? const Color(0xFF0284C7)
-                    : const Color(0xFFCBD5E1),
+                color: const Color(0xFF0284C7),
                 width: 0.8,
               ),
             ),
-            child: allMarked
-                ? const Center(
-                    child: FaIcon(
-                      FontAwesomeIcons.check,
-                      size: 11,
-                      color: Colors.white,
-                    ),
-                  )
-                : null,
+            child: Center(
+              child: FaIcon(
+                FontAwesomeIcons.check,
+                size: 13,
+                color: allMarked ? Colors.white : const Color(0xFF0284C7),
+              ),
+            ),
           ),
         ),
       ),
@@ -2967,16 +3172,16 @@ class _SelectAllBeatsButton extends StatelessWidget {
 }
 
 /// Botón cuadrado rojo con icono de basura de la minibarra: borra los acordes
-/// según el estado de la casilla de selección masiva contigua. Si la casilla
-/// está marcada borra todos los acordes de la cuadrícula; en caso contrario
-/// solo borra los acordes de las casillas marcadas directamente.
+/// según el estado de selección de la cuadrícula (todos o casillas marcadas directamente).
 class _DeleteAllChordsButton extends StatelessWidget {
   final VoidCallback onTap;
   final String tooltip;
+  final bool isEnabled;
 
   const _DeleteAllChordsButton({
     required this.onTap,
     this.tooltip = 'Borrar acordes',
+    this.isEnabled = true,
   });
 
   @override
@@ -2988,15 +3193,18 @@ class _DeleteAllChordsButton extends StatelessWidget {
         onTapDown: (_) => onTap(),
         behavior: HitTestBehavior.opaque,
         child: Container(
-          width: 24.2,
-          height: 24.2,
+          width: 29.0,
+          height: 29.0,
           decoration: BoxDecoration(
-            color: const Color(0xFFDC2626),
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: const Color(0xFFDC2626), width: 0.8),
+            color: isEnabled ? const Color(0xFFDC2626) : const Color(0xFFFCA5A5),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isEnabled ? const Color(0xFFDC2626) : const Color(0xFFFCA5A5),
+              width: 0.8,
+            ),
           ),
           child: const Center(
-            child: FaIcon(FontAwesomeIcons.trash, size: 11, color: Colors.white),
+            child: FaIcon(FontAwesomeIcons.trash, size: 13.5, color: Colors.white),
           ),
         ),
       ),
@@ -3008,28 +3216,35 @@ class _DeleteAllChordsButton extends StatelessWidget {
 /// marcadas en la cuadrícula del Compás sin borrar los acordes escritos.
 class _ClearMarksButton extends StatelessWidget {
   final VoidCallback onTap;
+  final bool isEnabled;
 
-  const _ClearMarksButton({required this.onTap});
+  const _ClearMarksButton({
+    required this.onTap,
+    this.isEnabled = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: 'Desmarcar selección',
+      message: isEnabled ? 'Desmarcar selección' : 'Sin casillas marcadas',
       child: GestureDetector(
         onTapDown: (_) => onTap(),
         behavior: HitTestBehavior.opaque,
         child: Container(
-          width: 24.2,
-          height: 24.2,
+          width: 29.0,
+          height: 29.0,
           decoration: BoxDecoration(
-            color: const Color(0xFFF59E0B),
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: const Color(0xFFF59E0B), width: 0.8),
+            color: isEnabled ? const Color(0xFFF59E0B) : const Color(0xFFFDE68A),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isEnabled ? const Color(0xFFF59E0B) : const Color(0xFFFDE68A),
+              width: 0.8,
+            ),
           ),
           child: const Center(
             child: FaIcon(
               FontAwesomeIcons.squareXmark,
-              size: 11,
+              size: 13.5,
               color: Colors.white,
             ),
           ),
@@ -3131,13 +3346,13 @@ class _CompleteChordsButton extends ConsumerWidget {
       elevation: 6,
       onSelected: (val) => _handleAction(context, ref, val),
       child: Container(
-        width: 24.2,
-        height: 24.2,
+        width: 29.0,
+        height: 29.0,
         decoration: BoxDecoration(
           color: hasYellowDecisions
               ? const Color(0xFFFEF9C3)
               : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(5),
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: hasYellowDecisions
                 ? const Color(0xFFEAB308)
@@ -3150,7 +3365,7 @@ class _CompleteChordsButton extends ConsumerWidget {
           children: [
             FaIcon(
               FontAwesomeIcons.checkDouble,
-              size: 11.0,
+              size: 13.5,
               color: hasYellowDecisions
                   ? const Color(0xFFB45309)
                   : const Color(0xFF0284C7),
@@ -3408,13 +3623,13 @@ class _AutoChordDetectButton extends StatelessWidget {
       child: InkWell(
         key: ValueKey('auto_chord_detect_btn_$accordionNumber'),
         onTap: onTap,
-        borderRadius: BorderRadius.circular(5),
+        borderRadius: BorderRadius.circular(6),
         child: Container(
-          width: 24.2,
-          height: 24.2,
+          width: 29.0,
+          height: 29.0,
           decoration: BoxDecoration(
             color: isActive ? activeBg : const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(5),
+            borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: isActive ? activeBorder : const Color(0xFFCBD5E1),
               width: 0.8,
@@ -3423,7 +3638,7 @@ class _AutoChordDetectButton extends StatelessWidget {
           child: Center(
             child: FaIcon(
               FontAwesomeIcons.bolt,
-              size: 11.0,
+              size: 13.5,
               color: isActive ? Colors.white : const Color(0xFF64748B),
             ),
           ),
@@ -3595,11 +3810,11 @@ class _BeatAdjustButton extends StatelessWidget {
         ),
       ],
       child: Container(
-        width: 24.2,
-        height: 24.2,
+        width: 29.0,
+        height: 29.0,
         decoration: BoxDecoration(
           color: isNudged ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(5),
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: isNudged ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
             width: 0.8,
@@ -3608,7 +3823,7 @@ class _BeatAdjustButton extends StatelessWidget {
         child: Center(
           child: FaIcon(
             FontAwesomeIcons.sliders,
-            size: 11.0,
+            size: 13.5,
             color: isNudged
                 ? const Color(0xFF1D4ED8)
                 : const Color(0xFF64748B),

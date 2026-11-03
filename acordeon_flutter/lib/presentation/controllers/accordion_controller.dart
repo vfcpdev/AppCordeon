@@ -29,8 +29,12 @@ import '../../domain/services/hoare_contract.dart';
 import '../../domain/services/musicxml_rhythm_importer.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../../domain/theory/chord_detector_engine.dart';
+import '../../domain/models/compas_grid_state.dart';
+import '../../domain/models/grid_selection_model.dart';
 import 'free_chord_playback_coordinator.dart';
 
+export '../../domain/models/compas_grid_state.dart';
+export '../../domain/models/grid_selection_model.dart';
 export '../../domain/models/measure_json_serializer.dart';
 export '../../domain/models/measure_models.dart';
 
@@ -212,6 +216,25 @@ class AccordionSimulatorState {
   /// Tiempos resaltados en amarillo para decidir el fuelle (acordes completos abriendo o cerrando).
   final Set<int>? _yellowDecisionBeats;
   Set<int> get yellowDecisionBeats => _yellowDecisionBeats ?? const {};
+
+  final bool canUndoGrid;
+  final bool canRedoGrid;
+
+  /// Indica si el borrado de diapasón y el borrado armónico de compás están sincronizados.
+  final bool isClearSynced;
+
+  /// Modelo unificado de selecciones de la cuadrícula de compases (Value Object / High Cohesion).
+  GridSelectionModel get gridSelection => GridSelectionModel(
+        markedBeats: markedBeats,
+        targetBeats: multiBeatAssignmentTargets,
+      );
+
+  /// Sub-estado cohesivo inmutable para la gestión de la cuadrícula de compases (Modular State).
+  CompasGridState get compasGridState => CompasGridState(
+        measures: measures,
+        selection: gridSelection,
+        yellowDecisionBeats: yellowDecisionBeats,
+      );
 
   // Sección 5: Acorde Libre y Escalas
   final FreeChordState freeChord;
@@ -452,6 +475,9 @@ class AccordionSimulatorState {
     double? audioStartOffset,
     bool? isPlaybackAutoChordDetectEnabled,
     double? beatNudgeOffset,
+    this.canUndoGrid = false,
+    this.canRedoGrid = false,
+    this.isClearSynced = false,
   }) : _audioStartOffset = audioStartOffset ?? 0.0,
        _bpmCalibrationStart = bpmCalibrationStart ?? -1.0,
        _manualMetronomeBpm = manualMetronomeBpm ?? 120.0,
@@ -555,6 +581,9 @@ class AccordionSimulatorState {
     double? audioStartOffset,
     bool? isPlaybackAutoChordDetectEnabled,
     double? beatNudgeOffset,
+    bool? canUndoGrid,
+    bool? canRedoGrid,
+    bool? isClearSynced,
   }) {
     // Merge del transporte: primero el grupo, luego los campos planos.
     final mergedTransport = (transport ?? this.transport).copyWith(
@@ -672,6 +701,9 @@ class AccordionSimulatorState {
       isLiveChordMarkerActive:
           isLiveChordMarkerActive ?? this.isLiveChordMarkerActive,
       copiedChord: copiedChord ?? this.copiedChord,
+      canUndoGrid: canUndoGrid ?? this.canUndoGrid,
+      canRedoGrid: canRedoGrid ?? this.canRedoGrid,
+      isClearSynced: isClearSynced ?? this.isClearSynced,
     );
   }
 
@@ -719,34 +751,62 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
   bool get canUndoGrid => _gridHistory.canUndo;
   bool get canRedoGrid => _gridHistory.canRedo;
 
-  void undoGrid() {
+  /// Guarda una instantánea del estado de la cuadrícula antes de una mutación destructiva o masiva (Memento Pattern).
+  void saveGridSnapshot() {
+    _gridHistory.saveSnapshot(
+      measures: state.measures,
+      markedBeats: state.markedBeats,
+      multiBeatAssignmentTargets: state.multiBeatAssignmentTargets,
+      yellowDecisionBeats: state.yellowDecisionBeats,
+    );
+    state = state.copyWith(
+      canUndoGrid: _gridHistory.canUndo,
+      canRedoGrid: _gridHistory.canRedo,
+    );
+  }
+
+  /// Deshace la última modificación en la cuadrícula de compases devolviendo el estado previo (Memento Pattern).
+  bool undoGrid() {
     final memento = _gridHistory.undo(
       currentMeasures: state.measures,
       currentMarkedBeats: state.markedBeats,
+      currentMultiBeatAssignmentTargets: state.multiBeatAssignmentTargets,
       currentYellowDecisionBeats: state.yellowDecisionBeats,
     );
     if (memento != null) {
       state = state.copyWith(
         measures: memento.measures,
         markedBeats: memento.markedBeats,
+        multiBeatAssignmentTargets: memento.multiBeatAssignmentTargets,
         yellowDecisionBeats: memento.yellowDecisionBeats,
+        canUndoGrid: _gridHistory.canUndo,
+        canRedoGrid: _gridHistory.canRedo,
       );
+      return true;
     }
+    return false;
   }
 
-  void redoGrid() {
+  /// Rehace la última acción deshecha en la cuadrícula de compases (Memento Pattern).
+  bool redoGrid() {
     final memento = _gridHistory.redo(
       currentMeasures: state.measures,
       currentMarkedBeats: state.markedBeats,
+      currentMultiBeatAssignmentTargets: state.multiBeatAssignmentTargets,
       currentYellowDecisionBeats: state.yellowDecisionBeats,
     );
     if (memento != null) {
       state = state.copyWith(
         measures: memento.measures,
         markedBeats: memento.markedBeats,
+        multiBeatAssignmentTargets: memento.multiBeatAssignmentTargets,
         yellowDecisionBeats: memento.yellowDecisionBeats,
+        canUndoGrid: _gridHistory.canUndo,
+        canRedoGrid: _gridHistory.canRedo,
       );
+      return true;
     }
+    return false;
   }
 
   @override
@@ -3045,7 +3105,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     state = state.copyWith(markedBeats: next);
   }
 
-  void clearBeatMarks() => state = state.copyWith(markedBeats: const {});
+  void clearBeatMarks() => state = state.copyWith(
+    markedBeats: const {},
+    multiBeatAssignmentTargets: const {},
+  );
 
   /// Activa el modo de selección de destinos desde las cajas de texto.
   /// Al salir del modo, limpia los destinos sin modificar los checkbox.
@@ -3077,11 +3140,20 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
   /// checkboxes están marcados, los desmarca; si no, los marca a todos.
   void toggleAllBeatMarks() {
     final total = state.measures.length * 4;
-    final allMarked = total > 0 && state.markedBeats.length == total;
+    final allMarked = total > 0 &&
+        (state.markedBeats.length >= total ||
+            state.multiBeatAssignmentTargets.length >= total);
     if (allMarked) {
-      state = state.copyWith(markedBeats: const {});
+      state = state.copyWith(
+        markedBeats: const {},
+        multiBeatAssignmentTargets: const {},
+      );
     } else {
-      state = state.copyWith(markedBeats: {for (var i = 0; i < total; i++) i});
+      final allKeys = {for (var i = 0; i < total; i++) i};
+      state = state.copyWith(
+        markedBeats: allKeys,
+        multiBeatAssignmentTargets: allKeys,
+      );
     }
   }
 
@@ -3092,20 +3164,32 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
   ///   los acordes de la cuadrícula y desmarca todas las casillas
   ///   {Q: forall k in [0, N): chord(k) == '' && markedBeats == {}}.
   /// - Casilla desactivada: borra únicamente los acordes de las casillas
-  ///   marcadas directamente
-  ///   {Q: chord vacía solo para k in markedBeats; el resto permanece intacto}.
+  ///   marcadas directamente (tanto checkboxes como cajas seleccionadas)
+  ///   {Q: chord vacía solo para k in targets; el resto permanece intacto}.
   /// Devuelve la cantidad de acordes borrados (0 si no hay nada que borrar).
   int deleteGridChords({required bool deleteAll}) {
+    saveGridSnapshot();
     final targets = deleteAll
         ? {
             // Casilla masiva activa: targets = todas las posiciones válidas,
             // más cualquier marca residual fuera de rango (la desmarca igual).
             for (var i = 0; i < state.measures.length * 4; i++) i,
             ...state.markedBeats,
+            ...state.multiBeatAssignmentTargets,
           }
-        : // Casilla desactivada: targets = solo las casillas marcadas a mano.
-          Set<int>.from(state.markedBeats);
-    return _deleteGridChordsAt(targets);
+        : // Casilla desactivada: targets = solo las casillas marcadas a mano (checkbox o cajas).
+          {
+            ...state.markedBeats,
+            ...state.multiBeatAssignmentTargets,
+          };
+    final deleted = _deleteGridChordsAt(targets);
+    state = state.copyWith(
+      markedBeats: const {},
+      multiBeatAssignmentTargets: const {},
+      canUndoGrid: _gridHistory.canUndo,
+      canRedoGrid: _gridHistory.canRedo,
+    );
+    return deleted;
   }
 
   /// Atajo para el borrado total (retrocompatible con código y pruebas existentes).
@@ -3128,11 +3212,15 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     state = state.copyWith(
       measures: result.updatedMeasures,
       markedBeats: result.updatedMarkedBeats,
+      multiBeatAssignmentTargets: const {},
+      canUndoGrid: _gridHistory.canUndo,
+      canRedoGrid: _gridHistory.canRedo,
     );
     return result.deletedCount;
   }
 
   void setBeatChord(int barIdx, int beatIdx, String chord) {
+    saveGridSnapshot();
     final newMeasures = state.measures.map((m) {
       if (m.barNumber - 1 != barIdx) return m;
       final newBeats = m.beats.map((b) {
@@ -3141,7 +3229,11 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       }).toList();
       return MeasureRow(barNumber: m.barNumber, beats: newBeats);
     }).toList();
-    state = state.copyWith(measures: newMeasures);
+    state = state.copyWith(
+      measures: newMeasures,
+      canUndoGrid: _gridHistory.canUndo,
+      canRedoGrid: _gridHistory.canRedo,
+    );
   }
 
   void addMeasure() {
@@ -3164,13 +3256,18 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
   }
 
   void clearAllGridChords() {
+    saveGridSnapshot();
     final cleared = state.measures.map((m) {
       return MeasureRow(
         barNumber: m.barNumber,
         beats: m.beats.map((b) => b.copyWith(chord: '')).toList(),
       );
     }).toList();
-    state = state.copyWith(measures: cleared);
+    state = state.copyWith(
+      measures: cleared,
+      canUndoGrid: _gridHistory.canUndo,
+      canRedoGrid: _gridHistory.canRedo,
+    );
   }
 
   void updateMeasureBeat(int barIndex, int beatIndex, String chord) {
@@ -3178,6 +3275,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     final row = state.measures[barIndex];
     if (beatIndex < 0 || beatIndex >= row.beats.length) return;
 
+    saveGridSnapshot();
     final updatedBeats = List<MeasureBeat>.from(row.beats);
     updatedBeats[beatIndex] = updatedBeats[beatIndex].copyWith(chord: chord);
 
@@ -3197,6 +3295,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       selectedBarIndex: barIndex,
       selectedBeatIndex: beatIndex,
       bellows1: nextBellows,
+      canUndoGrid: _gridHistory.canUndo,
+      canRedoGrid: _gridHistory.canRedo,
     );
   }
 
@@ -3503,6 +3603,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     final symbol = _freeChordSymbol();
     if (symbol == null || targetKeys.isEmpty) return null;
 
+    saveGridSnapshot();
     final updatedMeasures = List<MeasureRow>.from(state.measures);
     var applied = false;
     for (final key in targetKeys) {
@@ -3523,7 +3624,11 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     }
 
     if (!applied) return null;
-    state = state.copyWith(measures: updatedMeasures);
+    state = state.copyWith(
+      measures: updatedMeasures,
+      canUndoGrid: _gridHistory.canUndo,
+      canRedoGrid: _gridHistory.canRedo,
+    );
     return symbol;
   }
 
@@ -3868,29 +3973,149 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     );
   }
 
-  /// Limpia completamente el diapasón dejando 0 botones presionados o resaltados (Command Pattern).
-  void clearDiapason() {
-    ClearDiapasonCommand(
+  /// Inicia la edición del acorde actualmente activo (del compás, detector o constructor libre),
+  /// cargándolo en el constructor y habilitando [isFreeChordBeingEdited].
+  ///
+  /// Tripla de Hoare:
+  /// - {P}: Existe un acorde objetivo o selección activa.
+  /// - {C}: Carga componentes en el constructor y activa modo edición.
+  /// - {Q}: state.isFreeChordBeingEdited == true && state.isFreeChordFixed == true.
+  void editCurrentChord() {
+    String chord = '';
+    // 1. Prioridad: Acorde de la casilla actualmente seleccionada en el Compás
+    if (state.selectedBarIndex != null && state.selectedBeatIndex != null) {
+      final bar = state.selectedBarIndex!;
+      final beat = state.selectedBeatIndex!;
+      if (bar >= 0 && bar < state.measures.length) {
+        final beats = state.measures[bar].beats;
+        if (beat >= 0 && beat < beats.length) {
+          chord = beats[beat].chord.trim();
+        }
+      }
+    }
+    // 2. Prioridad: Acorde detectado en el detector
+    if (chord.isEmpty && state.detectedChord != null && state.detectedChord!.name.isNotEmpty) {
+      chord = state.detectedChord!.name;
+    }
+    // Si encontramos un acorde objetivo, lo descomponemos armónicamente
+    if (chord.isNotEmpty) {
+      final chordSelection = ChordCatalog.constructorSelectionForSymbol(chord);
+      if (chordSelection != null) {
+        state = state.copyWith(
+          freeChordRoot: chordSelection.root,
+          freeChordType: chordSelection.type,
+          freeChordFourth: chordSelection.extension,
+          freeChordBass: chordSelection.bass,
+          freeChordScaleHarmonicMode: chordSelection.structure,
+          isFreeChordFixed: true,
+          isFreeChordBeingEdited: true,
+        );
+        return;
+      }
+    }
+    // 3. Si ya existe un acorde en el constructor libre, lo activa en modo edición
+    state = state.copyWith(
+      isFreeChordBeingEdited: true,
+      isFreeChordFixed: true,
+    );
+  }
+
+  /// Conmuta la sincronización entre el borrado del diapasón físico y el borrado armónico del compás.
+  ///
+  /// {P}: True.
+  /// {Q}: state.isClearSynced == !oldSync.
+  void toggleSyncClear() {
+    state = state.copyWith(isClearSynced: !state.isClearSynced);
+  }
+
+  void _executeRawClearHarmonicSelections() {
+    ClearHarmonicSelectionsCommand(
       ({
         required freeChordRoot,
+        required freeChordType,
+        required freeChordFourth,
+        required freeChordOctave,
+        required freeChordScaleHarmonicMode,
+        required freeChordBass,
         required isFreeChordFixed,
-        required activeButtons,
-        required detectorSelectedButtons,
-        required detectedChord,
-        required playingChordNotes,
+        required isFreeChordBeingEdited,
       }) {
         state = state.copyWith(
           freeChordRoot: freeChordRoot,
+          freeChordType: freeChordType,
+          freeChordFourth: freeChordFourth,
+          freeChordOctave: freeChordOctave,
+          freeChordScaleHarmonicMode: freeChordScaleHarmonicMode,
+          freeChordBass: freeChordBass,
           isFreeChordFixed: isFreeChordFixed,
-          activeButtons: activeButtons,
-          detectorSelectedButtons: detectorSelectedButtons,
-          detectedChord: detectedChord,
-          playingChordNotes: playingChordNotes,
+          isFreeChordBeingEdited: isFreeChordBeingEdited,
         );
       },
-      onCancelAudioPlayback: () {
-        _currentBeatNotes = [];
-        _audioBridge.allNotesOff();
+    ).execute();
+  }
+
+  void _executeRawClearDiapason() {
+    _currentBeatNotes = [];
+    _audioBridge.allNotesOff();
+    state = state.copyWith(
+      activeButtons: const {},
+      detectorSelectedButtons: const [],
+      detectedChord: null,
+      clearDetectedChord: true,
+      playingChordNotes: const {},
+    );
+  }
+
+  /// Limpia todas las selecciones armónicas del constructor libre
+  /// (Tónica, Cualidad, Estructura, Octava y Extensiones).
+  /// Si la sincronización está activa (isClearSynced == true), también limpia el diapasón físico (Command Pattern + Hoare Triples).
+  void clearHarmonicSelections() {
+    ExecuteContextualClearCommand(
+      origin: ClearActionOrigin.harmonic,
+      isClearSynced: state.isClearSynced,
+      onClearDiapason: _executeRawClearDiapason,
+      onClearHarmonic: _executeRawClearHarmonicSelections,
+    ).execute();
+  }
+
+  /// Limpia el diapasón físico dejando 0 botones presionados.
+  /// Si la sincronización está activa (isClearSynced == true), también limpia las selecciones armónicas (Command Pattern + Hoare Triples).
+  void clearDiapason() {
+    ExecuteContextualClearCommand(
+      origin: ClearActionOrigin.diapason,
+      isClearSynced: state.isClearSynced,
+      onClearDiapason: _executeRawClearDiapason,
+      onClearHarmonic: _executeRawClearHarmonicSelections,
+    ).execute();
+  }
+
+  /// Conmuta la reproducción continua de acordes a lo largo de los compases
+  /// según el BPM asignado, partiendo de la posición seleccionada (Command Pattern + Hoare Triples).
+  bool togglePlayChordSequence() {
+    final bpm = state.audioReport?.bpm.toDouble() ??
+        state.selectedBassRhythmPattern?.quarterNotesPerMinute ??
+        state.manualMetronomeBpm;
+
+    return TogglePlayChordSequenceCommand(
+      isCurrentlyPlaying: state.isPlayingAudio,
+      bpm: bpm,
+      audioOffset: state.effectiveAudioStartOffset,
+      selectedBar: state.selectedBarIndex,
+      selectedBeat: state.selectedBeatIndex,
+      onStop: () {
+        if (state.isPlayingAudio) {
+          togglePlayAudio();
+        }
+      },
+      onStart: (startTime) {
+        if (state.isAudioCoupled) {
+          seekAudio(startTime, audition: false);
+        } else {
+          _seekCompas(startTime, audition: false);
+        }
+        if (!state.isPlayingAudio) {
+          togglePlayAudio();
+        }
       },
     ).execute();
   }
@@ -4369,4 +4594,19 @@ final mixerVolumesProvider = Provider<({double v1, double v2, bool sync})>((ref)
     accordionSimulatorProvider.select((s) => s.syncVolume),
   );
   return (v1: v1, v2: v2, sync: sync);
+});
+
+/// Selector atómico para consultar si es posible deshacer una acción en la cuadrícula de compases (ISP).
+final canUndoGridProvider = Provider<bool>((ref) {
+  return ref.watch(accordionSimulatorProvider.select((s) => s.canUndoGrid));
+});
+
+/// Selector atómico para consultar si es posible rehacer una acción en la cuadrícula de compases (ISP).
+final canRedoGridProvider = Provider<bool>((ref) {
+  return ref.watch(accordionSimulatorProvider.select((s) => s.canRedoGrid));
+});
+
+/// Selector atómico para consultar si el borrado de diapasón y selecciones armónicas está sincronizado (ISP).
+final isClearSyncedProvider = Provider<bool>((ref) {
+  return ref.watch(accordionSimulatorProvider.select((s) => s.isClearSynced));
 });

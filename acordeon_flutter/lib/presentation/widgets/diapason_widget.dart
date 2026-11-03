@@ -78,6 +78,9 @@ class DiapasonWidget extends ConsumerWidget {
     final isFreeChordBeingEdited = ref.watch(
       accordionSimulatorProvider.select((s) => s.isFreeChordBeingEdited),
     );
+    final isClearSynced = ref.watch(
+      accordionSimulatorProvider.select((s) => s.isClearSynced),
+    );
     // Acorde activo en el Compás (seleccionado o reproduciéndose)
     final compasChord = ref.watch(
       accordionSimulatorProvider.select((s) => s.activeCompasChord),
@@ -238,6 +241,45 @@ class DiapasonWidget extends ConsumerWidget {
                               activeColor: const Color(0xFF0284C7),
                               onTap: onToggleMirror,
                               tooltip: 'Intercambiar hileras',
+                            ),
+                            const SizedBox(width: 3),
+                            // Limpiar diapasón
+                            _BarActionBtn(
+                              icon: FontAwesomeIcons.broom,
+                              isActive: false,
+                              activeColor: const Color(0xFFDC2626),
+                              onTap: notifier.clearDiapason,
+                              tooltip: isClearSynced
+                                  ? 'Limpiar diapasón y compás (sincronizado)'
+                                  : 'Limpiar diapasón (independiente)',
+                            ),
+                            const SizedBox(width: 3),
+                            // Sincronizar borrado diapasón <-> compás
+                            _BarActionBtn(
+                              icon: isClearSynced
+                                  ? FontAwesomeIcons.link
+                                  : FontAwesomeIcons.linkSlash,
+                              isActive: isClearSynced,
+                              activeColor: const Color(0xFF0284C7),
+                              onTap: () {
+                                final next = !isClearSynced;
+                                notifier.toggleSyncClear();
+                                ScaffoldMessenger.of(context)
+                                  ..hideCurrentSnackBar()
+                                  ..showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        next
+                                            ? 'Sincronización de borrado activada: diapasón y compás sincronizados.'
+                                            : 'Sincronización de borrado desactivada: borrado independiente.',
+                                      ),
+                                      duration: const Duration(milliseconds: 1400),
+                                    ),
+                                  );
+                              },
+                              tooltip: isClearSynced
+                                  ? 'Borrado sincronizado activo (limpia diapasón y selecciones armónicas juntas)'
+                                  : 'Borrado independiente (activar sincronización de borrado)',
                             ),
                           ],
                         ),

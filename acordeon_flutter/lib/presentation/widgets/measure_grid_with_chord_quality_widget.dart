@@ -3,6 +3,12 @@ import '../../core/constants/layout_constants.dart';
 import 'chord_quality_selector_widget.dart';
 import 'measure_grid_widget.dart';
 
+/// Contenedor de la sección de Compás que integra la cuadrícula de compases,
+/// la barra de herramientas, la matriz de tónicas y el selector de cualidades.
+///
+/// Principios aplicados:
+/// - Single Responsibility Principle (SRP): Actúa como façade de integración de la sección de compás.
+/// - Open/Closed Principle (OCP): Permite acoplar y desacoplar sin alterar la lógica interna.
 class MeasureGridWithChordQualityWidget extends StatelessWidget {
   static double contentWidth(double gridWidth) =>
       gridWidth + ChordQualitySelectorWidget.layoutWidth;
@@ -20,24 +26,11 @@ class MeasureGridWithChordQualityWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final link = LayerLink();
-    return Row(
+    return MeasureGridWidget(
       key: ValueKey('measure_grid_with_chord_quality_$accordionNumber'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        MeasureGridWidget(
-          accordionNumber: accordionNumber,
-          width: width,
-          isUndocked: isUndocked,
-          chordQualityLink: link,
-        ),
-        CompositedTransformFollower(
-          link: link,
-          showWhenUnlinked: false,
-          offset: Offset(width, 0),
-          child: const ChordQualitySelectorWidget(),
-        ),
-      ],
+      accordionNumber: accordionNumber,
+      width: width,
+      isUndocked: isUndocked,
     );
   }
 }

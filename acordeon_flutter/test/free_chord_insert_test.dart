@@ -108,7 +108,7 @@ void main() {
   });
 
   testWidgets(
-    'la columna vertical de cualidades cambia la cualidad del acorde',
+    'los botones de cualidades se ubican debajo de las tónicas con el mismo ancho y alineados',
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
@@ -157,41 +157,38 @@ void main() {
       final qualityContainer = tester.getRect(
         find.byKey(const ValueKey('chord_qualities_container')),
       );
-      final firstTonic = tester.getTopLeft(
+      final tonic0Rect = tester.getRect(
         find.byKey(const ValueKey('tonic_matrix_btn_0')),
       );
-      expect(qualityContainer.top, closeTo(firstTonic.dy, 1));
-      final compasCardRect = tester.getRect(
-        find.byKey(const ValueKey('measure_grid_section_card')),
-      );
-      final qualityRect = tester.getRect(
+      final qualityMajRect = tester.getRect(
         find.byKey(const ValueKey('chord_quality_maj')),
       );
-      final layoutRect = tester.getRect(
-        find.byKey(const ValueKey('measure_grid_with_chord_quality_1')),
+
+      // Ubicados debajo de las tónicas
+      expect(qualityContainer.top, greaterThan(tonic0Rect.bottom));
+
+      // Mismo ancho y alineados en la columna 0
+      expect(qualityMajRect.left, closeTo(tonic0Rect.left, 0.5));
+      expect(qualityMajRect.width, closeTo(tonic0Rect.width, 0.5));
+
+      // En la misma fila horizontal y alineados en la columna 5
+      final qualitySus4Rect = tester.getRect(
+        find.byKey(const ValueKey('chord_quality_sus4')),
       );
-      expect(qualityContainer.left, greaterThan(compasCardRect.right));
-      expect(
-        qualityContainer.left,
-        lessThanOrEqualTo(compasCardRect.right + 10),
+      final tonic5Rect = tester.getRect(
+        find.byKey(const ValueKey('tonic_matrix_btn_5')),
       );
-      expect(qualityRect.right, lessThanOrEqualTo(layoutRect.right));
-      expect(qualityRect.left, greaterThanOrEqualTo(qualityContainer.left));
-      expect(qualityRect.right, lessThanOrEqualTo(qualityContainer.right));
+      expect(qualitySus4Rect.top, closeTo(qualityMajRect.top, 0.5));
+      expect(qualitySus4Rect.left, closeTo(tonic5Rect.left, 0.5));
+      expect(qualitySus4Rect.width, closeTo(tonic5Rect.width, 0.5));
+
+      // Están integrados dentro de la tarjeta de la sección de compás
       expect(
         find.ancestor(
           of: find.byKey(const ValueKey('chord_quality_maj')),
           matching: find.byKey(const ValueKey('measure_grid_section_card')),
         ),
-        findsNothing,
-      );
-      expect(
-        tester.getTopLeft(find.byKey(const ValueKey('chord_quality_sus4'))).dy,
-        greaterThan(
-          tester
-              .getTopLeft(find.byKey(const ValueKey('chord_quality_sus2')))
-              .dy,
-        ),
+        findsOneWidget,
       );
 
       await tester.tap(find.byKey(const ValueKey('chord_quality_sus2')));

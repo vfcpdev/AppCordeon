@@ -5,12 +5,14 @@ import '../models/measure_models.dart';
 class GridMemento {
   final List<MeasureRow> measures;
   final Set<int> markedBeats;
+  final Set<int> multiBeatAssignmentTargets;
   final Set<int> yellowDecisionBeats;
   final DateTime timestamp;
 
   GridMemento({
     required List<MeasureRow> measures,
     required Set<int> markedBeats,
+    Set<int>? multiBeatAssignmentTargets,
     required Set<int> yellowDecisionBeats,
     DateTime? timestamp,
   })  : measures = List.unmodifiable(
@@ -32,6 +34,7 @@ class GridMemento {
           ),
         ),
         markedBeats = Set.unmodifiable(markedBeats),
+        multiBeatAssignmentTargets = Set.unmodifiable(multiBeatAssignmentTargets ?? const {}),
         yellowDecisionBeats = Set.unmodifiable(yellowDecisionBeats),
         timestamp = timestamp ?? DateTime.now();
 }
@@ -53,6 +56,7 @@ class GridHistoryManager {
   void saveSnapshot({
     required List<MeasureRow> measures,
     required Set<int> markedBeats,
+    Set<int>? multiBeatAssignmentTargets,
     required Set<int> yellowDecisionBeats,
   }) {
     _redoStack.clear();
@@ -60,6 +64,7 @@ class GridHistoryManager {
       GridMemento(
         measures: measures,
         markedBeats: markedBeats,
+        multiBeatAssignmentTargets: multiBeatAssignmentTargets,
         yellowDecisionBeats: yellowDecisionBeats,
       ),
     );
@@ -72,6 +77,7 @@ class GridHistoryManager {
   GridMemento? undo({
     required List<MeasureRow> currentMeasures,
     required Set<int> currentMarkedBeats,
+    Set<int>? currentMultiBeatAssignmentTargets,
     required Set<int> currentYellowDecisionBeats,
   }) {
     if (!canUndo) return null;
@@ -79,6 +85,7 @@ class GridHistoryManager {
     final currentState = GridMemento(
       measures: currentMeasures,
       markedBeats: currentMarkedBeats,
+      multiBeatAssignmentTargets: currentMultiBeatAssignmentTargets,
       yellowDecisionBeats: currentYellowDecisionBeats,
     );
     _redoStack.add(currentState);
@@ -90,6 +97,7 @@ class GridHistoryManager {
   GridMemento? redo({
     required List<MeasureRow> currentMeasures,
     required Set<int> currentMarkedBeats,
+    Set<int>? currentMultiBeatAssignmentTargets,
     required Set<int> currentYellowDecisionBeats,
   }) {
     if (!canRedo) return null;
@@ -97,6 +105,7 @@ class GridHistoryManager {
     final currentState = GridMemento(
       measures: currentMeasures,
       markedBeats: currentMarkedBeats,
+      multiBeatAssignmentTargets: currentMultiBeatAssignmentTargets,
       yellowDecisionBeats: currentYellowDecisionBeats,
     );
     _undoStack.add(currentState);
@@ -104,10 +113,9 @@ class GridHistoryManager {
     return _redoStack.removeLast();
   }
 
-  /// Limpia todo el historial.
+  /// Limpia todo el historial de undo y redo.
   void clear() {
     _undoStack.clear();
     _redoStack.clear();
   }
 }
-

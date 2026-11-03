@@ -1404,3 +1404,170 @@ class DeleteGridChordsCommand
     );
   }
 }
+
+/// Modo u origen de la acción de limpieza en la interfaz.
+enum ClearActionOrigin {
+  diapason,
+  harmonic,
+}
+
+/// Comando para ejecutar el borrado contextual de diapasón y/o selecciones armónicas
+/// respetando la sincronización unificada (Strategy Pattern + Command Pattern + Hoare Triples).
+///
+/// Tripla de Hoare:
+/// {P}: True.
+/// {Q}:
+///   - Si isClearSynced == true:
+///       Ambos subsistemas se limpian (diapasón físico queda vacío y selecciones armónicas restablecidas).
+///   - Si isClearSynced == false && origin == ClearActionOrigin.diapason:
+///       Solo el diapasón físico se limpia; las selecciones armónicas permanecen invariantes {I}.
+///   - Si isClearSynced == false && origin == ClearActionOrigin.harmonic:
+///       Solo las selecciones armónicas se limpian; el diapasón físico permanece invariante {I}.
+class ExecuteContextualClearCommand implements AccordionCommand<void> {
+  @override
+  String get commandName => 'ExecuteContextualClearCommand';
+
+  final ClearActionOrigin origin;
+  final bool isClearSynced;
+  final void Function() onClearDiapason;
+  final void Function() onClearHarmonic;
+
+  const ExecuteContextualClearCommand({
+    required this.origin,
+    required this.isClearSynced,
+    required this.onClearDiapason,
+    required this.onClearHarmonic,
+  });
+
+  @override
+  bool canExecute() => true;
+
+  @override
+  void assertPreconditions() {}
+
+  @override
+  void execute() {
+    assertPreconditions();
+    if (isClearSynced) {
+      onClearDiapason();
+      onClearHarmonic();
+    } else {
+      switch (origin) {
+        case ClearActionOrigin.diapason:
+          onClearDiapason();
+          break;
+        case ClearActionOrigin.harmonic:
+          onClearHarmonic();
+          break;
+      }
+    }
+  }
+}
+
+/// Comando para limpiar todas las selecciones armónicas del constructor libre
+/// (Tónica, Cualidad, Estructura, Octava y Extensiones) sin alterar el diapasón físico.
+///
+/// Tripla de Hoare:
+/// {P}: True.
+/// {Q}: freeChordRoot == -1, freeChordType == '', freeChordFourth == 'none',
+///      freeChordOctave == 'all', freeChordScaleHarmonicMode == 'triad', freeChordBass == '',
+///      isFreeChordFixed == false, isFreeChordBeingEdited == false.
+class ClearHarmonicSelectionsCommand implements AccordionCommand<void> {
+  @override
+  String get commandName => 'ClearHarmonicSelectionsCommand';
+
+  final void Function({
+    required int freeChordRoot,
+    required String freeChordType,
+    required String freeChordFourth,
+    required String freeChordOctave,
+    required String freeChordScaleHarmonicMode,
+    required String freeChordBass,
+    required bool isFreeChordFixed,
+    required bool isFreeChordBeingEdited,
+  }) stateUpdater;
+
+  const ClearHarmonicSelectionsCommand(this.stateUpdater);
+
+  @override
+  bool canExecute() => true;
+
+  @override
+  void assertPreconditions() {}
+
+  @override
+  void execute() {
+    assertPreconditions();
+    stateUpdater(
+      freeChordRoot: -1,
+      freeChordType: '',
+      freeChordFourth: 'none',
+      freeChordOctave: 'all',
+      freeChordScaleHarmonicMode: 'triad',
+      freeChordBass: '',
+      isFreeChordFixed: false,
+      isFreeChordBeingEdited: false,
+    );
+  }
+}
+
+/// Comando para activar o desactivar la reproducción continua de acordes
+/// en la cuadrícula según el BPM asignado (Command Pattern + Hoare Triples).
+///
+/// Tripla de Hoare:
+/// {P}: bpm > 0.
+/// {Q}: Si isCurrentlyPlaying == true => se invoca onStop() y retorna false.
+///      Si isCurrentlyPlaying == false => se invoca onStart(startTime) y retorna true.
+class TogglePlayChordSequenceCommand implements AccordionCommand<bool> {
+  @override
+  String get commandName => 'TogglePlayChordSequenceCommand';
+
+  final bool isCurrentlyPlaying;
+  final void Function() onStop;
+  final void Function(double startTime) onStart;
+  final int? selectedBar;
+  final int? selectedBeat;
+  final double bpm;
+  final double audioOffset;
+
+  const TogglePlayChordSequenceCommand({
+    required this.isCurrentlyPlaying,
+    required this.onStop,
+    required this.onStart,
+    this.selectedBar,
+    this.selectedBeat,
+    required this.bpm,
+    required this.audioOffset,
+  });
+
+  @override
+  bool canExecute() => bpm > 0;
+
+  @override
+  void assertPreconditions() {
+    if (bpm <= 0) {
+      throw PreconditionViolationException(
+        commandName,
+        'El BPM debe ser mayor que cero ($bpm).',
+      );
+    }
+  }
+
+  @override
+  bool execute() {
+    assertPreconditions();
+    if (isCurrentlyPlaying) {
+      onStop();
+      return false;
+    } else {
+      final bar = (selectedBar != null && selectedBar! >= 0) ? selectedBar! : 0;
+      final beat = (selectedBeat != null && selectedBeat! >= 0 && selectedBeat! < 4)
+          ? selectedBeat!
+          : 0;
+      final secondsPerBeat = 60.0 / bpm;
+      final startTime = audioOffset + (bar * 4 + beat) * secondsPerBeat;
+      onStart(startTime);
+      return true;
+    }
+  }
+}
