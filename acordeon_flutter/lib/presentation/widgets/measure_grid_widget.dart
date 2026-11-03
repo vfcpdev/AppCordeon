@@ -699,6 +699,43 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                 ),
                                 const SizedBox(width: 4),
 
+                                // Botón Toggle Cascada: Icono cuadrado homogéneo 29x29 px
+                                Tooltip(
+                                  message: state.isCascadeBellowsActive
+                                      ? 'Fuelle en Cascada ACTIVO: Aplica fuelle a todos los compases con este mismo acorde'
+                                      : 'Fuelle en Cascada INACTIVO: Pulsa para activar asignación en cascada (o usa Ctrl+Clic)',
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: notifier.toggleCascadeBellows,
+                                    child: Container(
+                                      width: 29.0,
+                                      height: 29.0,
+                                      decoration: BoxDecoration(
+                                        color: state.isCascadeBellowsActive
+                                            ? const Color(0xFF2563EB)
+                                            : const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: state.isCascadeBellowsActive
+                                              ? const Color(0xFF1D4ED8)
+                                              : const Color(0xFFCBD5E1),
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Center(
+                                        child: FaIcon(
+                                          FontAwesomeIcons.layerGroup,
+                                          size: 13.0,
+                                          color: state.isCascadeBellowsActive
+                                              ? Colors.white
+                                              : const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+
                                 // 8. Botones de Fuelle: Abre (←) y Cierra (→) con soporte Ctrl+Clic en Windows y Toggle de Cascada
                                 _BeatBellowsArrows(
                                   bellows: activeBellows,
