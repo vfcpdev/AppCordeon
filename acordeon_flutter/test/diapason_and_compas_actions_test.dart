@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
+import 'package:acordeon_flutter/presentation/widgets/diapason_widget.dart';
+import 'package:acordeon_flutter/presentation/widgets/diapason_button_widget.dart';
+import 'package:acordeon_flutter/domain/models/tuning.dart';
 import 'package:acordeon_flutter/core/constants/enums.dart';
 
 void main() {
@@ -456,6 +459,72 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Estado del Acorde'), findsOneWidget);
       expect(find.textContaining('C1.1'), findsOneWidget);
+    });
+
+    testWidgets('Los botones que abren en el diapasón se colorean de verde', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: DiapasonWidget(
+                  currentTuning: TuningRegistry.defaultTunings[0],
+                  onTuningChanged: (_) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      // Cambiar fuelle a Abre (pull) y limpiar selecciones armónicas para verificar notas en reposo
+      notifier.setBellows1(BellowsMode.pull);
+      notifier.clearHarmonicSelections();
+      await tester.pumpAndSettle();
+
+      // 1. En reposo abriendo (sin acorde tintando el cuerpo), la etiqueta de la nota del botón es verde
+      final diapasonButtons = find.byType(DiapasonButtonWidget);
+      expect(diapasonButtons, findsWidgets);
+
+      final firstButton = tester.widget<DiapasonButtonWidget>(diapasonButtons.first);
+      expect(firstButton.bellowsMode, BellowsMode.pull);
+
+      final noteTextFinder = find.descendant(of: diapasonButtons.first, matching: find.byType(Text)).last;
+      final noteText = tester.widget<Text>(noteTextFinder);
+      expect(noteText.style?.color, equals(const Color(0xFF15803D)));
+
+      // 2. Al activar un acorde en Abre (ej. Do Mayor), los botones que abren se marcan como acorde en Abre (isChordPull == true)
+      notifier.setFreeChordRoot(0); // Do
+      notifier.setFreeChordType('maj');
+      await tester.pumpAndSettle();
+
+      final activePullBtn = tester.widget<DiapasonButtonWidget>(diapasonButtons.first);
+      expect(activePullBtn.isChordPull, isTrue);
+
+      // 3. Al presionar el botón abriendo, la insignia flotante 'ABRE' tiene fondo verde
+      final firstBtnId = container.read(accordionSimulatorProvider).trebleData1['row3']!.first.id;
+      notifier.pressButton(firstBtnId, firstButton.pullMidi);
+      await tester.pumpAndSettle();
+
+      final abrePillFinder = find.text('ABRE');
+      expect(abrePillFinder, findsOneWidget);
+
+      final animatedContainer = tester.widget<AnimatedContainer>(
+        find.ancestor(of: abrePillFinder, matching: find.byType(AnimatedContainer)).first,
+      );
+      final deco = animatedContainer.decoration as BoxDecoration;
+      expect(deco.color, equals(const Color(0xFF16A34A)));
     });
   });
 }

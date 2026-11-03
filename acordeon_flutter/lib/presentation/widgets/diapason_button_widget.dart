@@ -108,17 +108,17 @@ class DiapasonButtonWidget extends StatelessWidget {
                 curve: Curves.easeOutBack,
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1.5),
                 decoration: BoxDecoration(
-                  color: bellowsMode == BellowsMode.push ? const Color(0xFFDC2626) : const Color(0xFF2563EB),
+                  color: bellowsMode == BellowsMode.push ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
                   borderRadius: BorderRadius.circular(9999),
                   border: Border.all(
-                    color: bellowsMode == BellowsMode.push ? const Color(0xFFFCA5A5) : const Color(0xFF93C5FD),
+                    color: bellowsMode == BellowsMode.push ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC),
                     width: 1,
                   ),
                   boxShadow: [
                     BoxShadow(
                       color: bellowsMode == BellowsMode.push
                           ? const Color(0xFFDC2626).withValues(alpha: 0.85)
-                          : const Color(0xFF2563EB).withValues(alpha: 0.85),
+                          : const Color(0xFF16A34A).withValues(alpha: 0.85),
                       blurRadius: 10,
                       spreadRadius: 1,
                     ),
@@ -164,7 +164,7 @@ class DiapasonButtonWidget extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w900,
-                color: useWhite ? Colors.white : const Color(0xFF1E40AF),
+                color: useWhite ? Colors.white : const Color(0xFF15803D),
                 height: 1.0,
                 shadows: labelShadows,
               ),
@@ -233,7 +233,7 @@ class DiapasonButtonWidget extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
-                    color: pullUseWhite ? Colors.white : const Color(0xFF1E40AF),
+                    color: pullUseWhite ? Colors.white : const Color(0xFF15803D),
                     height: 1.0,
                     shadows: pullShadows,
                   ),

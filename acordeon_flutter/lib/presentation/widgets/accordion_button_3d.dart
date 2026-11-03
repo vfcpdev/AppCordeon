@@ -161,14 +161,14 @@ class _AccordionButton3DPainter extends CustomPainter {
           stops: const [0.0, 0.55, 1.0],
         ).createShader(Rect.fromCircle(center: center, radius: radius));
       } else if (bellowsMode == BellowsMode.pull) {
-        // Presionado Abriendo: Azul eléctrico vivo con gradiente 3D
+        // Presionado Abriendo: Verde esmeralda vivo con gradiente 3D
         bodyPaint.shader = RadialGradient(
           center: const Alignment(-0.35, -0.35),
           radius: 0.85,
           colors: const [
-            Color(0xFFBFDBFE), // Brillo central
-            Color(0xFF3B82F6), // Azul eléctrico
-            Color(0xFF1D4ED8), // Sombra rim
+            Color(0xFFDCFCE7), // Brillo central
+            Color(0xFF22C55E), // Verde vivo
+            Color(0xFF15803D), // Sombra rim
           ],
           stops: const [0.0, 0.55, 1.0],
         ).createShader(Rect.fromCircle(center: center, radius: radius));
@@ -270,15 +270,15 @@ class _AccordionButton3DPainter extends CustomPainter {
             chordTintBoth);
 
     if (chordTint || bothSplit) {
-      // Notas del acorde / bajo: azul = Abre (pull) · rojo = Cierra (push)
+      // Notas del acorde / bajo: verde = Abre (pull) · rojo = Cierra (push)
       final pullPaint = Paint()
         ..shader = RadialGradient(
           center: const Alignment(-0.35, -0.35),
           radius: 0.85,
           colors: const [
-            Color(0xFFBFDBFE),
-            Color(0xFF3B82F6),
-            Color(0xFF1D4ED8),
+            Color(0xFFDCFCE7),
+            Color(0xFF22C55E),
+            Color(0xFF15803D),
           ],
           stops: const [0.0, 0.55, 1.0],
         ).createShader(Rect.fromCircle(center: center, radius: radius));
@@ -303,14 +303,14 @@ class _AccordionButton3DPainter extends CustomPainter {
         canvas.drawCircle(center, radius, bodyPaint);
 
         if (paintPullHalf) {
-          // Mitad izquierda = Abre (azul exacto o cian cercano)
+          // Mitad izquierda = Abre (verde exacto o esmeralda cercano)
           final isClosePull = buttonType != null && bassMatchPull == BassMatchType.close;
           final effectivePullPaint = isClosePull
               ? (Paint()
                 ..shader = RadialGradient(
                   center: const Alignment(-0.35, -0.35),
                   radius: 0.85,
-                  colors: const [Color(0xFFE0F2FE), Color(0xFF38BDF8), Color(0xFF0284C7)],
+                  colors: const [Color(0xFFECFDF5), Color(0xFF34D399), Color(0xFF059669)],
                   stops: const [0.0, 0.55, 1.0],
                 ).createShader(Rect.fromCircle(center: center, radius: radius)))
               : pullPaint;
@@ -428,7 +428,7 @@ class _AccordionButton3DPainter extends CustomPainter {
         borderPaint.color = const Color(0xFFFCA5A5);
         borderPaint.strokeWidth = 2.0;
       } else if (bellowsMode == BellowsMode.pull) {
-        borderPaint.color = const Color(0xFFBFDBFE);
+        borderPaint.color = const Color(0xFF86EFAC);
         borderPaint.strokeWidth = 2.0;
       } else {
         borderPaint.color = const Color(0xFFFDE047);
@@ -453,12 +453,12 @@ class _AccordionButton3DPainter extends CustomPainter {
         borderPaint.color = const Color(0xFFFBBF24); // Oro nítido
         borderPaint.strokeWidth = 2.2;
       } else {
-        borderPaint.color = bellowsMode == BellowsMode.push ? const Color(0xFFFDBA74) : const Color(0xFF7DD3FC);
+        borderPaint.color = bellowsMode == BellowsMode.push ? const Color(0xFFFDBA74) : const Color(0xFF6EE7B7);
         borderPaint.strokeWidth = 1.8;
       }
     } else if (buttonType != null && bellowsMode == BellowsMode.pull) {
-      // Bajo en Abre: borde azul.
-      borderPaint.color = const Color(0xFF93C5FD);
+      // Bajo en Abre: borde verde.
+      borderPaint.color = const Color(0xFF86EFAC);
       borderPaint.strokeWidth = 1.6;
     } else if (buttonType != null && bellowsMode == BellowsMode.push) {
       // Bajo en Cierra: borde rojo.
