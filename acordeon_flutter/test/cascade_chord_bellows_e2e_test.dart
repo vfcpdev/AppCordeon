@@ -66,13 +66,23 @@ void main() {
         // Verificamos que el modo cascada está ahora activo en el estado
         state = container.read(accordionSimulatorProvider);
         expect(state.isCascadeBellowsActive, isTrue);
+        print('DEBUG: selectedBarIndex=${state.selectedBarIndex}, selectedBeatIndex=${state.selectedBeatIndex}');
+        print('DEBUG: measures length=${state.measures.length}');
+        print('DEBUG: C1.1 chord=${state.measures[0].beats[0].chord}, bellows=${state.measures[0].beats[0].bellows}');
 
         // 3. Pulsamos la flecha de 'Abre' (Pull)
         final pullBtnFinder = find.byKey(const ValueKey('bellows_pull_button'));
         expect(pullBtnFinder, findsOneWidget);
 
+        final gesture = tester.widget<GestureDetector>(pullBtnFinder);
+        print('DEBUG TEST: gesture.onTap is null? ${gesture.onTap == null}');
+        print('DEBUG TEST: pullBtnFinder rect = ${tester.getRect(pullBtnFinder)}');
+
         await tester.tap(pullBtnFinder);
         await tester.pumpAndSettle();
+
+        state = container.read(accordionSimulatorProvider);
+        print('DEBUG AFTER TAP: C1.1 bellows=${state.measures[0].beats[0].bellows}');
 
         // 4. VERIFICACIÓN CRÍTICA:
         // Todos los cuadros que tienen el acorde 'Do' deben haber cambiado a BellowsMode.pull

@@ -743,6 +743,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                   isCascadeActive: state.isCascadeBellowsActive,
                                   onToggleCascade: notifier.toggleCascadeBellows,
                                   onBellowsChanged: (b, {bool? explicitCascade}) {
+                                    print('DEBUG CALLBACK: onBellowsChanged triggered! b=$b, hasSelectedCell=$hasSelectedCell, selectedBar=$selectedBar, selectedBeat=$selectedBeat');
                                     final isCtrlPressed = HardwareKeyboard.instance.isControlPressed ||
                                         HardwareKeyboard.instance.isMetaPressed;
                                     final cascade = explicitCascade ?? (isCtrlPressed || state.isCascadeBellowsActive);
@@ -3052,6 +3053,7 @@ class _BeatBellowsArrows extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('DEBUG _BeatBellowsArrows build: isEnabled=$isEnabled, bellows=$bellows, isCascadeActive=$isCascadeActive');
     final isPull = isEnabled && bellows == BellowsMode.pull;
     final isPush = isEnabled && bellows == BellowsMode.push;
 
@@ -3062,14 +3064,14 @@ class _BeatBellowsArrows extends StatelessWidget {
         children: [
           // Flecha Abre (Pull) - Botón cuadrado homogéneo 29.0 x 29.0 px colorizado completamente
           Tooltip(
-            key: const ValueKey('bellows_pull_button'),
             message: isEnabled
                 ? 'Abre (Fuelle abriendo)'
                 : 'Asigna un acorde al tiempo para definir el fuelle',
             child: GestureDetector(
+              key: const ValueKey('bellows_pull_button'),
               behavior: HitTestBehavior.opaque,
-              onTap: isEnabled
-                  ? () {
+              onTapDown: isEnabled
+                  ? (_) {
                       final isCtrl = HardwareKeyboard.instance.isControlPressed ||
                           HardwareKeyboard.instance.isMetaPressed;
                       onBellowsChanged?.call(BellowsMode.pull, explicitCascade: isCtrl ? true : null);
@@ -3122,14 +3124,14 @@ class _BeatBellowsArrows extends StatelessWidget {
           const SizedBox(width: 3),
           // Flecha Cierra (Push) - Botón cuadrado homogéneo 29.0 x 29.0 px colorizado completamente
           Tooltip(
-            key: const ValueKey('bellows_push_button'),
             message: isEnabled
                 ? 'Cierra (Fuelle cerrando)'
                 : 'Asigna un acorde al tiempo para definir el fuelle',
             child: GestureDetector(
+              key: const ValueKey('bellows_push_button'),
               behavior: HitTestBehavior.opaque,
-              onTap: isEnabled
-                  ? () {
+              onTapDown: isEnabled
+                  ? (_) {
                       final isCtrl = HardwareKeyboard.instance.isControlPressed ||
                           HardwareKeyboard.instance.isMetaPressed;
                       onBellowsChanged?.call(BellowsMode.push, explicitCascade: isCtrl ? true : null);
