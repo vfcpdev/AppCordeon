@@ -1,10 +1,21 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/enums.dart';
+import '../../core/di/providers.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/bass_matrix_layout.dart';
+import '../../domain/models/bass_rhythm_pattern.dart';
 import '../controllers/accordion_controller.dart';
+
+/// Modo de operación del panel de captura de patrones rítmicos (State Pattern).
+enum CapturePanelMode {
+  recording,
+  reviewAndEdit,
+}
 
 /// Panel INLINE (no modal) de captura de patrones rítmicos de bajos.
 ///
@@ -13,22 +24,10 @@ import '../controllers/accordion_controller.dart';
 /// modal que absorbe los pointers, impidiendo registrar golpes. Como widget
 /// embebido sobre el propio panel, los bajos siguen accesibles.
 ///
-/// La fuente de verdad es una **matriz 2×2** que relaciona cada caja con un
-/// bajo físico del instrumento:
-///
-/// |            | Externos (col 0) | Internos (col 1) |
-/// |------------|------------------|------------------|
-/// | Fila 1     | botón 7          | botón 4          |
-/// | Fila 2     | botón 8          | botón 5          |
-///
-/// Principios aplicados:
-/// - **SRP**: este widget sólo presenta la matriz y delega toda la lógica al
-///   notifier / `BassRhythmRecorder` del dominio.
-/// - **OCP**: la disposición vive en [BassMatrixLayout]; cambiar el mapeo no
-///   toca la UI.
-/// - **ISP / bajo acoplamiento**: usa selectores finos, no el estado completo.
-/// - **Hoare**: las precondiciones ({P}) se validan en el notifier con
-///   `require`, no en el widget.
+/// Implementa State Pattern para desacoplar:
+/// 1. [CapturePanelMode.recording]: Captura de pulsos en tiempo real.
+/// 2. [CapturePanelMode.reviewAndEdit]: Audición, timeline desplazable, scrubbing,
+///    control de BPM independiente y ajuste de 1 o 2 botones por golpe.
 class BassRhythmCapturePanel extends ConsumerStatefulWidget {
   final int accordionNumber;
   final VoidCallback? onClose;
@@ -49,11 +48,19 @@ class _BassRhythmCapturePanelState
   late final TextEditingController _nameController;
   Set<int> _selectedButtons = {...BassMatrixLayout.buttonNumbers};
 
+  CapturePanelMode _mode = CapturePanelMode.recording;
+  BassRhythmPattern? _draftPattern;
+  List<BassRhythmHit> _draftHits = [];
+  int _selectedHitIndex = 0;
+  double _bpm = 120.0;
+  bool _isPlayingReview = false;
+  double _playbackQuarter = 0.0;
+  Timer? _reviewTimer;
+
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController();
-    // Si hay una captura ya activa (panel reabierto), refleja su selección.
     final recorder =
         ref.read(accordionSimulatorProvider).bassRhythmRecorder;
     if (recorder != null && recorder.isRecording) {
@@ -64,6 +71,7 @@ class _BassRhythmCapturePanelState
 
   @override
   void dispose() {
+    _reviewTimer?.cancel();
     _nameController.dispose();
     super.dispose();
   }
@@ -76,16 +84,16 @@ class _BassRhythmCapturePanelState
       }
     });
     if (ref.read(accordionSimulatorProvider).isBassCaptureActive) {
-      // La captura en curso ignora golpes de cajas deseleccionadas.
       notifier.toggleBassCaptureSelection(buttonNumber);
     }
   }
 
   void _startCapture() {
     if (_selectedButtons.isEmpty) return;
-    // Quita el foco del campo de nombre: mientras se captura, las teclas
-    // 4/5/7/8 deben llegar al listener global y no al editor de texto.
     FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _mode = CapturePanelMode.recording;
+    });
     ref.read(accordionSimulatorProvider.notifier).startBassRhythmCapture(
           name: _nameController.text,
           selectedButtons: _selectedButtons,
@@ -93,13 +101,194 @@ class _BassRhythmCapturePanelState
   }
 
   void _stopCapture() {
-    final pattern =
-        ref.read(accordionSimulatorProvider.notifier).stopBassRhythmCapture();
-    if (pattern != null && mounted) {
+    _reviewTimer?.cancel();
+    final notifier = ref.read(accordionSimulatorProvider.notifier);
+    final pattern = notifier.stopBassRhythmCapture();
+    if (pattern != null && pattern.hits.isNotEmpty && mounted) {
+      setState(() {
+        _mode = CapturePanelMode.reviewAndEdit;
+        _draftPattern = pattern;
+        _draftHits = List<BassRhythmHit>.from(pattern.hits);
+        _selectedHitIndex = 0;
+        _bpm = pattern.quarterNotesPerMinute ?? 120.0;
+        _playbackQuarter = 0.0;
+        _isPlayingReview = false;
+        if (_nameController.text.trim().isEmpty) {
+          _nameController.text = pattern.name;
+        }
+      });
+    } else {
+      widget.onClose?.call();
+    }
+  }
+
+  void _cancelCapture() {
+    _reviewTimer?.cancel();
+    ref.read(accordionSimulatorProvider.notifier).cancelBassRhythmCapture();
+    widget.onClose?.call();
+  }
+
+  double _totalQuarters() {
+    if (_draftHits.isEmpty) return 4.0;
+    final last = _draftHits.last;
+    final total = math.max(last.onsetQuarterBeats + math.max(last.durationQuarterBeats, 0.5), 4.0);
+    return total;
+  }
+
+  int _resolveFundamental(int btn) {
+    if (btn == 7 || btn == 4) return 7;
+    if (btn == 8 || btn == 5) return 8;
+    if (btn >= 7 && btn <= 12) return btn;
+    return (btn + 6).clamp(7, 12);
+  }
+
+  int _resolveChord(int btn) {
+    if (btn == 7 || btn == 4) return 4;
+    if (btn == 8 || btn == 5) return 5;
+    if (btn >= 1 && btn <= 6) return btn;
+    return (btn - 6).clamp(1, 6);
+  }
+
+  void _playHitSound(BassRhythmHit hit) {
+    final audioEngine = ref.read(audioEngineProvider);
+    final bassData = ref.read(accordionSimulatorProvider).bassData1;
+    for (final btnNum in hit.buttonIndexes) {
+      final btn = bassData.firstWhere(
+        (b) => b.btnIndex == btnNum,
+        orElse: () => AccordionData.baseCincoLetrasBass.first,
+      );
+      final notes = btn.pushNotes.isNotEmpty ? btn.pushNotes : btn.pullNotes;
+      for (final note in notes) {
+        audioEngine.noteOn(note, velocity: 0.85);
+        Future.delayed(const Duration(milliseconds: 140), () {
+          audioEngine.noteOff(note);
+        });
+      }
+    }
+  }
+
+  void _toggleHitButton({required bool isChord}) {
+    if (_draftHits.isEmpty || _selectedHitIndex >= _draftHits.length) return;
+    final currentHit = _draftHits[_selectedHitIndex];
+    final fundBtn = _resolveFundamental(currentHit.buttonIndex);
+    final chordBtn = _resolveChord(currentHit.buttonIndex);
+
+    final isFundActive = currentHit.buttonIndexes.contains(fundBtn);
+    final isChordActive = currentHit.buttonIndexes.contains(chordBtn);
+
+    bool nextFund = isFundActive;
+    bool nextChord = isChordActive;
+
+    if (!isChord) {
+      nextFund = !isFundActive;
+    } else {
+      nextChord = !isChordActive;
+    }
+
+    // Debe permitirse al menos un botón activo
+    if (!nextFund && !nextChord) return;
+
+    final BassRhythmHit updatedHit;
+    if (nextFund && nextChord) {
+      updatedHit = currentHit.copyWith(
+        buttonIndex: fundBtn,
+        pairedButtonIndex: chordBtn,
+        pairedFingerNumber: 3,
+      );
+    } else if (nextFund) {
+      updatedHit = currentHit.copyWith(
+        buttonIndex: fundBtn,
+        clearPairedButton: true,
+      );
+    } else {
+      updatedHit = currentHit.copyWith(
+        buttonIndex: chordBtn,
+        clearPairedButton: true,
+      );
+    }
+
+    setState(() {
+      _draftHits[_selectedHitIndex] = updatedHit;
+    });
+    _playHitSound(updatedHit);
+  }
+
+  void _togglePlayReview() {
+    if (_isPlayingReview) {
+      _stopPlayReview();
+    } else {
+      _startPlayReview();
+    }
+  }
+
+  void _startPlayReview() {
+    _reviewTimer?.cancel();
+    setState(() {
+      _isPlayingReview = true;
+    });
+
+    final totalQuarters = _totalQuarters();
+    const intervalMs = 25;
+    double lastTriggerQuarter = _playbackQuarter - 0.05;
+
+    _reviewTimer = Timer.periodic(const Duration(milliseconds: intervalMs), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final step = (intervalMs / 1000.0) * (_bpm / 60.0);
+      final prevQuarter = _playbackQuarter;
+      var nextQuarter = _playbackQuarter + step;
+
+      if (nextQuarter >= totalQuarters) {
+        nextQuarter = 0.0;
+        lastTriggerQuarter = -0.1;
+      }
+
+      // Disparar golpes cuyo onset caiga en esta ventana temporal
+      for (var i = 0; i < _draftHits.length; i++) {
+        final hit = _draftHits[i];
+        if (hit.onsetQuarterBeats >= lastTriggerQuarter &&
+            hit.onsetQuarterBeats <= nextQuarter) {
+          _playHitSound(hit);
+        }
+      }
+
+      lastTriggerQuarter = nextQuarter;
+      setState(() {
+        _playbackQuarter = nextQuarter;
+      });
+    });
+  }
+
+  void _stopPlayReview() {
+    _reviewTimer?.cancel();
+    setState(() {
+      _isPlayingReview = false;
+      _playbackQuarter = 0.0;
+    });
+  }
+
+  void _saveFinalPattern() {
+    if (_draftPattern == null) return;
+    _reviewTimer?.cancel();
+    final notifier = ref.read(accordionSimulatorProvider.notifier);
+    final patternName = _nameController.text.trim().isNotEmpty
+        ? _nameController.text.trim()
+        : _draftPattern!.name;
+
+    notifier.updateBassRhythmPattern(
+      patternId: _draftPattern!.id,
+      newName: patternName,
+      newQuarterNotesPerMinute: _bpm,
+      newHits: _draftHits,
+    );
+
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Patrón "${pattern.name}" guardado con ${pattern.hits.length} golpes.',
+            'Patrón "$patternName" guardado con ${_draftHits.length} golpes.',
           ),
         ),
       );
@@ -107,18 +296,10 @@ class _BassRhythmCapturePanelState
     }
   }
 
-  void _cancelCapture() {
-    ref.read(accordionSimulatorProvider.notifier).cancelBassRhythmCapture();
-    widget.onClose?.call();
-  }
-
   @override
   Widget build(BuildContext context) {
     final recorder = ref.watch(
       accordionSimulatorProvider.select((s) => s.bassRhythmRecorder),
-    );
-    final patterns = ref.watch(
-      accordionSimulatorProvider.select((s) => s.bassRhythmPatterns.length),
     );
     final isRecording = recorder?.isRecording ?? false;
     final capturedHits = recorder?.hits.length ?? 0;
@@ -132,122 +313,548 @@ class _BassRhythmCapturePanelState
           bottom: BorderSide(color: Color(0xFFCBD5E1), width: 0.6),
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Capturar patrón rítmico',
-                  key: ValueKey('bass_capture_title'),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
+      child: _mode == CapturePanelMode.reviewAndEdit
+          ? _buildReviewAndEditMode()
+          : _buildRecordingMode(isRecording, capturedHits),
+    );
+  }
+
+  Widget _buildRecordingMode(bool isRecording, int capturedHits) {
+    final patterns = ref.watch(
+      accordionSimulatorProvider.select((s) => s.bassRhythmPatterns.length),
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Capturar patrón rítmico',
+                key: ValueKey('bass_capture_title'),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              IconButton(
-                key: const ValueKey('bass_capture_close_btn'),
-                tooltip: 'Cerrar',
-                constraints: const BoxConstraints.tightFor(width: 26, height: 26),
-                padding: EdgeInsets.zero,
-                splashRadius: 13,
-                onPressed: isRecording ? _cancelCapture : widget.onClose,
-                icon: const Icon(Icons.close, size: 16),
-              ),
-            ],
+            ),
+            IconButton(
+              key: const ValueKey('bass_capture_close_btn'),
+              tooltip: 'Cerrar',
+              constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+              padding: EdgeInsets.zero,
+              splashRadius: 13,
+              onPressed: isRecording ? _cancelCapture : widget.onClose,
+              icon: const Icon(Icons.close, size: 16),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          key: const ValueKey('bass_capture_name_field'),
+          controller: _nameController,
+          enabled: !isRecording,
+          maxLength: 40,
+          style: const TextStyle(fontSize: 12),
+          decoration: const InputDecoration(
+            labelText: 'Nombre del patrón',
+            isDense: true,
+            border: OutlineInputBorder(),
           ),
-          const SizedBox(height: 6),
-          TextField(
-            key: const ValueKey('bass_capture_name_field'),
-            controller: _nameController,
-            enabled: !isRecording,
-            maxLength: 40,
-            style: const TextStyle(fontSize: 12),
-            decoration: const InputDecoration(
-              labelText: 'Nombre del patrón',
-              isDense: true,
-              border: OutlineInputBorder(),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Selecciona los bajos y tócalos en el panel mientras capturas',
+          style: TextStyle(fontSize: 10.5, color: Color(0xFF475569)),
+        ),
+        const SizedBox(height: 2),
+        const Text(
+          'Teclado: 7 = ext. fila 1 · 8 = ext. fila 2 · 4 = int. fila 1 · 5 = int. fila 2',
+          key: ValueKey('bass_capture_keyboard_hint'),
+          style: TextStyle(fontSize: 9.5, color: Color(0xFF16A34A)),
+        ),
+        const SizedBox(height: 6),
+        _buildMatrix(isRecording),
+        const SizedBox(height: 4),
+        if (isRecording)
+          Text(
+            'Capturando… $capturedHits golpe(s)',
+            key: const ValueKey('bass_capture_status'),
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFFDC2626),
+            ),
+          )
+        else
+          Text(
+            '$patterns patrón(es) disponible(s)',
+            style: const TextStyle(
+              fontSize: 10.5,
+              color: Color(0xFF64748B),
             ),
           ),
-          const SizedBox(height: 6),
-          const Text(
-            'Selecciona los bajos y tócalos en el panel mientras capturas',
-            style: TextStyle(fontSize: 10.5, color: Color(0xFF475569)),
-          ),
-          const SizedBox(height: 2),
-          const Text(
-            'Teclado: 7 = ext. fila 1 · 8 = ext. fila 2 · 4 = int. fila 1 · 5 = int. fila 2',
-            key: ValueKey('bass_capture_keyboard_hint'),
-            style: TextStyle(fontSize: 9.5, color: Color(0xFF2563EB)),
-          ),
-          const SizedBox(height: 6),
-          _buildMatrix(isRecording),
-          const SizedBox(height: 4),
-          if (isRecording)
-            Text(
-              'Capturando… $capturedHits golpe(s)',
-              key: const ValueKey('bass_capture_status'),
-              style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFFDC2626),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              key: const ValueKey('bass_capture_cancel_btn'),
+              onPressed: isRecording ? _cancelCapture : widget.onClose,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                minimumSize: const Size(0, 30),
               ),
-            )
-          else
-            Text(
-              '$patterns patrón(es) disponible(s)',
-              style: const TextStyle(
-                fontSize: 10.5,
-                color: Color(0xFF64748B),
-              ),
+              child: Text(isRecording ? 'Cancelar' : 'Cerrar'),
             ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                key: const ValueKey('bass_capture_cancel_btn'),
-                onPressed: isRecording ? _cancelCapture : widget.onClose,
-                style: TextButton.styleFrom(
+            const SizedBox(width: 8),
+            if (isRecording)
+              FilledButton.icon(
+                key: const ValueKey('bass_capture_stop_btn'),
+                onPressed: _stopCapture,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF059669),
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   minimumSize: const Size(0, 30),
                 ),
-                child: Text(isRecording ? 'Cancelar' : 'Cerrar'),
-              ),
-              const SizedBox(width: 8),
-              if (isRecording)
-                FilledButton.icon(
-                  key: const ValueKey('bass_capture_stop_btn'),
-                  onPressed: _stopCapture,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFDC2626),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    minimumSize: const Size(0, 30),
-                  ),
-                  icon: const Icon(Icons.save_rounded, size: 15),
-                  label: const Text('Guardar',
-                      style: TextStyle(fontSize: 11.5)),
-                )
-              else
-                FilledButton.icon(
-                  key: const ValueKey('bass_capture_start_btn'),
-                  onPressed:
-                      _selectedButtons.isEmpty ? null : _startCapture,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFDC2626),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    minimumSize: const Size(0, 30),
-                  ),
-                  icon: const Icon(Icons.fiber_manual_record, size: 13),
-                  label: const Text('Capturar',
-                      style: TextStyle(fontSize: 11.5)),
+                icon: const Icon(Icons.tune_rounded, size: 15),
+                label: const Text('Finalizar y Editar',
+                    style: TextStyle(fontSize: 11.5)),
+              )
+            else
+              FilledButton.icon(
+                key: const ValueKey('bass_capture_start_btn'),
+                onPressed:
+                    _selectedButtons.isEmpty ? null : _startCapture,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  minimumSize: const Size(0, 30),
                 ),
+                icon: const Icon(Icons.fiber_manual_record, size: 13),
+                label: const Text('Capturar',
+                    style: TextStyle(fontSize: 11.5)),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewAndEditMode() {
+    final selectedHit = (_draftHits.isNotEmpty && _selectedHitIndex < _draftHits.length)
+        ? _draftHits[_selectedHitIndex]
+        : null;
+    final totalQuarters = _totalQuarters();
+
+    final fundBtn = selectedHit != null ? _resolveFundamental(selectedHit.buttonIndex) : 7;
+    final chordBtn = selectedHit != null ? _resolveChord(selectedHit.buttonIndex) : 4;
+
+    final isFundActive = selectedHit != null && selectedHit.buttonIndexes.contains(fundBtn);
+    final isChordActive = selectedHit != null && selectedHit.buttonIndexes.contains(chordBtn);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Encabezado del modo de edición
+        Row(
+          children: [
+            const Icon(Icons.tune, size: 16, color: Color(0xFF059669)),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Text(
+                'Edición y Audición (${_draftHits.length} golpes)',
+                key: const ValueKey('capture_review_title'),
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+            IconButton(
+              key: const ValueKey('capture_review_close_btn'),
+              tooltip: 'Cerrar',
+              constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+              padding: EdgeInsets.zero,
+              splashRadius: 13,
+              onPressed: () {
+                _stopPlayReview();
+                widget.onClose?.call();
+              },
+              icon: const Icon(Icons.close, size: 16),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+
+        // 1. Línea de tiempo horizontal desplazable (Timeline)
+        const Text(
+          'Línea de tiempo (golpes capturados):',
+          style: TextStyle(fontSize: 10.0, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+        ),
+        const SizedBox(height: 3),
+        Container(
+          height: 68,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: const Color(0xFFCBD5E1), width: 0.8),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: Row(
+              children: [
+                for (var i = 0; i < _draftHits.length; i++) ...[
+                  _buildTimelineHitCard(i, _draftHits[i], isSelected: i == _selectedHitIndex),
+                  const SizedBox(width: 6),
+                ],
+              ],
+            ),
+          ),
+        ),
+
+        // Barra de desplazamiento / Scrubbing interactiva
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2.0),
+          child: Row(
+            children: [
+              Text(
+                '${_playbackQuarter.toStringAsFixed(1)}q',
+                style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 3.5,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  ),
+                  child: Slider(
+                    key: const ValueKey('capture_review_scrubbing_slider'),
+                    value: _playbackQuarter.clamp(0.0, totalQuarters),
+                    min: 0.0,
+                    max: totalQuarters > 0 ? totalQuarters : 4.0,
+                    activeColor: const Color(0xFF16A34A),
+                    inactiveColor: const Color(0xFFCBD5E1),
+                    onChanged: (val) {
+                      setState(() {
+                        _playbackQuarter = val;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              Text(
+                '${totalQuarters.toStringAsFixed(1)}q',
+                style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+              ),
             ],
           ),
-        ],
+        ),
+
+        const SizedBox(height: 4),
+
+        // 2. Dos cuadros pequeños: [Bajo Fundamental | Acorde Acompañante]
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Golpe #${_selectedHitIndex + 1} (${selectedHit?.onsetQuarterBeats.toStringAsFixed(1)}q):',
+                    style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF1E293B)),
+                  ),
+                  Text(
+                    (isFundActive && isChordActive)
+                        ? '2 botones activos'
+                        : '1 botón activo',
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w800,
+                      color: (isFundActive && isChordActive) ? const Color(0xFF16A34A) : const Color(0xFF2563EB),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  // Cuadro pequeño 1: Bajo Fundamental
+                  Expanded(
+                    child: _buildHitButtonBox(
+                      key: const ValueKey('capture_hit_box_fundamental'),
+                      title: 'Bajo Fundamental',
+                      buttonLabel: 'Botón $fundBtn',
+                      isActive: isFundActive,
+                      onTap: () => _toggleHitButton(isChord: false),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Cuadro pequeño 2: Acorde Acompañante
+                  Expanded(
+                    child: _buildHitButtonBox(
+                      key: const ValueKey('capture_hit_box_chord'),
+                      title: 'Acorde Acompañante',
+                      buttonLabel: 'Botón $chordBtn',
+                      isActive: isChordActive,
+                      onTap: () => _toggleHitButton(isChord: true),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 6),
+
+        // 3. Controles de Reproducción y Tempo (BPM independiente)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                key: const ValueKey('capture_review_play_btn'),
+                tooltip: _isPlayingReview ? 'Pausar audición' : 'Reproducir audición',
+                onPressed: _togglePlayReview,
+                constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+                padding: EdgeInsets.zero,
+                icon: Icon(
+                  _isPlayingReview ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                  size: 24,
+                  color: const Color(0xFF16A34A),
+                ),
+              ),
+              IconButton(
+                key: const ValueKey('capture_review_stop_btn'),
+                tooltip: 'Detener',
+                onPressed: _stopPlayReview,
+                constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+                padding: EdgeInsets.zero,
+                icon: const Icon(Icons.stop, size: 20, color: Color(0xFF64748B)),
+              ),
+              const SizedBox(width: 6),
+              // Control de Tempo / BPM
+              Expanded(
+                child: Row(
+                  children: [
+                    const Text('BPM:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
+                    Expanded(
+                      child: Slider(
+                        key: const ValueKey('capture_review_bpm_slider'),
+                        value: _bpm,
+                        min: 40.0,
+                        max: 220.0,
+                        divisions: 180,
+                        activeColor: const Color(0xFF2563EB),
+                        inactiveColor: const Color(0xFFCBD5E1),
+                        onChanged: (val) {
+                          setState(() {
+                            _bpm = val;
+                          });
+                        },
+                      ),
+                    ),
+                    Text(
+                      '${_bpm.round()}',
+                      key: const ValueKey('capture_review_bpm_text'),
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF2563EB)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        // 4. Botones de acción: Grabar de nuevo y Guardar Patrón
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            OutlinedButton.icon(
+              key: const ValueKey('capture_review_rerecord_btn'),
+              onPressed: () {
+                _stopPlayReview();
+                _startCapture();
+              },
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 30),
+              ),
+              icon: const Icon(Icons.fiber_manual_record, size: 12, color: Color(0xFFDC2626)),
+              label: const Text('Grabar de nuevo', style: TextStyle(fontSize: 10.5)),
+            ),
+            FilledButton.icon(
+              key: const ValueKey('capture_review_save_btn'),
+              onPressed: _saveFinalPattern,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF16A34A),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                minimumSize: const Size(0, 30),
+              ),
+              icon: const Icon(Icons.save_rounded, size: 14),
+              label: const Text('Guardar Patrón', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTimelineHitCard(int index, BassRhythmHit hit, {required bool isSelected}) {
+    final hasFund = hit.pairedButtonIndex == null || hit.buttonIndex == _resolveFundamental(hit.buttonIndex);
+    final isBoth = hit.pairedButtonIndex != null;
+
+    final badgeLabel = isBoth ? '2 Botones' : '1 Botón';
+    final badgeColor = isBoth ? const Color(0xFF16A34A) : const Color(0xFF2563EB);
+
+    return InkWell(
+      key: ValueKey('capture_timeline_hit_$index'),
+      onTap: () {
+        setState(() {
+          _selectedHitIndex = index;
+          _playbackQuarter = hit.onsetQuarterBeats;
+        });
+        _playHitSound(hit);
+      },
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        width: 64,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1),
+            width: isSelected ? 1.8 : 0.8,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.18),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '#${index + 1}',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF1E293B),
+              ),
+            ),
+            Text(
+              '${hit.onsetQuarterBeats.toStringAsFixed(1)}q',
+              style: const TextStyle(fontSize: 8.5, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 2),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
+              decoration: BoxDecoration(
+                color: badgeColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: Text(
+                badgeLabel,
+                style: TextStyle(
+                  fontSize: 7.5,
+                  fontWeight: FontWeight.w800,
+                  color: badgeColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHitButtonBox({
+    required Key key,
+    required String title,
+    required String buttonLabel,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      key: key,
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFF0FDF4) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isActive ? const Color(0xFF16A34A) : const Color(0xFFCBD5E1),
+            width: isActive ? 1.5 : 1.0,
+          ),
+        ),
+        child: Column(
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w700,
+                color: isActive ? const Color(0xFF15803D) : const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              buttonLabel,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w900,
+                color: isActive ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isActive ? Icons.check_circle : Icons.remove_circle_outline,
+                  size: 11,
+                  color: isActive ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  isActive ? 'ACTIVO' : 'DESACTIVADO',
+                  style: TextStyle(
+                    fontSize: 8.0,
+                    fontWeight: FontWeight.w800,
+                    color: isActive ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
