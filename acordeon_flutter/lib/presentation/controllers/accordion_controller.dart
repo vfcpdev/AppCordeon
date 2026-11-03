@@ -3021,6 +3021,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
 
     _currentBeatNotes = [];
     _audioBridge.allNotesOff();
+
+    // Si el usuario está preparando activamente un acorde en el constructor armónico libre,
+    // preserva su selección para poder asignarlo/agregarlo directamente a esta casilla.
+    final isPreparingConstructorChord =
+        state.isFreeChordBeingEdited && state.freeChordRoot >= 0;
+
     state = state.copyWith(
       selectedBarIndex: barIdx,
       selectedBeatIndex: beatIdx,
@@ -3028,16 +3034,30 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       bellows1: nextBellows,
       activeButtons: const {},
       playingChordNotes: const {},
-      freeChordRoot: chordSelection?.root ?? -1,
-      freeChordType: chordSelection?.type ?? '',
-      freeChordFourth: chordSelection?.extension ?? '',
-      freeChordOctave: chordSelection == null ? '' : 'all',
-      freeChordMode: chordSelection == null ? '' : 'harmonic',
+      freeChordRoot: isPreparingConstructorChord
+          ? state.freeChordRoot
+          : (chordSelection?.root ?? -1),
+      freeChordType: isPreparingConstructorChord
+          ? state.freeChordType
+          : (chordSelection?.type ?? ''),
+      freeChordFourth: isPreparingConstructorChord
+          ? state.freeChordFourth
+          : (chordSelection?.extension ?? ''),
+      freeChordOctave: isPreparingConstructorChord
+          ? state.freeChordOctave
+          : (chordSelection == null ? '' : 'all'),
+      freeChordMode: isPreparingConstructorChord
+          ? state.freeChordMode
+          : (chordSelection == null ? '' : 'harmonic'),
       freeChordBellows: BellowsMode.both,
-      freeChordBass: chordSelection?.bass ?? '',
-      freeChordScaleHarmonicMode: chordSelection?.structure ?? '',
+      freeChordBass: isPreparingConstructorChord
+          ? state.freeChordBass
+          : (chordSelection?.bass ?? ''),
+      freeChordScaleHarmonicMode: isPreparingConstructorChord
+          ? state.freeChordScaleHarmonicMode
+          : (chordSelection?.structure ?? ''),
       isFreeChordFixed: false,
-      isFreeChordBeingEdited: false,
+      isFreeChordBeingEdited: isPreparingConstructorChord,
       detectorMode: false,
       detectorSelectedButtons: const [],
       clearDetectedChord: true,
@@ -3189,6 +3209,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       canUndoGrid: _gridHistory.canUndo,
       canRedoGrid: _gridHistory.canRedo,
     );
+    if (deleteAll && state.isClearSynced) {
+      _executeRawClearDiapason();
+      _executeRawClearHarmonicSelections();
+    }
     return deleted;
   }
 
@@ -3290,6 +3314,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
         ? beatBellows
         : state.bellows1;
 
+    // Sincronización bidireccional inmediata con el constructor armónico
+    final chordSelection = ChordCatalog.constructorSelectionForSymbol(chord);
+
     state = state.copyWith(
       measures: updatedMeasures,
       selectedBarIndex: barIndex,
@@ -3297,6 +3324,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       bellows1: nextBellows,
       canUndoGrid: _gridHistory.canUndo,
       canRedoGrid: _gridHistory.canRedo,
+      freeChordRoot: chordSelection != null ? chordSelection.root : state.freeChordRoot,
+      freeChordType: chordSelection != null ? chordSelection.type : state.freeChordType,
+      freeChordFourth: chordSelection != null ? chordSelection.extension : state.freeChordFourth,
+      freeChordBass: chordSelection != null ? chordSelection.bass : state.freeChordBass,
+      freeChordScaleHarmonicMode: chordSelection != null ? chordSelection.structure : state.freeChordScaleHarmonicMode,
+      isFreeChordBeingEdited: false,
     );
   }
 
@@ -3855,6 +3888,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
   // desactiva (valor neutro) y al pulsarla de nuevo se vuelve a activar.
   void setFreeChordRoot(int root) => state = state.copyWith(
     freeChordRoot: state.freeChordRoot == root ? -1 : root,
+    freeChordType: (state.freeChordRoot != root && state.freeChordType.isEmpty)
+        ? 'maj'
+        : state.freeChordType,
     isFreeChordBeingEdited: true,
   );
   void setFreeChordType(String type) => state = state.copyWith(

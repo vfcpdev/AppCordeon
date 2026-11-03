@@ -148,5 +148,44 @@ void main() {
       expect(state.multiBeatAssignmentTargets, isEmpty);
       expect(state.markedBeats, isEmpty);
     });
+
+    testWidgets('Resolución de contradicciones: selectBeat preserva acorde en preparación en el constructor', (tester) async {
+      final container = await pumpGrid(tester);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      // Usuario prepara acorde en el constructor (Fa# = 6, min)
+      notifier.setFreeChordRoot(6);
+      notifier.setFreeChordType('min');
+      await tester.pumpAndSettle();
+
+      expect(container.read(accordionSimulatorProvider).freeChordRoot, equals(6));
+      expect(container.read(accordionSimulatorProvider).freeChordType, equals('min'));
+      expect(container.read(accordionSimulatorProvider).isFreeChordBeingEdited, isTrue);
+
+      // Hace clic en una celda vacía para seleccionarla como destino
+      notifier.selectBeat(1, 2);
+      await tester.pumpAndSettle();
+
+      final state = container.read(accordionSimulatorProvider);
+      // El foco se movió a la celda 1, 2 sin destruir el acorde que estaba armando
+      expect(state.selectedBarIndex, equals(1));
+      expect(state.selectedBeatIndex, equals(2));
+      expect(state.freeChordRoot, equals(6));
+      expect(state.freeChordType, equals('min'));
+    });
+
+    testWidgets('Resolución de contradicciones: updateMeasureBeat sincroniza bidireccionalmente con la matriz armónica', (tester) async {
+      final container = await pumpGrid(tester);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      // Escribir acorde directamente en casilla
+      notifier.updateMeasureBeat(0, 0, 'Solm');
+      await tester.pumpAndSettle();
+
+      final state = container.read(accordionSimulatorProvider);
+      // La matriz de tónica y cualidad refleja en tiempo real el acorde escrito
+      expect(state.freeChordRoot, equals(7)); // Sol = 7
+      expect(state.freeChordType, equals('min'));
+    });
   });
 }
