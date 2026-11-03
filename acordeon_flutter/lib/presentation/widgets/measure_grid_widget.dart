@@ -699,27 +699,31 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                 ),
                                 const SizedBox(width: 4),
 
-                                // 8. Botones de Fuelle: Abre (←) y Cierra (→) con Toggle de Cascada integrado
+                                // 8. Botones de Fuelle: Abre (←) y Cierra (→) con soporte Ctrl+Clic en Windows y Toggle de Cascada
                                 _BeatBellowsArrows(
                                   bellows: activeBellows,
                                   isEnabled: canChangeBellows,
                                   isCascadeActive: state.isCascadeBellowsActive,
                                   onToggleCascade: notifier.toggleCascadeBellows,
-                                  onBellowsChanged: (b) {
+                                  onBellowsChanged: (b, {bool? explicitCascade}) {
+                                    final isCtrlPressed = HardwareKeyboard.instance.isControlPressed ||
+                                        HardwareKeyboard.instance.isMetaPressed;
+                                    final cascade = explicitCascade ?? (isCtrlPressed || state.isCascadeBellowsActive);
+
                                     if (state.isMultiBeatAssignmentMode && state.multiBeatAssignmentTargets.isNotEmpty) {
                                       for (final key in state.multiBeatAssignmentTargets) {
                                         final m = key ~/ 4;
                                         final beat = key % 4;
-                                        notifier.setBeatBellows(m, beat, b);
+                                        notifier.setBeatBellows(m, beat, b, cascadeToSameChord: cascade);
                                       }
                                     } else if (hasMarks) {
                                       for (final key in state.markedBeats) {
                                         final m = key ~/ 4;
                                         final beat = key % 4;
-                                        notifier.setBeatBellows(m, beat, b);
+                                        notifier.setBeatBellows(m, beat, b, cascadeToSameChord: cascade);
                                       }
                                     } else if (hasSelectedCell) {
-                                      notifier.setBeatBellows(selectedBar, selectedBeat, b);
+                                      notifier.setBeatBellows(selectedBar, selectedBeat, b, cascadeToSameChord: cascade);
                                     }
                                   },
                                 ),
@@ -2999,7 +3003,7 @@ class _BeatBellowsArrows extends StatelessWidget {
   final bool isEnabled;
   final bool isCascadeActive;
   final VoidCallback? onToggleCascade;
-  final ValueChanged<BellowsMode>? onBellowsChanged;
+  final void Function(BellowsMode mode, {bool? explicitCascade})? onBellowsChanged;
 
   const _BeatBellowsArrows({
     required this.bellows,
@@ -3029,7 +3033,11 @@ class _BeatBellowsArrows extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: isEnabled
-                  ? () => onBellowsChanged?.call(BellowsMode.pull)
+                  ? () {
+                      final isCtrl = HardwareKeyboard.instance.isControlPressed ||
+                          HardwareKeyboard.instance.isMetaPressed;
+                      onBellowsChanged?.call(BellowsMode.pull, explicitCascade: isCtrl ? true : null);
+                    }
                   : null,
               onLongPress: isEnabled ? onToggleCascade : null,
               onDoubleTap: isEnabled ? onToggleCascade : null,
@@ -3086,7 +3094,11 @@ class _BeatBellowsArrows extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: isEnabled
-                  ? () => onBellowsChanged?.call(BellowsMode.push)
+                  ? () {
+                      final isCtrl = HardwareKeyboard.instance.isControlPressed ||
+                          HardwareKeyboard.instance.isMetaPressed;
+                      onBellowsChanged?.call(BellowsMode.push, explicitCascade: isCtrl ? true : null);
+                    }
                   : null,
               onLongPress: isEnabled ? onToggleCascade : null,
               onDoubleTap: isEnabled ? onToggleCascade : null,
