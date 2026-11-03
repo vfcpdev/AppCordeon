@@ -33,6 +33,8 @@ import '../../domain/theory/chord_detector_engine.dart';
 import '../../domain/models/compas_grid_state.dart';
 import '../../domain/models/grid_selection_model.dart';
 import 'free_chord_playback_coordinator.dart';
+import 'subcontrollers/accordion_bass_rhythm_controller.dart';
+import 'subcontrollers/accordion_transport_controller.dart';
 
 export '../../domain/models/compas_grid_state.dart';
 export '../../domain/models/grid_selection_model.dart';
@@ -839,8 +841,11 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       (s) => state = s,
       () => ref.read(audioEngineProvider),
     );
+    _transportController = AccordionTransportController();
+    _bassRhythmController = AccordionBassRhythmController();
     ref.onDispose(() {
       _disposed = true;
+      _transportController.dispose();
       _playbackTimer?.cancel();
       _standaloneMetronomeTimer?.cancel();
       _bassCaptureTimer?.cancel();
@@ -995,6 +1000,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
           : state.multiBeatChord,
     );
   }
+
+  late final AccordionTransportController _transportController;
+  AccordionTransportController get transportController => _transportController;
+
+  late final AccordionBassRhythmController _bassRhythmController;
+  AccordionBassRhythmController get bassRhythmController => _bassRhythmController;
 
   Timer? _playbackTimer;
 
