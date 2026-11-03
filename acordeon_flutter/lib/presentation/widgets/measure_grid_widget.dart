@@ -1640,7 +1640,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
   }) {
     final accentColor = isPush
         ? const Color(0xFFDC2626)
-        : const Color(0xFF2563EB);
+        : const Color(0xFF16A34A);
     final badgeBg = isComplete
         ? const Color(0xFFDCFCE7)
         : const Color(0xFFFEE2E2);
@@ -1653,7 +1653,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
       decoration: BoxDecoration(
         color: isTargetBellows
-            ? (isPush ? const Color(0xFFFFF1F2) : const Color(0xFFEFF6FF))
+            ? (isPush ? const Color(0xFFFFF1F2) : const Color(0xFFF0FDF4))
             : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(5),
         border: Border.all(
@@ -2668,7 +2668,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                 ? const Color(0xFFF3E8FF)
                 : (hasChord
                     ? (widget.bellows == BellowsMode.pull
-                        ? const Color(0xFF2563EB)
+                        ? const Color(0xFF16A34A)
                         : (widget.bellows == BellowsMode.push
                             ? const Color(0xFFDC2626)
                             : const Color(0xFFFEF08A)))
@@ -2684,7 +2684,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                 : (isPlaying
                     ? Border.all(
                         color: widget.bellows == BellowsMode.pull
-                            ? const Color(0xFF93C5FD)
+                            ? const Color(0xFF86EFAC)
                             : (widget.bellows == BellowsMode.push
                                 ? const Color(0xFFFCA5A5)
                                 : const Color(0xFFF59E0B)),
@@ -2692,25 +2692,13 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                       )
                     : (isCellSelected
                         ? Border.all(
-                            color: (hasChord &&
-                                    (widget.bellows == BellowsMode.pull ||
-                                        widget.bellows == BellowsMode.push))
-                                ? Colors.white
-                                : (hasChord &&
-                                        (widget.isYellowDecision ||
-                                            widget.bellows == BellowsMode.both)
-                                    ? const Color(0xFFB45309)
-                                    : const Color(0xFF2563EB)),
-                            width: 1.8,
+                            color: const Color(0xFF2563EB),
+                            width: 2.0,
                           )
                         : (_isEditing
                             ? Border.all(
-                                color: (hasChord &&
-                                        (widget.bellows == BellowsMode.pull ||
-                                            widget.bellows == BellowsMode.push))
-                                    ? Colors.white
-                                    : const Color(0xFF3B82F6),
-                                width: 1.8,
+                                color: const Color(0xFF2563EB),
+                                width: 2.0,
                               )
                             : (isMarked
                                 ? Border.all(
@@ -2720,7 +2708,7 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                                 : (hasChord
                                     ? (widget.bellows == BellowsMode.pull
                                         ? Border.all(
-                                            color: const Color(0xFF1D4ED8),
+                                            color: const Color(0xFF15803D),
                                             width: 1.0,
                                           )
                                         : (widget.bellows == BellowsMode.push
@@ -2733,8 +2721,8 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                                                 width: 1.2,
                                               )))
                                     : Border.all(
-                                        color: Colors.transparent,
-                                        width: 0.8,
+                                        color: const Color(0xFFCBD5E1),
+                                        width: 1.0,
                                       )))))),
             boxShadow: isAssignmentTarget
                 ? [
@@ -3039,11 +3027,11 @@ class _BeatBellowsArrows extends StatelessWidget {
                 width: 29.0,
                 height: 29.0,
                 decoration: BoxDecoration(
-                  color: isPull ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
+                  color: isPull ? const Color(0xFF16A34A) : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: isPull
-                        ? const Color(0xFF2563EB)
+                        ? const Color(0xFF16A34A)
                         : const Color(0xFFCBD5E1),
                     width: 0.8,
                   ),

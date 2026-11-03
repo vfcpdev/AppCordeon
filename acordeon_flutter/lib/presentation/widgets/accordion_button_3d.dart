@@ -210,14 +210,14 @@ class _AccordionButton3DPainter extends CustomPainter {
         stops: const [0.0, 0.55, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     } else if (buttonType != null && bellowsMode == BellowsMode.pull && (isChordPull || bassMatchPull.isMatch)) {
-      // Bajo en Abre (pull): Azul para exacto, Cian/Celeste para cercanía armónica
+      // Bajo en Abre (pull): Verde para exacto, Esmeralda para cercanía armónica
       final isExact = bassMatchPull == BassMatchType.exact || (bassMatchPull == BassMatchType.none && isChordPull);
       bodyPaint.shader = RadialGradient(
         center: const Alignment(-0.40, -0.40),
         radius: 0.88,
         colors: isExact
-            ? const [Color(0xFFDBEAFE), Color(0xFF60A5FA), Color(0xFF2563EB)]
-            : const [Color(0xFFE0F2FE), Color(0xFF38BDF8), Color(0xFF0284C7)],
+            ? const [Color(0xFFDCFCE7), Color(0xFF4ADE80), Color(0xFF16A34A)]
+            : const [Color(0xFFECFDF5), Color(0xFF34D399), Color(0xFF059669)],
         stops: const [0.0, 0.58, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     } else if (buttonType != null && bellowsMode == BellowsMode.push && (isChordPush || bassMatchPush.isMatch)) {

@@ -273,7 +273,7 @@ void main() {
       expect(importSize.height, equals(29.0));
     });
 
-    testWidgets('Flechas de fuelle para compás colorizan todo el fondo del botón (Azul si abre, Rojo si cierra)', (tester) async {
+    testWidgets('Flechas de fuelle para compás colorizan todo el fondo del botón (Verde si abre, Rojo si cierra)', (tester) async {
       final container = await pumpGrid(tester);
       final notifier = container.read(accordionSimulatorProvider.notifier);
 
@@ -282,7 +282,7 @@ void main() {
       notifier.setBeatBellows(0, 0, BellowsMode.pull);
       await tester.pumpAndSettle();
 
-      // Flecha abre seleccionada -> fondo azul completo
+      // Flecha abre seleccionada -> fondo verde completo
       final pullContainer = tester.widget<Container>(
         find.descendant(
           of: find.byTooltip('Abre (Fuelle abriendo)'),
@@ -290,7 +290,7 @@ void main() {
         ).first,
       );
       final pullDeco = pullContainer.decoration as BoxDecoration;
-      expect(pullDeco.color, equals(const Color(0xFF2563EB)));
+      expect(pullDeco.color, equals(const Color(0xFF16A34A)));
 
       // Cambiar a cierra -> fondo rojo completo
       notifier.setBeatBellows(0, 0, BellowsMode.push);
@@ -306,7 +306,7 @@ void main() {
       expect(pushDeco.color, equals(const Color(0xFFDC2626)));
     });
 
-    testWidgets('Color permanente del cuadro: Azul si abre, Rojo si cierra, y Amarillo si abre o cierra por definir', (tester) async {
+    testWidgets('Color permanente del cuadro: Verde si abre, Rojo si cierra, y Amarillo si abre o cierra por definir', (tester) async {
       final container = await pumpGrid(tester);
       final notifier = container.read(accordionSimulatorProvider.notifier);
 
@@ -321,7 +321,7 @@ void main() {
       // Fondo amarillo cálido de decisión
       expect(beat0PendingDeco.color, equals(const Color(0xFFFEF08A)));
 
-      // Definir fuelle a Abre (pull) -> Color queda asignado en Azul permanente sin reproducir
+      // Definir fuelle a Abre (pull) -> Color queda asignado en Verde permanente sin reproducir
       notifier.setBeatBellows(0, 0, BellowsMode.pull);
       await tester.pumpAndSettle();
 
@@ -329,7 +329,7 @@ void main() {
         find.byKey(const ValueKey('beat_cell_0_0')),
       );
       final beat0PullDeco = beat0Pull.decoration as BoxDecoration;
-      expect(beat0PullDeco.color, equals(const Color(0xFF2563EB))); // Azul permanente
+      expect(beat0PullDeco.color, equals(const Color(0xFF16A34A))); // Verde permanente
 
       // Compás 0.1: con acorde y fuelle definido a Cierra (push) -> Rojo permanente
       notifier.updateMeasureBeat(0, 1, 'Sol');
@@ -346,7 +346,7 @@ void main() {
       expect(container.read(accordionSimulatorProvider).isPlayingAudio, isFalse);
     });
 
-    testWidgets('Al reproducir compás, la asignación de fuelle mantiene el cuadro en Azul si abre y Rojo si cierra con borde activo', (tester) async {
+    testWidgets('Al reproducir compás, la asignación de fuelle mantiene el cuadro en Verde si abre y Rojo si cierra con borde activo', (tester) async {
       final container = await pumpGrid(tester);
       final notifier = container.read(accordionSimulatorProvider.notifier);
 
@@ -368,7 +368,7 @@ void main() {
         find.byKey(const ValueKey('beat_cell_0_0')),
       );
       final beat0Deco = beat0Container.decoration as BoxDecoration;
-      expect(beat0Deco.color, equals(const Color(0xFF2563EB))); // Azul al abrir
+      expect(beat0Deco.color, equals(const Color(0xFF16A34A))); // Verde al abrir
 
       // Simular avance al pulso 1 (push)
       container.read(accordionSimulatorProvider.notifier).state =
@@ -384,6 +384,28 @@ void main() {
       );
       final beat1Deco = beat1Container.decoration as BoxDecoration;
       expect(beat1Deco.color, equals(const Color(0xFFDC2626))); // Rojo al cerrar
+    });
+
+    testWidgets('Borde de cuadros de compás: tenue gris claro en reposo y resaltado en azul al seleccionar', (tester) async {
+      final container = await pumpGrid(tester);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      // En reposo (sin seleccionar), el cuadro tiene borde tenue en gris claro
+      final cell0 = tester.widget<AnimatedContainer>(find.byKey(const ValueKey('beat_cell_0_0')));
+      final cell0Deco = cell0.decoration as BoxDecoration;
+      final cell0Border = cell0Deco.border as Border;
+      expect(cell0Border.top.color, equals(const Color(0xFFCBD5E1)));
+      expect(cell0Border.top.width, equals(1.0));
+
+      // Al seleccionar el cuadro, se resalta con borde Azul
+      notifier.selectBeat(0, 0);
+      await tester.pumpAndSettle();
+
+      final cell0Selected = tester.widget<AnimatedContainer>(find.byKey(const ValueKey('beat_cell_0_0')));
+      final cell0SelectedDeco = cell0Selected.decoration as BoxDecoration;
+      final cell0SelectedBorder = cell0SelectedDeco.border as Border;
+      expect(cell0SelectedBorder.top.color, equals(const Color(0xFF2563EB)));
+      expect(cell0SelectedBorder.top.width, equals(2.0));
     });
 
     testWidgets('Etiqueta del acorde y notas que lo conforman sobre los botones de tónica reutiliza el banner sin botones 3, 4 y 5', (tester) async {
