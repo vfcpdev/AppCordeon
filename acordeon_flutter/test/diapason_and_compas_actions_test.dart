@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
+import 'package:acordeon_flutter/core/constants/enums.dart';
 
 void main() {
   group('Pruebas de Acciones Unificadas: Limpiar Selecciones Armónicas, Reproducir Acorde Continuo y Selección de Compás', () {
@@ -248,6 +249,101 @@ void main() {
       expect(state.measures[0].beats[1].chord, equals('Sol'));
       // Las marcas quedan limpias
       expect(state.markedBeats, isEmpty);
+    });
+
+    testWidgets('Botones de cabecera del compás (Metrónomo, Guardar, Importar) tienen tamaño homogéneo de 29x29', (tester) async {
+      await pumpGrid(tester);
+
+      final metronomeFinder = find.byKey(const ValueKey('metronome_toggle_btn_1'));
+      expect(metronomeFinder, findsOneWidget);
+      final metronomeSize = tester.getSize(metronomeFinder);
+      expect(metronomeSize.width, equals(29.0));
+      expect(metronomeSize.height, equals(29.0));
+
+      final saveFinder = find.byTooltip('Guardar compases en JSON (Exportar)');
+      expect(saveFinder, findsOneWidget);
+      final saveSize = tester.getSize(saveFinder);
+      expect(saveSize.width, equals(29.0));
+      expect(saveSize.height, equals(29.0));
+
+      final importFinder = find.byTooltip('Importar compases desde archivo JSON');
+      expect(importFinder, findsOneWidget);
+      final importSize = tester.getSize(importFinder);
+      expect(importSize.width, equals(29.0));
+      expect(importSize.height, equals(29.0));
+    });
+
+    testWidgets('Flechas de fuelle para compás colorizan todo el fondo del botón (Azul si abre, Rojo si cierra)', (tester) async {
+      final container = await pumpGrid(tester);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      notifier.updateMeasureBeat(0, 0, 'Do');
+      notifier.selectBeat(0, 0);
+      notifier.setBeatBellows(0, 0, BellowsMode.pull);
+      await tester.pumpAndSettle();
+
+      // Flecha abre seleccionada -> fondo azul completo
+      final pullContainer = tester.widget<Container>(
+        find.descendant(
+          of: find.byTooltip('Abre (Fuelle abriendo)'),
+          matching: find.byType(Container),
+        ).first,
+      );
+      final pullDeco = pullContainer.decoration as BoxDecoration;
+      expect(pullDeco.color, equals(const Color(0xFF2563EB)));
+
+      // Cambiar a cierra -> fondo rojo completo
+      notifier.setBeatBellows(0, 0, BellowsMode.push);
+      await tester.pumpAndSettle();
+
+      final pushContainer = tester.widget<Container>(
+        find.descendant(
+          of: find.byTooltip('Cierra (Fuelle cerrando)'),
+          matching: find.byType(Container),
+        ).first,
+      );
+      final pushDeco = pushContainer.decoration as BoxDecoration;
+      expect(pushDeco.color, equals(const Color(0xFFDC2626)));
+    });
+
+    testWidgets('Al reproducir compás, la asignación de fuelle colorea el cuadro en Azul si abre y Rojo si cierra', (tester) async {
+      final container = await pumpGrid(tester);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      notifier.updateMeasureBeat(0, 0, 'Do');
+      notifier.setBeatBellows(0, 0, BellowsMode.pull);
+      notifier.updateMeasureBeat(0, 1, 'Sol');
+      notifier.setBeatBellows(0, 1, BellowsMode.push);
+
+      // Simular reproducción en el compás 0, pulso 0 (pull)
+      container.read(accordionSimulatorProvider.notifier).state =
+          container.read(accordionSimulatorProvider).copyWith(
+                isPlayingAudio: true,
+                selectedBarIndex: 0,
+                selectedBeatIndex: 0,
+              );
+      await tester.pumpAndSettle();
+
+      final beat0Container = tester.widget<AnimatedContainer>(
+        find.byKey(const ValueKey('beat_cell_0_0')),
+      );
+      final beat0Deco = beat0Container.decoration as BoxDecoration;
+      expect(beat0Deco.color, equals(const Color(0xFF2563EB))); // Azul al abrir
+
+      // Simular avance al pulso 1 (push)
+      container.read(accordionSimulatorProvider.notifier).state =
+          container.read(accordionSimulatorProvider).copyWith(
+                isPlayingAudio: true,
+                selectedBarIndex: 0,
+                selectedBeatIndex: 1,
+              );
+      await tester.pumpAndSettle();
+
+      final beat1Container = tester.widget<AnimatedContainer>(
+        find.byKey(const ValueKey('beat_cell_0_1')),
+      );
+      final beat1Deco = beat1Container.decoration as BoxDecoration;
+      expect(beat1Deco.color, equals(const Color(0xFFDC2626))); // Rojo al cerrar
     });
   });
 }

@@ -376,9 +376,9 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                     ),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final naturalWidth = constraints.maxWidth > 280.0
+                        final naturalWidth = constraints.maxWidth > 340.0
                             ? constraints.maxWidth
-                            : 280.0;
+                            : 340.0;
                         return FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
@@ -2655,15 +2655,19 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
             borderRadius: BorderRadius.circular(4),
             color: isAssignmentTarget
                 ? const Color(0xFFF3E8FF)
-                : (isCellSelected
-                      ? const Color(
-                          0xFFDBEAFE,
-                        ) // Resaltado azul suave y vivo para cuadro seleccionado
-                      : (_isEditing
-                            ? Colors
-                                  .white // Fondo blanco limpio al editar
-                            : (isPlaying
-                                  ? const Color(0xFFFEF3C7)
+                : (isPlaying
+                      ? (widget.bellows == BellowsMode.pull
+                            ? const Color(0xFF2563EB)
+                            : (widget.bellows == BellowsMode.push
+                                  ? const Color(0xFFDC2626)
+                                  : const Color(0xFFFEF3C7)))
+                      : (isCellSelected
+                            ? const Color(
+                                0xFFDBEAFE,
+                              ) // Resaltado azul suave y vivo para cuadro seleccionado
+                            : (_isEditing
+                                  ? Colors
+                                        .white // Fondo blanco limpio al editar
                                   : (widget.isYellowDecision
                                         ? const Color(
                                             0xFFFEF08A,
@@ -2675,21 +2679,31 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                                               : Colors.white))))),
             border: isAssignmentTarget
                 ? Border.all(color: const Color(0xFF7C3AED), width: 1.8)
-                : (isCellSelected
-                      ? Border.all(
-                          color: const Color(0xFF2563EB),
-                          width: 1.8,
-                        ) // Cuadro resaltado nítido con borde completo
-                      : (_isEditing
+                : (isPlaying
+                      ? (widget.bellows == BellowsMode.pull
                             ? Border.all(
-                                color: const Color(0xFF3B82F6),
+                                color: const Color(0xFF1D4ED8),
                                 width: 1.8,
-                              ) // Borde activo de edición
-                            : (isPlaying
+                              )
+                            : (widget.bellows == BellowsMode.push
                                   ? Border.all(
-                                      color: const Color(0xFFF59E0B),
+                                      color: const Color(0xFFB91C1C),
                                       width: 1.8,
                                     )
+                                  : Border.all(
+                                      color: const Color(0xFFF59E0B),
+                                      width: 1.8,
+                                    )))
+                      : (isCellSelected
+                            ? Border.all(
+                                color: const Color(0xFF2563EB),
+                                width: 1.8,
+                              ) // Cuadro resaltado nítido con borde completo
+                            : (_isEditing
+                                  ? Border.all(
+                                      color: const Color(0xFF3B82F6),
+                                      width: 1.8,
+                                    ) // Borde activo de edición
                                   : (widget.isYellowDecision
                                         ? Border.all(
                                             color: const Color(0xFFEAB308),
@@ -2714,37 +2728,50 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                       spreadRadius: 0.8,
                     ),
                   ]
-                : (isCellSelected
+                : (isPlaying
                       ? [
                           BoxShadow(
-                            color: const Color(
-                              0xFF2563EB,
-                            ).withValues(alpha: 0.28),
+                            color: (widget.bellows == BellowsMode.pull
+                                    ? const Color(0xFF2563EB)
+                                    : (widget.bellows == BellowsMode.push
+                                          ? const Color(0xFFDC2626)
+                                          : const Color(0xFFF59E0B)))
+                                .withValues(alpha: 0.35),
                             blurRadius: 4,
-                            spreadRadius: 0.8,
+                            spreadRadius: 1.0,
                           ),
                         ]
-                      : (widget.isYellowDecision
+                      : (isCellSelected
                             ? [
                                 BoxShadow(
                                   color: const Color(
-                                    0xFFEAB308,
-                                  ).withValues(alpha: 0.35),
+                                    0xFF2563EB,
+                                  ).withValues(alpha: 0.28),
                                   blurRadius: 4,
                                   spreadRadius: 0.8,
                                 ),
                               ]
-                            : (_isEditing
+                            : (widget.isYellowDecision
                                   ? [
                                       BoxShadow(
                                         color: const Color(
-                                          0xFF3B82F6,
-                                        ).withValues(alpha: 0.20),
-                                        blurRadius: 3,
-                                        spreadRadius: 0.5,
+                                          0xFFEAB308,
+                                        ).withValues(alpha: 0.35),
+                                        blurRadius: 4,
+                                        spreadRadius: 0.8,
                                       ),
                                     ]
-                                  : null))),
+                                  : (_isEditing
+                                        ? [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFF3B82F6,
+                                              ).withValues(alpha: 0.20),
+                                              blurRadius: 3,
+                                              spreadRadius: 0.5,
+                                            ),
+                                          ]
+                                        : null)))),
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -2790,26 +2817,33 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                   style: TextStyle(
                     fontSize: chordFontSize,
                     letterSpacing: -0.2,
-                    fontWeight: (isFocusedOrSelected || hasChord)
+                    fontWeight: (isFocusedOrSelected || hasChord || isPlaying)
                         ? FontWeight.w900
                         : FontWeight.w600,
                     color: isAssignmentTarget
                         ? const Color(0xFF6D28D9)
                         : (isPlaying
-                              ? const Color(0xFFB45309)
+                              ? (widget.bellows == BellowsMode.pull ||
+                                      widget.bellows == BellowsMode.push
+                                  ? Colors.white
+                                  : const Color(0xFFB45309))
                               : (isFocusedOrSelected
                                     ? const Color(0xFF1D4ED8)
                                     : (hasChord
                                           ? const Color(0xFF0F172A)
                                           : const Color(0xFF94A3B8)))),
                   ),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     isDense: true,
                     hintText: '-',
                     hintStyle: TextStyle(
                       fontSize: 11.0,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF94A3B8),
+                      color: isPlaying &&
+                              (widget.bellows == BellowsMode.pull ||
+                                  widget.bellows == BellowsMode.push)
+                          ? Colors.white70
+                          : const Color(0xFF94A3B8),
                     ),
                     contentPadding: EdgeInsets.zero,
                     border: InputBorder.none,
@@ -2842,12 +2876,17 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                           widget.timeText,
                           style: TextStyle(
                             fontSize: 7.5,
-                            fontWeight: isCellSelected
+                            fontWeight: (isCellSelected || isPlaying)
                                 ? FontWeight.w800
                                 : FontWeight.w600,
-                            color: isCellSelected
-                                ? const Color(0xFF1D4ED8)
-                                : const Color(0xFF64748B),
+                            color: isPlaying
+                                ? (widget.bellows == BellowsMode.pull ||
+                                        widget.bellows == BellowsMode.push
+                                    ? Colors.white70
+                                    : const Color(0xFFB45309))
+                                : (isCellSelected
+                                    ? const Color(0xFF1D4ED8)
+                                    : const Color(0xFF64748B)),
                             fontFamily: 'monospace',
                             decoration: TextDecoration.underline,
                             decorationStyle: TextDecorationStyle.dotted,
@@ -2966,7 +3005,7 @@ class _BeatBellowsArrows extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Flecha Abre (Pull) - Botón cuadrado homogéneo 29.0 x 29.0 px
+          // Flecha Abre (Pull) - Botón cuadrado homogéneo 29.0 x 29.0 px colorizado completamente
           Tooltip(
             message: isEnabled
                 ? 'Abre (Fuelle abriendo)'
@@ -2980,11 +3019,11 @@ class _BeatBellowsArrows extends StatelessWidget {
                 width: 29.0,
                 height: 29.0,
                 decoration: BoxDecoration(
-                  color: isPull ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
+                  color: isPull ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: isPull
-                        ? const Color(0xFF3B82F6)
+                        ? const Color(0xFF2563EB)
                         : const Color(0xFFCBD5E1),
                     width: 0.8,
                   ),
@@ -2993,16 +3032,14 @@ class _BeatBellowsArrows extends StatelessWidget {
                   child: FaIcon(
                     FontAwesomeIcons.arrowLeft,
                     size: 13.5,
-                    color: isPull
-                        ? const Color(0xFF2563EB)
-                        : const Color(0xFF64748B),
+                    color: isPull ? Colors.white : const Color(0xFF64748B),
                   ),
                 ),
               ),
             ),
           ),
           const SizedBox(width: 3),
-          // Flecha Cierra (Push) - Botón cuadrado homogéneo 29.0 x 29.0 px
+          // Flecha Cierra (Push) - Botón cuadrado homogéneo 29.0 x 29.0 px colorizado completamente
           Tooltip(
             message: isEnabled
                 ? 'Cierra (Fuelle cerrando)'
@@ -3016,11 +3053,11 @@ class _BeatBellowsArrows extends StatelessWidget {
                 width: 29.0,
                 height: 29.0,
                 decoration: BoxDecoration(
-                  color: isPush ? const Color(0xFFFEF2F2) : const Color(0xFFF1F5F9),
+                  color: isPush ? const Color(0xFFDC2626) : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: isPush
-                        ? const Color(0xFFEF4444)
+                        ? const Color(0xFFDC2626)
                         : const Color(0xFFCBD5E1),
                     width: 0.8,
                   ),
@@ -3029,9 +3066,7 @@ class _BeatBellowsArrows extends StatelessWidget {
                   child: FaIcon(
                     FontAwesomeIcons.arrowRight,
                     size: 13.5,
-                    color: isPush
-                        ? const Color(0xFFDC2626)
-                        : const Color(0xFF64748B),
+                    color: isPush ? Colors.white : const Color(0xFF64748B),
                   ),
                 ),
               ),
@@ -3537,26 +3572,29 @@ class _MetronomeButton extends StatelessWidget {
       message: isActive
           ? 'Metrónomo Activo (Click encendido)'
           : 'Activar Metrónomo (Click sincronizado con compás)',
-      child: InkWell(
+      child: GestureDetector(
         key: ValueKey('metronome_toggle_btn_$accordionNumber'),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => onTap(),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+          width: 29.0,
+          height: 29.0,
           decoration: BoxDecoration(
-            color: isActive ? const Color(0xFF10B981) : const Color(0xFFE2E8F0),
-            borderRadius: BorderRadius.circular(4),
+            color: isActive ? const Color(0xFF10B981) : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: isActive
                   ? const Color(0xFF059669)
                   : const Color(0xFFCBD5E1),
-              width: 0.9,
+              width: 0.8,
             ),
           ),
-          child: FaIcon(
-            FontAwesomeIcons.stopwatch,
-            size: 9.5,
-            color: isActive ? Colors.white : const Color(0xFF64748B),
+          child: Center(
+            child: FaIcon(
+              FontAwesomeIcons.stopwatch,
+              size: 13.5,
+              color: isActive ? Colors.white : const Color(0xFF64748B),
+            ),
           ),
         ),
       ),
@@ -3574,23 +3612,26 @@ class _SaveCompasButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: 'Guardar compases en JSON (Exportar)',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => onTap(),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+          width: 29.0,
+          height: 29.0,
           decoration: BoxDecoration(
             color: const Color(0xFF0284C7),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: const Color(0xFF0284C7),
-              width: 0.9,
+              width: 0.8,
             ),
           ),
-          child: const FaIcon(
-            FontAwesomeIcons.floppyDisk,
-            size: 9.5,
-            color: Colors.white,
+          child: const Center(
+            child: FaIcon(
+              FontAwesomeIcons.floppyDisk,
+              size: 13.5,
+              color: Colors.white,
+            ),
           ),
         ),
       ),
@@ -3608,23 +3649,26 @@ class _ImportCompasButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: 'Importar compases desde archivo JSON',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => onTap(),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+          width: 29.0,
+          height: 29.0,
           decoration: BoxDecoration(
             color: const Color(0xFF059669),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: const Color(0xFF059669),
-              width: 0.9,
+              width: 0.8,
             ),
           ),
-          child: const FaIcon(
-            FontAwesomeIcons.upload,
-            size: 9.5,
-            color: Colors.white,
+          child: const Center(
+            child: FaIcon(
+              FontAwesomeIcons.upload,
+              size: 13.5,
+              color: Colors.white,
+            ),
           ),
         ),
       ),
