@@ -166,6 +166,8 @@ class BassPanelWidget extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 3),
+                  // Selector de Columnas: [Todos | Externos | Internos]
+                  _buildColumnFilterSelector(state, notifier),
                   Row(
                     mainAxisSize: MainAxisSize.max,
                     children: [
@@ -231,26 +233,40 @@ class BassPanelWidget extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildBassColumn(
-                      title: 'Exterior',
-                      buttons: exteriorButtons,
-                      state: state,
-                      notifier: notifier,
-                      activeChordPitchClasses: activeChordPitchClasses,
-                      rhythmHits: rhythmHits,
-                      rhythmButtonIndexes: rhythmButtonIndexes,
-                      rhythmButtonOffset: 0,
+                    AnimatedOpacity(
+                      duration: const Duration(milliseconds: 150),
+                      opacity: state.bassColumnFilter == BassColumnFilter.internalOnly ? 0.28 : 1.0,
+                      child: IgnorePointer(
+                        ignoring: state.bassColumnFilter == BassColumnFilter.internalOnly,
+                        child: _buildBassColumn(
+                          title: 'Exterior',
+                          buttons: exteriorButtons,
+                          state: state,
+                          notifier: notifier,
+                          activeChordPitchClasses: activeChordPitchClasses,
+                          rhythmHits: rhythmHits,
+                          rhythmButtonIndexes: rhythmButtonIndexes,
+                          rhythmButtonOffset: 0,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 14.0),
-                    _buildBassColumn(
-                      title: 'Interior',
-                      buttons: interiorButtons,
-                      state: state,
-                      notifier: notifier,
-                      activeChordPitchClasses: activeChordPitchClasses,
-                      rhythmHits: rhythmHits,
-                      rhythmButtonIndexes: rhythmButtonIndexes,
-                      rhythmButtonOffset: 6,
+                    AnimatedOpacity(
+                      duration: const Duration(milliseconds: 150),
+                      opacity: state.bassColumnFilter == BassColumnFilter.externalOnly ? 0.28 : 1.0,
+                      child: IgnorePointer(
+                        ignoring: state.bassColumnFilter == BassColumnFilter.externalOnly,
+                        child: _buildBassColumn(
+                          title: 'Interior',
+                          buttons: interiorButtons,
+                          state: state,
+                          notifier: notifier,
+                          activeChordPitchClasses: activeChordPitchClasses,
+                          rhythmHits: rhythmHits,
+                          rhythmButtonIndexes: rhythmButtonIndexes,
+                          rhythmButtonOffset: 6,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -808,6 +824,57 @@ class BassPanelWidget extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildColumnFilterSelector(
+    AccordionSimulatorState state,
+    AccordionSimulatorNotifier notifier,
+  ) {
+    return Container(
+      height: 22,
+      margin: const EdgeInsets.only(bottom: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFCBD5E1),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      padding: const EdgeInsets.all(1.5),
+      child: Row(
+        children: BassColumnFilter.values.map((filter) {
+          final isSelected = state.bassColumnFilter == filter;
+          return Expanded(
+            child: InkWell(
+              key: ValueKey('bass_column_filter_${filter.name}_$accordionNumber'),
+              onTap: () => notifier.selectBassColumnFilter(filter),
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 2,
+                            offset: const Offset(0, 1),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Text(
+                  filter.label,
+                  style: TextStyle(
+                    fontSize: 9.0,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                    color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF475569),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

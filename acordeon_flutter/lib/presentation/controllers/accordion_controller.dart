@@ -271,6 +271,7 @@ class AccordionSimulatorState {
   final List<BassRhythmPattern> bassRhythmPatterns;
   final String? selectedBassRhythmPatternId;
   final AccordionRowTarget selectedBassRowTarget;
+  final BassColumnFilter bassColumnFilter;
   final bool isBassMetronomeActive;
   final double bassRhythmElapsedSeconds;
   final double? _manualMetronomeBpm;
@@ -475,6 +476,7 @@ class AccordionSimulatorState {
     this.bassRhythmPatterns = const [],
     this.selectedBassRhythmPatternId,
     this.selectedBassRowTarget = AccordionRowTarget.middleRow,
+    this.bassColumnFilter = BassColumnFilter.all,
     this.isBassMetronomeActive = false,
     this.bassRhythmElapsedSeconds = 0.0,
     double? manualMetronomeBpm,
@@ -581,6 +583,7 @@ class AccordionSimulatorState {
     String? selectedBassRhythmPatternId,
     bool clearSelectedBassRhythmPattern = false,
     AccordionRowTarget? selectedBassRowTarget,
+    BassColumnFilter? bassColumnFilter,
     bool? isBassMetronomeActive,
     double? bassRhythmElapsedSeconds,
     double? manualMetronomeBpm,
@@ -701,6 +704,7 @@ class AccordionSimulatorState {
           : (selectedBassRhythmPatternId ?? this.selectedBassRhythmPatternId),
       selectedBassRowTarget:
           selectedBassRowTarget ?? this.selectedBassRowTarget,
+      bassColumnFilter: bassColumnFilter ?? this.bassColumnFilter,
       isBassMetronomeActive:
           isBassMetronomeActive ?? this.isBassMetronomeActive,
       bassRhythmElapsedSeconds:
@@ -2128,6 +2132,15 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     state = state.copyWith(selectedBassRowTarget: target);
   }
 
+  /// Selecciona el filtro de columnas de bajos (Todos, Externos, Internos).
+  ///
+  /// {P}: `filter` no nulo.
+  /// {Q}: `state.bassColumnFilter == filter`.
+  void selectBassColumnFilter(BassColumnFilter filter) {
+    if (state.bassColumnFilter == filter) return;
+    state = state.copyWith(bassColumnFilter: filter);
+  }
+
   /// Selecciona un ritmo del catálogo y comienza a ejecutarlo inmediatamente.
   void playBassRhythmPattern(String patternId) {
     if (!state.bassRhythmPatterns.any((pattern) => pattern.id == patternId)) {
@@ -2249,6 +2262,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     required String patternId,
     String? newName,
     double? newQuarterNotesPerMinute,
+    List<BassRhythmHit>? newHits,
   }) {
     require(
       'updateBassRhythmPattern',
@@ -2275,6 +2289,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
         return p.copyWith(
           name: newName?.trim() ?? p.name,
           quarterNotesPerMinute: newQuarterNotesPerMinute ?? p.quarterNotesPerMinute,
+          hits: newHits ?? p.hits,
         );
       }
       return p;

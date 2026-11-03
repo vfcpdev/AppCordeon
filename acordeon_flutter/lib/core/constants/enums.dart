@@ -65,3 +65,21 @@ enum AccordionRowTarget {
     }
   }
 }
+
+/// Filtro de visualización e interacción de columnas en el panel de bajos.
+enum BassColumnFilter {
+  all,
+  externalOnly,
+  internalOnly;
+
+  String get label {
+    switch (this) {
+      case BassColumnFilter.all:
+        return 'Todos';
+      case BassColumnFilter.externalOnly:
+        return 'Externos';
+      case BassColumnFilter.internalOnly:
+        return 'Internos';
+    }
+  }
+}

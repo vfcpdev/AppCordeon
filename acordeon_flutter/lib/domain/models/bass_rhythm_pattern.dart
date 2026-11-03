@@ -42,6 +42,35 @@ class BassRhythmHit {
     if (this.buttonIndex == buttonIndex) return fingerNumber;
     return null;
   }
+
+  BassRhythmHit copyWith({
+    double? onsetQuarterBeats,
+    double? durationQuarterBeats,
+    int? buttonIndex,
+    int? pairedButtonIndex,
+    bool clearPairedButton = false,
+    BassRhythmButtonType? buttonType,
+    int? fingerNumber,
+    int? pairedFingerNumber,
+    bool? isAccented,
+    bool? isStaccato,
+  }) {
+    return BassRhythmHit(
+      onsetQuarterBeats: onsetQuarterBeats ?? this.onsetQuarterBeats,
+      durationQuarterBeats: durationQuarterBeats ?? this.durationQuarterBeats,
+      buttonIndex: buttonIndex ?? this.buttonIndex,
+      pairedButtonIndex: clearPairedButton
+          ? null
+          : (pairedButtonIndex ?? this.pairedButtonIndex),
+      buttonType: buttonType ?? this.buttonType,
+      fingerNumber: fingerNumber ?? this.fingerNumber,
+      pairedFingerNumber: clearPairedButton
+          ? null
+          : (pairedFingerNumber ?? this.pairedFingerNumber),
+      isAccented: isAccented ?? this.isAccented,
+      isStaccato: isStaccato ?? this.isStaccato,
+    );
+  }
 }
 
 class BassRhythmPattern {
