@@ -2,17 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:acordeon_flutter/core/audio/audio_engine_bridge.dart';
 import 'package:acordeon_flutter/core/constants/enums.dart';
 import 'package:acordeon_flutter/core/di/providers.dart';
-import 'package:acordeon_flutter/domain/models/bass_rhythm_pattern.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/bass_panel_widget.dart';
 import 'package:acordeon_flutter/presentation/widgets/bass_rhythm_capture_dialog.dart';
 
+class _SilentAudioEngine implements AudioEngine {
+  @override
+  Future<void> init({double sampleRate = 44100.0}) async {}
+
+  @override
+  void noteOn(int midiNote, {double velocity = 0.8}) {}
+
+  @override
+  void noteOff(int midiNote) {}
+
+  @override
+  void allNotesOff() {}
+
+  @override
+  void setVolume(double volume) {}
+
+  @override
+  void playPercussiveClick({bool isDownbeat = true, double volume = 0.8}) {}
+}
+
 void main() {
   group('BassColumnFilter State and Controller Unit Tests', () {
     test('el estado inicial tiene bassColumnFilter en all', () {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          audioEngineProvider.overrideWithValue(_SilentAudioEngine()),
+        ],
+      );
       addTearDown(container.dispose);
 
       final state = container.read(accordionSimulatorProvider);
@@ -20,7 +44,11 @@ void main() {
     });
 
     test('selectBassColumnFilter muta correctamente el filtro en el controller', () {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          audioEngineProvider.overrideWithValue(_SilentAudioEngine()),
+        ],
+      );
       addTearDown(container.dispose);
 
       final notifier = container.read(accordionSimulatorProvider.notifier);
@@ -39,7 +67,11 @@ void main() {
 
   group('BassPanelWidget Column Filter UI Tests', () {
     testWidgets('renderiza el selector de hileras [Todos | Ext | Int] en acordeón 1', (tester) async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          audioEngineProvider.overrideWithValue(_SilentAudioEngine()),
+        ],
+      );
       addTearDown(container.dispose);
 
       await tester.pumpWidget(
@@ -48,7 +80,7 @@ void main() {
           child: const MaterialApp(
             home: Scaffold(
               body: SingleChildScrollView(
-                child: BassPanelWidget(accordionIndex: 1),
+                child: BassPanelWidget(accordionNumber: 1),
               ),
             ),
           ),
@@ -83,31 +115,25 @@ void main() {
 
   group('BassRhythmCapturePanel Timeline, Review and 2-Button Pairing Tests', () {
     testWidgets('muestra línea de tiempo, scrubber y permite alternar 1 vs 2 botones', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final patternWithHits = BassRhythmPattern(
-        id: 'test_pat_review',
-        name: 'Patrón de Prueba Review',
-        timeSignature: BassTimeSignature.fourFour,
-        durationBeats: 4,
-        hits: const [
-          BassRhythmHit(
-            buttonIndex: 7, // fundamental Fila 1 ext
-            onsetQuarterBeats: 0.0,
-            durationQuarterBeats: 1.0,
-          ),
-          BassRhythmHit(
-            buttonIndex: 4, // acorde Fila 1 int
-            pairedButtonIndex: 7, // ambos
-            onsetQuarterBeats: 1.0,
-            durationQuarterBeats: 1.0,
-          ),
+      final container = ProviderContainer(
+        overrides: [
+          audioEngineProvider.overrideWithValue(_SilentAudioEngine()),
         ],
       );
+      addTearDown(container.dispose);
 
-      // Asignar el patrón al estado
-      container.read(accordionSimulatorProvider.notifier).updateBassRhythmPattern(patternWithHits);
+      // Capturar 2 hits con avance de tiempo para tener un patrón activo de 2 golpes
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+      notifier.startBassRhythmCapture(
+        name: 'Patrón de Prueba Review',
+        selectedButtons: const {7, 8, 4, 5},
+      );
+      notifier.captureBassMatrixHit(7);
+      container.read(accordionSimulatorProvider).bassRhythmRecorder?.tick(ticks: 50);
+      notifier.captureBassMatrixHit(4);
+      final capturedPattern = notifier.stopBassRhythmCapture();
+      expect(capturedPattern, isNotNull);
+      expect(capturedPattern!.hits.length, 2);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -131,10 +157,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Debe mostrar controles de transporte
-      expect(find.byKey(const ValueKey('review_play_button')), findsOneWidget);
-      expect(find.byKey(const ValueKey('review_stop_button')), findsOneWidget);
-      expect(find.byKey(const ValueKey('review_bpm_slider')), findsOneWidget);
-      expect(find.byKey(const ValueKey('review_timeline_scrubber')), findsOneWidget);
+      expect(find.byKey(const ValueKey('capture_review_play_btn')), findsOneWidget);
+      expect(find.byKey(const ValueKey('capture_review_stop_btn')), findsOneWidget);
+      expect(find.byKey(const ValueKey('capture_review_bpm_slider')), findsOneWidget);
+      expect(find.byKey(const ValueKey('capture_review_scrubbing_slider')), findsOneWidget);
 
       // Verificar que los hits aparecen en el timeline
       final hit0Finder = find.byKey(const ValueKey('capture_timeline_hit_0'));
@@ -147,8 +173,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verificar que existen los dos cuadros pequeños para Bajo Fundamental y Acorde Acompañante
-      final fundBoxFinder = find.byKey(const ValueKey('hit_button_box_fundamental'));
-      final chordBoxFinder = find.byKey(const ValueKey('hit_button_box_chord'));
+      final fundBoxFinder = find.byKey(const ValueKey('capture_hit_box_fundamental'));
+      final chordBoxFinder = find.byKey(const ValueKey('capture_hit_box_chord'));
       expect(fundBoxFinder, findsOneWidget);
       expect(chordBoxFinder, findsOneWidget);
 
@@ -157,18 +183,19 @@ void main() {
       await tester.tap(chordBoxFinder);
       await tester.pumpAndSettle();
 
-      // Al activarse el par, se muestra "2 Botones" en el badge
-      expect(find.text('2 Botones'), findsAtLeastNWidgets(1));
+      // Al activarse el par, se muestra "2 botones activos"
+      expect(find.text('2 botones activos'), findsOneWidget);
 
       // Guardar cambios con el botón de aplicar
-      final saveBtnFinder = find.byKey(const ValueKey('save_reviewed_pattern_button'));
+      final saveBtnFinder = find.byKey(const ValueKey('capture_review_save_btn'));
       expect(saveBtnFinder, findsOneWidget);
       await tester.tap(saveBtnFinder);
       await tester.pumpAndSettle();
 
       // Verificar que el patrón en el notifier ahora tiene el hit 0 emparejado
-      final updatedPattern = container.read(accordionSimulatorProvider).bassRhythmPattern;
-      expect(updatedPattern.hits[0].pairedButtonIndex, isNotNull);
+      final updatedPattern = container.read(accordionSimulatorProvider).selectedBassRhythmPattern;
+      expect(updatedPattern, isNotNull);
+      expect(updatedPattern!.hits[0].pairedButtonIndex, isNotNull);
     });
   });
 }

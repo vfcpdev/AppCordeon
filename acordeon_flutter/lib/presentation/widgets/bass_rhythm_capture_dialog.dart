@@ -61,11 +61,17 @@ class _BassRhythmCapturePanelState
   void initState() {
     super.initState();
     _nameController = TextEditingController();
-    final recorder =
-        ref.read(accordionSimulatorProvider).bassRhythmRecorder;
+    final state = ref.read(accordionSimulatorProvider);
+    final recorder = state.bassRhythmRecorder;
     if (recorder != null && recorder.isRecording) {
       _selectedButtons = {...recorder.selectedButtons};
       _nameController.text = recorder.name;
+    } else if (state.selectedBassRhythmPattern != null) {
+      final pat = state.selectedBassRhythmPattern!;
+      _draftPattern = pat;
+      _draftHits = List<BassRhythmHit>.from(pat.hits);
+      _bpm = (pat.quarterNotesPerMinute ?? 120.0).clamp(40.0, 220.0);
+      _nameController.text = pat.name;
     }
   }
 
@@ -303,6 +309,18 @@ class _BassRhythmCapturePanelState
     final isRecording = recorder?.isRecording ?? false;
     final capturedHits = recorder?.hits.length ?? 0;
 
+    final selectedPattern = ref.watch(
+      accordionSimulatorProvider.select((s) => s.selectedBassRhythmPattern),
+    );
+    if (_draftHits.isEmpty && selectedPattern != null) {
+      _draftPattern = selectedPattern;
+      _draftHits = List.of(selectedPattern.hits);
+      _bpm = (selectedPattern.quarterNotesPerMinute ?? 120.0).clamp(40.0, 220.0);
+      if (_nameController.text.trim().isEmpty) {
+        _nameController.text = selectedPattern.name;
+      }
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(10),
@@ -315,6 +333,92 @@ class _BassRhythmCapturePanelState
       child: _mode == CapturePanelMode.reviewAndEdit
           ? _buildReviewAndEditMode()
           : _buildRecordingMode(isRecording, capturedHits),
+    );
+  }
+
+  Widget _buildModeTabBar(bool isRecording) {
+    final canReview = !isRecording && (_draftHits.isNotEmpty || _draftPattern != null);
+    return Container(
+      height: 26,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE2E8F0),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildModeTabItem(
+            label: 'Grabar',
+            mode: CapturePanelMode.recording,
+            keyName: 'capture_mode_recording_tab',
+            enabled: !isRecording,
+          ),
+          _buildModeTabItem(
+            label: 'Revisar / Editar',
+            mode: CapturePanelMode.reviewAndEdit,
+            keyName: 'capture_mode_review_tab',
+            enabled: canReview,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeTabItem({
+    required String label,
+    required CapturePanelMode mode,
+    required String keyName,
+    required bool enabled,
+  }) {
+    final isSelected = _mode == mode;
+    return InkWell(
+      key: ValueKey(keyName),
+      onTap: enabled
+          ? () {
+              if (mode == CapturePanelMode.reviewAndEdit && _draftHits.isEmpty) {
+                final currentPattern = ref.read(accordionSimulatorProvider).selectedBassRhythmPattern;
+                if (currentPattern != null) {
+                  _draftPattern = currentPattern;
+                  _draftHits = List.of(currentPattern.hits);
+                  _bpm = (currentPattern.quarterNotesPerMinute ?? 120.0).clamp(40.0, 220.0);
+                  if (_nameController.text.trim().isEmpty) {
+                    _nameController.text = currentPattern.name;
+                  }
+                }
+              }
+              setState(() {
+                _mode = mode;
+              });
+            }
+          : null,
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: !enabled
+                ? const Color(0xFF94A3B8)
+                : (isSelected ? const Color(0xFF0F172A) : const Color(0xFF475569)),
+          ),
+        ),
+      ),
     );
   }
 
@@ -339,6 +443,8 @@ class _BassRhythmCapturePanelState
                 ),
               ),
             ),
+            _buildModeTabBar(isRecording),
+            const SizedBox(width: 6),
             IconButton(
               key: const ValueKey('bass_capture_close_btn'),
               tooltip: 'Cerrar',
@@ -474,6 +580,8 @@ class _BassRhythmCapturePanelState
                 ),
               ),
             ),
+            _buildModeTabBar(false),
+            const SizedBox(width: 6),
             IconButton(
               key: const ValueKey('capture_review_close_btn'),
               tooltip: 'Cerrar',
@@ -497,7 +605,7 @@ class _BassRhythmCapturePanelState
         ),
         const SizedBox(height: 3),
         Container(
-          height: 68,
+          height: 76,
           decoration: BoxDecoration(
             color: const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(6),
@@ -505,7 +613,7 @@ class _BassRhythmCapturePanelState
           ),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             child: Row(
               children: [
                 for (var i = 0; i < _draftHits.length; i++) ...[
@@ -736,7 +844,7 @@ class _BassRhythmCapturePanelState
       borderRadius: BorderRadius.circular(6),
       child: Container(
         width: 64,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
           borderRadius: BorderRadius.circular(6),
@@ -755,21 +863,22 @@ class _BassRhythmCapturePanelState
               : null,
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               '#${index + 1}',
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 9.5,
                 fontWeight: FontWeight.w900,
                 color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF1E293B),
               ),
             ),
             Text(
               '${hit.onsetQuarterBeats.toStringAsFixed(1)}q',
-              style: const TextStyle(fontSize: 8.5, color: Color(0xFF64748B)),
+              style: const TextStyle(fontSize: 8, color: Color(0xFF64748B)),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 1),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
               decoration: BoxDecoration(
