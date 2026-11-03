@@ -360,6 +360,11 @@ class AccordionSimulatorState {
   final bool? _isLiveChordMarkerActive;
   bool get isLiveChordMarkerActive => _isLiveChordMarkerActive ?? false;
 
+  /// Indica si la asignación de fuelle se propaga en cascada a todos los compases
+  /// con el mismo acorde (SPEC-002).
+  final bool? _isCascadeBellowsActive;
+  bool get isCascadeBellowsActive => _isCascadeBellowsActive ?? false;
+
   final String copiedChord;
 
   /// Marca temporal (s) del primer toque de Control para calibrar el BPM.
@@ -488,6 +493,7 @@ class AccordionSimulatorState {
     this.bassRhythmRecorder,
     this.isBassCapturePanelOpen = false,
     bool? isLiveChordMarkerActive,
+    bool? isCascadeBellowsActive,
     this.copiedChord = '',
     double? bpmCalibrationStart,
     double? audioStartOffset,
@@ -508,6 +514,7 @@ class AccordionSimulatorState {
        _multiBeatPattern = multiBeatPattern ?? '',
        _isMetronomeActive = isMetronomeActive ?? false,
        _metronomeVolume = metronomeVolume ?? 0.8,
+       _isCascadeBellowsActive = isCascadeBellowsActive ?? false,
        _isLiveChordMarkerActive = isLiveChordMarkerActive ?? false;
 
   AccordionSimulatorState copyWith({
@@ -596,6 +603,7 @@ class AccordionSimulatorState {
     bool clearBassRhythmRecorder = false,
     bool? isBassCapturePanelOpen,
     bool? isLiveChordMarkerActive,
+    bool? isCascadeBellowsActive,
     String? copiedChord,
     double? bpmCalibrationStart,
     double? audioStartOffset,
@@ -722,6 +730,8 @@ class AccordionSimulatorState {
           isBassCapturePanelOpen ?? this.isBassCapturePanelOpen,
       isLiveChordMarkerActive:
           isLiveChordMarkerActive ?? this.isLiveChordMarkerActive,
+      isCascadeBellowsActive:
+          isCascadeBellowsActive ?? this.isCascadeBellowsActive,
       copiedChord: copiedChord ?? this.copiedChord,
       canUndoGrid: canUndoGrid ?? this.canUndoGrid,
       canRedoGrid: canRedoGrid ?? this.canRedoGrid,
@@ -3632,25 +3642,49 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     return '$mins:$secs';
   }
 
+  /// Alterna el modo de propagación de fuelle en cascada para todos los acordes idénticos.
+  void toggleCascadeBellows() {
+    state = state.copyWith(isCascadeBellowsActive: !state.isCascadeBellowsActive);
+  }
+
   /// Define el fuelle (Abre o Cierra) para un tiempo del compás.
   /// Solo es válido para cuadros que tengan un acorde registrado.
-  /// No modifica el acorde ni aplica acordes a cuadros anteriores o actuales.
-  void setBeatBellows(int barIndex, int beatIndex, BellowsMode bellows) {
+  /// Si [cascadeToSameChord] es true (o state.isCascadeBellowsActive está activo),
+  /// aplica el mismo fuelle en cascada a todos los cuadros con ese mismo acorde.
+  void setBeatBellows(
+    int barIndex,
+    int beatIndex,
+    BellowsMode bellows, {
+    bool? cascadeToSameChord,
+  }) {
     if (barIndex < 0 || barIndex >= state.measures.length) return;
     final row = state.measures[barIndex];
     if (beatIndex < 0 || beatIndex >= row.beats.length) return;
 
     final targetBeat = row.beats[beatIndex];
-    // Solo es válido para cuadros que ya tengan un acorde registrado
     if (targetBeat.chord.trim().isEmpty) return;
 
+    final shouldCascade = cascadeToSameChord ?? state.isCascadeBellowsActive;
     final newBellows = targetBeat.bellows == bellows
         ? BellowsMode.both
         : bellows;
-    final updatedMeasures = List<MeasureRow>.from(state.measures);
+
+    saveGridSnapshot();
+
+    List<MeasureRow> updatedMeasures;
     final key = beatKey(barIndex, beatIndex);
 
-    if (state.markedBeats.contains(key)) {
+    if (shouldCascade) {
+      final cmd = CascadeChordBellowsCommand(
+        measures: state.measures,
+        targetBarIndex: barIndex,
+        targetBeatIndex: beatIndex,
+        newBellows: newBellows,
+        cascade: true,
+      );
+      updatedMeasures = cmd.execute();
+    } else if (state.markedBeats.contains(key)) {
+      updatedMeasures = List<MeasureRow>.from(state.measures);
       for (final markedKey in state.markedBeats) {
         final bIdx = markedKey ~/ 4;
         final tIdx = markedKey % 4;
@@ -3658,7 +3692,6 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
           final r = updatedMeasures[bIdx];
           if (tIdx >= 0 && tIdx < r.beats.length) {
             final bts = List<MeasureBeat>.from(r.beats);
-            // Solo para cuadros con acorde registrado, sin modificar el acorde
             if (bts[tIdx].chord.trim().isNotEmpty) {
               bts[tIdx] = bts[tIdx].copyWith(bellows: newBellows);
               updatedMeasures[bIdx] = MeasureRow(
@@ -3670,6 +3703,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
         }
       }
     } else {
+      updatedMeasures = List<MeasureRow>.from(state.measures);
       final beats = List<MeasureBeat>.from(row.beats);
       beats[beatIndex] = targetBeat.copyWith(bellows: newBellows);
       updatedMeasures[barIndex] = MeasureRow(
@@ -3679,7 +3713,16 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     }
 
     final remainingYellow = Set<int>.from(state.yellowDecisionBeats);
-    if (state.markedBeats.contains(key)) {
+    if (shouldCascade) {
+      final targetNormalized = targetBeat.chord.trim().toLowerCase();
+      for (var b = 0; b < updatedMeasures.length; b++) {
+        for (var t = 0; t < updatedMeasures[b].beats.length; t++) {
+          if (updatedMeasures[b].beats[t].chord.trim().toLowerCase() == targetNormalized) {
+            remainingYellow.remove(beatKey(b, t));
+          }
+        }
+      }
+    } else if (state.markedBeats.contains(key)) {
       remainingYellow.removeAll(state.markedBeats);
     } else {
       remainingYellow.remove(key);

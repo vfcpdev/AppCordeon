@@ -1571,3 +1571,120 @@ class TogglePlayChordSequenceCommand implements AccordionCommand<bool> {
     }
   }
 }
+
+/// Comando para la asignación de fuelle individual o en cascada a todos los
+/// acordes idénticos en la cuadrícula de compases (SPEC-002).
+///
+/// Aplica los principios:
+/// - Single Responsibility (SRP): Encapsula la mutación pura de fuelle en la cuadrícula.
+/// - Open/Closed (OCP): Soporta extensión de estrategias de coincidencia de acorde.
+/// - Triplas de Hoare:
+///   {P}: targetChord no vacío y newBellows válido.
+///   {Q}: Todas las celdas con el mismo acorde adoptan newBellows si cascade es true;
+///        o solo la celda objetivo si cascade es false.
+class CascadeChordBellowsCommand implements AccordionCommand<List<MeasureRow>> {
+  @override
+  String get commandName => 'CascadeChordBellowsCommand';
+
+  final List<MeasureRow> measures;
+  final int targetBarIndex;
+  final int targetBeatIndex;
+  final BellowsMode newBellows;
+  final bool cascade;
+
+  const CascadeChordBellowsCommand({
+    required this.measures,
+    required this.targetBarIndex,
+    required this.targetBeatIndex,
+    required this.newBellows,
+    this.cascade = false,
+  });
+
+  @override
+  bool canExecute() {
+    if (targetBarIndex < 0 || targetBarIndex >= measures.length) return false;
+    final row = measures[targetBarIndex];
+    if (targetBeatIndex < 0 || targetBeatIndex >= row.beats.length) return false;
+    final targetBeat = row.beats[targetBeatIndex];
+    return targetBeat.chord.trim().isNotEmpty;
+  }
+
+  @override
+  void assertPreconditions() {
+    if (targetBarIndex < 0 || targetBarIndex >= measures.length) {
+      throw PreconditionViolationException(
+        commandName,
+        'Índice de compás fuera de rango: $targetBarIndex.',
+      );
+    }
+    final row = measures[targetBarIndex];
+    if (targetBeatIndex < 0 || targetBeatIndex >= row.beats.length) {
+      throw PreconditionViolationException(
+        commandName,
+        'Índice de tiempo fuera de rango: $targetBeatIndex.',
+      );
+    }
+    final targetBeat = row.beats[targetBeatIndex];
+    if (targetBeat.chord.trim().isEmpty) {
+      throw PreconditionViolationException(
+        commandName,
+        'No se puede asignar fuelle a una celda sin acorde registrado.',
+      );
+    }
+  }
+
+  @override
+  List<MeasureRow> execute() {
+    assertPreconditions();
+    final targetChord = measures[targetBarIndex].beats[targetBeatIndex].chord.trim().toLowerCase();
+    final updatedMeasures = <MeasureRow>[];
+
+    for (var bIdx = 0; bIdx < measures.length; bIdx++) {
+      final row = measures[bIdx];
+      var rowModified = false;
+      final updatedBeats = List<MeasureBeat>.from(row.beats);
+
+      for (var tIdx = 0; tIdx < row.beats.length; tIdx++) {
+        final beat = row.beats[tIdx];
+        final matchesTarget = (bIdx == targetBarIndex && tIdx == targetBeatIndex);
+        final matchesCascade = cascade && beat.chord.trim().toLowerCase() == targetChord && targetChord.isNotEmpty;
+
+        if (matchesTarget || matchesCascade) {
+          updatedBeats[tIdx] = beat.copyWith(bellows: newBellows);
+          rowModified = true;
+        }
+      }
+
+      if (rowModified) {
+        updatedMeasures.add(MeasureRow(
+          barNumber: row.barNumber,
+          beats: updatedBeats,
+        ));
+      } else {
+        updatedMeasures.add(row);
+      }
+    }
+
+    assertPostconditions(updatedMeasures, targetChord);
+    return updatedMeasures;
+  }
+
+  void assertPostconditions(List<MeasureRow> result, String targetChord) {
+    assert(
+      result[targetBarIndex].beats[targetBeatIndex].bellows == newBellows,
+      'Violación {Q}: La celda seleccionada debe tener el nuevo fuelle.',
+    );
+    if (cascade && targetChord.isNotEmpty) {
+      for (final row in result) {
+        for (final beat in row.beats) {
+          if (beat.chord.trim().toLowerCase() == targetChord) {
+            assert(
+              beat.bellows == newBellows,
+              'Violación {Q}: Todas las celdas con el acorde "$targetChord" deben tener el fuelle en cascada.',
+            );
+          }
+        }
+      }
+    }
+  }
+}

@@ -699,10 +699,12 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                 ),
                                 const SizedBox(width: 4),
 
-                                // 8. Botones de Fuelle: Abre (←) y Cierra (→) situados a la derecha de Selección Múltiple
+                                // 8. Botones de Fuelle: Abre (←) y Cierra (→) con Toggle de Cascada integrado
                                 _BeatBellowsArrows(
                                   bellows: activeBellows,
                                   isEnabled: canChangeBellows,
+                                  isCascadeActive: state.isCascadeBellowsActive,
+                                  onToggleCascade: notifier.toggleCascadeBellows,
                                   onBellowsChanged: (b) {
                                     if (state.isMultiBeatAssignmentMode && state.multiBeatAssignmentTargets.isNotEmpty) {
                                       for (final key in state.multiBeatAssignmentTargets) {
@@ -2995,11 +2997,15 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
 class _BeatBellowsArrows extends StatelessWidget {
   final BellowsMode bellows;
   final bool isEnabled;
+  final bool isCascadeActive;
+  final VoidCallback? onToggleCascade;
   final ValueChanged<BellowsMode>? onBellowsChanged;
 
   const _BeatBellowsArrows({
     required this.bellows,
     this.isEnabled = true,
+    this.isCascadeActive = false,
+    this.onToggleCascade,
     this.onBellowsChanged,
   });
 
@@ -3016,33 +3022,56 @@ class _BeatBellowsArrows extends StatelessWidget {
           // Flecha Abre (Pull) - Botón cuadrado homogéneo 29.0 x 29.0 px colorizado completamente
           Tooltip(
             message: isEnabled
-                ? 'Abre (Fuelle abriendo)'
+                ? (isCascadeActive
+                    ? 'Abre (Fuelle abriendo) [EN CASCADA: Aplica a todos los compases con este mismo acorde]'
+                    : 'Abre (Fuelle abriendo)')
                 : 'Asigna un acorde al tiempo para definir el fuelle',
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: isEnabled
                   ? () => onBellowsChanged?.call(BellowsMode.pull)
                   : null,
-              child: Container(
-                width: 29.0,
-                height: 29.0,
-                decoration: BoxDecoration(
-                  color: isPull ? const Color(0xFF16A34A) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: isPull
-                        ? const Color(0xFF16A34A)
-                        : const Color(0xFFCBD5E1),
-                    width: 0.8,
+              onLongPress: isEnabled ? onToggleCascade : null,
+              onDoubleTap: isEnabled ? onToggleCascade : null,
+              child: Stack(
+                children: [
+                  Container(
+                    width: 29.0,
+                    height: 29.0,
+                    decoration: BoxDecoration(
+                      color: isPull ? const Color(0xFF16A34A) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isPull
+                            ? const Color(0xFF16A34A)
+                            : (isCascadeActive
+                                ? const Color(0xFF2563EB)
+                                : const Color(0xFFCBD5E1)),
+                        width: isCascadeActive ? 1.4 : 0.8,
+                      ),
+                    ),
+                    child: Center(
+                      child: FaIcon(
+                        FontAwesomeIcons.arrowLeft,
+                        size: 13.5,
+                        color: isPull ? Colors.white : const Color(0xFF64748B),
+                      ),
+                    ),
                   ),
-                ),
-                child: Center(
-                  child: FaIcon(
-                    FontAwesomeIcons.arrowLeft,
-                    size: 13.5,
-                    color: isPull ? Colors.white : const Color(0xFF64748B),
-                  ),
-                ),
+                  if (isCascadeActive)
+                    Positioned(
+                      right: 1.5,
+                      top: 1.5,
+                      child: Container(
+                        width: 6.0,
+                        height: 6.0,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF2563EB),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -3050,33 +3079,56 @@ class _BeatBellowsArrows extends StatelessWidget {
           // Flecha Cierra (Push) - Botón cuadrado homogéneo 29.0 x 29.0 px colorizado completamente
           Tooltip(
             message: isEnabled
-                ? 'Cierra (Fuelle cerrando)'
+                ? (isCascadeActive
+                    ? 'Cierra (Fuelle cerrando) [EN CASCADA: Aplica a todos los compases con este mismo acorde]'
+                    : 'Cierra (Fuelle cerrando)')
                 : 'Asigna un acorde al tiempo para definir el fuelle',
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: isEnabled
                   ? () => onBellowsChanged?.call(BellowsMode.push)
                   : null,
-              child: Container(
-                width: 29.0,
-                height: 29.0,
-                decoration: BoxDecoration(
-                  color: isPush ? const Color(0xFFDC2626) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: isPush
-                        ? const Color(0xFFDC2626)
-                        : const Color(0xFFCBD5E1),
-                    width: 0.8,
+              onLongPress: isEnabled ? onToggleCascade : null,
+              onDoubleTap: isEnabled ? onToggleCascade : null,
+              child: Stack(
+                children: [
+                  Container(
+                    width: 29.0,
+                    height: 29.0,
+                    decoration: BoxDecoration(
+                      color: isPush ? const Color(0xFFDC2626) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isPush
+                            ? const Color(0xFFDC2626)
+                            : (isCascadeActive
+                                ? const Color(0xFF2563EB)
+                                : const Color(0xFFCBD5E1)),
+                        width: isCascadeActive ? 1.4 : 0.8,
+                      ),
+                    ),
+                    child: Center(
+                      child: FaIcon(
+                        FontAwesomeIcons.arrowRight,
+                        size: 13.5,
+                        color: isPush ? Colors.white : const Color(0xFF64748B),
+                      ),
+                    ),
                   ),
-                ),
-                child: Center(
-                  child: FaIcon(
-                    FontAwesomeIcons.arrowRight,
-                    size: 13.5,
-                    color: isPush ? Colors.white : const Color(0xFF64748B),
-                  ),
-                ),
+                  if (isCascadeActive)
+                    Positioned(
+                      right: 1.5,
+                      top: 1.5,
+                      child: Container(
+                        width: 6.0,
+                        height: 6.0,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF2563EB),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
