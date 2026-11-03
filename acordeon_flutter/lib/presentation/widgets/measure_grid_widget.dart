@@ -743,7 +743,6 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
                                   isCascadeActive: state.isCascadeBellowsActive,
                                   onToggleCascade: notifier.toggleCascadeBellows,
                                   onBellowsChanged: (b, {bool? explicitCascade}) {
-                                    print('DEBUG CALLBACK: onBellowsChanged triggered! b=$b, hasSelectedCell=$hasSelectedCell, selectedBar=$selectedBar, selectedBeat=$selectedBeat');
                                     final isCtrlPressed = HardwareKeyboard.instance.isControlPressed ||
                                         HardwareKeyboard.instance.isMetaPressed;
                                     final cascade = explicitCascade ?? (isCtrlPressed || state.isCascadeBellowsActive);
@@ -3053,7 +3052,6 @@ class _BeatBellowsArrows extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('DEBUG _BeatBellowsArrows build: isEnabled=$isEnabled, bellows=$bellows, isCascadeActive=$isCascadeActive');
     final isPull = isEnabled && bellows == BellowsMode.pull;
     final isPush = isEnabled && bellows == BellowsMode.push;
 
@@ -3067,18 +3065,17 @@ class _BeatBellowsArrows extends StatelessWidget {
             message: isEnabled
                 ? 'Abre (Fuelle abriendo)'
                 : 'Asigna un acorde al tiempo para definir el fuelle',
-            child: GestureDetector(
+            child: InkWell(
               key: const ValueKey('bellows_pull_button'),
-              behavior: HitTestBehavior.opaque,
-              onTapDown: isEnabled
-                  ? (_) {
+              onTap: isEnabled
+                  ? () {
                       final isCtrl = HardwareKeyboard.instance.isControlPressed ||
                           HardwareKeyboard.instance.isMetaPressed;
                       onBellowsChanged?.call(BellowsMode.pull, explicitCascade: isCtrl ? true : null);
                     }
                   : null,
               onLongPress: isEnabled ? onToggleCascade : null,
-              onDoubleTap: isEnabled ? onToggleCascade : null,
+              borderRadius: BorderRadius.circular(6),
               child: Stack(
                 children: [
                   Container(
@@ -3127,18 +3124,17 @@ class _BeatBellowsArrows extends StatelessWidget {
             message: isEnabled
                 ? 'Cierra (Fuelle cerrando)'
                 : 'Asigna un acorde al tiempo para definir el fuelle',
-            child: GestureDetector(
+            child: InkWell(
               key: const ValueKey('bellows_push_button'),
-              behavior: HitTestBehavior.opaque,
-              onTapDown: isEnabled
-                  ? (_) {
+              onTap: isEnabled
+                  ? () {
                       final isCtrl = HardwareKeyboard.instance.isControlPressed ||
                           HardwareKeyboard.instance.isMetaPressed;
                       onBellowsChanged?.call(BellowsMode.push, explicitCascade: isCtrl ? true : null);
                     }
                   : null,
               onLongPress: isEnabled ? onToggleCascade : null,
-              onDoubleTap: isEnabled ? onToggleCascade : null,
+              borderRadius: BorderRadius.circular(6),
               child: Stack(
                 children: [
                   Container(
