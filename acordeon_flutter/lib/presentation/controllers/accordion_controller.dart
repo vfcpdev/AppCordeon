@@ -894,8 +894,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       selectedBarIndex: null,
       selectedBeatIndex: null,
       freeChord: const FreeChordState(
-        root: -1,
-        type: '',
+        root: 0, // Do
+        type: 'maj',
         fourth: 'none',
         octave: 'all',
         mode: 'harmonic',
@@ -3529,6 +3529,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
 
     // Sincronización bidireccional inmediata con el constructor armónico
     final chordSelection = ChordCatalog.constructorSelectionForSymbol(chord);
+    final shouldSyncConstructor = !state.isFreeChordBeingEdited && chordSelection != null;
 
     state = state.copyWith(
       measures: updatedMeasures,
@@ -3537,12 +3538,12 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       bellows1: nextBellows,
       canUndoGrid: _gridHistory.canUndo,
       canRedoGrid: _gridHistory.canRedo,
-      freeChordRoot: chordSelection != null ? chordSelection.root : state.freeChordRoot,
-      freeChordType: chordSelection != null ? chordSelection.type : state.freeChordType,
-      freeChordFourth: chordSelection != null ? chordSelection.extension : state.freeChordFourth,
-      freeChordBass: chordSelection != null ? chordSelection.bass : state.freeChordBass,
-      freeChordScaleHarmonicMode: chordSelection != null ? chordSelection.structure : state.freeChordScaleHarmonicMode,
-      isFreeChordBeingEdited: false,
+      freeChordRoot: shouldSyncConstructor ? chordSelection.root : state.freeChordRoot,
+      freeChordType: shouldSyncConstructor ? chordSelection.type : state.freeChordType,
+      freeChordFourth: shouldSyncConstructor ? chordSelection.extension : state.freeChordFourth,
+      freeChordBass: shouldSyncConstructor ? chordSelection.bass : state.freeChordBass,
+      freeChordScaleHarmonicMode: shouldSyncConstructor ? chordSelection.structure : state.freeChordScaleHarmonicMode,
+      isFreeChordBeingEdited: state.isFreeChordBeingEdited,
     );
   }
 

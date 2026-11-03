@@ -1436,7 +1436,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
           ? activeBeat.bellows
           : targetBellows;
       contextLabel = 'C${activeBeat.barIndex + 1}.${activeBeat.beatIndex + 1}';
-    } else if (state.freeChordRoot >= 0) {
+    } else if (state.isFreeChordBeingEdited && state.freeChordRoot >= 0) {
       targetChord = ChordCatalog.symbolFor(
         root: state.freeChordRoot,
         type: state.freeChordType.isNotEmpty ? state.freeChordType : 'maj',

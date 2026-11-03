@@ -177,17 +177,20 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Verifica que exista la sección de información bajo el compás
-      expect(find.text('Estado del Acorde'), findsOneWidget);
-      expect(find.text('Cierra'), findsOneWidget);
-      expect(find.text('Abre'), findsOneWidget);
+      // Cuando no hay ningún acorde definido en compás ni diapasón, no debe mostrar nada
+      expect(find.text('Estado del Acorde'), findsNothing);
 
-      // Asigna un acorde al primer tiempo para habilitar las flechas de fuelle
+      // Asigna un acorde al primer tiempo para habilitar Estado del Acorde y las flechas de fuelle
       final container = ProviderScope.containerOf(
         tester.element(find.byType(MeasureGridWidget)),
       );
       container.read(accordionSimulatorProvider.notifier).updateMeasureBeat(0, 0, 'Do');
       await tester.pumpAndSettle();
+
+      // Una vez definido el acorde, se muestra la tarjeta informativa actualizada
+      expect(find.text('Estado del Acorde'), findsOneWidget);
+      expect(find.text('Cierra'), findsOneWidget);
+      expect(find.text('Abre'), findsOneWidget);
 
       // Verifica que existan tooltips o íconos de flechas en los tiempos
       expect(find.byTooltip('Abre (Fuelle abriendo)'), findsWidgets);

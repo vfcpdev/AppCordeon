@@ -127,14 +127,10 @@ class TonicNotesMatrixWidget extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 2.5, bottom: 1.0),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 1.5, vertical: 2.0),
+                    padding: const EdgeInsets.symmetric(vertical: 2.0),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: const Color(0xFFCBD5E1),
-                        width: 0.8,
-                      ),
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     child: const ChordQualitySelectorWidget(),
                   ),
