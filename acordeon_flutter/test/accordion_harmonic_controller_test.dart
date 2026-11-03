@@ -53,11 +53,12 @@ void main() {
     });
 
     test('detectChordFromMidiNotes detecta tríada mayor correctamente', () {
-      // Do Mayor: C4 (60), E4 (64), G4 (67) -> Por convención de AppCordeon root es 'Do'
+      // Do Mayor: C4 (60), E4 (64), G4 (67) -> Por convención de AppCordeon
       final chord = controller.detectChordFromMidiNotes([60, 64, 67]);
       expect(chord, isNotNull);
       expect(chord!.root, equals('Do'));
-      expect(chord.type, equals('maj'));
+      expect(chord.type, equals('Tríada Mayor'));
+      expect(chord.name, equals('Do Mayor'));
     });
   });
 }
