@@ -826,6 +826,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       _playbackTimer?.cancel();
       _standaloneMetronomeTimer?.cancel();
       _bassCaptureTimer?.cancel();
+      _stopActiveBassNotes();
     });
 
     // Generar compases iniciales por defecto (8 compases con 4 tiempos)
@@ -2045,6 +2046,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     _currentBeatNotes = [];
     _audioBridge.noteOff(84);
     _audioBridge.noteOff(76);
+    _stopActiveBassNotes();
     _lastPlaybackDetectedChord = null;
     state = state.copyWith(
       isPlayingAudio: false,
@@ -2132,6 +2134,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
 
   /// Detiene la ejecución del ritmo de bajos sin borrar el patrón elegido.
   void stopBassRhythm() {
+    _stopActiveBassNotes();
     if (!state.isBassMetronomeActive) return;
     state = state.copyWith(
       isBassMetronomeActive: false,
@@ -2541,6 +2544,87 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     ).execute();
   }
 
+  final Set<int> _activeBassRhythmNotes = {};
+  Timer? _bassNoteOffTimer;
+
+  /// Detiene y apaga todas las notas MIDI del patrón de bajos que se encuentren sonando.
+  void _stopActiveBassNotes() {
+    _bassNoteOffTimer?.cancel();
+    _bassNoteOffTimer = null;
+    for (final note in _activeBassRhythmNotes) {
+      _audioBridge.noteOff(note);
+    }
+    _activeBassRhythmNotes.clear();
+  }
+
+  /// Retorna los 12 botones del panel de bajos ordenados físicamente por índice (0 a 11):
+  /// - Columna Exterior (pares 1, 3, 5): 0 (acorde 1), 1 (bajo 1), 2 (acorde 3), 3 (bajo 3), 4 (acorde 5), 5 (bajo 5)
+  /// - Columna Interior (pares 2, 4, 6): 6 (acorde 2), 7 (bajo 2), 8 (acorde 4), 9 (bajo 4), 10 (acorde 6), 11 (bajo 6)
+  static List<BassButtonModel> orderedBassPanelButtons(List<BassButtonModel> bassData) {
+    final funds = bassData.where((b) => b.type == ButtonType.fundamental).toList();
+    final chords = bassData.where((b) => b.type == ButtonType.chord).toList();
+    if (funds.length < 6 || chords.length < 6) return bassData;
+    return [
+      chords[0], // 0: Acorde Par 1 (Bb/F)
+      funds[0],  // 1: Bajo Par 1 (Bb/F)
+      chords[2], // 2: Acorde Par 3 (Eb/Bb)
+      funds[2],  // 3: Bajo Par 3 (Eb/Bb)
+      chords[4], // 4: Acorde Par 5 (Ab/Eb)
+      funds[4],  // 5: Bajo Par 5 (Ab/Eb)
+      chords[1], // 6: Acorde Par 2 (G/C)
+      funds[1],  // 7: Bajo Par 2 (G/C)
+      chords[3], // 8: Acorde Par 4 (C/F)
+      funds[3],  // 9: Bajo Par 4 (C/F)
+      chords[5], // 10: Acorde Par 6 (F/Bb)
+      funds[5],  // 11: Bajo Par 6 (F/Bb)
+    ];
+  }
+
+  /// Reproduce las notas reales de los botones del bajo que contiene el golpe rítmico,
+  /// según la dirección del fuelle (abierto o cerrado).
+  void _playBassHitNotes(
+    BassRhythmHit hit,
+    BassRhythmPattern pattern,
+    BellowsMode bellows,
+  ) {
+    _stopActiveBassNotes();
+
+    final buttons = orderedBassPanelButtons(state.bassData1);
+    final target = state.selectedBassRowTarget;
+    final notesToPlay = <int>{};
+
+    for (final rawIndex in hit.buttonIndexes) {
+      final remapped = BassRowPairResolver.remapButtonIndex(rawIndex, target);
+      if (remapped >= 0 && remapped < buttons.length) {
+        final btn = buttons[remapped];
+        final btnNotes = btn.notesForBellows(bellows);
+        notesToPlay.addAll(btnNotes);
+      }
+    }
+
+    if (notesToPlay.isEmpty) return;
+
+    final velocity = hit.isAccented ? 0.95 : 0.8;
+    for (final note in notesToPlay) {
+      _audioBridge.noteOn(note, velocity: velocity);
+      _activeBassRhythmNotes.add(note);
+    }
+
+    final bpm = _standaloneMetronomeBpm;
+    var durationSec = hit.durationQuarterBeats * 60.0 / bpm;
+    if (hit.isStaccato) {
+      durationSec *= 0.5;
+    }
+    final durationMs = (durationSec * 1000 * 0.9).round().clamp(60, 1500);
+
+    _bassNoteOffTimer = Timer(Duration(milliseconds: durationMs), () {
+      for (final note in notesToPlay) {
+        _audioBridge.noteOff(note);
+        _activeBassRhythmNotes.remove(note);
+      }
+    });
+  }
+
   void _playBassRhythmHitsBetween(
     double previousPosition,
     double currentPosition,
@@ -2553,6 +2637,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     }
     final firstCycle = (previousPosition / pattern.durationQuarterBeats).floor();
     final lastCycle = (currentPosition / pattern.durationQuarterBeats).floor();
+    final currentBellows = state.bellows1;
+
     for (var cycle = firstCycle; cycle <= lastCycle; cycle++) {
       for (final hit in pattern.hits) {
         final absoluteOnset =
@@ -2561,11 +2647,18 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
             ? absoluteOnset >= previousPosition
             : absoluteOnset > previousPosition;
         if (isAfterPrevious && absoluteOnset <= currentPosition) {
-          playMetronomeTick(
-            (hit.onsetQuarterBeats * 4).round(),
-            beatsPerMeasure: pattern.beatsPerMeasureInQuarterNotes * 4,
-            accented: hit.isAccented,
-          );
+          if (currentBellows == BellowsMode.both) {
+            // Cuando está en ambos solo ejecuta el patrón con un chasquido
+            playMetronomeTick(
+              (hit.onsetQuarterBeats * 4).round(),
+              beatsPerMeasure: pattern.beatsPerMeasureInQuarterNotes * 4,
+              accented: hit.isAccented,
+            );
+          } else {
+            // Solo cuando tiene el fuelle abierto o cerrado, lo ejecuta con
+            // las notas que contiene cada botón del bajo.
+            _playBassHitNotes(hit, pattern, currentBellows);
+          }
         }
       }
     }
@@ -2664,6 +2757,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     _standaloneMetronomeTimer = null;
     _audioBridge.noteOff(84);
     _audioBridge.noteOff(76);
+    _stopActiveBassNotes();
   }
 
   /// Marca en vivo el cambio de acorde en el compás y tiempo exacto según el slider de audio.
@@ -3221,6 +3315,60 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
 
   /// Borra los acordes únicamente de las casillas actualmente marcadas.
   int deleteMarkedGridChords() => deleteGridChords(deleteAll: false);
+
+  /// Resetea el cuadro de texto del compás en [barIndex] y [beatIndex] a cadena vacía `''`
+  /// para que no se ejecute ningún acorde en dicho pulso (silencio musical).
+  ///
+  /// Enfoque formal con Triplas de Hoare:
+  /// - Precondición {P}: `0 <= barIndex < len(measures)` y `0 <= beatIndex < len(measures[barIndex].beats)`.
+  /// - Comando {C}: Snapshot Memento en `_gridHistory`, ejecución de `DeleteGridChordsCommand` con clave objetivo.
+  /// - Poscondición {Q}: `measures[barIndex].beats[beatIndex].chord == ''`, celda desmarcada, `canUndoGrid == true`.
+  /// - Invariante {I}: Todos los demás pulsos de la cuadrícula conservan intactos sus acordes, fuelles y tiempos.
+  bool resetMeasureBeatChord(int barIndex, int beatIndex) {
+    if (barIndex < 0 || barIndex >= state.measures.length) return false;
+    final row = state.measures[barIndex];
+    if (beatIndex < 0 || beatIndex >= row.beats.length) return false;
+
+    saveGridSnapshot();
+    final key = barIndex * 4 + beatIndex;
+    _deleteGridChordsAt({key});
+    return true;
+  }
+
+  /// Resetea el cuadro de texto actualmente seleccionado en el compás dejándolo en blanco (`''`)
+  /// para asegurar que no se ejecute ningún acorde en ese tiempo musical.
+  /// Retorna `true` si la posición era válida y fue reseteada con éxito.
+  bool resetSelectedBeatChord() {
+    final bar = state.selectedBarIndex;
+    final beat = state.selectedBeatIndex;
+    if (bar == null || beat == null) return false;
+    return resetMeasureBeatChord(bar, beat);
+  }
+
+  /// Acción unificada de borrado y reseteo (SOLID / Command Pattern):
+  /// - Si hay cuadros seleccionados/marcados: borra los acordes de dichos cuadros.
+  /// - Si no hay casillas marcadas pero hay un cuadro de texto activo: lo resetea a silencio (`''`).
+  /// Retorna la cantidad de acordes eliminados o reseteados.
+  int deleteOrResetGridChords() {
+    final hasMarks = state.markedBeats.isNotEmpty || state.multiBeatAssignmentTargets.isNotEmpty;
+    if (hasMarks) {
+      final totalBeats = state.measures.length * 4;
+      final allMarked = totalBeats > 0 && state.markedBeats.length >= totalBeats;
+      return deleteGridChords(deleteAll: allMarked);
+    }
+    final bar = state.selectedBarIndex;
+    final beat = state.selectedBeatIndex;
+    if (bar != null && beat != null) {
+      final hadChord = bar >= 0 &&
+          bar < state.measures.length &&
+          beat >= 0 &&
+          beat < state.measures[bar].beats.length &&
+          state.measures[bar].beats[beat].chord.isNotEmpty;
+      final ok = resetSelectedBeatChord();
+      return (ok && hadChord) ? 1 : 0;
+    }
+    return 0;
+  }
 
   /// Núcleo atómico de borrado: crea, verifica {P}, ejecuta {C} y publica
   /// {Q} del comando sin conocer la estrategia de selección de las claves.

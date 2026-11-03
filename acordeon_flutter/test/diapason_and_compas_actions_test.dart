@@ -187,5 +187,67 @@ void main() {
       expect(state.freeChordRoot, equals(7)); // Sol = 7
       expect(state.freeChordType, equals('min'));
     });
+
+    testWidgets('Guardar e Importar compás están ubicados a la derecha del BPM', (tester) async {
+      await pumpGrid(tester);
+
+      expect(find.byTooltip('Guardar compases en JSON (Exportar)'), findsOneWidget);
+      expect(find.byTooltip('Importar compases desde archivo JSON'), findsOneWidget);
+
+      // Verificamos que el control de metrónomo también está presente en la cabecera
+      expect(find.byTooltip('Activar Metrónomo (Click sincronizado con compás)'), findsOneWidget);
+    });
+
+    testWidgets('Opción de borrar acorde resetea el cuadro de texto enfocado a silencio sin marcas previas', (tester) async {
+      final container = await pumpGrid(tester);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      // Escribir acorde en el compás 0, tiempo 1
+      notifier.updateMeasureBeat(0, 1, 'Lam');
+      notifier.selectBeat(0, 1);
+      await tester.pumpAndSettle();
+
+      expect(container.read(accordionSimulatorProvider).measures[0].beats[1].chord, equals('Lam'));
+      expect(container.read(accordionSimulatorProvider).markedBeats, isEmpty);
+
+      // Tocar el botón de borrar acorde
+      await tester.tap(find.byKey(const ValueKey('delete_grid_chords_btn')));
+      await tester.pumpAndSettle();
+
+      final state = container.read(accordionSimulatorProvider);
+      // {Q}: El cuadro de texto quedó reseteado a silencio ('') para no ejecutar acorde
+      expect(state.measures[0].beats[1].chord, isEmpty);
+      // Invariante de Memento: se puede revertir con undo si el usuario lo desea
+      expect(state.canUndoGrid, isTrue);
+    });
+
+    testWidgets('Opción de borrar acorde borra múltiples cuadros seleccionados', (tester) async {
+      final container = await pumpGrid(tester);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      notifier.updateMeasureBeat(0, 0, 'Do');
+      notifier.updateMeasureBeat(0, 1, 'Sol');
+      notifier.updateMeasureBeat(0, 2, 'Fa');
+
+      // Marcar casillas (0,0) y (0,2)
+      notifier.toggleBeatMark(0, 0);
+      notifier.toggleBeatMark(0, 2);
+      await tester.pumpAndSettle();
+
+      expect(container.read(accordionSimulatorProvider).markedBeats.length, equals(2));
+
+      // Tocar el botón de borrar acorde
+      await tester.tap(find.byKey(const ValueKey('delete_grid_chords_btn')));
+      await tester.pumpAndSettle();
+
+      final state = container.read(accordionSimulatorProvider);
+      // Los cuadros seleccionados fueron borrados
+      expect(state.measures[0].beats[0].chord, isEmpty);
+      expect(state.measures[0].beats[2].chord, isEmpty);
+      // El cuadro no seleccionado permanece intacto
+      expect(state.measures[0].beats[1].chord, equals('Sol'));
+      // Las marcas quedan limpias
+      expect(state.markedBeats, isEmpty);
+    });
   });
 }
