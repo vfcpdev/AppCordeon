@@ -959,9 +959,7 @@ class BassPanelWidget extends ConsumerWidget {
     AccordionSimulatorState state,
     AccordionSimulatorNotifier notifier,
   ) {
-    final currentBpm = state.selectedBassRhythmPattern?.quarterNotesPerMinute ??
-        state.audioReport?.bpm.toDouble() ??
-        state.manualMetronomeBpm;
+    final currentBpm = state.effectiveBassBpm;
 
     return Tooltip(
       message: 'Velocidad del patrón / Metrónomo (BPM)',
@@ -977,7 +975,7 @@ class BassPanelWidget extends ConsumerWidget {
             InkWell(
               onTap: () {
                 final newBpm = (currentBpm - 5).clamp(30.0, 300.0);
-                notifier.setManualMetronomeBpm(newBpm);
+                notifier.setBassBpm(newBpm);
               },
               borderRadius: BorderRadius.circular(3),
               child: const Icon(Icons.remove, size: 12, color: Color(0xFF1E293B)),
@@ -1000,7 +998,7 @@ class BassPanelWidget extends ConsumerWidget {
             InkWell(
               onTap: () {
                 final newBpm = (currentBpm + 5).clamp(30.0, 300.0);
-                notifier.setManualMetronomeBpm(newBpm);
+                notifier.setBassBpm(newBpm);
               },
               borderRadius: BorderRadius.circular(3),
               child: const Icon(Icons.add, size: 12, color: Color(0xFF1E293B)),
@@ -1040,7 +1038,7 @@ class BassPanelWidget extends ConsumerWidget {
             onPressed: () {
               final parsed = double.tryParse(ctrl.text.trim());
               if (parsed != null && parsed >= 30 && parsed <= 300) {
-                notifier.setManualMetronomeBpm(parsed);
+                notifier.setBassBpm(parsed);
                 Navigator.pop(dialogCtx);
               }
             },

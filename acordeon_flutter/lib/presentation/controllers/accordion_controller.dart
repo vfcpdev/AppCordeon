@@ -25,6 +25,7 @@ import '../../domain/models/tuning.dart';
 import '../../domain/services/bass_rhythm_catalog.dart';
 import '../../domain/services/bass_row_pair_resolver.dart';
 import '../../domain/services/grid_metrics_service.dart' as grid_metrics;
+import '../../domain/services/high_precision_rhythm_clock.dart';
 import '../../domain/services/hoare_contract.dart';
 import '../../domain/services/musicxml_rhythm_importer.dart';
 import '../../domain/theory/chord_catalog.dart';
@@ -275,6 +276,21 @@ class AccordionSimulatorState {
   final double? _manualMetronomeBpm;
   double get manualMetronomeBpm => _manualMetronomeBpm ?? 120.0;
 
+  /// BPM específico asignado al subsistema de bajos con influencia directa en su tempo.
+  final double? bassBpm;
+
+  /// Retorna el tempo efectivo para los bajos, priorizando la influencia del BPM
+  /// configurado para los bajos y manteniendo coherencia con el patrón y el compás.
+  double get effectiveBassBpm {
+    if (bassBpm != null && bassBpm! > 0) return bassBpm!;
+    final pattern = selectedBassRhythmPattern;
+    if (pattern?.quarterNotesPerMinute != null && pattern!.quarterNotesPerMinute! > 0) {
+      return pattern.quarterNotesPerMinute!;
+    }
+    if (audioReport != null) return audioReport!.bpm.toDouble();
+    return manualMetronomeBpm;
+  }
+
   /// Captura de patrón en curso (matriz 2×2 de bajos 7/8/4/5). `null` cuando
   /// no hay captura activa.
   final BassRhythmRecorder? bassRhythmRecorder;
@@ -296,12 +312,7 @@ class AccordionSimulatorState {
   double get bassRhythmPositionQuarterBeats {
     final pattern = selectedBassRhythmPattern;
     if (pattern == null || pattern.durationQuarterBeats <= 0) return 0;
-    final bpm = isPlayingAudio
-        ? audioReport?.bpm.toDouble() ??
-              manualMetronomeBpm
-        : pattern.quarterNotesPerMinute ??
-              audioReport?.bpm.toDouble() ??
-              manualMetronomeBpm;
+    final bpm = effectiveBassBpm;
     final elapsedSeconds = isPlayingAudio
         ? math.max(0.0, compasTime - effectiveAudioStartOffset)
         : bassRhythmElapsedSeconds;
@@ -467,6 +478,7 @@ class AccordionSimulatorState {
     this.isBassMetronomeActive = false,
     this.bassRhythmElapsedSeconds = 0.0,
     double? manualMetronomeBpm,
+    this.bassBpm,
     this.bassRhythmRecorder,
     this.isBassCapturePanelOpen = false,
     bool? isLiveChordMarkerActive,
@@ -572,6 +584,7 @@ class AccordionSimulatorState {
     bool? isBassMetronomeActive,
     double? bassRhythmElapsedSeconds,
     double? manualMetronomeBpm,
+    double? bassBpm,
     BassRhythmRecorder? bassRhythmRecorder,
     bool clearBassRhythmRecorder = false,
     bool? isBassCapturePanelOpen,
@@ -693,6 +706,7 @@ class AccordionSimulatorState {
       bassRhythmElapsedSeconds:
           bassRhythmElapsedSeconds ?? this.bassRhythmElapsedSeconds,
       manualMetronomeBpm: manualMetronomeBpm ?? this.manualMetronomeBpm,
+      bassBpm: bassBpm ?? this.bassBpm,
       bassRhythmRecorder: clearBassRhythmRecorder
           ? null
           : (bassRhythmRecorder ?? this.bassRhythmRecorder),
@@ -2062,7 +2076,6 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
 
   Timer? _standaloneMetronomeTimer;
   int _standaloneBeat = 0;
-  double _standaloneElapsedQuarterBeats = 0;
   double? _lastPlaybackRhythmPosition;
   final MusicXmlRhythmImporter _rhythmImporter = MusicXmlRhythmImporter();
 
@@ -2307,6 +2320,37 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     );
   }
 
+  /// Asigna el tempo (BPM) del subsistema de bajos con influencia directa en la
+  /// reproducción del patrón activo y la biblioteca.
+  ///
+  /// {P}: `bpm` en el rango musical [30.0, 300.0].
+  /// {Q}: `state.effectiveBassBpm == bpm`. Si hay un patrón activo, su tempo se sincroniza.
+  void setBassBpm(double bpm) {
+    require(
+      'setBassBpm',
+      'el BPM debe estar dentro de [30, 300]',
+      bpm >= 30.0 && bpm <= 300.0,
+    );
+    final clamped = bpm.clamp(30.0, 300.0);
+    final selectedPattern = state.selectedBassRhythmPattern;
+    if (selectedPattern != null) {
+      updateBassRhythmPattern(
+        patternId: selectedPattern.id,
+        newQuarterNotesPerMinute: clamped,
+      );
+    }
+    state = state.copyWith(
+      bassBpm: clamped,
+      manualMetronomeBpm: clamped,
+    );
+    _syncStandaloneMetronome();
+    ensure(
+      'setBassBpm',
+      'el BPM de los bajos coincide con el asignado',
+      state.effectiveBassBpm == clamped,
+    );
+  }
+
   /// Establece o acopla el tempo del patrón seleccionado o manual del metrónomo principal.
   ///
   /// {P}: `bpm` en el rango musical [30, 300].
@@ -2325,7 +2369,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
         newQuarterNotesPerMinute: bpm,
       );
     }
-    state = state.copyWith(manualMetronomeBpm: bpm);
+    state = state.copyWith(
+      manualMetronomeBpm: bpm,
+      bassBpm: bpm,
+    );
     _syncStandaloneMetronome();
     ensure(
       'setManualMetronomeBpm',
@@ -2610,12 +2657,11 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       _activeBassRhythmNotes.add(note);
     }
 
-    final bpm = _standaloneMetronomeBpm;
-    var durationSec = hit.durationQuarterBeats * 60.0 / bpm;
-    if (hit.isStaccato) {
-      durationSec *= 0.5;
-    }
-    final durationMs = (durationSec * 1000 * 0.9).round().clamp(60, 1500);
+    final clock = HighPrecisionRhythmClock(
+      bpm: _standaloneMetronomeBpm,
+      durationQuarterBeats: pattern.durationQuarterBeats,
+    );
+    final durationMs = clock.noteDurationMs(hit.durationQuarterBeats, isStaccato: hit.isStaccato);
 
     _bassNoteOffTimer = Timer(Duration(milliseconds: durationMs), () {
       for (final note in notesToPlay) {
@@ -2664,10 +2710,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     }
   }
 
-  double get _standaloneMetronomeBpm =>
-      state.selectedBassRhythmPattern?.quarterNotesPerMinute ??
-      state.audioReport?.bpm.toDouble() ??
-      state.manualMetronomeBpm;
+  /// Tempo del metrónomo independiente o patrón de bajos gobernado por `effectiveBassBpm`.
+  double get _standaloneMetronomeBpm => state.effectiveBassBpm;
 
   int get _standaloneMetronomeBeatsPerMeasure =>
       state.selectedBassRhythmPattern?.beatsPerMeasureInQuarterNotes ?? 4;
@@ -2699,54 +2743,73 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     _startStandaloneMetronome();
   }
 
+  Stopwatch? _rhythmStopwatch;
+
+  /// Inicia el temporizador de reproducción rítmica con anclaje de alta resolución
+  /// (`Stopwatch`), garantizando que la temporización no acumule deriva (Zero Clock Drift).
   void _startStandaloneMetronome() {
     _standaloneMetronomeTimer?.cancel();
+    _rhythmStopwatch?.stop();
+    _rhythmStopwatch = Stopwatch()..start();
+
     final bpm = _standaloneMetronomeBpm;
-    final quarterBeatStep = _rhythmClockStep(state.selectedBassRhythmPattern);
-    final intervalMs = ((60.0 / bpm * quarterBeatStep) * 1000).round().clamp(
-      50,
-      3000,
-    );
     final beatsPerMeasure = _standaloneMetronomeBeatsPerMeasure;
     _standaloneBeat = 0;
-    _standaloneElapsedQuarterBeats = 0;
     state = state.copyWith(bassRhythmElapsedSeconds: 0);
     final pattern = state.selectedBassRhythmPattern;
+    final clock = HighPrecisionRhythmClock(
+      bpm: bpm,
+      durationQuarterBeats: pattern?.durationQuarterBeats ?? beatsPerMeasure.toDouble(),
+    );
+
     if (pattern == null) {
       playMetronomeTick(_standaloneBeat, beatsPerMeasure: beatsPerMeasure);
     } else {
       _playBassRhythmHitsBetween(0, 0, pattern, includeStart: true);
     }
 
+    double lastProcessedQuarterBeats = 0.0;
+    // Muestreo rítmico continuo de alta frecuencia (15 ms) libre de deriva acumulativa (zero clock drift)
+    const tickInterval = Duration(milliseconds: 15);
+
     _standaloneMetronomeTimer = Timer.periodic(
-      Duration(milliseconds: intervalMs),
+      tickInterval,
       (timer) {
         if ((!state.isMetronomeActive && !state.isBassMetronomeActive) ||
             state.isPlayingAudio) {
           timer.cancel();
+          _rhythmStopwatch?.stop();
+          _rhythmStopwatch = null;
           return;
         }
-        final currentBeatsPerMeasure = _standaloneMetronomeBeatsPerMeasure;
-        final previousBeat = _standaloneElapsedQuarterBeats.floor();
-        final previousPosition = _standaloneElapsedQuarterBeats;
-        _standaloneElapsedQuarterBeats += quarterBeatStep;
-        final currentBeat = _standaloneElapsedQuarterBeats.floor();
+
+        final elapsedMicros = _rhythmStopwatch?.elapsedMicroseconds ?? 0;
+        final elapsedSec = elapsedMicros / 1000000.0;
+        final currentTotalQuarterBeats = clock.totalQuarterBeatsAtMicroseconds(elapsedMicros);
+
         state = state.copyWith(
-          bassRhythmElapsedSeconds: _standaloneElapsedQuarterBeats * 60 / bpm,
+          bassRhythmElapsedSeconds: elapsedSec,
         );
+
         final currentPattern = state.selectedBassRhythmPattern;
         if (currentPattern != null) {
           _playBassRhythmHitsBetween(
-            previousPosition,
-            _standaloneElapsedQuarterBeats,
+            lastProcessedQuarterBeats,
+            currentTotalQuarterBeats,
             currentPattern,
           );
-        } else if (currentBeat > previousBeat) {
-          _standaloneBeat = currentBeat % currentBeatsPerMeasure;
-          playMetronomeTick(
-            _standaloneBeat,
-            beatsPerMeasure: currentBeatsPerMeasure,
-          );
+          lastProcessedQuarterBeats = currentTotalQuarterBeats;
+        } else {
+          final previousBeat = lastProcessedQuarterBeats.floor();
+          final currentBeat = currentTotalQuarterBeats.floor();
+          if (currentBeat > previousBeat) {
+            _standaloneBeat = currentBeat % beatsPerMeasure;
+            playMetronomeTick(
+              _standaloneBeat,
+              beatsPerMeasure: beatsPerMeasure,
+            );
+          }
+          lastProcessedQuarterBeats = currentTotalQuarterBeats;
         }
       },
     );
@@ -2755,6 +2818,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
   void _stopStandaloneMetronome() {
     _standaloneMetronomeTimer?.cancel();
     _standaloneMetronomeTimer = null;
+    _rhythmStopwatch?.stop();
+    _rhythmStopwatch = null;
     _audioBridge.noteOff(84);
     _audioBridge.noteOff(76);
     _stopActiveBassNotes();

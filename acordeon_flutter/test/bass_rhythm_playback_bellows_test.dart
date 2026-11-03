@@ -4,6 +4,7 @@ import 'package:acordeon_flutter/core/audio/audio_engine_bridge.dart';
 import 'package:acordeon_flutter/core/constants/enums.dart';
 import 'package:acordeon_flutter/core/di/providers.dart';
 import 'package:acordeon_flutter/domain/models/bass_rhythm_pattern.dart';
+import 'package:acordeon_flutter/domain/services/high_precision_rhythm_clock.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 
 class _MockAudioEngineRecorder implements AudioEngine {
@@ -194,6 +195,55 @@ void main() {
       // {Q}: Las notas activas reciben noteOff
       expect(mockAudio.noteOffCalls, contains(46));
       expect(container.read(accordionSimulatorProvider).isBassMetronomeActive, isFalse);
+    });
+
+    test('Influencia directa del BPM de bajos: setBassBpm actualiza tempo efectivo y patrón activo', () {
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+      final pattern = createTestPattern();
+
+      notifier.applyRawState(
+        container.read(accordionSimulatorProvider).copyWith(
+          bassRhythmPatterns: [pattern],
+          selectedBassRhythmPatternId: pattern.id,
+        ),
+      );
+
+      expect(container.read(accordionSimulatorProvider).effectiveBassBpm, equals(120.0));
+
+      // Asignar nuevo BPM de bajos
+      notifier.setBassBpm(145.0);
+
+      final state = container.read(accordionSimulatorProvider);
+      // {Q}: effectiveBassBpm refleja de inmediato el nuevo BPM
+      expect(state.effectiveBassBpm, equals(145.0));
+      expect(state.bassBpm, equals(145.0));
+      // El patrón seleccionado sincroniza su tempo
+      expect(state.selectedBassRhythmPattern?.quarterNotesPerMinute, equals(145.0));
+    });
+
+    test('HighPrecisionRhythmClock: cálculo temporal exacto con cero deriva rítmica (zero drift)', () {
+      final clock = HighPrecisionRhythmClock(
+        bpm: 120.0, // 2 negras por segundo (0.5 s por negra = 500,000 µs)
+        durationQuarterBeats: 4.0,
+      );
+
+      // A 0 µs -> 0.0 negras
+      expect(clock.positionAtMicroseconds(0), equals(0.0));
+
+      // A 500,000 µs (0.5 s) -> 1.0 negras
+      expect(clock.positionAtMicroseconds(500000), closeTo(1.0, 0.0001));
+
+      // A 1,000,000 µs (1.0 s) -> 2.0 negras
+      expect(clock.positionAtMicroseconds(1000000), closeTo(2.0, 0.0001));
+
+      // A 2,000,000 µs (2.0 s = ciclo completo de 4 negras) -> vuelve a 0.0 por wrap modulo
+      expect(clock.positionAtMicroseconds(2000000), closeTo(0.0, 0.0001));
+
+      // Duración de nota física articulada y staccato
+      final normalDuration = clock.noteDurationMs(1.0);
+      final staccatoDuration = clock.noteDurationMs(1.0, isStaccato: true);
+      expect(normalDuration, equals(450)); // 0.5 s * 0.9 = 450 ms
+      expect(staccatoDuration, equals(225)); // 450 ms * 0.5 = 225 ms
     });
   });
 }
