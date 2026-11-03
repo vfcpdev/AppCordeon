@@ -259,7 +259,7 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
       }
     } else if (hasSelectedCell) {
       final selectedMeasureBeat = state.measures[selectedBar].beats[selectedBeat];
-      canChangeBellows = selectedMeasureBeat.chord.trim().isNotEmpty;
+      canChangeBellows = true;
       activeBellows = selectedMeasureBeat.bellows;
     }
 

@@ -219,6 +219,114 @@ class _BassRhythmCapturePanelState
     _playHitSound(updatedHit);
   }
 
+  void _adjustHitOnset(double delta) {
+    if (_draftHits.isEmpty || _selectedHitIndex >= _draftHits.length) return;
+    final currentHit = _draftHits[_selectedHitIndex];
+    final total = _totalQuarters();
+    final newOnset = (currentHit.onsetQuarterBeats + delta).clamp(0.0, total);
+    final updatedHit = currentHit.copyWith(
+      onsetQuarterBeats: (newOnset * 100).round() / 100.0,
+    );
+    setState(() {
+      _draftHits[_selectedHitIndex] = updatedHit;
+      _sortHitsAndKeepSelection(updatedHit);
+      _playbackQuarter = updatedHit.onsetQuarterBeats;
+    });
+    _playHitSound(updatedHit);
+  }
+
+  void _quantizeHitOnset({double grid = 0.25}) {
+    if (_draftHits.isEmpty || _selectedHitIndex >= _draftHits.length) return;
+    final currentHit = _draftHits[_selectedHitIndex];
+    final quantized = ((currentHit.onsetQuarterBeats / grid).round() * grid)
+        .clamp(0.0, _totalQuarters());
+    final updatedHit = currentHit.copyWith(
+      onsetQuarterBeats: (quantized * 100).round() / 100.0,
+    );
+    setState(() {
+      _draftHits[_selectedHitIndex] = updatedHit;
+      _sortHitsAndKeepSelection(updatedHit);
+      _playbackQuarter = updatedHit.onsetQuarterBeats;
+    });
+    _playHitSound(updatedHit);
+  }
+
+  void _setHitDuration(double duration) {
+    if (_draftHits.isEmpty || _selectedHitIndex >= _draftHits.length) return;
+    final currentHit = _draftHits[_selectedHitIndex];
+    final updatedHit = currentHit.copyWith(
+      durationQuarterBeats: duration.clamp(0.1, 4.0),
+    );
+    setState(() {
+      _draftHits[_selectedHitIndex] = updatedHit;
+    });
+  }
+
+  void _setHitRow(int rowTarget) {
+    if (_draftHits.isEmpty || _selectedHitIndex >= _draftHits.length) return;
+    final currentHit = _draftHits[_selectedHitIndex];
+    final isPaired = currentHit.pairedButtonIndex != null;
+    final targetFund = rowTarget == 1 ? 7 : 8;
+    final targetChord = rowTarget == 1 ? 4 : 5;
+    final isFund =
+        currentHit.buttonIndex == _resolveFundamental(currentHit.buttonIndex);
+
+    final BassRhythmHit updatedHit;
+    if (isPaired) {
+      updatedHit = currentHit.copyWith(
+        buttonIndex: targetFund,
+        pairedButtonIndex: targetChord,
+      );
+    } else if (isFund) {
+      updatedHit = currentHit.copyWith(
+        buttonIndex: targetFund,
+        clearPairedButton: true,
+      );
+    } else {
+      updatedHit = currentHit.copyWith(
+        buttonIndex: targetChord,
+        clearPairedButton: true,
+      );
+    }
+    setState(() {
+      _draftHits[_selectedHitIndex] = updatedHit;
+    });
+    _playHitSound(updatedHit);
+  }
+
+  void _deleteSelectedHit() {
+    if (_draftHits.length <= 1 || _selectedHitIndex >= _draftHits.length) return;
+    setState(() {
+      _draftHits.removeAt(_selectedHitIndex);
+      if (_selectedHitIndex >= _draftHits.length) {
+        _selectedHitIndex = _draftHits.length - 1;
+      }
+      _playbackQuarter = _draftHits[_selectedHitIndex].onsetQuarterBeats;
+    });
+  }
+
+  void _addNewHitAtCurrentPosition() {
+    final onset = (_playbackQuarter * 100).round() / 100.0;
+    final newHit = BassRhythmHit(
+      onsetQuarterBeats: onset,
+      durationQuarterBeats: 0.5,
+      buttonIndex: 7,
+      buttonType: BassRhythmButtonType.fundamental,
+      fingerNumber: 2,
+    );
+    setState(() {
+      _draftHits.add(newHit);
+      _sortHitsAndKeepSelection(newHit);
+    });
+    _playHitSound(newHit);
+  }
+
+  void _sortHitsAndKeepSelection(BassRhythmHit targetHit) {
+    _draftHits.sort((a, b) => a.onsetQuarterBeats.compareTo(b.onsetQuarterBeats));
+    _selectedHitIndex = _draftHits.indexOf(targetHit);
+    if (_selectedHitIndex < 0) _selectedHitIndex = 0;
+  }
+
   void _togglePlayReview() {
     if (_isPlayingReview) {
       _stopPlayReview();
@@ -598,10 +706,36 @@ class _BassRhythmCapturePanelState
         ),
         const SizedBox(height: 6),
 
-        // 1. Línea de tiempo horizontal desplazable (Timeline)
-        const Text(
-          'Línea de tiempo (golpes capturados):',
-          style: TextStyle(fontSize: 10.0, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+        // 1. Línea de tiempo horizontal desplazable (Timeline) con botón para añadir golpe
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Línea de tiempo (golpes capturados):',
+              style: TextStyle(fontSize: 10.0, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+            ),
+            InkWell(
+              key: const ValueKey('capture_timeline_add_hit_btn'),
+              onTap: _addNewHitAtCurrentPosition,
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: const Color(0xFF93C5FD), width: 0.6),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_circle_outline, size: 11, color: Color(0xFF2563EB)),
+                    SizedBox(width: 3),
+                    Text('+ Golpe en Cursor', style: TextStyle(fontSize: 9.0, fontWeight: FontWeight.w700, color: Color(0xFF2563EB))),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 3),
         Container(
@@ -663,42 +797,120 @@ class _BassRhythmCapturePanelState
           ),
         ),
 
-        const SizedBox(height: 4),
+        const SizedBox(height: 3),
 
-        // 2. Dos cuadros pequeños: [Bajo Fundamental | Acorde Acompañante]
+        // 2. Editor del Golpe Seleccionado (Timing, Duración, Hileras y Botones)
         Container(
-          padding: const EdgeInsets.all(6),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(7),
             border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Fila 1: Título de Golpe + Controles de Onset/Timing + Borrar Golpe
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Golpe #${_selectedHitIndex + 1} (${selectedHit?.onsetQuarterBeats.toStringAsFixed(1)}q):',
-                    style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF1E293B)),
+                    'Golpe #${_selectedHitIndex + 1}:',
+                    style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                   ),
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0xFF93C5FD), width: 0.6),
+                    ),
+                    child: Text(
+                      '${selectedHit?.onsetQuarterBeats.toStringAsFixed(2)}q',
+                      key: const ValueKey('capture_hit_onset_text'),
+                      style: const TextStyle(fontSize: 10.0, fontWeight: FontWeight.w800, color: Color(0xFF1D4ED8)),
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  // Botones de ajuste fino de tiempo
+                  _buildMiniActionBtn(
+                    key: 'capture_hit_onset_minus_btn',
+                    label: '-0.1q',
+                    tooltip: 'Adelantar golpe (-0.1 pulso)',
+                    onTap: () => _adjustHitOnset(-0.1),
+                  ),
+                  const SizedBox(width: 3),
+                  _buildMiniActionBtn(
+                    key: 'capture_hit_onset_plus_btn',
+                    label: '+0.1q',
+                    tooltip: 'Retrasar golpe (+0.1 pulso)',
+                    onTap: () => _adjustHitOnset(0.1),
+                  ),
+                  const SizedBox(width: 3),
+                  _buildMiniActionBtn(
+                    key: 'capture_hit_quantize_btn',
+                    label: 'Q 1/4',
+                    tooltip: 'Cuantizar al 1/4 de tiempo más cercano',
+                    onTap: () => _quantizeHitOnset(grid: 0.25),
+                  ),
+                  const Spacer(),
+                  // Indicador de 1 o 2 botones
                   Text(
                     (isFundActive && isChordActive)
                         ? '2 botones activos'
                         : '1 botón activo',
                     style: TextStyle(
-                      fontSize: 9.5,
+                      fontSize: 9.0,
                       fontWeight: FontWeight.w800,
                       color: (isFundActive && isChordActive) ? const Color(0xFF16A34A) : const Color(0xFF2563EB),
                     ),
                   ),
+                  const SizedBox(width: 6),
+                  // Botón para eliminar el golpe seleccionado
+                  Tooltip(
+                    message: _draftHits.length > 1
+                        ? 'Eliminar este golpe'
+                        : 'El patrón debe tener al menos 1 golpe',
+                    child: IconButton(
+                      key: const ValueKey('capture_hit_delete_btn'),
+                      constraints: const BoxConstraints.tightFor(width: 22, height: 22),
+                      padding: EdgeInsets.zero,
+                      splashRadius: 11,
+                      onPressed: _draftHits.length > 1 ? _deleteSelectedHit : null,
+                      icon: Icon(
+                        Icons.delete_outline,
+                        size: 15,
+                        color: _draftHits.length > 1 ? const Color(0xFFDC2626) : const Color(0xFFCBD5E1),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 3),
+
+              // Fila 2: Selector de Duración + Selector de Fila (Hilera 1 vs Hilera 2)
               Row(
                 children: [
-                  // Cuadro pequeño 1: Bajo Fundamental
+                  const Text('Duración:', style: TextStyle(fontSize: 9.0, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
+                  const SizedBox(width: 4),
+                  _buildDurationPill('0.25q', 0.25, selectedHit?.durationQuarterBeats ?? 0.5, 'capture_hit_duration_025_btn'),
+                  const SizedBox(width: 3),
+                  _buildDurationPill('0.5q', 0.5, selectedHit?.durationQuarterBeats ?? 0.5, 'capture_hit_duration_050_btn'),
+                  const SizedBox(width: 3),
+                  _buildDurationPill('1.0q', 1.0, selectedHit?.durationQuarterBeats ?? 0.5, 'capture_hit_duration_100_btn'),
+                  const Spacer(),
+                  const Text('Fila:', style: TextStyle(fontSize: 9.0, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
+                  const SizedBox(width: 4),
+                  _buildRowPill('Fila 1 (7/4)', isSelected: fundBtn == 7, keyName: 'capture_hit_row1_btn', onTap: () => _setHitRow(1)),
+                  const SizedBox(width: 3),
+                  _buildRowPill('Fila 2 (8/5)', isSelected: fundBtn != 7, keyName: 'capture_hit_row2_btn', onTap: () => _setHitRow(2)),
+                ],
+              ),
+              const SizedBox(height: 4),
+
+              // Fila 3: Los dos cuadros pequeños compactos: [Bajo Fundamental | Acorde Acompañante]
+              Row(
+                children: [
                   Expanded(
                     child: _buildHitButtonBox(
                       key: const ValueKey('capture_hit_box_fundamental'),
@@ -708,8 +920,7 @@ class _BassRhythmCapturePanelState
                       onTap: () => _toggleHitButton(isChord: false),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  // Cuadro pequeño 2: Acorde Acompañante
+                  const SizedBox(width: 6),
                   Expanded(
                     child: _buildHitButtonBox(
                       key: const ValueKey('capture_hit_box_chord'),
@@ -900,6 +1111,103 @@ class _BassRhythmCapturePanelState
     );
   }
 
+  Widget _buildMiniActionBtn({
+    required String key,
+    required String label,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        key: ValueKey(key),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: const Color(0xFFCBD5E1), width: 0.7),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 9.0,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF334155),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDurationPill(
+    String label,
+    double val,
+    double currentVal,
+    String keyName,
+  ) {
+    final isSelected = (val - currentVal).abs() < 0.05;
+    return InkWell(
+      key: ValueKey(keyName),
+      onTap: () => _setHitDuration(val),
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1),
+            width: 0.6,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 8.5,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+            color: isSelected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRowPill(
+    String label, {
+    required bool isSelected,
+    required String keyName,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      key: ValueKey(keyName),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF059669) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
+            width: 0.6,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 8.5,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+            color: isSelected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHitButtonBox({
     required Key key,
     required String title,
@@ -912,53 +1220,68 @@ class _BassRhythmCapturePanelState
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFF0FDF4) : const Color(0xFFF1F5F9),
+          color: isActive ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: isActive ? const Color(0xFF16A34A) : const Color(0xFFCBD5E1),
-            width: isActive ? 1.5 : 1.0,
+            width: isActive ? 1.4 : 0.8,
           ),
         ),
-        child: Column(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 9.5,
-                fontWeight: FontWeight.w700,
-                color: isActive ? const Color(0xFF15803D) : const Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              buttonLabel,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w900,
-                color: isActive ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Row(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  isActive ? Icons.check_circle : Icons.remove_circle_outline,
-                  size: 11,
-                  color: isActive ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
-                ),
-                const SizedBox(width: 3),
                 Text(
-                  isActive ? 'ACTIVO' : 'DESACTIVADO',
+                  title,
                   style: TextStyle(
                     fontSize: 8.0,
-                    fontWeight: FontWeight.w800,
-                    color: isActive ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w700,
+                    color: isActive ? const Color(0xFF15803D) : const Color(0xFF64748B),
+                  ),
+                ),
+                Text(
+                  buttonLabel,
+                  style: TextStyle(
+                    fontSize: 10.0,
+                    fontWeight: FontWeight.w900,
+                    color: isActive ? const Color(0xFF16A34A) : const Color(0xFF475569),
                   ),
                 ),
               ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? const Color(0xFF16A34A).withValues(alpha: 0.12)
+                    : const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isActive ? Icons.check_circle : Icons.remove_circle_outline,
+                    size: 9,
+                    color: isActive ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    isActive ? 'ON' : 'OFF',
+                    style: TextStyle(
+                      fontSize: 8.0,
+                      fontWeight: FontWeight.w900,
+                      color: isActive ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1051,23 +1374,23 @@ class _BassMatrixCell extends ConsumerWidget {
     final label = _genericLabelFor(bassData, buttonNumber);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 2.5),
       child: Material(
         key: ValueKey('bass_matrix_cell_$buttonNumber'),
         color: isSelected ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
         child: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               border: Border.all(
                 color: isSelected
                     ? const Color(0xFF16A34A)
                     : const Color(0xFFCBD5E1),
-                width: isSelected ? 1.6 : 1,
+                width: isSelected ? 1.5 : 0.8,
               ),
             ),
             child: Column(
@@ -1079,7 +1402,7 @@ class _BassMatrixCell extends ConsumerWidget {
                     Text(
                       '$buttonNumber',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w900,
                         color: isSelected
                             ? const Color(0xFF15803D)
@@ -1091,20 +1414,20 @@ class _BassMatrixCell extends ConsumerWidget {
                       isSelected
                           ? Icons.check_circle
                           : Icons.radio_button_unchecked,
-                      size: 11,
+                      size: 10,
                       color: isSelected
                           ? const Color(0xFF16A34A)
                           : const Color(0xFF94A3B8),
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(
                   label,
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 8.5, height: 1.1),
+                  style: const TextStyle(fontSize: 8.0, height: 1.05),
                 ),
               ],
             ),

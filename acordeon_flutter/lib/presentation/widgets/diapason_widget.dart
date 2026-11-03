@@ -162,7 +162,7 @@ class DiapasonWidget extends ConsumerWidget {
                               icon: FontAwesomeIcons.arrowLeft,
                               mode: BellowsMode.pull,
                               current: bellowsMode,
-                              activeColor: const Color(0xFF0284C7),
+                              activeColor: const Color(0xFF16A34A),
                               onTap: onBellowsChanged,
                               tooltip: 'Abre (Pull)',
                             ),
@@ -190,7 +190,7 @@ class DiapasonWidget extends ConsumerWidget {
                             _BarActionBtn(
                               icon: FontAwesomeIcons.arrowsRotate,
                               isActive: isMirror,
-                              activeColor: const Color(0xFF0284C7),
+                              activeColor: const Color(0xFF16A34A),
                               onTap: onToggleMirror,
                               tooltip: 'Intercambiar hileras',
                             ),
@@ -212,7 +212,7 @@ class DiapasonWidget extends ConsumerWidget {
                                   ? FontAwesomeIcons.link
                                   : FontAwesomeIcons.linkSlash,
                               isActive: isClearSynced,
-                              activeColor: const Color(0xFF0284C7),
+                              activeColor: const Color(0xFF16A34A),
                               onTap: () {
                                 final next = !isClearSynced;
                                 notifier.toggleSyncClear();

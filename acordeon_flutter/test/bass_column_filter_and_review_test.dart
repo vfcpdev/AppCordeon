@@ -8,6 +8,7 @@ import 'package:acordeon_flutter/core/di/providers.dart';
 import 'package:acordeon_flutter/presentation/controllers/accordion_controller.dart';
 import 'package:acordeon_flutter/presentation/widgets/bass_panel_widget.dart';
 import 'package:acordeon_flutter/presentation/widgets/bass_rhythm_capture_dialog.dart';
+import 'package:acordeon_flutter/presentation/widgets/measure_grid_widget.dart';
 
 class _SilentAudioEngine implements AudioEngine {
   @override
@@ -65,6 +66,76 @@ void main() {
     });
   });
 
+  group('Compas Bellows Undefined Synchronization Tests', () {
+    test('celda sin definir fuelle (both) actualiza a doble flecha en diapasón', () {
+      final container = ProviderContainer(
+        overrides: [
+          audioEngineProvider.overrideWithValue(_SilentAudioEngine()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      // Ponemos el diapasón previamente en pull para comprobar el cambio
+      notifier.setBellows1(BellowsMode.pull);
+      expect(container.read(accordionSimulatorProvider).bellows1, BellowsMode.pull);
+
+      // Celda 0, 0 tiene bellows en both por defecto
+      notifier.selectBeat(0, 0);
+
+      // Debe actualizar a BellowsMode.both (doble flecha)
+      expect(container.read(accordionSimulatorProvider).bellows1, BellowsMode.both);
+    });
+
+    testWidgets('en cuadros sin definir si abre o cierra, ambas flechas de fuelle en compás están sin color', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          audioEngineProvider.overrideWithValue(_SilentAudioEngine()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Celda 0, 0 seleccionada en both
+      container.read(accordionSimulatorProvider.notifier).selectBeat(0, 0);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: MeasureGridWidget(accordionNumber: 1),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Las flechas de fuelle en la barra de compás no deben tener color verde ni rojo
+      final pullBtnFinder = find.byTooltip('Abre (Fuelle abriendo)');
+      final pushBtnFinder = find.byTooltip('Cierra (Fuelle cerrando)');
+
+      expect(pullBtnFinder, findsOneWidget);
+      expect(pushBtnFinder, findsOneWidget);
+
+      final pullContainer = tester.widget<Container>(
+        find.descendant(of: pullBtnFinder, matching: find.byType(Container)).first,
+      );
+      final pushContainer = tester.widget<Container>(
+        find.descendant(of: pushBtnFinder, matching: find.byType(Container)).first,
+      );
+
+      final pullDecor = pullContainer.decoration as BoxDecoration;
+      final pushDecor = pushContainer.decoration as BoxDecoration;
+
+      // Ambas deben tener color de fondo neutro Color(0xFFF1F5F9), no verde ni rojo
+      expect(pullDecor.color, const Color(0xFFF1F5F9));
+      expect(pushDecor.color, const Color(0xFFF1F5F9));
+    });
+  });
+
   group('BassPanelWidget Column Filter UI Tests', () {
     testWidgets('renderiza el selector de hileras [Todos | Ext | Int] en acordeón 1', (tester) async {
       final container = ProviderContainer(
@@ -113,8 +184,8 @@ void main() {
     });
   });
 
-  group('BassRhythmCapturePanel Timeline, Review and 2-Button Pairing Tests', () {
-    testWidgets('muestra línea de tiempo, scrubber y permite alternar 1 vs 2 botones', (tester) async {
+  group('BassRhythmCapturePanel Timeline, Review and Complete Hit Editing Tests', () {
+    testWidgets('permite editar timing, duración, hilera, agregar y eliminar golpes', (tester) async {
       final container = ProviderContainer(
         overrides: [
           audioEngineProvider.overrideWithValue(_SilentAudioEngine()),
@@ -156,46 +227,69 @@ void main() {
       await tester.tap(reviewTabFinder);
       await tester.pumpAndSettle();
 
-      // Debe mostrar controles de transporte
+      // Controles de transporte
       expect(find.byKey(const ValueKey('capture_review_play_btn')), findsOneWidget);
       expect(find.byKey(const ValueKey('capture_review_stop_btn')), findsOneWidget);
       expect(find.byKey(const ValueKey('capture_review_bpm_slider')), findsOneWidget);
       expect(find.byKey(const ValueKey('capture_review_scrubbing_slider')), findsOneWidget);
 
-      // Verificar que los hits aparecen en el timeline
-      final hit0Finder = find.byKey(const ValueKey('capture_timeline_hit_0'));
-      final hit1Finder = find.byKey(const ValueKey('capture_timeline_hit_1'));
-      expect(hit0Finder, findsOneWidget);
-      expect(hit1Finder, findsOneWidget);
+      // Controles de edición del golpe
+      expect(find.byKey(const ValueKey('capture_hit_onset_minus_btn')), findsOneWidget);
+      expect(find.byKey(const ValueKey('capture_hit_onset_plus_btn')), findsOneWidget);
+      expect(find.byKey(const ValueKey('capture_hit_quantize_btn')), findsOneWidget);
+      expect(find.byKey(const ValueKey('capture_hit_duration_025_btn')), findsOneWidget);
+      expect(find.byKey(const ValueKey('capture_hit_duration_050_btn')), findsOneWidget);
+      expect(find.byKey(const ValueKey('capture_hit_duration_100_btn')), findsOneWidget);
+      expect(find.byKey(const ValueKey('capture_hit_row1_btn')), findsOneWidget);
+      expect(find.byKey(const ValueKey('capture_hit_row2_btn')), findsOneWidget);
+      expect(find.byKey(const ValueKey('capture_hit_delete_btn')), findsOneWidget);
+      expect(find.byKey(const ValueKey('capture_timeline_add_hit_btn')), findsOneWidget);
 
-      // Seleccionar hit 0
-      await tester.tap(hit0Finder);
+      // 1. Ajustar tiempo con +0.1q
+      final initialOnsetText = find.byKey(const ValueKey('capture_hit_onset_text'));
+      expect(initialOnsetText, findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('capture_hit_onset_plus_btn')));
       await tester.pumpAndSettle();
 
-      // Verificar que existen los dos cuadros pequeños para Bajo Fundamental y Acorde Acompañante
-      final fundBoxFinder = find.byKey(const ValueKey('capture_hit_box_fundamental'));
-      final chordBoxFinder = find.byKey(const ValueKey('capture_hit_box_chord'));
-      expect(fundBoxFinder, findsOneWidget);
-      expect(chordBoxFinder, findsOneWidget);
+      // 2. Cuantizar con Q 1/4
+      await tester.tap(find.byKey(const ValueKey('capture_hit_quantize_btn')));
+      await tester.pumpAndSettle();
 
-      // Hit 0 actualmente tiene solo fundamental (pairedButtonIndex == null).
-      // Al hacer tap en el cuadro de acorde acompañante, se debe activar la pareja (2 botones).
+      // 3. Ajustar duración a 1.0q
+      await tester.tap(find.byKey(const ValueKey('capture_hit_duration_100_btn')));
+      await tester.pumpAndSettle();
+
+      // 4. Conmutar a Fila 2 (8/5)
+      await tester.tap(find.byKey(const ValueKey('capture_hit_row2_btn')));
+      await tester.pumpAndSettle();
+      expect(find.text('Botón 8'), findsOneWidget);
+
+      // 5. Alternar botón de acorde acompañante para activar 2 botones
+      final chordBoxFinder = find.byKey(const ValueKey('capture_hit_box_chord'));
       await tester.tap(chordBoxFinder);
       await tester.pumpAndSettle();
-
-      // Al activarse el par, se muestra "2 botones activos"
       expect(find.text('2 botones activos'), findsOneWidget);
 
-      // Guardar cambios con el botón de aplicar
+      // 6. Añadir un nuevo golpe en cursor
+      await tester.tap(find.byKey(const ValueKey('capture_timeline_add_hit_btn')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('capture_timeline_hit_2')), findsOneWidget);
+
+      // 7. Eliminar el golpe recién añadido
+      await tester.tap(find.byKey(const ValueKey('capture_timeline_hit_2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('capture_hit_delete_btn')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('capture_timeline_hit_2')), findsNothing);
+
+      // 8. Guardar patrón editado
       final saveBtnFinder = find.byKey(const ValueKey('capture_review_save_btn'));
-      expect(saveBtnFinder, findsOneWidget);
       await tester.tap(saveBtnFinder);
       await tester.pumpAndSettle();
 
-      // Verificar que el patrón en el notifier ahora tiene el hit 0 emparejado
       final updatedPattern = container.read(accordionSimulatorProvider).selectedBassRhythmPattern;
       expect(updatedPattern, isNotNull);
-      expect(updatedPattern!.hits[0].pairedButtonIndex, isNotNull);
+      expect(updatedPattern!.hits.length, 2);
     });
   });
 }

@@ -1873,9 +1873,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     _currentBeatNotes = notes;
     state = state.copyWith(
       playingChordNotes: notes.toSet(),
-      bellows1: beat.bellows != BellowsMode.both
-          ? beat.bellows
-          : state.bellows1,
+      bellows1: beat.bellows,
     );
   }
 
@@ -3188,10 +3186,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     final chordSelection = ChordCatalog.constructorSelectionForSymbol(
       beat.chord,
     );
-    BellowsMode nextBellows = state.bellows1;
-    if (beat.bellows != BellowsMode.both) {
-      nextBellows = beat.bellows;
-    }
+    BellowsMode nextBellows = beat.bellows;
 
     _currentBeatNotes = [];
     _audioBridge.allNotesOff();
@@ -3538,9 +3533,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     );
 
     final beatBellows = updatedBeats[beatIndex].bellows;
-    final nextBellows = beatBellows != BellowsMode.both
-        ? beatBellows
-        : state.bellows1;
+    final nextBellows = beatBellows;
 
     // Sincronización bidireccional inmediata con el constructor armónico
     final chordSelection = ChordCatalog.constructorSelectionForSymbol(chord);
@@ -3674,7 +3667,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       measures: updatedMeasures,
       selectedBarIndex: barIndex,
       selectedBeatIndex: beatIndex,
-      bellows1: newBellows != BellowsMode.both ? newBellows : state.bellows1,
+      bellows1: newBellows,
       yellowDecisionBeats: remainingYellow,
     );
   }
