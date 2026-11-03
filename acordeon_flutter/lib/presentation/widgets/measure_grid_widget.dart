@@ -3063,9 +3063,7 @@ class _BeatBellowsArrows extends StatelessWidget {
           // Flecha Abre (Pull) - Botón cuadrado homogéneo 29.0 x 29.0 px colorizado completamente
           Tooltip(
             message: isEnabled
-                ? (isCascadeActive
-                    ? 'Abre (Fuelle abriendo) [EN CASCADA: Aplica a todos los compases con este mismo acorde]'
-                    : 'Abre (Fuelle abriendo)')
+                ? 'Abre (Fuelle abriendo)'
                 : 'Asigna un acorde al tiempo para definir el fuelle',
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -3124,9 +3122,7 @@ class _BeatBellowsArrows extends StatelessWidget {
           // Flecha Cierra (Push) - Botón cuadrado homogéneo 29.0 x 29.0 px colorizado completamente
           Tooltip(
             message: isEnabled
-                ? (isCascadeActive
-                    ? 'Cierra (Fuelle cerrando) [EN CASCADA: Aplica a todos los compases con este mismo acorde]'
-                    : 'Cierra (Fuelle cerrando)')
+                ? 'Cierra (Fuelle cerrando)'
                 : 'Asigna un acorde al tiempo para definir el fuelle',
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,

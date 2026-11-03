@@ -34,9 +34,7 @@ void main() {
             container: container,
             child: const MaterialApp(
               home: Scaffold(
-                body: SingleChildScrollView(
-                  child: MeasureGridWidget(accordionNumber: 1),
-                ),
+                body: MeasureGridWidget(accordionNumber: 1),
               ),
             ),
           ),
@@ -51,10 +49,8 @@ void main() {
         expect(state.measures[1].beats[3].bellows, equals(BellowsMode.both));
         expect(state.isCascadeBellowsActive, isFalse);
 
-        // 2. Buscamos y pulsamos el botón cuadrado con el icono de Cascada (layerGroup)
-        final cascadeBtnFinder = find.byWidgetPredicate(
-          (w) => w is FaIcon && w.icon == FontAwesomeIcons.layerGroup,
-        );
+        // 2. Buscamos y pulsamos el botón de Cascada por su tooltip único
+        final cascadeBtnFinder = find.byTooltip('Fuelle en Cascada INACTIVO: Pulsa para activar asignación en cascada (o usa Ctrl+Clic)');
         expect(cascadeBtnFinder, findsOneWidget);
 
         await tester.tap(cascadeBtnFinder);
