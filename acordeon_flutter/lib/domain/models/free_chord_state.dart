@@ -20,8 +20,8 @@ class FreeChordState {
   final String bass; // Bajo alterado / slash chord ('' = ninguno)
 
   const FreeChordState({
-    this.root = 0,
-    this.type = 'maj',
+    this.root = -1,
+    this.type = '',
     this.fourth = 'none',
     this.octave = 'all',
     this.mode = 'harmonic',

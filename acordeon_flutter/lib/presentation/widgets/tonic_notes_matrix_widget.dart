@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
+import 'active_chord_banner_widget.dart';
 import 'chord_quality_selector_widget.dart';
 
 /// Matriz de notas tónicas organizada en 2 filas por 6 columnas con selector
@@ -48,6 +49,16 @@ class TonicNotesMatrixWidget extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Etiqueta del acorde y notas que lo conforman (reutilización de la etiqueta del diapasón, sin botones 3, 4 y 5)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 2.5),
+                  child: ActiveChordBannerWidget(
+                    accordionNumber: 1,
+                    showStructureSelector: false,
+                    height: 24.0,
+                    labelKey: ValueKey('tonic_chord_header_banner'),
+                  ),
+                ),
                 ...matrixRows.map((row) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 1.5),

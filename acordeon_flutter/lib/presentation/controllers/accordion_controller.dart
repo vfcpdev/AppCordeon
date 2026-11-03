@@ -894,8 +894,8 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
       selectedBarIndex: null,
       selectedBeatIndex: null,
       freeChord: const FreeChordState(
-        root: 0, // Do
-        type: 'maj',
+        root: -1,
+        type: '',
         fourth: 'none',
         octave: 'all',
         mode: 'harmonic',

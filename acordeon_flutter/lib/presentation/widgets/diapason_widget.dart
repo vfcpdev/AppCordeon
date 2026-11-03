@@ -4,8 +4,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants/enums.dart';
 import '../../domain/models/accordion_data.dart';
 import '../../domain/models/tuning.dart';
-import '../../domain/theory/chord_catalog.dart';
 import '../controllers/accordion_controller.dart';
+import 'active_chord_banner_widget.dart';
 import 'diapason_button_widget.dart';
 import 'tuning_picker_dialog.dart';
 
@@ -56,25 +56,6 @@ class DiapasonWidget extends ConsumerWidget {
       activeChordPitchClassesProvider(accordionNumber),
     );
 
-    // Nombre del acorde del constructor en la notación activa (Latina/Alemana).
-    final freeChordRoot = ref.watch(
-      accordionSimulatorProvider.select((s) => s.freeChordRoot),
-    );
-    final freeChordType = ref.watch(
-      accordionSimulatorProvider.select((s) => s.freeChordType),
-    );
-    final freeChordFourth = ref.watch(
-      accordionSimulatorProvider.select((s) => s.freeChordFourth),
-    );
-    final freeChordBass = ref.watch(
-      accordionSimulatorProvider.select((s) => s.freeChordBass),
-    );
-    final notation = ref.watch(
-      accordionSimulatorProvider.select((s) => s.notation),
-    );
-    final isFreeChordFixed = ref.watch(
-      accordionSimulatorProvider.select((s) => s.isFreeChordFixed),
-    );
     final isFreeChordBeingEdited = ref.watch(
       accordionSimulatorProvider.select((s) => s.isFreeChordBeingEdited),
     );
@@ -85,35 +66,6 @@ class DiapasonWidget extends ConsumerWidget {
     final compasChord = ref.watch(
       accordionSimulatorProvider.select((s) => s.activeCompasChord),
     );
-    final formattedCompasChord = compasChord.isNotEmpty
-        ? ChordCatalog.formatChordForNotation(compasChord, notation)
-        : '';
-    final formattedFreeChord = ChordCatalog.symbolFor(
-      root: freeChordRoot,
-      type: freeChordType,
-      extension: freeChordFourth,
-      bass: freeChordBass,
-      latin: notation != NotationMode.alemana,
-      display: true,
-    );
-    final chordLabel =
-        (!isFreeChordFixed &&
-            !isFreeChordBeingEdited &&
-            formattedCompasChord.isNotEmpty)
-        ? formattedCompasChord
-        : formattedFreeChord;
-    final storedChordStructure = ref.watch(
-      accordionSimulatorProvider.select((s) => s.freeChordScaleHarmonicMode),
-    );
-    final chordNoteCount = ChordCatalog.pitchClassesForChordSymbol(
-      chordLabel,
-    ).length;
-    final displayedChordStructure = switch (chordNoteCount) {
-      3 => 'triad',
-      4 => 'seventh',
-      5 => 'five',
-      _ => storedChordStructure,
-    };
     final rowList = [
       _RowDef(
         rowKey: 'row3',
@@ -354,56 +306,12 @@ class DiapasonWidget extends ConsumerWidget {
                   top: 35,
                   left: 0,
                   right: 0,
-                  child: Container(
+                  child: KeyedSubtree(
                     key: ValueKey('diapason_chord_info_$accordionNumber'),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(
-                        color: const Color(0xFFCBD5E1),
-                        width: 1.0,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x33000000),
-                          blurRadius: 4,
-                          offset: Offset(0, 1.5),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text.rich(
-                                chordLabel.isEmpty
-                                    ? const TextSpan(text: '—')
-                                    : ChordCatalog.buildChordLabelSpans(
-                                        chord: chordLabel,
-                                        notation: notation,
-                                        fontSize: 9.5,
-                                      ),
-                                key: ValueKey(
-                                  'diapason_chord_label_$accordionNumber',
-                                ),
-                                maxLines: 1,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        _ChordStructureSelector(
-                          selectedStructure: displayedChordStructure,
-                        ),
-                      ],
+                    child: ActiveChordBannerWidget(
+                      accordionNumber: accordionNumber,
+                      showStructureSelector: true,
+                      labelKey: ValueKey('diapason_chord_label_$accordionNumber'),
                     ),
                   ),
                 ),
@@ -573,87 +481,6 @@ class DiapasonWidget extends ConsumerWidget {
           );
         }),
       ],
-    );
-  }
-}
-
-class _ChordStructureSelector extends ConsumerWidget {
-  final String selectedStructure;
-
-  const _ChordStructureSelector({required this.selectedStructure});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final notifier = ref.read(accordionSimulatorProvider.notifier);
-
-    return Row(
-      key: const ValueKey('diapason_structure_selector'),
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildButton(
-          label: '3',
-          tooltip: 'Tríada: 3 notas',
-          key: 'diapason_structure_triad',
-          isSelected: selectedStructure == 'triad',
-          onTap: () => notifier.setFreeChordScaleHarmonicMode('triad'),
-        ),
-        const SizedBox(width: 2),
-        _buildButton(
-          label: '4',
-          tooltip: 'Cuatríada: 4 notas',
-          key: 'diapason_structure_seventh',
-          isSelected: selectedStructure == 'seventh',
-          onTap: () => notifier.setFreeChordScaleHarmonicMode('seventh'),
-        ),
-        const SizedBox(width: 2),
-        _buildButton(
-          label: '5',
-          tooltip: 'Acorde de cinco notas: 1, 3, 5, 7 y 9',
-          key: 'diapason_structure_five',
-          isSelected: selectedStructure == 'five',
-          onTap: () => notifier.setFreeChordScaleHarmonicMode('five'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildButton({
-    required String label,
-    required String tooltip,
-    required String key,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        key: ValueKey(key),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(3),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 90),
-          width: 25,
-          height: 20,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFEA580C) : Colors.white,
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(
-              color: isSelected
-                  ? const Color(0xFFC2410C)
-                  : const Color(0xFFFDBA74),
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 8,
-              fontWeight: FontWeight.w900,
-              color: isSelected ? Colors.white : const Color(0xFF9A3412),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

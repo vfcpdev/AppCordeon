@@ -306,7 +306,47 @@ void main() {
       expect(pushDeco.color, equals(const Color(0xFFDC2626)));
     });
 
-    testWidgets('Al reproducir compás, la asignación de fuelle colorea el cuadro en Azul si abre y Rojo si cierra', (tester) async {
+    testWidgets('Color permanente del cuadro: Azul si abre, Rojo si cierra, y Amarillo si abre o cierra por definir', (tester) async {
+      final container = await pumpGrid(tester);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      // Compás 0.0: con acorde pero fuelle BellowsMode.both (abrir o cerrar por definir)
+      notifier.updateMeasureBeat(0, 0, 'Do');
+      await tester.pumpAndSettle();
+
+      final beat0Pending = tester.widget<AnimatedContainer>(
+        find.byKey(const ValueKey('beat_cell_0_0')),
+      );
+      final beat0PendingDeco = beat0Pending.decoration as BoxDecoration;
+      // Fondo amarillo cálido de decisión
+      expect(beat0PendingDeco.color, equals(const Color(0xFFFEF08A)));
+
+      // Definir fuelle a Abre (pull) -> Color queda asignado en Azul permanente sin reproducir
+      notifier.setBeatBellows(0, 0, BellowsMode.pull);
+      await tester.pumpAndSettle();
+
+      final beat0Pull = tester.widget<AnimatedContainer>(
+        find.byKey(const ValueKey('beat_cell_0_0')),
+      );
+      final beat0PullDeco = beat0Pull.decoration as BoxDecoration;
+      expect(beat0PullDeco.color, equals(const Color(0xFF2563EB))); // Azul permanente
+
+      // Compás 0.1: con acorde y fuelle definido a Cierra (push) -> Rojo permanente
+      notifier.updateMeasureBeat(0, 1, 'Sol');
+      notifier.setBeatBellows(0, 1, BellowsMode.push);
+      await tester.pumpAndSettle();
+
+      final beat1Push = tester.widget<AnimatedContainer>(
+        find.byKey(const ValueKey('beat_cell_0_1')),
+      );
+      final beat1PushDeco = beat1Push.decoration as BoxDecoration;
+      expect(beat1PushDeco.color, equals(const Color(0xFFDC2626))); // Rojo permanente
+
+      // El estado no está reproduciendo y los colores permanecen
+      expect(container.read(accordionSimulatorProvider).isPlayingAudio, isFalse);
+    });
+
+    testWidgets('Al reproducir compás, la asignación de fuelle mantiene el cuadro en Azul si abre y Rojo si cierra con borde activo', (tester) async {
       final container = await pumpGrid(tester);
       final notifier = container.read(accordionSimulatorProvider.notifier);
 

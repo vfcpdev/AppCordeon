@@ -1436,16 +1436,30 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
           ? activeBeat.bellows
           : targetBellows;
       contextLabel = 'C${activeBeat.barIndex + 1}.${activeBeat.beatIndex + 1}';
-    } else {
+    } else if (state.freeChordRoot >= 0) {
       targetChord = ChordCatalog.symbolFor(
         root: state.freeChordRoot,
-        type: state.freeChordType,
+        type: state.freeChordType.isNotEmpty ? state.freeChordType : 'maj',
         extension: state.freeChordFourth,
         bass: state.freeChordBass,
         latin: isLatin,
         display: true,
       );
       contextLabel = 'Constructor';
+    } else if (state.detectedChord != null) {
+      targetChord = state.detectedChord!.formattedSymbol(notation);
+      contextLabel = 'Diapasón';
+    } else if (state.activeCompasChord.isNotEmpty) {
+      targetChord = state.activeCompasChord;
+      contextLabel = 'Compás';
+    }
+
+    final chordPcs = ChordCatalog.pitchClassesForChordSymbol(targetChord);
+    final hasTarget = targetChord.isNotEmpty && chordPcs.isNotEmpty;
+
+    // Si ninguna parte ha definido una nota o acorde válido, no debe mostrar nada.
+    if (!hasTarget) {
+      return const SizedBox.shrink();
     }
 
     // Clases de altura disponibles físicamente en el diapasón según el fuelle
@@ -1457,9 +1471,6 @@ class _MeasureGridWidgetState extends ConsumerState<MeasureGridWidget> {
         pushPcs.add(btn.push % 12);
       }
     }
-
-    final chordPcs = ChordCatalog.pitchClassesForChordSymbol(targetChord);
-    final hasTarget = targetChord.isNotEmpty && chordPcs.isNotEmpty;
 
     final missingPush = chordPcs.difference(pushPcs);
     final missingPull = chordPcs.difference(pullPcs);
@@ -2655,71 +2666,76 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
             borderRadius: BorderRadius.circular(4),
             color: isAssignmentTarget
                 ? const Color(0xFFF3E8FF)
-                : (isPlaying
-                      ? (widget.bellows == BellowsMode.pull
-                            ? const Color(0xFF2563EB)
-                            : (widget.bellows == BellowsMode.push
-                                  ? const Color(0xFFDC2626)
-                                  : const Color(0xFFFEF3C7)))
-                      : (isCellSelected
-                            ? const Color(
-                                0xFFDBEAFE,
-                              ) // Resaltado azul suave y vivo para cuadro seleccionado
-                            : (_isEditing
-                                  ? Colors
-                                        .white // Fondo blanco limpio al editar
-                                  : (widget.isYellowDecision
-                                        ? const Color(
-                                            0xFFFEF08A,
-                                          ) // Resaltado amarillo para decidir fuelle
-                                        : (isMarked
-                                              ? const Color(
-                                                  0xFFF0FDF4,
-                                                ) // Tiempo marcado con el checkbox
-                                              : Colors.white))))),
+                : (hasChord
+                    ? (widget.bellows == BellowsMode.pull
+                        ? const Color(0xFF2563EB)
+                        : (widget.bellows == BellowsMode.push
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFFFEF08A)))
+                    : (isCellSelected
+                        ? const Color(0xFFDBEAFE)
+                        : (isMarked
+                            ? const Color(0xFFF0FDF4)
+                            : (isPlaying
+                                ? const Color(0xFFFEF3C7)
+                                : Colors.white)))),
             border: isAssignmentTarget
                 ? Border.all(color: const Color(0xFF7C3AED), width: 1.8)
                 : (isPlaying
-                      ? (widget.bellows == BellowsMode.pull
+                    ? Border.all(
+                        color: widget.bellows == BellowsMode.pull
+                            ? const Color(0xFF93C5FD)
+                            : (widget.bellows == BellowsMode.push
+                                ? const Color(0xFFFCA5A5)
+                                : const Color(0xFFF59E0B)),
+                        width: 2.2,
+                      )
+                    : (isCellSelected
+                        ? Border.all(
+                            color: (hasChord &&
+                                    (widget.bellows == BellowsMode.pull ||
+                                        widget.bellows == BellowsMode.push))
+                                ? Colors.white
+                                : (hasChord &&
+                                        (widget.isYellowDecision ||
+                                            widget.bellows == BellowsMode.both)
+                                    ? const Color(0xFFB45309)
+                                    : const Color(0xFF2563EB)),
+                            width: 1.8,
+                          )
+                        : (_isEditing
                             ? Border.all(
-                                color: const Color(0xFF1D4ED8),
+                                color: (hasChord &&
+                                        (widget.bellows == BellowsMode.pull ||
+                                            widget.bellows == BellowsMode.push))
+                                    ? Colors.white
+                                    : const Color(0xFF3B82F6),
                                 width: 1.8,
                               )
-                            : (widget.bellows == BellowsMode.push
-                                  ? Border.all(
-                                      color: const Color(0xFFB91C1C),
-                                      width: 1.8,
-                                    )
-                                  : Border.all(
-                                      color: const Color(0xFFF59E0B),
-                                      width: 1.8,
-                                    )))
-                      : (isCellSelected
-                            ? Border.all(
-                                color: const Color(0xFF2563EB),
-                                width: 1.8,
-                              ) // Cuadro resaltado nítido con borde completo
-                            : (_isEditing
-                                  ? Border.all(
-                                      color: const Color(0xFF3B82F6),
-                                      width: 1.8,
-                                    ) // Borde activo de edición
-                                  : (widget.isYellowDecision
+                            : (isMarked
+                                ? Border.all(
+                                    color: const Color(0xFF059669),
+                                    width: 1.6,
+                                  )
+                                : (hasChord
+                                    ? (widget.bellows == BellowsMode.pull
                                         ? Border.all(
-                                            color: const Color(0xFFEAB308),
-                                            width: 1.8,
-                                          ) // Borde amarillo dorado
-                                        : (isMarked
-                                              ? Border.all(
-                                                  color: const Color(
-                                                    0xFF059669,
-                                                  ),
-                                                  width: 1.2,
-                                                )
-                                              : Border.all(
-                                                  color: Colors.transparent,
-                                                  width: 0.8,
-                                                )))))),
+                                            color: const Color(0xFF1D4ED8),
+                                            width: 1.0,
+                                          )
+                                        : (widget.bellows == BellowsMode.push
+                                            ? Border.all(
+                                                color: const Color(0xFFB91C1C),
+                                                width: 1.0,
+                                              )
+                                            : Border.all(
+                                                color: const Color(0xFFEAB308),
+                                                width: 1.2,
+                                              )))
+                                    : Border.all(
+                                        color: Colors.transparent,
+                                        width: 0.8,
+                                      )))))),
             boxShadow: isAssignmentTarget
                 ? [
                     BoxShadow(
@@ -2729,49 +2745,47 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                     ),
                   ]
                 : (isPlaying
-                      ? [
-                          BoxShadow(
-                            color: (widget.bellows == BellowsMode.pull
-                                    ? const Color(0xFF2563EB)
-                                    : (widget.bellows == BellowsMode.push
-                                          ? const Color(0xFFDC2626)
-                                          : const Color(0xFFF59E0B)))
-                                .withValues(alpha: 0.35),
-                            blurRadius: 4,
-                            spreadRadius: 1.0,
-                          ),
-                        ]
-                      : (isCellSelected
+                    ? [
+                        BoxShadow(
+                          color: (widget.bellows == BellowsMode.pull
+                                  ? const Color(0xFF2563EB)
+                                  : (widget.bellows == BellowsMode.push
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFFEAB308)))
+                              .withValues(alpha: 0.45),
+                          blurRadius: 6,
+                          spreadRadius: 1.2,
+                        ),
+                      ]
+                    : (isCellSelected
+                        ? [
+                            BoxShadow(
+                              color: (hasChord &&
+                                      widget.bellows == BellowsMode.pull)
+                                  ? const Color(0xFF1D4ED8)
+                                      .withValues(alpha: 0.35)
+                                  : ((hasChord &&
+                                          widget.bellows == BellowsMode.push)
+                                      ? const Color(0xFFB91C1C)
+                                          .withValues(alpha: 0.35)
+                                      : const Color(0xFF2563EB)
+                                          .withValues(alpha: 0.28)),
+                              blurRadius: 4,
+                              spreadRadius: 0.8,
+                            ),
+                          ]
+                        : (hasChord &&
+                                (widget.isYellowDecision ||
+                                    widget.bellows == BellowsMode.both)
                             ? [
                                 BoxShadow(
-                                  color: const Color(
-                                    0xFF2563EB,
-                                  ).withValues(alpha: 0.28),
-                                  blurRadius: 4,
-                                  spreadRadius: 0.8,
+                                  color: const Color(0xFFEAB308)
+                                      .withValues(alpha: 0.25),
+                                  blurRadius: 3,
+                                  spreadRadius: 0.5,
                                 ),
                               ]
-                            : (widget.isYellowDecision
-                                  ? [
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFFEAB308,
-                                        ).withValues(alpha: 0.35),
-                                        blurRadius: 4,
-                                        spreadRadius: 0.8,
-                                      ),
-                                    ]
-                                  : (_isEditing
-                                        ? [
-                                            BoxShadow(
-                                              color: const Color(
-                                                0xFF3B82F6,
-                                              ).withValues(alpha: 0.20),
-                                              blurRadius: 3,
-                                              spreadRadius: 0.5,
-                                            ),
-                                          ]
-                                        : null)))),
+                            : null))),
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -2822,24 +2836,27 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                         : FontWeight.w600,
                     color: isAssignmentTarget
                         ? const Color(0xFF6D28D9)
-                        : (isPlaying
+                        : (hasChord
                               ? (widget.bellows == BellowsMode.pull ||
                                       widget.bellows == BellowsMode.push
                                   ? Colors.white
-                                  : const Color(0xFFB45309))
+                                  : const Color(0xFF78350F))
                               : (isFocusedOrSelected
                                     ? const Color(0xFF1D4ED8)
-                                    : (hasChord
-                                          ? const Color(0xFF0F172A)
-                                          : const Color(0xFF94A3B8)))),
+                                    : const Color(0xFF94A3B8))),
                   ),
+                  cursorColor: hasChord &&
+                          (widget.bellows == BellowsMode.pull ||
+                              widget.bellows == BellowsMode.push)
+                      ? Colors.white
+                      : const Color(0xFF1D4ED8),
                   decoration: InputDecoration(
                     isDense: true,
                     hintText: '-',
                     hintStyle: TextStyle(
                       fontSize: 11.0,
                       fontWeight: FontWeight.w500,
-                      color: isPlaying &&
+                      color: hasChord &&
                               (widget.bellows == BellowsMode.pull ||
                                   widget.bellows == BellowsMode.push)
                           ? Colors.white70
@@ -2879,14 +2896,17 @@ class _InlineBeatChordEditorState extends State<_InlineBeatChordEditor> {
                             fontWeight: (isCellSelected || isPlaying)
                                 ? FontWeight.w800
                                 : FontWeight.w600,
-                            color: isPlaying
-                                ? (widget.bellows == BellowsMode.pull ||
-                                        widget.bellows == BellowsMode.push
-                                    ? Colors.white70
-                                    : const Color(0xFFB45309))
-                                : (isCellSelected
-                                    ? const Color(0xFF1D4ED8)
-                                    : const Color(0xFF64748B)),
+                            color: hasChord &&
+                                    (widget.bellows == BellowsMode.pull ||
+                                        widget.bellows == BellowsMode.push)
+                                ? Colors.white70
+                                : (hasChord &&
+                                        (widget.isYellowDecision ||
+                                            widget.bellows == BellowsMode.both)
+                                    ? const Color(0xFF92400E)
+                                    : (isCellSelected
+                                        ? const Color(0xFF1D4ED8)
+                                        : const Color(0xFF64748B))),
                             fontFamily: 'monospace',
                             decoration: TextDecoration.underline,
                             decorationStyle: TextDecorationStyle.dotted,
