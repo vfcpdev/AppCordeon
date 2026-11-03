@@ -33,18 +33,30 @@ class AccordionTransportController {
     );
   }
 
+  /// Inicia el temporizador periódico de transporte con un intervalo en milisegundos.
+  void startTimer({
+    required int intervalMs,
+    required void Function(Timer timer) onTick,
+  }) {
+    _playbackTimer?.cancel();
+    _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), onTick);
+    _onStateChanged?.call();
+  }
+
   /// Inicia el temporizador de reproducción para iterar sobre los beats del compás.
   void startLoop({
     required double bpm,
     required int totalBeats,
     required void Function(int nextBeatIndex) onTick,
   }) {
-    _playbackTimer?.cancel();
     final intervalMs = (60000.0 / bpm).round().clamp(100, 3000);
-    _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
-      onTick(timer.tick % (totalBeats > 0 ? totalBeats : 1));
-      _onStateChanged?.call();
-    });
+    startTimer(
+      intervalMs: intervalMs,
+      onTick: (timer) {
+        onTick(timer.tick % (totalBeats > 0 ? totalBeats : 1));
+        _onStateChanged?.call();
+      },
+    );
   }
 
   /// Detiene la reproducción en curso.
