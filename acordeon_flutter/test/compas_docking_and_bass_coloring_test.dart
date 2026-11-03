@@ -33,6 +33,7 @@ void main() {
         playingChordNotes: {60},
         detectorMode: true,
         detectorSelectedButtons: ['button-2'],
+        isFreeChordBeingEdited: false,
       );
 
       notifier.selectBeat(0, 0);

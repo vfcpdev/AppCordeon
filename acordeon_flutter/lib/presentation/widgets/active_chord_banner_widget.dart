@@ -90,7 +90,7 @@ class ActiveChordBannerWidget extends ConsumerWidget {
       height: height,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: const Color(0xFFCBD5E1), width: 0.8),
       ),

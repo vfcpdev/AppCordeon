@@ -131,6 +131,7 @@ void main() {
       final container = ProviderContainer();
       final notifier = container.read(accordionSimulatorProvider.notifier);
       notifier.setTuning1(TuningRegistry.defaultTunings.first);
+      notifier.updateMeasureBeat(0, 0, 'Do');
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -178,6 +179,7 @@ void main() {
       final container = ProviderContainer();
       final notifier = container.read(accordionSimulatorProvider.notifier);
       notifier.setTuning1(TuningRegistry.defaultTunings.first);
+      notifier.updateMeasureBeat(0, 0, 'Do');
 
       // Seleccionar un par de botones en el detector
       notifier.toggleDetectorMode();
@@ -222,6 +224,7 @@ void main() {
       final container = ProviderContainer();
       final notifier = container.read(accordionSimulatorProvider.notifier);
       notifier.setTuning1(TuningRegistry.defaultTunings.first);
+      notifier.updateMeasureBeat(0, 0, 'Do');
 
       await tester.pumpWidget(
         UncontrolledProviderScope(

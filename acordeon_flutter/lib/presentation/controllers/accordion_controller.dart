@@ -4677,19 +4677,18 @@ final isDiapasonCleanProvider = Provider<bool>((ref) {
   final detectorButtons = ref.watch(
     accordionSimulatorProvider.select((s) => s.detectorSelectedButtons),
   );
-  final freeRoot = ref.watch(
-    accordionSimulatorProvider.select((s) => s.freeChordRoot),
-  );
-  final compasChord = ref.watch(
-    accordionSimulatorProvider.select((s) => s.activeCompasChord),
+  final playingNotes = ref.watch(
+    accordionSimulatorProvider.select((s) => s.playingChordNotes),
   );
   final isPlaying = ref.watch(
     accordionSimulatorProvider.select((s) => s.isPlayingAudio),
   );
 
-  if (activeButtons.isNotEmpty || isPlaying) return false;
+  if (activeButtons.isNotEmpty || isPlaying || playingNotes.isNotEmpty) {
+    return false;
+  }
   if (detectorMode) return detectorButtons.isEmpty;
-  return freeRoot < 0 && compasChord.isEmpty;
+  return true;
 });
 
 /// Selector atómico memoizado de la dirección del fuelle de un acordeón específico (ISP).

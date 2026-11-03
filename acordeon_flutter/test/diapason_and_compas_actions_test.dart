@@ -385,5 +385,55 @@ void main() {
       final beat1Deco = beat1Container.decoration as BoxDecoration;
       expect(beat1Deco.color, equals(const Color(0xFFDC2626))); // Rojo al cerrar
     });
+
+    testWidgets('Etiqueta del acorde y notas que lo conforman sobre los botones de tónica reutiliza el banner sin botones 3, 4 y 5', (tester) async {
+      final container = await pumpGrid(tester);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      // Verificar que la etiqueta reutilizada sobre las tónicas existe
+      final tonicBannerFinder = find.byKey(const ValueKey('tonic_chord_header_banner'));
+      expect(tonicBannerFinder, findsOneWidget);
+
+      // Los botones de estructura 3, 4 y 5 no deben existir en el banner de tónicas
+      expect(find.descendant(of: tonicBannerFinder, matching: find.byKey(const ValueKey('diapason_structure_triad'))), findsNothing);
+      expect(find.descendant(of: tonicBannerFinder, matching: find.byKey(const ValueKey('diapason_structure_seventh'))), findsNothing);
+      expect(find.descendant(of: tonicBannerFinder, matching: find.byKey(const ValueKey('diapason_structure_five'))), findsNothing);
+
+      // Seleccionar tónica Sol (7) y cualidad menor ('min')
+      notifier.setFreeChordRoot(7);
+      notifier.setFreeChordType('min');
+      await tester.pumpAndSettle();
+
+      // Debe mostrar el acorde y sus notas conformantes
+      final bannerText = tester.widget<Text>(tonicBannerFinder).textSpan?.toPlainText();
+      expect(bannerText, contains('Solm'));
+      expect(bannerText, contains('Sol - Si♭ - Re'));
+    });
+
+    testWidgets('Estado del Acorde no muestra nada cuando no hay notas ni acorde y se actualiza al definir tónica o compás', (tester) async {
+      final container = await pumpGrid(tester);
+      final notifier = container.read(accordionSimulatorProvider.notifier);
+
+      // En reposo limpio (sin notas en diapasón, ni compás, ni edición en constructor), Estado del Acorde no debe mostrar nada
+      expect(find.text('Estado del Acorde'), findsNothing);
+
+      // Al definir una tónica en el constructor, se muestra inmediatamente la información actualizada
+      notifier.setFreeChordRoot(7); // Sol
+      await tester.pumpAndSettle();
+      expect(find.text('Estado del Acorde'), findsOneWidget);
+      expect(find.textContaining('Constructor'), findsOneWidget);
+
+      // Al limpiar las selecciones armónicas, vuelve a ocultarse
+      notifier.clearHarmonicSelections();
+      await tester.pumpAndSettle();
+      expect(find.text('Estado del Acorde'), findsNothing);
+
+      // Al asignar un acorde en el compás, aparece de nuevo reflejando la casilla
+      notifier.updateMeasureBeat(0, 0, 'Fa');
+      notifier.selectBeat(0, 0);
+      await tester.pumpAndSettle();
+      expect(find.text('Estado del Acorde'), findsOneWidget);
+      expect(find.textContaining('C1.1'), findsOneWidget);
+    });
   });
 }
