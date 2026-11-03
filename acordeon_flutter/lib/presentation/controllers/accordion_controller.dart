@@ -33,6 +33,7 @@ import '../../domain/theory/chord_detector_engine.dart';
 import '../../domain/models/compas_grid_state.dart';
 import '../../domain/models/grid_selection_model.dart';
 import 'free_chord_playback_coordinator.dart';
+import 'subcontrollers/accordion_audio_analysis_controller.dart';
 import 'subcontrollers/accordion_bass_rhythm_controller.dart';
 import 'subcontrollers/accordion_harmonic_controller.dart';
 import 'subcontrollers/accordion_transport_controller.dart';
@@ -845,6 +846,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     _transportController = AccordionTransportController();
     _bassRhythmController = AccordionBassRhythmController();
     _harmonicController = AccordionHarmonicController();
+    _audioAnalysisController = const AccordionAudioAnalysisController();
     ref.onDispose(() {
       _disposed = true;
       _transportController.dispose();
@@ -1011,6 +1013,10 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
 
   late final AccordionHarmonicController _harmonicController;
   AccordionHarmonicController get harmonicController => _harmonicController;
+
+  late final AccordionAudioAnalysisController _audioAnalysisController;
+  AccordionAudioAnalysisController get audioAnalysisController =>
+      _audioAnalysisController;
 
   Timer? _playbackTimer;
 
