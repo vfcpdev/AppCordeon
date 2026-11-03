@@ -34,6 +34,7 @@ import '../../domain/models/compas_grid_state.dart';
 import '../../domain/models/grid_selection_model.dart';
 import 'free_chord_playback_coordinator.dart';
 import 'subcontrollers/accordion_bass_rhythm_controller.dart';
+import 'subcontrollers/accordion_harmonic_controller.dart';
 import 'subcontrollers/accordion_transport_controller.dart';
 
 export '../../domain/models/compas_grid_state.dart';
@@ -843,6 +844,7 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
     );
     _transportController = AccordionTransportController();
     _bassRhythmController = AccordionBassRhythmController();
+    _harmonicController = AccordionHarmonicController();
     ref.onDispose(() {
       _disposed = true;
       _transportController.dispose();
@@ -1006,6 +1008,9 @@ class AccordionSimulatorNotifier extends Notifier<AccordionSimulatorState>
 
   late final AccordionBassRhythmController _bassRhythmController;
   AccordionBassRhythmController get bassRhythmController => _bassRhythmController;
+
+  late final AccordionHarmonicController _harmonicController;
+  AccordionHarmonicController get harmonicController => _harmonicController;
 
   Timer? _playbackTimer;
 
